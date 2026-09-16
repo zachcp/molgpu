@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "examples",
+      "runtimeExecutable": "spikes/examples/node_modules/.bin/vite",
+      "runtimeArgs": ["spikes/examples", "--port", "5185", "--strictPort"],
+      "port": 5185
+    },
+    {
+      "name": "s1-spacefill",
+      "runtimeExecutable": "spikes/s1-spacefill/node_modules/.bin/vite",
+      "runtimeArgs": ["spikes/s1-spacefill", "--port", "5184", "--strictPort"],
+      "port": 5184
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+
+# Beads / Dolt files (added by bd init)
+.dolt/
+*.db
+.beads-credential-key
+.beads/proxieddb/
+
+# Node
+node_modules/
+dist/
+dist-demo/
+.vite/
+
+# Spike build output / preview scratch
+spikes/*/preview-artifact.html

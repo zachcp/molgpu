@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "embedded",
+  "dolt_database": "molgpu_sept",
+  "project_id": "2b9d4416-2ccf-48f8-a0eb-84132e76bbb8"
+}

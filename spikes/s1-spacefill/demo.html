@@ -1,0 +1,105 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Spacefill Impostors</title>
+<style>
+  :root{
+    --bg:#0e1014; --panel:#16191f; --line:#252a33;
+    --ink:#e7eaf0; --dim:#98a0ae; --accent:#8fb8e8;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:14px/1.55 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
+  .wrap{max-width:1100px;margin:0 auto;padding-block:28px;padding-left:16px;padding-right:16px}
+  h1{font-size:19px;margin:0 0 6px;letter-spacing:-.01em}
+  .sub{color:var(--dim);margin:0 0 20px;font-size:13px;max-width:70ch}
+  .stage-box{position:relative;border:1px solid var(--line);border-radius:10px;overflow:hidden;
+    background:#0d0f13;aspect-ratio:16/10;max-width:100%}
+  #stage{position:absolute;inset:0}
+  #stage canvas{display:block;width:100%;height:100%}
+  #meta{position:absolute;left:10px;top:10px;background:#000000b3;padding:6px 9px;border-radius:6px;
+    font:11px/1.4 ui-monospace,Menlo,monospace;color:var(--ink);pointer-events:none;max-width:calc(100% - 20px)}
+  [hidden]{display:none!important}
+  #fallback{position:absolute;inset:0;display:grid;place-content:center;text-align:center;padding:24px;
+    background:#0d0f13;font-size:13px;color:var(--dim)}
+  #fallback b{color:var(--ink);display:block;margin-bottom:6px;font-size:15px}
+  #why{font:11px ui-monospace,Menlo,monospace;margin-top:10px;color:#c2708a;word-break:break-word}
+  .controls{display:flex;flex-wrap:wrap;gap:18px;margin-top:16px}
+  .grp{display:flex;flex-direction:column;gap:6px;min-width:0}
+  .lbl{font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--dim)}
+  .row{display:flex;flex-wrap:wrap;gap:6px}
+  button{font:12px/1 ui-sans-serif,system-ui,sans-serif;color:var(--ink);background:var(--panel);
+    border:1px solid var(--line);border-radius:6px;padding:7px 11px;cursor:pointer}
+  button:hover{border-color:#3a424f}
+  button[aria-pressed=true]{background:#1e2c40;border-color:var(--accent);color:#cfe1f7}
+  .notes{margin-top:26px;border-top:1px solid var(--line);padding-top:18px;
+    display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+  .note{font-size:13px;color:var(--dim)}
+  .note b{color:var(--ink);font-weight:600}
+  code{font:12px ui-monospace,Menlo,monospace;background:#1b1f27;padding:1px 5px;border-radius:4px;color:#cfe1f7}
+  table{border-collapse:collapse;font-size:12.5px;margin-top:6px;width:100%}
+  th,td{text-align:left;padding:5px 10px 5px 0;border-bottom:1px solid var(--line);white-space:nowrap}
+  th{color:var(--dim);font-weight:500;font-size:10.5px;letter-spacing:.07em;text-transform:uppercase}
+  .win{color:#8fd3a8}
+  .tablewrap{overflow-x:auto}
+  .foot{margin-top:22px;font-size:11.5px;color:#6d7480}
+</style></head>
+<body><div class="wrap">
+
+<h1>Spacefill impostors in use.gpu</h1>
+<p class="sub">Spike S1 for a use.gpu-native molecular viewer: deciding how to draw
+space-filling atoms. Drag to orbit is not wired up — each control reloads the scene.
+Needs a WebGPU browser.</p>
+
+<div class="stage-box">
+  <div id="stage"></div>
+  <div id="meta">initialising…</div>
+  <div id="fallback" hidden>
+    <b>WebGPU unavailable</b>
+    This demo renders with WebGPU. Try Chrome or Edge 113+, or Safari 18+.
+    <div id="why"></div>
+  </div>
+</div>
+
+<div class="controls">
+  <div class="grp"><span class="lbl">Scene</span><div class="row">
+    <button data-q="scene=crambin">Crambin · 327</button>
+    <button data-q="scene=10000">10k</button>
+    <button data-q="scene=100000">100k</button>
+    <button data-q="scene=1000000">1M</button>
+    <button data-q="scene=probe">Impostor proof</button>
+  </div></div>
+  <div class="grp"><span class="lbl">Shading</span><div class="row">
+    <button data-q="shaded=1">Shaded</button>
+    <button data-q="shaded=0">Flat</button>
+  </div></div>
+  <div class="grp"><span class="lbl">Size space</span><div class="row">
+    <button data-q="depth=1">World (Å)</button>
+    <button data-q="depth=0">Screen (px)</button>
+  </div></div>
+</div>
+
+<div class="notes">
+  <div class="note"><b>Impostors are real spheres.</b> Pick <em>Impostor proof</em>:
+  the seams where spheres overlap are curved sphere–sphere intersection arcs, which
+  is only possible if the fragment shader writes per-fragment depth. Flat billboards
+  would hard-occlude with circular edges.</div>
+
+  <div class="note"><b><code>depth</code> picks the size space.</b>
+  <code>depth:1</code> is world-space and perspective-correct — atoms keep their
+  Ångström radius as you zoom. <code>depth:0</code> is pixels, so atoms stay the same
+  on-screen size regardless of distance. Molecular work needs <code>depth:1</code>.</div>
+
+  <div class="note"><b>Why not real sphere geometry?</b> Cost, measured in this spike:
+  <div class="tablewrap"><table>
+    <tr><th>path</th><th>CPU build</th><th>bytes/atom</th></tr>
+    <tr><td class="win">impostor</td><td class="win">0.9 ms @ 100k</td><td class="win">16</td></tr>
+    <tr><td>merged mesh</td><td>593 ms @ 20k</td><td>~3 900</td></tr>
+  </table></div>
+  ~200× the memory, extrapolating to ~3.2 GB at 1M atoms. Mol* uses impostors at
+  scale for the same reason.</div>
+</div>
+
+<p class="foot">Built on use.gpu 0.20.0. Crambin (PDB 1CRN) coordinates are inlined,
+so this page fetches nothing at runtime.</p>
+
+</div><script type="module" src="./demo.mjs"></script></body></html>
