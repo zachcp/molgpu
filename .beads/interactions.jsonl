@@ -20,3 +20,4 @@
 {"id":"int-3cfc04455be8966a34dc15385b8c07e2","kind":"field_change","created_at":"2026-09-15T16:52:08.598304Z","actor":"Zachary Charlop-Powers","issue_id":"molgpu-sept-cqm.3","extra":{"field":"status","new_value":"closed","old_value":"in_progress"}}
 {"id":"int-0656e550152454493da390bd110bb2d5","kind":"field_change","created_at":"2026-09-15T17:03:32.074845Z","actor":"Zachary Charlop-Powers","issue_id":"molgpu-sept-cqm.5","extra":{"field":"priority","new_value":"3","old_value":"0"}}
 {"id":"int-0ddd9c039300fff527072d3d2362eac9","kind":"field_change","created_at":"2026-09-16T11:33:41.872597Z","actor":"Zachary Charlop-Powers","issue_id":"molgpu-sept-cqm.8","extra":{"field":"status","new_value":"closed","old_value":"open"}}
+{"id":"int-880e4208fe2c1c5212039eaef8c28cdf","kind":"field_change","created_at":"2026-09-16T12:00:49.138264Z","actor":"Zachary Charlop-Powers","issue_id":"molgpu-sept-jy6.6","extra":{"field":"status","new_value":"closed","old_value":"open"}}
