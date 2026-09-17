@@ -1,5 +1,11 @@
 # Structure component — ergonomics of the data intermediary
 
+> **CORRECTED 2026-09-17.** The claim below that `useRawSource` is "the
+> hook-level equivalent of the `RawData` component" is **wrong**. They are not
+> interchangeable: a source a layer interprets structurally (`segments`) behaves
+> differently through the hook, which silently drew bonds between unbonded atoms.
+> See `2026-09-17-rawdata-hook-vs-component.md`. The rest of this document stands.
+
 Spike: `spikes/examples/lib/` + `?ex=structure`. Verified rendering.
 Question: what should `<Structure>` be, so representations never touch `RawData`?
 

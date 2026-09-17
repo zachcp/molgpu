@@ -26,6 +26,14 @@ not optional: `DualContourLayer` is present in the package and completely broken
 (see `docs/findings/2026-09-15-s3-molecular-surface.md`), so presence is not
 usability.
 
+## Important: RawData component vs useRawSource hook
+
+They are **not** interchangeable. A `LineLayer` given `segments` from the
+`useRawSource` hook ignores the segment codes and draws cross-pair connectors;
+the same array through the `RawData` **component** draws correctly. Identical
+data, identical props. So: **any source a layer interprets structurally must come
+from the component.** See `docs/findings/2026-09-17-rawdata-hook-vs-component.md`.
+
 ## The core pattern
 
 Wrap each attribute array in `RawData` to get a `ShaderSource`, then bind the
@@ -52,14 +60,19 @@ declares `getSegment` as `i32`; binding `f32` fails WGSL validation
 ("return statement type must match its function return type, returned 'f32',
 expected 'i32'") and draws nothing.
 
-**Line segment codes, empirically:**
-- discrete strokes (bonds): per-vertex `[1,2]` repeated — one stroke per pair.
-  Verified: 6 points with `1,2,1,2,1,2` gives exactly 3 strokes.
-- one continuous run (traces, ribbons): use the **scalar** `segment` prop
-  (e.g. `segment: 0`), which compiles the lookup as a shader constant instead of
-  reading a buffer.
-- Note `1,2,2,3` ("start, mid, mid, end") does **not** give continuity — it
-  renders as two disconnected strokes. Do not assume the obvious convention.
+**Line segment codes: `1 = start, 3 = middle, 2 = end`.** (Corrected — an
+earlier version of this file guessed wrong.) Every observation fits:
+- discrete strokes (bonds): `[1,2]` repeated — start,end,start,end. Verified:
+  6 points as `1,2,1,2,1,2` gives exactly 3 strokes.
+- one continuous run (traces, tubes): `1,3,3,...,3,2`.
+- `1,2,2,3` is start,end,end,middle — which is why it renders as two
+  disconnected strokes, not the continuous line the naming suggests.
+
+**Do NOT use the scalar `segment` prop for a continuous run when `shaded`.**
+It draws, so it looks correct for flat lines — but with `shaded: true` and
+`sides > 0` it extrudes every vertex pair as its own cone, giving a mess of
+spikes. Bind per-vertex i32 segments instead. `join: 'round'` is also the only
+join that does not leave points (`tangent` and `miter` both spike).
 
 **`FaceLayer` needs `side: 'both'` for `makeSphereGeometry`.** Its winding is
 back-facing by use.gpu's convention, so the default `side: 'front'` culls the

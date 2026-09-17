@@ -17,9 +17,10 @@ const bounds = computeBounds(table);
 export const camera = { radius: bounds.extent * 1.8, target: bounds.center };
 
 export function body() {
-  const rep = new URLSearchParams(location.search).get('rep') ?? 'both';
+  const q = new URLSearchParams(location.search);
+  const rep = q.get('rep') ?? 'both';
   return use(Structure, { table, children: [
     (rep === 'both' || rep === 'spacefill') && use(Spacefill, { scale: 0.4 }),
-    (rep === 'both' || rep === 'bonds') && use(Bonds, { width: 3 }),
+    (rep === 'both' || rep === 'bonds') && use(Bonds, { width: parseFloat(q.get('w') ?? '3'), shaded: q.get('shaded') === '1' }),
   ].filter(Boolean) });
 }

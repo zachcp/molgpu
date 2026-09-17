@@ -19,6 +19,8 @@ const COLUMNS = [
   ['radius',    'f32'],
   ['colors',    'vec4<f32>'],
   ['element',   'u32'],
+  ['residue',   'u32'],
+  ['backbone',  'u32'],
 ];
 
 /**

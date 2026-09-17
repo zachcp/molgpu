@@ -1,46 +1,40 @@
-// Isolation harness for LineLayer's `segments` convention.
-//   ?seg=1,2,2,3   explicit per-vertex segment codes (bound as i32)
-//   ?seg=scalar    the scalar `segment` prop instead of an array
-// Points are laid out in a zigzag so breaks are obvious.
+// Settle the LineLayer `segments` convention with UNAMBIGUOUS geometry.
+//
+// Three short "dumbbells" placed far apart in a triangle. A real segment is a
+// SHORT stroke; a cross-pair connector is a LONG stroke between dumbbells. So
+// the correct encoding shows exactly 3 short strokes and nothing else.
+//
+//   ?codes=1,2      per-vertex codes, repeated across the 3 pairs
+//   ?w=3
 import { use } from '@use-gpu/live';
 import { RawData, LineLayer } from '@use-gpu/workbench';
 
-export const title = 'LineLayer isolation';
-export const camera = { radius: 16 };
+export const title = 'LineLayer segments — dumbbell test';
+export const camera = { radius: 26, pitch: 0.9 };
 
 export function body() {
   const q = new URLSearchParams(location.search);
-  const seg = q.get('seg') ?? '1,2,2,3';
+  const codes = (q.get('codes') ?? '1,2').split(',').map(Number);
+  const w = parseFloat(q.get('w') ?? '3');
 
-  const n = seg === 'scalar' ? 4 : seg.split(',').length;
-  const positions = new Float32Array(n * 3);
-  for (let i = 0; i < n; i++) {
-    positions[i*3]   = (i - (n - 1) / 2) * 3;
-    positions[i*3+1] = i % 2 === 0 ? -2 : 2;
-    positions[i*3+2] = 0;
+  // 3 dumbbells, each 2 A long, centres 9 A apart on a triangle
+  const centres = [[-8, -5, 0], [8, -5, 0], [0, 7, 0]];
+  const pts = [];
+  for (const [cx, cy, cz] of centres) {
+    pts.push(cx - 1, cy, cz);
+    pts.push(cx + 1, cy, cz);
   }
+  const positions = Float32Array.from(pts);
+  const n = positions.length / 3;
 
-  const withColors = q.get('colors') === '1';
-  const layer = (posSrc, segSrc, colSrc) => use(LineLayer, {
-    positions: posSrc,
-    ...(segSrc ? { segments: segSrc } : { segment: 0 }),
-    ...(colSrc ? { colors: colSrc } : { color: [0.45, 0.85, 0.6, 1] }),
-    width: 10, join: 'round',
-  });
+  const segments = new Int32Array(n);
+  for (let k = 0; k < n; k++) segments[k] = codes[k % codes.length];
 
-  const colors = new Float32Array(n * 4);
-  for (let i = 0; i < n; i++) colors.set([0.45, 0.85, 0.6, 1], i * 4);
-  const wrapColors = (fn) => withColors
-    ? use(RawData, { data: colors, format: 'vec4<f32>', render: fn })
-    : fn(null);
-
-  if (seg === 'scalar') {
-    return wrapColors((c) =>
-      use(RawData, { data: positions, format: 'vec3<f32>', render: (p) => layer(p, null, c) }));
-  }
-  // getSegment is declared i32 in the line vertex shader, so this MUST be i32.
-  const segments = Int32Array.from(seg.split(',').map(Number));
-  return wrapColors((c) =>
-    use(RawData, { data: segments, format: 'i32', render: (s) =>
-    use(RawData, { data: positions, format: 'vec3<f32>', render: (p) => layer(p, s, c) }) }));
+  return use(RawData, { data: segments, format: 'i32', render: (segSrc) =>
+         use(RawData, { data: positions, format: 'vec3<f32>', render: (posSrc) =>
+    use(LineLayer, {
+      positions: posSrc, segments: segSrc,
+      color: [0.45, 0.85, 0.6, 1], width: w, join: 'round',
+    })
+  })});
 }
