@@ -41,14 +41,14 @@ export function body() {
   // ?only=sticks isolates the bond rendering (6 CYS CB-SG bonds at shell=0)
   const only = q.get('only');
   if (only === 'sticks') {
-    return use(Structure, { table, children: use(BallAndStick, { select: sticks, ball: 0.20, stick: 0.22 }) });
+    return use(Structure, { table, children: use(BallAndStick, { select: sticks, ball: 0.3, stick: 0.5 }) });
   }
 
   return use(Structure, { table, children: [
     // the fold
     use(Tube, { width: tubeWidth, sides: 10, taper: 0.5 }),
     // the site, as sticks
-    use(BallAndStick, { select: sticks, ball: 0.20, stick: 0.22 }),
+    use(BallAndStick, { select: sticks, ball: 0.3, stick: 0.5 }),
     // and the site's own atoms called out a little larger
     use(Spacefill, { select: site, scale: 0.34 }),
   ] });

@@ -1,7 +1,7 @@
 // <Spacefill> — a representation. Pulls what it needs from <Structure> context.
 // No data props: that is the point of the intermediary.
 import { use, useMemo } from '@use-gpu/live';
-import { PointLayer, useRawSource } from '@use-gpu/workbench';
+import { PointLayer, RawData } from '@use-gpu/workbench';
 import { useStructure } from './structure.mjs';
 
 // At depth:1 PointLayer's `sizes` is world-space but not raw Angstrom. This
@@ -43,12 +43,15 @@ export const Spacefill = ({ scale = 1, select = null }) => {
     // exactly why a Selection carries a key (CONCEPT 2).
   }, [table, scale, select?.key, count]);
 
-  const positions = useRawSource(packed.positions, 'vec3<f32>');
-  const colors = useRawSource(packed.colors, 'vec4<f32>');
-  const sizes = useRawSource(packed.sizes, 'f32');
-
-  return use(PointLayer, {
-    positions, colors, sizes, count: packed.count,
-    shape: 'circle', shaded: true, depth: 1,
-  });
+  // RawData COMPONENTS, not useRawSource hooks — the hook and the component do
+  // not produce equivalent sources (see
+  // docs/findings/2026-09-17-rawdata-hook-vs-component.md).
+  return use(RawData, { data: packed.positions, format: 'vec3<f32>', render: (positions) =>
+         use(RawData, { data: packed.colors, format: 'vec4<f32>', render: (colors) =>
+         use(RawData, { data: packed.sizes, format: 'f32', render: (sizes) =>
+    use(PointLayer, {
+      positions, colors, sizes, count: packed.count,
+      shape: 'circle', shaded: true, depth: 1,
+    })
+  })})});
 };

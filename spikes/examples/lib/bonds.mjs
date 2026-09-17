@@ -12,7 +12,7 @@ import { inferBonds } from './table.mjs';
 // `shaded` + `sides` makes each bond a real extruded cylinder instead of a flat
 // camera-facing strip, which is what a stick should look like. Each bond is its
 // own [1,2] (start,end) run, so the per-pair extrusion is correct here.
-export const Bonds = ({ width = 0.22, cutoff = 1.9, select = null, sides = 6, shaded = true }) => {
+export const Bonds = ({ width = 0.5, cutoff = 1.9, select = null, sides = 6, shaded = true }) => {
   const { table } = useStructure();
 
   const built = useMemo(() => {
