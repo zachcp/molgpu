@@ -2,6 +2,8 @@
 import { mount } from './harness.mjs';
 
 const EXAMPLES = {
+  tube:      () => import('./ex/tube.mjs'),
+  select:    () => import('./ex/select.mjs'),
   structure: () => import('./ex/structure.mjs'),
   points:   () => import('./ex/points.mjs'),
   lines:    () => import('./ex/lines.mjs'),
