@@ -1,6 +1,6 @@
 import { render, use, useState } from '@use-gpu/live';
 import { WebGPU, AutoCanvas } from '@use-gpu/webgpu';
-import { OrbitCamera, Pass, LineLayer, RawData, useRawSource, useDeviceContext } from '@use-gpu/workbench';
+import { OrbitCamera, Pass, LineLayer, RawData, useRawSource, useDeviceContext, AmbientLight, DirectionalLight } from '@use-gpu/workbench';
 import { ColumnSource } from '../src/internal/column-source.mjs';
 
 const probe = window.__adapter = { errors: [], sources: {}, buffers: [], destroyed: 0, mounted: false };
@@ -69,9 +69,13 @@ const App = () => {
       data: state.empty ? data.subarray(0,0) : data, format, revision: state.revision,
       render: source => { record(format, source); return null; },
     })),
-    use(OrbitCamera, { radius: 24, bearing: 0, pitch: 0, target: [0,0,0], children:
-      use(Pass, { children: state.mounted ? use(Fixture, state) : null }) }),
+    use(OrbitCamera, { radius: 24, bearing: 0.6, pitch: 0.35, target: [0,0,0], children:
+      use(Pass, { lights: true, children: state.mounted ? [
+        use(AmbientLight, { color: [1, 1, 1], intensity: 0.3 }),
+        use(DirectionalLight, { position: [1, 2, 1.5], color: [1, 1, 1], intensity: 1 }),
+        use(Fixture, state),
+      ] : null }) }),
   ];
 };
 render(use(WebGPU, { fallback: e => { probe.errors.push(String(e)); return null; }, children:
-  use(AutoCanvas, { selector: '#root', samples: 1, backgroundColor: [0,0,0,1], children: use(App) }) }));
+  use(AutoCanvas, { selector: '#root', samples: 4, backgroundColor: [0,0,0,1], children: use(App) }) }));
