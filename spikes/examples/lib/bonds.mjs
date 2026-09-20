@@ -11,17 +11,16 @@ import { useStructure } from './structure.mjs';
 // `shaded` + `sides` makes each bond a real extruded cylinder instead of a flat
 // camera-facing strip, which is what a stick should look like. Each bond is its
 // own [1,2] (start,end) run, so the per-pair extrusion is correct here.
-export const Bonds = ({ width = 0.5, cutoff = 1.9, select = null, sides = 6, shaded = true }) => {
+export const Bonds = ({ width = 0.5, select = null, sides = 6, shaded = true }) => {
   const { table, bonds } = useStructure();
 
   const built = useMemo(() => {
-    const pairs = bonds.forCutoff(cutoff);
     // A selection restricts bonds to those with BOTH endpoints selected, which
     // is what makes "show sidechains of these residues" look right.
     const keep = select ? new Set(select.indices) : null;
     const use_ = [];
-    for (let b = 0; b < bonds.length; b += 2) {
-      const i = bonds[b], j = bonds[b + 1];
+    for (let b = 0; b < bonds.count; b++) {
+      const i = bonds.a[b], j = bonds.b[b];
       if (!keep || (keep.has(i) && keep.has(j))) use_.push(i, j);
     }
 
@@ -45,7 +44,7 @@ export const Bonds = ({ width = 0.5, cutoff = 1.9, select = null, sides = 6, sha
                segments: new Int32Array(1), count: 0 };
     }
     return { positions, colors, segments, count: n };
-  }, [table, bonds, cutoff, select?.key]);
+  }, [table, bonds, select?.key]);
 
   if (!built.count) return null;
 

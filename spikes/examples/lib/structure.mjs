@@ -12,7 +12,7 @@
 // fixed schema rather than "upload whatever keys the table happens to have".
 import { makeContext, provide, useContext, useMemo } from '@use-gpu/live';
 import { useRawSource, useNoRawSource } from '@use-gpu/workbench';
-import { inferBonds } from './table.mjs';
+import { bondTopology } from '@molgpu/table';
 
 /** The fixed column schema. Order matters — it is the hook order. */
 const COLUMNS = [
@@ -23,6 +23,7 @@ const COLUMNS = [
   ['residue',   'u32'],
   ['backbone',  'u32'],
 ];
+const EMPTY_BONDS = Object.freeze({ count: 0, a: new Uint32Array(), b: new Uint32Array() });
 
 /**
  * Plain (non-hook) bounds, so callers outside the component tree — camera
@@ -64,14 +65,10 @@ export const Structure = ({ table, children }) => {
   const bounds = useMemo(() => computeBounds(table), [table]);
   // Connectivity is topology, not representation state. Build it once in the
   // structure scope so every Bonds/BallAndStick consumer sees the same rows.
-  const bonds = useMemo(() => {
-    const byCutoff = new Map();
-    return Object.freeze({ forCutoff: (cutoff = 1.9) => {
-      let rows = byCutoff.get(cutoff);
-      if (!rows) byCutoff.set(cutoff, rows = inferBonds(table, cutoff));
-      return rows;
-    }});
-  }, [table]);
+  // Connectivity is cached by @molgpu/table per data/policy revision. Every
+  // Bonds/BallAndStick sibling reads this exact topology; no representation
+  // repeats local all-pairs cutoff inference.
+  const bonds = useMemo(() => table.data ? bondTopology(table.data) : EMPTY_BONDS, [table.data]);
 
   // useOne takes a SINGLE dep; passing an array to it re-runs every evaluation.
   // useMemo is the one that takes a dependency list.

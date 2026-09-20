@@ -44,18 +44,6 @@ function atomNames(count) {
   return names;
 }
 
-/** Naive distance cutoff. A uniform 1.9A rule is a spike, not a bond model. */
-function inferBonds(positions, count, cutoff = 1.9) {
-  const a = [], b = [], c2 = cutoff * cutoff;
-  for (let i = 0; i < count; i++) for (let j = i + 1; j < count; j++) {
-    const dx = positions[i*3]   - positions[j*3];
-    const dy = positions[i*3+1] - positions[j*3+1];
-    const dz = positions[i*3+2] - positions[j*3+2];
-    if (dx*dx + dy*dy + dz*dz < c2) { a.push(i); b.push(j); }
-  }
-  return { a: Uint32Array.from(a), b: Uint32Array.from(b) };
-}
-
 export function crambinStructure() {
   const count = EL.length;
   const residueCount = RESNAME.length;
@@ -71,8 +59,6 @@ export function crambinStructure() {
     element[i] = ATOMIC_NUMBER[ELS[EL[i]]];
     radius[i] = VDW[EL[i]];
   }
-
-  const { a, b } = inferBonds(positions, count);
 
   return createStructure({
     positions,
@@ -99,9 +85,8 @@ export function crambinStructure() {
       },
       chains: { count: 1, model: Int32Array.of(1), labelId: ['A'], authId: ['A'] },
       bonds: {
-        count: a.length, a, b,
-        order: new Uint8Array(a.length).fill(1),
-        source: new Array(a.length).fill('inferred'),
+        count: 0, a: new Uint32Array(), b: new Uint32Array(),
+        order: new Uint8Array(), source: [],
       },
       instances: {
         count: 1, chain: Uint32Array.of(0), operatorId: ['1'],

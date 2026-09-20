@@ -2,6 +2,7 @@
 // Plain typed arrays, no GPU and no Mol* types. Everything downstream is a
 // function of this.
 import { XYZ, EL, RES, BB, RESNAME, RESSEQ, VDW } from '../crambin.mjs';
+import { crambinStructure } from './crambin-structure.mjs';
 
 export const ELEMENT_COLOR = [
   [0.78, 0.80, 0.84, 1],   // C
@@ -19,6 +20,9 @@ export const BACKBONE = { SIDECHAIN: 0, N: 1, CA: 2, C: 3, O: 4 };
  * is what lets selections be plain index lists.
  */
 export function crambinTable() {
+  // Keep the example's presentation columns while carrying the production
+  // StructureData used by shared connectivity consumers.
+  const data = crambinStructure();
   const count = EL.length;
   const positions = new Float32Array(count * 3);
   const radius = new Float32Array(count);
@@ -39,7 +43,7 @@ export function crambinTable() {
   }
 
   return {
-    count, positions, radius, colors, element, residue, backbone,
+    count, positions, radius, colors, element, residue, backbone, data,
     // residue-level metadata, indexed by residue ordinal
     residues: { count: RESNAME.length, name: RESNAME, seq: RESSEQ },
   };
@@ -110,20 +114,6 @@ function norm(v) {
   if (l < 1e-6) return false;
   v[0] /= l; v[1] /= l; v[2] /= l;
   return true;
-}
-
-/** Naive distance-based bonds, as flat [i,j] pairs. A real build infers these properly. */
-export function inferBonds(table, cutoff = 1.9) {
-  const { positions, count } = table;
-  const out = [];
-  const c2 = cutoff * cutoff;
-  for (let i = 0; i < count; i++) for (let j = i + 1; j < count; j++) {
-    const dx = positions[i*3] - positions[j*3];
-    const dy = positions[i*3+1] - positions[j*3+1];
-    const dz = positions[i*3+2] - positions[j*3+2];
-    if (dx*dx + dy*dy + dz*dz < c2) out.push(i, j);
-  }
-  return Uint32Array.from(out);
 }
 
 /**
