@@ -95,8 +95,8 @@ export function body() {
       // applies that -1 even when count is passed, so an explicit count silently
       // drops the last segment. Let it derive from the source.
       //
-      // `shaded + sides + depth:-1` is the world-space shaded-tube convention
-      // (same as lib/bonds.mjs); plain `width` alone is pixels.
+      // `shaded + sides + depth:-1` makes width a world-space diameter. Plain
+      // LineLayer width is screen-space; see the LineLayer size contract.
       positions, colors, segments, width: stick,
       join: 'round', shaded: true, sides: 6, depth: -1,
     }));
