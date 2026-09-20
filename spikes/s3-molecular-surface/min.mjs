@@ -1,5 +1,5 @@
-// Isolation + control. ?layer=point renders a PointLayer in the identical harness,
-// to distinguish "DualContourLayer is broken" from "our use.gpu setup is wrong".
+// Isolation + controls. ?layer=point renders a PointLayer in the identical harness,
+// while ?layer=mesh uses the independent CPU marching-cubes fallback.
 // ?method=quadratic switches the contour fit.
 import { render, use } from '@use-gpu/live';
 import { WebGPU, AutoCanvas } from '@use-gpu/webgpu';
