@@ -137,9 +137,10 @@ reconciliation as well as segments before assigning root cause. No browser rerun
 was performed during this review. Keep the working component path meanwhile.
 
 Test three isolated strokes, multiple trace runs, vec3 attributes with distinct
-values, empty inputs, and updates after first render. Derive world-size semantics
-for points AND tubes across FOV, viewport, DPR, and projection type. Existing
-empirical width clamps and the factor 296 must not become public units.
+values, empty inputs, and updates after first render. Point world-size semantics
+are now derived from live view uniforms and pinned across FOV, viewport, DPR,
+and projection type; perform the same work for tubes. Empirical width clamps
+must not become public units.
 
 ## Representation sequencing and correctness
 

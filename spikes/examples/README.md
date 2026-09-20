@@ -117,9 +117,9 @@ ESM default-imports lodash CJS submodules. `@use-gpu/wgsl` ships precompiled
 `.wgsl.js` with an export map, so it needs no loader — do not exclude it.
 
 **`PointLayer` sizing:** `depth: 1` is world-space and perspective-correct,
-`depth: 0` is pixels. At `depth: 1` the `sizes` value is not raw Angstrom — a
-factor of ~296 applied here, which depends on fov and viewport and must be
-**derived** in real code, not hardcoded.
+`depth: 0` is pixels. `WorldSpacePointLayer` accepts physical radii in Ångström
+and derives PointLayer's camera-normalized diameter from the live view uniforms;
+it responds to viewport, DPR, FOV, focus, and perspective/orthographic changes.
 
 ## Process note
 

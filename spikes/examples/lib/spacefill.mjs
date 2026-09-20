@@ -1,13 +1,9 @@
 // <Spacefill> — a representation. Pulls what it needs from <Structure> context.
 // No data props: that is the point of the intermediary.
 import { use, useMemo } from '@use-gpu/live';
-import { PointLayer, RawData } from '@use-gpu/workbench';
+import { RawData } from '@use-gpu/workbench';
+import { WorldSpacePointLayer } from '@molgpu/viewer';
 import { useStructure } from './structure.mjs';
-
-// At depth:1 PointLayer's `sizes` is world-space but not raw Angstrom. This
-// factor depends on fov and viewport and MUST be derived in real code
-// (bead molgpu-sept-jy6.5); hardcoded here because the harness camera is fixed.
-const A_TO_SIZE = 296;
 
 export const Spacefill = ({ scale = 1, select = null }) => {
   const { count, table, sources } = useStructure();
@@ -29,16 +25,16 @@ export const Spacefill = ({ scale = 1, select = null }) => {
     const n = idx ? idx.length : count;
     const positions = new Float32Array(n * 3);
     const colors = new Float32Array(n * 4);
-    const sizes = new Float32Array(n);
+    const radii = new Float32Array(n);
     for (let k = 0; k < n; k++) {
       const i = idx ? idx[k] : k;
       positions[k*3]   = table.positions[i*3];
       positions[k*3+1] = table.positions[i*3+1];
       positions[k*3+2] = table.positions[i*3+2];
       colors.set(table.colors.subarray(i*4, i*4 + 4), k*4);
-      sizes[k] = table.radius[i] * scale * A_TO_SIZE;
+      radii[k] = table.radius[i];
     }
-    return { positions, colors, sizes, count: n };
+    return { positions, colors, radii, count: n };
     // memoized on the selection KEY, not the index array identity — which is
     // exactly why a Selection carries a key (CONCEPT 2).
   }, [table, scale, select?.key, count]);
@@ -48,10 +44,9 @@ export const Spacefill = ({ scale = 1, select = null }) => {
   // docs/findings/2026-09-17-rawdata-hook-vs-component.md).
   return use(RawData, { data: packed.positions, format: 'vec3<f32>', render: (positions) =>
          use(RawData, { data: packed.colors, format: 'vec4<f32>', render: (colors) =>
-         use(RawData, { data: packed.sizes, format: 'f32', render: (sizes) =>
-    use(PointLayer, {
-      positions, colors, sizes, count: packed.count,
-      shape: 'circle', shaded: true, depth: 1,
+    use(WorldSpacePointLayer, {
+      positions, colors, radii: packed.radii, scale, count: packed.count,
+      shape: 'circle', shaded: true,
     })
-  })})});
+  })});
 };

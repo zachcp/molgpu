@@ -34,11 +34,10 @@ This was the spike's central unknown and it comes back positive.
 
 `depth: 1` is what we want.
 
-**Open detail:** the `sizes` value at `depth: 1` is not raw Ångström. Empirically
-a world radius of 5 Å needed `sizes ≈ 1480`, i.e. a factor of ~296 that must
-depend on fov and viewport. `@molgpu/viewer` needs to **derive** that factor
-rather than hardcode it — and it should be pinned by a test, because a silent
-change there mis-sizes every atom.
+**Resolved (2026-09-20):** `sizes` is a camera-normalized diameter, rather than
+an Ångström radius. `@molgpu/viewer` now derives it from the live view uniforms
+and pins the relationship in a test. See
+[`2026-09-20-pointlayer-size-contract.md`](2026-09-20-pointlayer-size-contract.md).
 
 ## 3. Cost: impostors beat merged geometry by ~200x on memory
 

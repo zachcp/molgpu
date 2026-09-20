@@ -16,8 +16,9 @@
 //   ?rep=both | spacefill | bonds
 //   ?src=adapter | hook         (hook = useRawSource, the broken vec3 path)
 import { use, useMemo } from '@use-gpu/live';
-import { PointLayer, LineLayer, useRawSource } from '@use-gpu/workbench';
+import { LineLayer, useRawSource } from '@use-gpu/workbench';
 import { activeAtoms, coordinateBounds } from '@molgpu/table';
+import { WorldSpacePointLayer } from '@molgpu/viewer';
 import { ColumnSource } from '@molgpu/viewer/src/internal/column-source.mjs';
 import { crambinStructure, elementColors } from '../lib/crambin-structure.mjs';
 
@@ -31,11 +32,6 @@ const bounds = coordinateBounds(data, active);
 // are NOT recentred, the target is the real centroid in Angstroms.
 const extent = Math.max(...bounds.max.map((v, i) => v - bounds.min[i]));
 export const camera = { radius: extent * 1.6, target: bounds.center };
-
-// At depth:1 PointLayer `sizes` is world-space but not raw Angstrom. This factor
-// depends on fov and viewport and MUST be derived in real code (bead
-// molgpu-sept-jy6.5); hardcoded because the harness camera is fixed.
-const A_TO_SIZE = 296;
 
 // The diagnostic control. useRawSource uploads array.buffer verbatim, with no
 // vec3->vec4 GPU padding, so every position after the first is read at the wrong
@@ -63,15 +59,12 @@ export function body() {
 
   // --- spacefill: one row per atom, columns used as-is -----------------------
   const spacefill = () => {
-    const sizes = new Float32Array(atoms.count);
-    for (let i = 0; i < atoms.count; i++) sizes[i] = atoms.radius[i] * scale * A_TO_SIZE;
     return withColumns(Source, [
       { name: 'positions', data: data.positions, format: 'vec3<f32>' },
       { name: 'colors',    data: colors,         format: 'vec4<f32>' },
-      { name: 'sizes',     data: sizes,          format: 'f32' },
-    ], ({ positions, colors, sizes }) => positions && use(PointLayer, {
-      positions, colors, sizes, count: atoms.count,
-      shape: 'circle', shaded: true, depth: 1,
+    ], ({ positions, colors }) => positions && use(WorldSpacePointLayer, {
+      positions, colors, radii: atoms.radius, scale, count: atoms.count,
+      shape: 'circle', shaded: true,
     }));
   };
 
