@@ -8,6 +8,7 @@ import { mount } from './harness.mjs';
 
 const EXAMPLES = {
   scene: () => import('./ex/scene.mjs'),
+  select: () => import('./ex/select.mjs'),
 };
 
 const which = new URLSearchParams(location.search).get('ex') ?? 'scene';

@@ -10,6 +10,7 @@ export default {
     alias: {
       // The workspace packages live outside this spike, so point at them directly.
       '@molgpu/table': repo('../../packages/table/src/index.mjs'),
+      '@molgpu/select': repo('../../packages/select/src/index.mjs'),
       '@molgpu/io': repo('../../packages/io/src/index.mjs'),
       '@molgpu/viewer': repo('../../packages/viewer'),
     },
