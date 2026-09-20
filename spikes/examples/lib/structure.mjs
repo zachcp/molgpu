@@ -12,6 +12,7 @@
 // fixed schema rather than "upload whatever keys the table happens to have".
 import { makeContext, provide, useContext, useMemo } from '@use-gpu/live';
 import { useRawSource, useNoRawSource } from '@use-gpu/workbench';
+import { inferBonds } from './table.mjs';
 
 /** The fixed column schema. Order matters — it is the hook order. */
 const COLUMNS = [
@@ -61,11 +62,21 @@ export const Structure = ({ table, children }) => {
   // Bounds live here because the structure is what knows its own extent.
   // Framing derives from this (and later from selections — CONCEPT 6).
   const bounds = useMemo(() => computeBounds(table), [table]);
+  // Connectivity is topology, not representation state. Build it once in the
+  // structure scope so every Bonds/BallAndStick consumer sees the same rows.
+  const bonds = useMemo(() => {
+    const byCutoff = new Map();
+    return Object.freeze({ forCutoff: (cutoff = 1.9) => {
+      let rows = byCutoff.get(cutoff);
+      if (!rows) byCutoff.set(cutoff, rows = inferBonds(table, cutoff));
+      return rows;
+    }});
+  }, [table]);
 
   // useOne takes a SINGLE dep; passing an array to it re-runs every evaluation.
   // useMemo is the one that takes a dependency list.
-  const value = useMemo(() => ({ table, count: table.count, sources, bounds }),
-                        [table, bounds]);
+  const value = useMemo(() => ({ table, count: table.count, sources, bounds, bonds }),
+                        [table, bounds, bonds]);
 
   return provide(StructureContext, value, children);
 };
