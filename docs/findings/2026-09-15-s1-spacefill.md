@@ -1,5 +1,7 @@
 # S1 finding — the spacefill path
 
+> Update 2026-09-17: frame timings are now measured and the mesh baseline is repaired. See [S1/S2 execution evidence](2026-09-17-s1-s2-execution.md). The missing-timings sections below describe the original run.
+
 Bead: `molgpu-sept-cqm.1`. Spike code: `spikes/s1-spacefill/`.
 `@use-gpu/* 0.20.0`, vite 8.3.0, macOS arm64, Chrome/WebGPU.
 

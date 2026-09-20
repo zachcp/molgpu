@@ -1,5 +1,7 @@
 # molgpu — design
 
+> Architecture refinement (2026-09-17): read [the JSX/domain review](findings/2026-09-17-architecture-review.md) alongside this original plan. It updates domain identity, cache invalidation, package boundaries, renderer fallbacks and acceptance gates. These contracts are planned, not implemented.
+
 A use.gpu-native molecular visualization library. GPU-first, declarative,
 timeline-native.
 

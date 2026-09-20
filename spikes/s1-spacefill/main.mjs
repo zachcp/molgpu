@@ -10,10 +10,12 @@ import { render, use } from '@use-gpu/live';
 import { WebGPU, AutoCanvas } from '@use-gpu/webgpu';
 import {
   OrbitCamera, Pass, RawData, PointLayer, FaceLayer, GeometryData,
-  AmbientLight, DirectionalLight, makeSphereGeometry,
+  AmbientLight, DirectionalLight, makeSphereGeometry, useAnimationFrame, useTimeContext,
 } from '@use-gpu/workbench';
 import { synthetic, loadReal, toBuffers } from './atoms.mjs';
 import { startBench } from './bench.mjs';
+import { installGPUProbe } from './gpu-probe.mjs';
+installGPUProbe();
 
 const hud = (s) => { document.getElementById('hud').textContent = s; };
 const qs = new URLSearchParams(location.search);
@@ -76,18 +78,19 @@ if (MODE === 'mesh') {
     const base = makeSphereGeometry({ detail: [6, 10] });
     const bp = base.attributes.positions, bn = base.attributes.normals;
     const bi = base.attributes.indices;
-    const vpr = bp.length / 3;                      // verts per sphere
-    const positions = new Float32Array(n * vpr * 3);
-    const normals   = new Float32Array(n * vpr * 3);
+    const vpr = bp.length / 4;                      // verts per sphere
+    const positions = new Float32Array(n * vpr * 4);
+    const normals   = new Float32Array(n * vpr * 4);
     const indices   = bi ? new Uint32Array(n * bi.length) : null;
     for (let a = 0; a < n; a++) {
-      const r = atoms.radius[a] * SIZE;
+      const r = atoms.radius[a] * SIZE * 2;
       const [ox, oy, oz] = [atoms.positions[a*3], atoms.positions[a*3+1], atoms.positions[a*3+2]];
       for (let v = 0; v < vpr; v++) {
-        const s = (a * vpr + v) * 3, b = v * 3;
+        const s = (a * vpr + v) * 4, b = v * 4;
         positions[s]   = bp[b]   * r + ox;
         positions[s+1] = bp[b+1] * r + oy;
         positions[s+2] = bp[b+2] * r + oz;
+        positions[s+3] = 1;
         if (bn) { normals[s] = bn[b]; normals[s+1] = bn[b+1]; normals[s+2] = bn[b+2]; }
       }
       if (indices) for (let k = 0; k < bi.length; k++) indices[a * bi.length + k] = bi[k] + a * vpr;
@@ -120,11 +123,11 @@ const body =
   MODE === 'mesh'
     ? (merged
         ? use(GeometryData, {
-            count: merged.verts,
+            count: merged.indices?.length ?? merged.verts,
             topology: 'triangle-list',
             attributes: { positions: merged.positions, normals: merged.normals, ...(merged.indices ? { indices: merged.indices } : {}) },
-            formats: { positions: 'vec3<f32>', normals: 'vec3<f32>', ...(merged.indices ? { indices: 'u32' } : {}) },
-            render: (geo) => use(FaceLayer, { mesh: geo, color: [0.62,0.76,0.93,1], shaded: SHADED }),
+            formats: { positions: 'vec4<f32>', normals: 'vec4<f32>', ...(merged.indices ? { indices: 'u32' } : {}) },
+            render: (geo) => use(FaceLayer, { mesh: geo, side: 'both', color: [0.62,0.76,0.93,1], shaded: SHADED }),
           })
         : null)
     : use(RawData, {
@@ -139,11 +142,21 @@ const body =
         }),
       });
 
+// Camera motion forces actual scene rendering throughout the benchmark.
+const BenchmarkCamera = ({ children }) => {
+  useAnimationFrame();
+  const { elapsed } = useTimeContext();
+  return use(OrbitCamera, {
+    bearing: 0.6 + elapsed * 0.0001, pitch: 0.35,
+    radius: RAD ?? atoms.extent * 1.7, target: [0, 0, 0], children,
+  });
+};
+
 render(use(WebGPU, {
   fallback: (e) => { window.__err = String(e?.message ?? e); hud('WebGPU unavailable: ' + (e?.message ?? e)); return null; },
   children: use(AutoCanvas, {
     selector: '#root', samples: 1, backgroundColor: [0.08,0.09,0.11,1],
-    children: use(OrbitCamera, {
+    children: use(PROBE ? OrbitCamera : BenchmarkCamera, {
       bearing: 0.6, pitch: 0.35, radius: RAD ?? atoms.extent * 1.7, target: [0,0,0],
       children: use(Pass, {
         lights: true,

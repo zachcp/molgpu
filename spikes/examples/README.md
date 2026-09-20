@@ -17,6 +17,7 @@ npx vite .          # http://localhost:5185
 | `?ex=faces` | `FaceLayer` | real triangle geometry from a mesh |
 | `?ex=material` | `PBRMaterial` | material as a context provider; roughness ramp |
 | `?ex=labels` | `LabelLayer` | SDF text anchored to 3D positions |
+| `?ex=adapter` | `PointLayer` + `LineLayer` | the real `@molgpu/table` + `ColumnSource`, on crambin |
 
 Plus two isolation harnesses kept because they document how the conventions were
 found: `?ex=linemin` (`&seg=1,2,1,2`) and `?ex=facemin` (`&v=tri|both|flat`).
@@ -28,11 +29,25 @@ usability.
 
 ## Important: RawData component vs useRawSource hook
 
-They are **not** interchangeable. A `LineLayer` given `segments` from the
-`useRawSource` hook ignores the segment codes and draws cross-pair connectors;
-the same array through the `RawData` **component** draws correctly. Identical
-data, identical props. So: **any source a layer interprets structurally must come
-from the component.** See `docs/findings/2026-09-17-rawdata-hook-vs-component.md`.
+They are **not** interchangeable, but the reason is narrower than first recorded.
+
+**Corrected 2026-09-17-b.** The original rule here said `segments` through the
+hook was the problem. It is not: `segments` is `i32` and works through either
+path. The broken column is **`positions`**, because `useRawSource` uploads
+`array.buffer` verbatim while `RawData` pads for GPU layout — and `vec3<f32>` is
+the one format that needs padding (`UNIFORM_ARRAY_DIMS['vec3<f32>']` is `3.5`,
+i.e. 3 floats on the CPU, 4 slots on the GPU). Through the hook the shader reads
+a 16-byte stride from a 12-byte-packed buffer, so every position after the first
+is wrong, which is what produced the "cross-pair connectors".
+
+**Rule: never put a `vec3<f32>` column through `useRawSource`.** Use the
+`RawData` component (or `ColumnSource`, which wraps it).
+
+See it directly: `?ex=adapter&rep=bonds` vs `?ex=adapter&rep=bonds&src=hook` —
+identical data and props, only the positions source differs. Isolated further in
+`packages/viewer/test/` (`hook-segments` renders correctly, `hook-all` does not).
+`docs/findings/2026-09-17-rawdata-hook-vs-component.md` still carries the old
+framing and needs updating.
 
 ## The core pattern
 

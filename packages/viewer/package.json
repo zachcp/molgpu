@@ -1,0 +1,4 @@
+{
+  "name": "@molgpu/viewer", "version": "0.0.0", "private": true, "type": "module",
+  "peerDependencies": { "@use-gpu/live": "0.20.0", "@use-gpu/workbench": "0.20.0" }
+}

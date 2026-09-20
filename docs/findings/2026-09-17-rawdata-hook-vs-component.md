@@ -1,73 +1,76 @@
-# useRawSource is NOT a drop-in for the RawData component
+# `useRawSource` is not a drop-in for `RawData` with packed vec3 columns
 
-Found while building the composed scene. This **corrects the main conclusion of**
-`2026-09-16-structure-component.md`.
+Found while building the composed scene. This corrects the headline conclusion
+of `2026-09-16-structure-component.md` and the original version of this finding.
 
-## The claim that was wrong
+## Correction (2026-09-17-b)
 
-The `<Structure>` writeup said:
+The original finding correctly identified that the hook and component paths are
+not interchangeable, but it blamed the wrong column. `segments` is `i32` and
+works through either path. The actual failure is a packed `vec3<f32>` position
+column passed to `useRawSource`.
 
-> `useRawSource(array, format) -> StorageSource` is the **hook-level** equivalent
-> of the `RawData` component. This is the single most useful discovery here.
+`RawData` copies packed CPU vec3 rows into four GPU slots per row. The hook
+uploads `array.buffer` verbatim, while the shader reads a 16-byte vec3 stride.
+After the first vertex, the shader therefore reads the wrong coordinates. That
+made the bonds appear to connect cross-pairs; their segment codes were correct.
 
-It is not equivalent. With **identical data and identical props**, a
-`LineLayer` fed `segments` from the hook **ignores the segment codes** and draws
-the cross-pair connectors; fed the same array through the `RawData` component it
-draws correct discrete strokes.
+The isolated controls live in `spikes/examples/?ex=adapter` and
+`packages/viewer/test/`. `?rep=bonds` uses `ColumnSource`/`RawData` for positions
+and renders correct bonds; `?rep=bonds&src=hook` changes only the position source
+and fails. `hook-segments` remains a valid control.
+
+**Current rule:** never bind packed `vec3<f32>` data through `useRawSource`.
+Use `RawData` or the internal `ColumnSource` adapter, which delegates to it.
+
+## The earlier claim that was wrong
+
+The Structure writeup said:
+
+> `useRawSource(array, format) -> StorageSource` is the hook-level equivalent
+> of the `RawData` component.
+
+It is not equivalent. With identical geometry and layer props, a `LineLayer`
+with hook-uploaded packed positions draws cross-pair connectors; the same
+positions supplied through `RawData` draw correct discrete strokes.
 
 ## How it presented
 
 Bonds looked wrong in the composed scene — long lines joining atoms that are not
-bonded. The user spotted it as "the bonds don't seem to be connecting the correct
-atoms", which is exactly right: the spurious lines run from bond *k*'s end to
-bond *k+1*'s start.
-
-Measured on crambin: real bonds max **1.82 A**, but the cross-pair connectors
-reach **8.68 A** — and 333 of them were being drawn alongside the 334 real bonds.
+bonded. The user spotted it as “the bonds don't seem to be connecting the correct
+atoms”. On crambin, real bonds max at 1.82 Å while the false cross-pair connectors
+reach 8.68 Å.
 
 ## What was eliminated first
 
-Each of these was tested and is **not** the cause:
+- the segment encoding — a dumbbell isolation test confirms `[1,2]` repeated
+  gives three clean strokes and no connectors;
+- the segment data — codes alternate 1,2 correctly and positions match pairs;
+- shaded/sides/depth, width, source order, and stale modules.
 
-- the segment encoding — a dumbbell isolation test (three short segments placed
-  far apart, so a connector cannot be mistaken for a real segment) confirms
-  `[1,2]` repeated gives exactly 3 clean strokes and no connectors
-- the data — the built arrays were dumped and verified: codes alternate 1,2
-  correctly, positions match the pairs, real lengths all <= 1.82 A
-- `shaded` / `sides` / `depth` — connectors appear in both shaded and flat modes
-- `width` — same at 0.22 and 3
-- source creation order — creating `segments` before `positions` changed nothing
-- stale modules — reproduced in fresh tabs
-
-The only remaining difference from the known-good `ex/lines.mjs` was hook vs
-component. Switching to `RawData` components fixed it outright.
+The component path fixed the result outright. Reading `raw-data.mjs` against
+`useRawSource.mjs` then identified the material difference: GPU-dimension packing
+for vec3 inputs.
 
 ## Consequences
 
-**Rule for now: any source a layer interprets structurally — `segments` above
-all — must come from the `RawData` component, not `useRawSource`.**
+Packed `vec3<f32>` sources must come from `RawData`, not `useRawSource`. Scalar,
+i32, u32, vec2 and vec4 behavior is separately covered by the adapter regression
+suite; do not generalize one result to every source format without a test.
 
-`useRawSource` does appear to work for plain per-element attributes
-(`positions`, `colors`, `sizes` in `<Spacefill>` render correctly). But "appears
-to work" is exactly what was believed about `segments` too, so treat the hook as
-**unverified** for anything else until each case is checked.
+`useRawSource` remains unsuitable as the viewer's general column uploader. The
+fixed schema must preserve logical row counts, typed-array views, versioning and
+resource cleanup, all now owned by `ColumnSource`.
 
-This partially undoes the ergonomic win in `<Structure>`:
+`<Structure>` must not directly upload packed vec3 columns through the hook.
+`ColumnSource` removes the component nesting pyramid without bypassing `RawData`.
+The hook is an opt-in, format-specific optimization only after its behavior is
+verified for the pinned upstream version.
 
-- `<Structure>`'s fixed-schema column upload still uses `useRawSource`, and its
-  columns are plain attributes, so it stands for now — but it needs a deliberate
-  audit rather than an assumption.
-- Representations that need structurally-interpreted sources are back to the
-  `RawData` nesting pyramid. `<Bonds>` and `<Tube>` now use components.
-- The "hook removes the pyramid" framing should be stated much more narrowly:
-  it removes it for plain attribute columns only.
+## Remaining scope
 
-## Not yet root-caused
-
-Why the hook's source differs is unknown. `RawData` does more than allocate a
-buffer — it computes bounds via `getBoundingBox`/`toDataBounds`, tracks
-dimensions through `toCPUDims`/`toGPUDims`, and versions its uploads. One of
-those is probably what the segment lookup depends on. Worth reading
-`data/raw-data.mjs` against `hooks/useRawSource.mjs` properly before relying on
-the hook anywhere new, and worth an upstream question since the two are
-presented as interchangeable.
+The root cause for packed vec3 is established. The internal adapter bead remains
+open because its full browser lifecycle fixture still needs to prove rendering,
+updates and teardown across all supported formats. The upstream report bead must
+not claim a `segments` bug; any report should be limited to the documented
+vec3-packing contract mismatch.

@@ -1,7 +1,23 @@
 // @use-gpu/* ESM default-imports lodash CJS submodules, so vite must pre-bundle them.
 // @use-gpu/wgsl ships precompiled .wgsl.js with an export map — do NOT exclude it.
+import { fileURLToPath } from 'node:url';
+
+const repo = (p) => fileURLToPath(new URL(p, import.meta.url));
+
 export default {
-  server: { port: 5185 },
+  server: { port: Number(process.env.PORT) || 5185, fs: { allow: [repo('.'), repo('../../packages')] } },
+  resolve: {
+    alias: {
+      // The workspace packages live outside this spike, so point at them directly.
+      '@molgpu/table': repo('../../packages/table/src/index.mjs'),
+      '@molgpu/viewer': repo('../../packages/viewer'),
+    },
+    // Those packages import @use-gpu/* too. Without dedupe they resolve against
+    // the REPO ROOT node_modules while the examples resolve against this one,
+    // loading two copies of Live and breaking context lookups.
+    dedupe: ['@use-gpu/live', '@use-gpu/workbench', '@use-gpu/webgpu',
+             '@use-gpu/core', '@use-gpu/shader', '@use-gpu/wgsl'],
+  },
   optimizeDeps: {
     include: ['@use-gpu/live','@use-gpu/workbench','@use-gpu/webgpu',
               '@use-gpu/core','@use-gpu/shader','@use-gpu/wgsl','lodash'],

@@ -4,8 +4,9 @@
     {
       "name": "examples",
       "runtimeExecutable": "spikes/examples/node_modules/.bin/vite",
-      "runtimeArgs": ["spikes/examples", "--port", "5185", "--strictPort"],
-      "port": 5185
+      "runtimeArgs": ["spikes/examples"],
+      "port": 5185,
+      "autoPort": true
     },
     {
       "name": "s1-spacefill",

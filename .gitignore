@@ -13,3 +13,6 @@ dist-demo/
 
 # Spike build output / preview scratch
 spikes/*/preview-artifact.html
+
+# Reproducible spike runner output (selected evidence lives under docs/findings)
+spikes/s1-spacefill/results/

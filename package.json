@@ -1,0 +1,22 @@
+{
+  "name": "molgpu",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "test": "node --test packages/table/test/*.test.mjs packages/viewer/test/*.test.mjs",
+    "test:gpu": "node packages/viewer/test/run-browser.mjs"
+  },
+  "devDependencies": {
+    "@use-gpu/live": "0.20.0",
+    "@use-gpu/workbench": "0.20.0",
+    "@use-gpu/webgpu": "0.20.0",
+    "@use-gpu/core": "0.20.0",
+    "@use-gpu/shader": "0.20.0",
+    "@use-gpu/wgsl": "0.20.0",
+    "vite": "8.3.0",
+    "playwright": "1.62.1"
+  }
+}

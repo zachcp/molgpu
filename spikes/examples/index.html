@@ -13,12 +13,20 @@
   nav a:hover{color:#e4e9f2;border-color:#39424f}
   nav a[aria-current=page]{background:#17293c;border-color:#7fb2e5;color:#cfe3f8}
   #stage{flex:1;position:relative;min-height:0}
-  #stage canvas{display:block;width:100%;height:100%}
+  #stage canvas{display:block;width:100%;height:100%;cursor:grab;touch-action:none}
+  #stage canvas:active{cursor:grabbing}
   #err{position:absolute;left:12px;bottom:12px;color:#c98a9e;max-width:calc(100% - 24px)}
+  #toolbar{display:flex;gap:4px;flex-wrap:wrap;padding:8px 14px;border-bottom:1px solid #232935}
+  #toolbar:empty{display:none;border-bottom:none;padding:0}
+  #toolbar button{font:inherit;color:#8d97a8;background:#12151b;text-decoration:none;
+    padding:4px 8px;border:1px solid #232935;border-radius:3px;cursor:pointer}
+  #toolbar button:hover{color:#e4e9f2;border-color:#39424f}
+  #toolbar button[aria-current=true]{background:#17293c;border-color:#7fb2e5;color:#cfe3f8}
 </style></head><body>
 <header>
   <span id="title">…</span>
   <nav>
+    <a data-ex="adapter"   href="?ex=adapter">adapter</a>
     <a data-ex="scene"     href="?ex=scene">scene</a>
     <a data-ex="align"     href="?ex=align">align</a>
     <a data-ex="structure" href="?ex=structure">structure</a>
@@ -32,6 +40,7 @@
     <a data-ex="labels"   href="?ex=labels">labels</a>
   </nav>
 </header>
+<div id="toolbar"></div>
 <div id="stage"><div id="err"></div></div>
 <script type="module" src="./main.mjs"></script>
 </body></html>

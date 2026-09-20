@@ -1,5 +1,7 @@
 # molgpu — roadmap
 
+> Architecture refinement (2026-09-17): read [the JSX/domain review](findings/2026-09-17-architecture-review.md) alongside this original plan. It updates domain identity, cache invalidation, package boundaries, renderer fallbacks and acceptance gates. These contracts are planned, not implemented.
+
 Phases are gated. Each gate is a question with a yes/no answer, written down
 before moving on. The ordering puts the two ideas that make this project
 *different* (fields, timeline) ahead of the idea that makes it *complete*
@@ -8,6 +10,8 @@ before moving on. The ordering puts the two ideas that make this project
 ---
 
 ## Phase 0 — Feasibility spikes
+
+**Gate 0 passed on 2026-09-17:** S1 timing and S2 invalidation evidence are [recorded here](findings/2026-09-17-s1-s2-execution.md). S3 kernel reuse passed with a CPU mesh fallback. S4 remains required before production importer work.
 
 **Throwaway code, in `spikes/`, not behind package boundaries.** The point is
 to answer questions that could reshape or kill the design before any structure
