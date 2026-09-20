@@ -1,4 +1,5 @@
 {
   "name": "@molgpu/io", "version": "0.0.0", "private": true, "type": "module",
-  "dependencies": { "@molgpu/table": "0.0.0", "molstar": "5.11.0" }
+  "dependencies": { "@molgpu/table": "0.0.0", "molstar": "5.11.0" },
+  "exports": "./src/index.mjs"
 }
