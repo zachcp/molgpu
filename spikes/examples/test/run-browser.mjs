@@ -37,6 +37,23 @@ try {
     try { patch(GPUQueue.prototype, 'submit', 'submit'); } catch {}
     try { patch(GPUQueue.prototype, 'writeBuffer', 'writeBuffer'); } catch {}
     window.__snap = () => ({ ...window.__gpuStats });
+
+    // WebGPU validation failures surface as `uncapturederror` events on the
+    // device — they do not throw, so `pageerror`/console listeners miss them.
+    // Hook requestDevice to attach a listener the moment any device is created.
+    window.__gpuErrors = [];
+    try {
+      const requestDevice = GPUAdapter.prototype.requestDevice;
+      GPUAdapter.prototype.requestDevice = async function (...args) {
+        const device = await requestDevice.apply(this, args);
+        try {
+          device.addEventListener('uncapturederror', (event) => {
+            window.__gpuErrors.push(String(event.error?.message ?? event.error));
+          });
+        } catch {}
+        return device;
+      };
+    } catch {}
   });
 
   const settle = (frames = 8) => page.evaluate(async (n) => {
@@ -120,6 +137,38 @@ try {
   assert.equal(settled.createBuffer, 0, `scene must allocate nothing after drag (got ${settled.createBuffer})`);
   assert.ok(settled.submit <= 2, `scene must stop redrawing after drag (got ${settled.submit} trailing submits)`);
 
+  // Wheel zoom: same contract as the drag. It must move the image and drive
+  // submissions, allocate nothing per wheel tick, and settle to a fixed point.
+  const preWheel = await shot();
+  const beforeWheel = await snap();
+  for (let i = 0; i < 6; i++) { await page.mouse.wheel(0, -80); await settle(2); }
+  const afterWheel = await snap();
+  const wheelDelta = delta(beforeWheel, afterWheel);
+  assert.ok(!(await shot()).equals(preWheel), 'wheel zoom must redraw the scene');
+  assert.ok(wheelDelta.submit > 0, 'wheel zoom must drive render submissions');
+  assert.equal(wheelDelta.createBuffer, 0, `wheel zoom must not allocate buffers per tick (got ${wheelDelta.createBuffer})`);
+  await settle(24);
+  const settledWheel = delta(afterWheel, await snap());
+  assert.equal(settledWheel.createBuffer, 0, `scene must allocate nothing after wheel (got ${settledWheel.createBuffer})`);
+  assert.ok(settledWheel.submit <= 2, `scene must stop redrawing after wheel (got ${settledWheel.submit} trailing submits)`);
+
+  // Resize: AutoCanvas must reallocate its swapchain/attachment textures for the
+  // new size (a real render, not a frozen frame), then return to a fixed point
+  // — no resize-driven redraw loop.
+  const beforeResize = await snap();
+  await page.setViewportSize({ width: 1024, height: 720 });
+  await settle(24);
+  const afterResize = delta(beforeResize, await snap());
+  assert.ok(afterResize.submit > 0, 'resize must trigger a redraw at the new size');
+  const resizeQuiesced = await snap();
+  await settle(24);
+  const settledResize = delta(resizeQuiesced, await snap());
+  assert.equal(settledResize.submit, 0, `scene must not redraw-loop after resize (got ${settledResize.submit} submits)`);
+  await page.setViewportSize({ width: 800, height: 600 });
+  await settle(16);
+
+  assert.deepEqual(await page.evaluate(() => window.__gpuErrors), [], 'uncaptured WebGPU errors');
+
   const first = await shot();
   await settle();
   const second = await shot();
@@ -129,6 +178,8 @@ try {
     status: 'passed',
     examples: Object.fromEntries(Object.entries(results).map(([k, v]) => [k, v.bytes])),
     sceneDrag: { submits: dragDelta.submit, writes: dragDelta.writeBuffer, allocations: dragDelta.createBuffer },
+    sceneWheel: { submits: wheelDelta.submit, allocations: wheelDelta.createBuffer },
+    sceneResize: { submits: afterResize.submit },
     browser: browser.version(),
   }));
 } finally {
