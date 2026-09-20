@@ -31,12 +31,16 @@ export interface EvalContext { t?: number; domain?: Domain; }
 /** Numeric fields return a packed Float32Array; string fields return strings. */
 export function evaluate(field: Field, data: StructureData, ctx?: EvalContext): Float32Array | string[];
 
+export type Target = 'raw' | 'link';
+
 /** A GPU input the compiled shader needs, with a pure function to fill it. */
 export interface Binding {
   readonly id: string;
   readonly binding: number;
   readonly kind: 'buffer' | 'uniform';
   readonly wgslType: string;
+  /** Name of the WGSL accessor for this input (`@link fn` in the link target). */
+  readonly accessor: string;
   /** buffer: fill(data) -> Float32Array; uniform: fill({ t }) -> Float32Array. */
   readonly fill: (source: StructureData | { t?: number }) => Float32Array;
 }
@@ -44,10 +48,17 @@ export interface Binding {
 export interface Compiled {
   readonly valueType: ValueType;
   readonly domain: Domain;
+  readonly target: Target;
+  /** Entry name: `evalField` (raw) or `getField` (link). */
+  readonly entry: string;
   readonly bindings: readonly Binding[];
-  /** Self-contained WGSL exposing `fn evalField(row: u32) -> <type>`. No ShaderSource. */
+  /**
+   * Self-contained WGSL. `raw` uses `@group(0)` bindings and a plain `evalField`;
+   * `link` uses `@link fn` accessors (bound in `bindings` order) and `@export fn
+   * getField`. No ShaderSource either way.
+   */
   readonly wgsl: string;
 }
-export function compile(field: Field, options?: { domain?: Domain }): Compiled;
+export function compile(field: Field, options?: { domain?: Domain; target?: Target }): Compiled;
 
 export function fieldDomain(field: Field): Domain | 'any';

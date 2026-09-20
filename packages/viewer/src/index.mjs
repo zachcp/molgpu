@@ -4,5 +4,6 @@ export { StructureContext, StructureProvider, useStructure } from './structure-c
 export { Molecule } from './molecule.mjs';
 export { Structure } from './structure.mjs';
 export { Spacefill } from './spacefill.mjs';
+export { useField } from './use-field.mjs';
 export { pointSizeForRadius, pointSizeForCameraRadius, pointSizesForRadii } from './internal/point-size.mjs';
 export { lineRadiusForWidth } from './internal/line-size.mjs';

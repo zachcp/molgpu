@@ -236,34 +236,54 @@ const vec4 = (c) => `vec4<f32>(${c.map(f32).join(', ')})`;
  * Lower a numeric field to WGSL plus a plain-data binding schema. Returns
  * `{ valueType, domain, bindings, wgsl }`. `bindings` describe storage/uniform
  * inputs the shader needs and how to fill each from data (pure functions, not
- * ShaderSources); `wgsl` is a self-contained module exposing
- * `fn evalField(row: u32) -> <type>`.
+ * ShaderSources). Two targets: `raw` (default) emits a self-contained module
+ * with `@group(0)` bindings and `fn evalField(row) -> T`, runnable in a plain
+ * WebGPU compute pass; `link` emits `@link fn` accessors and `@export fn
+ * getField(row) -> T` for the use.gpu shader linker (the viewer binds the
+ * accessors to sources/uniforms in `bindings` order). No ShaderSource either way.
  */
-export function compile(f, { domain } = {}) {
+export function compile(f, { domain, target = 'raw' } = {}) {
   assertField(f, 'compile.field');
   if (!numeric(f.type)) fail('compile', 'string fields are CPU-only and do not lower to WGSL');
+  if (!['raw', 'link'].includes(target)) fail('compile.target', 'expected raw or link');
   const dom = reconcileDomain(f.domain, domain ?? 'any', 'compile');
   const ctx = { bindings: [], helpers: [], nextHelper: 0 };
   const { expr, type } = emit(f, ctx);
-  const decls = ctx.bindings.map((b) => b.decl).join('\n');
+  const accessors = ctx.bindings.map((b) => accessorDecl(b, target)).join('\n');
   const helpers = ctx.helpers.join('\n');
-  const wgsl = `${decls}${decls ? '\n' : ''}${helpers}${helpers ? '\n' : ''}fn evalField(row: u32) -> ${type.wgsl} {\n  return ${expr};\n}\n`;
-  return Object.freeze({ valueType: type, domain: dom, bindings: Object.freeze(ctx.bindings.map(publicBinding)), wgsl });
+  const entry = target === 'link' ? 'getField' : 'evalField';
+  const head = target === 'link' ? '@export ' : '';
+  const parts = [accessors, helpers, `${head}fn ${entry}(row: u32) -> ${type.wgsl} {\n  return ${expr};\n}`].filter(Boolean);
+  return Object.freeze({ valueType: type, domain: dom, target, entry, bindings: Object.freeze(ctx.bindings.map(publicBinding)), wgsl: `${parts.join('\n')}\n` });
 }
 
-const publicBinding = (b) => Object.freeze({ id: b.id, binding: b.binding, kind: b.kind, wgslType: b.wgslType, fill: b.fill });
+const publicBinding = (b) => Object.freeze({ id: b.id, binding: b.binding, kind: b.kind, wgslType: b.wgslType, accessor: b.name, fill: b.fill });
+
+/** WGSL for one input accessor, in the chosen target's binding convention. */
+function accessorDecl(b, target) {
+  if (b.kind === 'uniform') {
+    return target === 'link'
+      ? `@link fn ${b.name}() -> f32;`
+      : `@group(0) @binding(${b.binding}) var<uniform> _uni${b.binding}: f32;\nfn ${b.name}() -> f32 { return _uni${b.binding}; }`;
+  }
+  if (target === 'link') return `@link fn ${b.name}(i: u32) -> ${b.wgslType};`;
+  const read = b.wgslType === 'vec4<f32>'
+    ? `vec4<f32>(_buf${b.binding}[i*4u], _buf${b.binding}[i*4u+1u], _buf${b.binding}[i*4u+2u], _buf${b.binding}[i*4u+3u])`
+    : `_buf${b.binding}[i]`;
+  return `@group(0) @binding(${b.binding}) var<storage, read> _buf${b.binding}: array<f32>;\nfn ${b.name}(i: u32) -> ${b.wgslType} { return ${read}; }`;
+}
 
 function bufferBinding(ctx, id, wgslType, fill) {
   const binding = ctx.bindings.length;
-  ctx.bindings.push({ id, binding, kind: 'buffer', wgslType, fill,
-    decl: `@group(0) @binding(${binding}) var<storage, read> in${binding}: array<f32>;` });
-  return `in${binding}`;
+  const name = `field_get${binding}`;
+  ctx.bindings.push({ id, binding, kind: 'buffer', wgslType, fill, name });
+  return `${name}(row)`;
 }
 function uniformBinding(ctx, id, fill) {
   const binding = ctx.bindings.length;
-  ctx.bindings.push({ id, binding, kind: 'uniform', wgslType: 'f32', fill,
-    decl: `@group(0) @binding(${binding}) var<uniform> u${binding}: f32;` });
-  return `u${binding}`;
+  const name = `field_uni${binding}`;
+  ctx.bindings.push({ id, binding, kind: 'uniform', wgslType: 'f32', fill, name });
+  return `${name}()`;
 }
 
 function emit(node, ctx) {
@@ -271,8 +291,8 @@ function emit(node, ctx) {
     case 'constant':
       return { expr: node.type === COLOR ? vec4(node.value) : f32(node.value), type: node.type };
     case 'attribute': {
-      const v = bufferBinding(ctx, `attr:${node.name}`, 'f32', (data) => Float32Array.from(ATTRIBUTES[node.name].read(data)));
-      return { expr: `${v}[row]`, type: SCALAR };
+      const call = bufferBinding(ctx, `attr:${node.name}`, 'f32', (data) => Float32Array.from(ATTRIBUTES[node.name].read(data)));
+      return { expr: call, type: SCALAR };
     }
     case 'categorical': {
       const inner = emit(node.input, ctx);
@@ -302,10 +322,8 @@ function emit(node, ctx) {
       return { expr: `${name}(${inner.expr})`, type: COLOR };
     }
     case 'annotation': {
-      const comp = node.type.components;
-      const v = bufferBinding(ctx, `annotation`, node.type.wgsl, (data) => bakeAnnotation(node, rowCount(node.domain, data)));
-      if (node.type === COLOR) return { expr: `vec4<f32>(${v}[row*4u], ${v}[row*4u+1u], ${v}[row*4u+2u], ${v}[row*4u+3u])`, type: COLOR };
-      return { expr: `${v}[row]`, type: SCALAR };
+      const call = bufferBinding(ctx, `annotation`, node.type.wgsl, (data) => bakeAnnotation(node, rowCount(node.domain, data)));
+      return { expr: call, type: node.type };
     }
     case 'curve': {
       const u = uniformBinding(ctx, 'curve:t', ({ t } = {}) => new Float32Array([t ?? 0]));

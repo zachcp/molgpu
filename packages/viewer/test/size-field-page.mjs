@@ -1,12 +1,20 @@
-// Instrumented mount for the urn.5 derived-style-field invariant: changing the
-// point `scale` must not re-upload the per-atom size column. We count STORAGE
-// buffer allocations (RawData columns) so a scale change that only writes a
-// uniform shows zero new storage buffers after warm-up.
+// Instrumented mount for the urn.5 derived-style-field invariant, for both a
+// scalar (size) field and a colour field.
+//
+//  - scale changes must not re-upload the per-atom size column (uniform write).
+//  - colours come from a byElement field composed over the element column, so no
+//    per-atom colour array is uploaded at all; swapping the palette rebuilds the
+//    shader module but re-uploads no per-atom array.
+//
+// We count STORAGE buffer allocations (RawData columns) so either change shows
+// zero new storage buffers after warm-up.
 import { render, use, useState } from '@use-gpu/live';
 import { WebGPU, AutoCanvas } from '@use-gpu/webgpu';
 import { OrbitCamera, Pass, AmbientLight, DirectionalLight, useDeviceContext } from '@use-gpu/workbench';
+import { attribute, categorical } from '@molgpu/fields';
 import { ColumnSource } from '../src/internal/column-source.mjs';
 import { WorldSpacePointLayer } from '../src/world-space-points.mjs';
+import { useField } from '../src/use-field.mjs';
 
 const probe = window.__probe = { storage: 0, uniform: 0, errors: [], mounted: false };
 const make = GPUDevice.prototype.createBuffer;
@@ -24,28 +32,42 @@ GPUAdapter.prototype.requestDevice = async function (...args) {
 
 const N = 216;
 const positions = new Float32Array(N * 3);
-const colors = new Float32Array(N * 4);
 const radii = new Float32Array(N);
+const elements = new Float32Array(N);
+const ELS = [6, 7, 8, 16];
 for (let i = 0; i < N; i++) {
   positions[i * 3] = (i % 18) - 9;
   positions[i * 3 + 1] = Math.floor(i / 18) - 6;
   positions[i * 3 + 2] = 0;
-  colors.set([0.6, 0.72, 0.95, 1], i * 4);
   radii[i] = 0.6 + (i % 5) * 0.12;
+  elements[i] = ELS[i % 4];
 }
+
+// Two palettes: swapping between them changes colours via a new shader module,
+// but must not re-upload the per-atom element column.
+const PALETTES = [
+  categorical(attribute('element'), { 6: [0.8, 0.8, 0.85, 1], 7: [0.35, 0.5, 0.92, 1], 8: [0.9, 0.36, 0.33, 1], 16: [0.95, 0.8, 0.3, 1] }, [0.5, 0.5, 0.5, 1]),
+  categorical(attribute('element'), { 6: [0.2, 0.7, 0.4, 1], 7: [0.2, 0.7, 0.4, 1], 8: [0.9, 0.2, 0.6, 1], 16: [0.9, 0.2, 0.6, 1] }, [0.5, 0.5, 0.5, 1]),
+];
+
+const Points = ({ positions, elementSource, scale, palette }) => {
+  const colors = useField(PALETTES[palette], { 'attr:element': elementSource }, { domain: 'atom' });
+  return use(WorldSpacePointLayer, { positions, colors, radii, count: N, scale, shape: 'circle', shaded: true });
+};
 
 const App = () => {
   useDeviceContext();
-  const [scale, setScale] = useState(1);
-  probe.setScale = (s) => setScale(s);
+  const [state, setState] = useState({ scale: 1, palette: 0 });
+  probe.setScale = (scale) => setState((s) => ({ ...s, scale }));
+  probe.setPalette = (palette) => setState((s) => ({ ...s, palette }));
   probe.mounted = true;
   return use(ColumnSource, { data: positions, format: 'vec3<f32>', render: (pos) =>
-    use(ColumnSource, { data: colors, format: 'vec4<f32>', render: (col) =>
+    use(ColumnSource, { data: elements, format: 'f32', render: (elem) =>
       use(OrbitCamera, { radius: 34, bearing: 0.6, pitch: 0.35, target: [0, 0, 0], children:
         use(Pass, { lights: true, children: [
           use(AmbientLight, { color: [1, 1, 1], intensity: 0.3 }),
           use(DirectionalLight, { position: [1, 2, 1.5], color: [1, 1, 1], intensity: 1 }),
-          use(WorldSpacePointLayer, { positions: pos, colors: col, radii, count: N, scale, shape: 'circle', shaded: true }),
+          use(Points, { positions: pos, elementSource: elem, scale: state.scale, palette: state.palette }),
         ] }) }) }) });
 };
 

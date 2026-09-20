@@ -9,9 +9,17 @@ import { chromium } from 'playwright';
 const root = fileURLToPath(new URL('../../../', import.meta.url));
 const server = await createServer({
   root, configFile: false,
-  resolve: { alias: { '@molgpu/io': `${root}packages/io/src/index.mjs` } },
+  resolve: { alias: {
+    '@molgpu/io': `${root}packages/io/src/index.mjs`,
+    '@molgpu/table': `${root}packages/table/src/index.mjs`,
+    '@molgpu/fields': `${root}packages/fields/src/index.mjs`,
+  } },
   server: { host: '127.0.0.1', port: 5193, strictPort: true },
-  optimizeDeps: { include: ['@use-gpu/live', '@use-gpu/workbench', '@use-gpu/webgpu', '@use-gpu/core', '@use-gpu/shader', '@use-gpu/wgsl', 'lodash'] },
+  optimizeDeps: {
+    entries: ['packages/viewer/test/size-field.html'],
+    exclude: ['@molgpu/fields', '@molgpu/table', '@molgpu/io', '@molgpu/viewer'],
+    include: ['@use-gpu/live', '@use-gpu/workbench', '@use-gpu/webgpu', '@use-gpu/core', '@use-gpu/shader', '@use-gpu/shader/wgsl', '@use-gpu/wgsl', 'lodash'],
+  },
 });
 let browser;
 try {
@@ -39,13 +47,24 @@ try {
   const after = await snap();
   const afterShot = await shot();
 
-  assert.deepEqual(errors, [], 'page errors');
-  assert.deepEqual(after.errors, [], 'uncaptured WebGPU errors');
   assert.ok(!afterShot.equals(beforeShot), 'scale change must change the rendered image');
   const storageDelta = after.storage - before.storage;
   assert.equal(storageDelta, 0, `scale change reallocated ${storageDelta} storage buffers (expected 0)`);
 
-  console.log(JSON.stringify({ status: 'passed', storageBefore: before.storage, storageDelta, uniformBefore: before.uniform, browser: browser.version() }));
+  // Colour field: swapping the byElement palette recompiles the shader module but
+  // must re-upload no per-atom column (the element source is reused).
+  await page.evaluate(() => window.__probe.setPalette(1));
+  await settle(); await settle();
+  const afterPalette = await snap();
+  const paletteShot = await shot();
+  const paletteDelta = afterPalette.storage - after.storage;
+  assert.ok(!paletteShot.equals(afterShot), 'palette change must change the rendered image');
+  assert.equal(paletteDelta, 0, `palette change reallocated ${paletteDelta} storage buffers (expected 0)`);
+
+  assert.deepEqual(errors, [], 'page errors');
+  assert.deepEqual(afterPalette.errors, [], 'uncaptured WebGPU errors');
+
+  console.log(JSON.stringify({ status: 'passed', storageBefore: before.storage, scaleStorageDelta: storageDelta, paletteStorageDelta: paletteDelta, uniformBefore: before.uniform, browser: browser.version() }));
 } finally {
   await browser?.close();
   await server.close();

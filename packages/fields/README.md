@@ -23,12 +23,15 @@ continuous × domain / overflow matrix.
 - `evaluate(field, data, { t?, domain? })` runs on the CPU and returns a packed
   `Float32Array` (numeric) or a `string[]` (labels/tooltips). Broadcast fields
   (`constant`, `curve`) need an explicit `{ domain }`.
-- `compile(field)` lowers a numeric field to `{ valueType, domain, bindings, wgsl }`.
-  `wgsl` is a self-contained module exposing `fn evalField(row: u32) -> <type>`;
-  `bindings` are plain data describing the storage/uniform inputs and a pure
-  `fill` function for each. **No `ShaderSource` crosses the package boundary** —
-  the viewer binds these and wraps the expression. String fields are CPU-only
-  and `compile` rejects them; `linear` `overflow: 'fail'` is CPU-only too.
+- `compile(field, { target })` lowers a numeric field to
+  `{ valueType, domain, target, entry, bindings, wgsl }`. Two targets: `raw`
+  (default) emits `@group(0)` bindings and `fn evalField(row)`, runnable in a
+  plain WebGPU compute pass; `link` emits `@link fn` accessors and `@export fn
+  getField(row)` for the use.gpu shader linker (the viewer's `useField` binds the
+  accessors to sources/uniforms in `bindings` order). `bindings` are plain data
+  describing the inputs plus a pure `fill` function for each. **No `ShaderSource`
+  crosses the package boundary** either way. String fields are CPU-only and
+  `compile` rejects them; `linear` `overflow: 'fail'` is CPU-only too.
 
 The CPU evaluator and the generated WGSL share numeric definitions and are proven
 equal within tolerance by `npm run test:fields:gpu` (a raw-WebGPU compute pass, no

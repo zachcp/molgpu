@@ -94,9 +94,16 @@ test('compile emits self-contained WGSL and a plain binding schema (no ShaderSou
   assert.equal(c.valueType, COLOR);
   assert.equal(c.domain, 'atom');
   assert.match(c.wgsl, /fn evalField\(row: u32\) -> vec4<f32>/);
-  assert.match(c.wgsl, /var<storage, read> in0: array<f32>/);
+  assert.match(c.wgsl, /var<storage, read> _buf0: array<f32>/);
   assert.equal(c.bindings.length, 1);
   assert.equal(c.bindings[0].kind, 'buffer');
+  // the link target swaps @group bindings for @link accessors and an @export entry
+  const linked = compile(byElement, { target: 'link' });
+  assert.match(linked.wgsl, /@link fn field_get0\(i: u32\) -> f32;/);
+  assert.match(linked.wgsl, /@export fn getField\(row: u32\) -> vec4<f32>/);
+  assert.doesNotMatch(linked.wgsl, /@group/);
+  assert.equal(linked.entry, 'getField');
+  assert.deepEqual(linked.bindings.map((b) => b.accessor), ['field_get0']);
   // the binding's fill is a pure function producing the element column as f32
   assert.deepEqual([...c.bindings[0].fill(data)], [6, 7, 8, 16]);
   // a colormap over an attribute needs exactly one input; a curve adds a uniform

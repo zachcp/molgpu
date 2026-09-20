@@ -3,6 +3,7 @@ import type { VectorLike } from '@use-gpu/core';
 import type { ShaderSource } from '@use-gpu/shader';
 import type { PointLayerProps } from '@use-gpu/workbench';
 import type { StructureData } from '@molgpu/table';
+import type { Field } from '@molgpu/fields';
 
 /** Ångström-space axis-aligned extent, or null for an empty structure. */
 export interface StructureBounds {
@@ -117,6 +118,18 @@ export const WorldSpacePointLayer: LC<{
   count?: number;
   scale?: number;
 } & Omit<PointLayerProps, 'positions' | 'colors' | 'sizes' | 'count' | 'depth'>>;
+
+/**
+ * Lower a numeric @molgpu/fields Field to a use.gpu shader source, composed over
+ * existing GPU inputs. `inputs` maps each compiled binding id to a StorageSource
+ * (buffer input) or a number/ShaderRef (uniform), so a per-row column is never
+ * materialised and a uniform change is a binding update, not a re-upload.
+ */
+export function useField(
+  field: Field,
+  inputs: Record<string, ShaderSource | number | { current: number }>,
+  options?: { domain?: 'atom' | 'residue' },
+): ShaderSource;
 
 export interface ViewScale {
   readonly pixelRatio: number;
