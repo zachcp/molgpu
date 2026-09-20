@@ -1,19 +1,8 @@
 import { use, useMemo } from '@use-gpu/live';
-import { compile } from '@molgpu/fields';
 import { WorldSpacePointLayer } from './world-space-points.mjs';
 import { useStructure } from './structure-context.mjs';
-import { ColumnSource } from './internal/column-source.mjs';
 import { useField } from './use-field.mjs';
-
-const isField = (v) => !!v && typeof v === 'object' && !Array.isArray(v) && typeof v.kind === 'string' && !!v.type;
-
-/** Fold a list of columns into nested owned sources, then render with the map. */
-const withColumns = (specs, render) => {
-  const step = (i, acc) => i === specs.length ? render(acc)
-    : use(ColumnSource, { data: specs[i].data, format: specs[i].format,
-        render: (source) => step(i + 1, { ...acc, [specs[i].key]: source }) });
-  return step(0, {});
-};
+import { isField, fieldAttrNames, withColumns } from './internal/representation.mjs';
 
 /** Copy the columns a selection touches into fresh packed arrays. */
 const gather = (data, indices, attrNames) => {
@@ -70,11 +59,7 @@ export const Spacefill = ({ scale = 1, select, color = [0.72, 0.72, 0.76, 1], ..
   }
   const field = isField(color) ? color : null;
   // A colour field names the atom columns it reads; gather exactly those.
-  const attrNames = useMemo(() => {
-    if (!field) return [];
-    return compile(field, { target: 'link', domain: 'atom' }).bindings
-      .filter((b) => b.kind === 'buffer' && b.id.startsWith('attr:')).map((b) => b.id.slice(5));
-  }, [field]);
+  const attrNames = useMemo(() => fieldAttrNames(field), [field]);
 
   const indices = select ? select.indices : null;
   const n = indices ? indices.length : data.topology.atoms.count;

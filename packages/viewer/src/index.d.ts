@@ -112,6 +112,21 @@ export const Spacefill: LC<{
   color?: VectorLike | Field;
 } & Omit<PointLayerProps, 'positions' | 'sizes' | 'count' | 'color'>>;
 
+/** Draw bonds as world-space sticks, optionally restricted to a selection and
+ * coloured by a field. Connectivity is the shared bond topology. */
+export const Bonds: LC<{
+  /** Stick width; defaults to 0.3. */
+  width?: number;
+  /** A @molgpu/select atom Selection for this structure. */
+  select?: Selection | null;
+  /** Keep bonds whose endpoints are 'both' (default) or 'either' selected. */
+  endpoints?: 'both' | 'either';
+  /** A flat colour, or a @molgpu/fields Field coloured per endpoint atom. */
+  color?: VectorLike | Field;
+  sides?: number;
+  shaded?: boolean;
+}>;
+
 /** Draw Ångström radii through PointLayer's camera-normalized `sizes` API. */
 export const WorldSpacePointLayer: LC<{
   positions: ShaderSource;
