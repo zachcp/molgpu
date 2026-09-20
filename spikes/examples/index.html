@@ -2,7 +2,13 @@
 <meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" href="data:,">
 <title>use.gpu layer examples</title>
 <style>
-  html,body{margin:0;height:100%;background:#0d0f13;color:#e4e9f2;
+  /* overflow:hidden is load-bearing, not cosmetic. Without it the canvas and a
+     would-be scrollbar fight frame to frame: canvas grows -> content overflows
+     -> scrollbar appears -> layout shrinks 15px -> canvas shrinks -> overflow
+     gone -> scrollbar hides -> repeat. AutoCanvas re-renders on every size flip
+     and PickingTarget reallocates its readback buffer each time — the visible
+     thrash tracked in molgpu-sept-s15. Clamping overflow breaks the loop. */
+  html,body{margin:0;height:100%;overflow:hidden;background:#0d0f13;color:#e4e9f2;
     font:13px/1.5 ui-monospace,Menlo,monospace}
   body{display:flex;flex-direction:column}
   header{display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;
@@ -12,7 +18,7 @@
   nav a{color:#8d97a8;text-decoration:none;padding:4px 8px;border:1px solid #232935;border-radius:3px}
   nav a:hover{color:#e4e9f2;border-color:#39424f}
   nav a[aria-current=page]{background:#17293c;border-color:#7fb2e5;color:#cfe3f8}
-  #stage{flex:1;position:relative;min-height:0}
+  #stage{flex:1;position:relative;min-height:0;overflow:hidden}
   #stage canvas{display:block;width:100%;height:100%;cursor:grab;touch-action:none}
   #stage canvas:active{cursor:grabbing}
   #err{position:absolute;left:12px;bottom:12px;color:#c98a9e;max-width:calc(100% - 24px)}
@@ -26,18 +32,7 @@
 <header>
   <span id="title">…</span>
   <nav>
-    <a data-ex="adapter"   href="?ex=adapter">adapter</a>
     <a data-ex="scene"     href="?ex=scene">scene</a>
-    <a data-ex="align"     href="?ex=align">align</a>
-    <a data-ex="structure" href="?ex=structure">structure</a>
-    <a data-ex="select"    href="?ex=select">select</a>
-    <a data-ex="tube"      href="?ex=tube">tube</a>
-    <a data-ex="points"   href="?ex=points">points</a>
-    <a data-ex="lines"    href="?ex=lines">lines</a>
-    <a data-ex="trace"    href="?ex=trace">trace</a>
-    <a data-ex="faces"    href="?ex=faces">faces</a>
-    <a data-ex="material" href="?ex=material">material</a>
-    <a data-ex="labels"   href="?ex=labels">labels</a>
   </nav>
 </header>
 <div id="toolbar"></div>

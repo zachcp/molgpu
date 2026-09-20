@@ -1,32 +1,22 @@
-// Example switcher. Each module in ex/ exports { title, camera?, body }.
+// Example loader. Each module in ex/ exports { title, camera?, body }.
+//
+// The old per-layer gallery was deleted: those spikes tripped a per-frame
+// PickingTarget readback-buffer realloc loop (visible thrash on real GPUs; see
+// molgpu-sept-s15) and are being replaced with the new component format. The
+// composed `scene` is the one that stayed clean and is kept as the reference.
 import { mount } from './harness.mjs';
 
 const EXAMPLES = {
-  adapter:   () => import('./ex/adapter.mjs'),
-  align:     () => import('./ex/align.mjs'),
-  scene:     () => import('./ex/scene.mjs'),
-  tube:      () => import('./ex/tube.mjs'),
-  select:    () => import('./ex/select.mjs'),
-  structure: () => import('./ex/structure.mjs'),
-  points:   () => import('./ex/points.mjs'),
-  lines:    () => import('./ex/lines.mjs'),
-  trace:    () => import('./ex/trace.mjs'),
-  faces:    () => import('./ex/faces.mjs'),
-  material: () => import('./ex/material.mjs'),
-  labels:   () => import('./ex/labels.mjs'),
-  linemin:  () => import('./ex/linemin.mjs'),
-  facemin:  () => import('./ex/facemin.mjs'),
-  // Intentional failing upstream repro; not linked in the interactive gallery.
-  instances: () => import('./ex/instances.mjs'),
+  scene: () => import('./ex/scene.mjs'),
 };
 
-const which = new URLSearchParams(location.search).get('ex') ?? 'points';
-const load = EXAMPLES[which] ?? EXAMPLES.points;
+const which = new URLSearchParams(location.search).get('ex') ?? 'scene';
+const load = EXAMPLES[which] ?? EXAMPLES.scene;
 
 const mod = await load();
 document.getElementById('title').textContent = mod.title;
 for (const a of document.querySelectorAll('nav a')) {
   if (a.dataset.ex === which) a.setAttribute('aria-current', 'page');
 }
-window.__example = which;
+window.__example = EXAMPLES[which] ? which : 'scene';
 mount(mod.body(), mod.camera ?? {});

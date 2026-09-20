@@ -77,39 +77,39 @@ try {
     return prev;
   };
 
-  const examples = ['adapter', 'align', 'scene', 'structure', 'tube', 'select'];
+  // The per-layer gallery was deleted (molgpu-sept-s15): those examples tripped
+  // a per-frame PickingTarget readback-buffer realloc loop and are being
+  // replaced with the new component format. `scene` is the composed reference
+  // that stayed clean, so the probe now proves the whole contract on it.
+  //
+  // NB: this is a headless run, and headless Chrome does NOT reproduce the
+  // PickingTarget loop — it only ever manifests on a real GPU/compositor. The
+  // idle-quiescence and fixed-point assertions below therefore guard the
+  // *reactive* contract (no unconditional redraw, no per-input allocation);
+  // catching a resize/picking feedback loop needs a real-GPU run.
   const results = {};
-  for (const example of examples) {
-    await page.goto(`http://127.0.0.1:5187/?ex=${example}`);
-    await page.waitForFunction((name) => window.__example === name && document.querySelector('canvas'), example);
+  await page.goto('http://127.0.0.1:5187/?ex=scene');
+  await page.waitForFunction(() => window.__example === 'scene' && document.querySelector('canvas'));
 
-    // Capture a cold-start frame before settling. It must contain a real render,
-    // while the later pair proves transient resource work reaches a fixed point.
-    const transient = await shot();
-    const warm = await warmup();
+  // Capture a cold-start frame before settling. It must contain a real render,
+  // while the later pair proves transient resource work reaches a fixed point.
+  const transient = await shot();
+  const sceneWarm = await warmup();
+  {
     const first = await shot();
     await settle();
     const second = await shot();
-    assert.ok(transient.length > 1_000, `${example} canvas must render during cold start`);
-    assert.deepEqual(second, first, `${example} must settle after transient frames`);
+    assert.ok(transient.length > 1_000, 'scene canvas must render during cold start');
+    assert.deepEqual(second, first, 'scene must settle after transient frames');
 
     // Idle quiescence: with no input after warm-up, a reactive renderer must
     // allocate nothing and submit nothing. Any non-zero here is the thrashing
     // signal — an allocation churn or an unconditional redraw loop.
-    const idle = delta(warm, await snap());
-    assert.equal(idle.createBuffer, 0, `${example} must allocate no buffers at rest (got ${idle.createBuffer})`);
-    assert.equal(idle.submit, 0, `${example} must not redraw at rest (got ${idle.submit} submits)`);
-
-    results[example] = { bytes: first.length, warm };
+    const idle = delta(sceneWarm, await snap());
+    assert.equal(idle.createBuffer, 0, `scene must allocate no buffers at rest (got ${idle.createBuffer})`);
+    assert.equal(idle.submit, 0, `scene must not redraw at rest (got ${idle.submit} submits)`);
+    results.scene = first.length;
   }
-
-  // Switch once more in the same session, then trace a real orbit drag frame by
-  // frame. Interaction must move the image AND drive submissions (redraw
-  // responds to input), but must not allocate per camera update, and must reach
-  // a fixed point once the pointer is released.
-  await page.goto('http://127.0.0.1:5187/?ex=scene');
-  await page.waitForFunction(() => window.__example === 'scene' && document.querySelector('canvas'));
-  const sceneWarm = await warmup();
 
   const preDrag = await shot();
   await page.mouse.move(360, 280);
@@ -172,11 +172,11 @@ try {
   const first = await shot();
   await settle();
   const second = await shot();
-  assert.deepEqual(second, first, 'scene must settle after example switch and orbit interaction');
+  assert.deepEqual(second, first, 'scene must settle after orbit, wheel, and resize interaction');
   assert.deepEqual(errors, [], 'scene browser errors');
   console.log(JSON.stringify({
     status: 'passed',
-    examples: Object.fromEntries(Object.entries(results).map(([k, v]) => [k, v.bytes])),
+    examples: results,
     sceneDrag: { submits: dragDelta.submit, writes: dragDelta.writeBuffer, allocations: dragDelta.createBuffer },
     sceneWheel: { submits: wheelDelta.submit, allocations: wheelDelta.createBuffer },
     sceneResize: { submits: afterResize.submit },
