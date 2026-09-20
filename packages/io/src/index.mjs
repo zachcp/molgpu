@@ -1,4 +1,3 @@
-import { CIF } from 'molstar/lib/mol-io/reader/cif.js';
 import { createStructure } from '@molgpu/table';
 
 const ELEMENT = { H: 1, C: 6, N: 7, O: 8, P: 15, S: 16, SE: 34, FE: 26 };
@@ -8,12 +7,37 @@ const field = (category, name) => category.getField(name);
 const str = (category, name, row, fallback = '') => clean(field(category, name)?.str(row) ?? fallback);
 const num = (category, name, row, fallback = 0) => field(category, name)?.float(row) ?? fallback;
 
+/** A machine-readable failure at the BCIF/Mol* import boundary. */
+export class BcifParseError extends Error {
+  constructor(message, code, cause) {
+    super(message, cause === undefined ? undefined : { cause });
+    this.name = 'BcifParseError';
+    this.code = code;
+  }
+}
+
+async function parseBcif(bytes) {
+  if (!(bytes instanceof Uint8Array)) {
+    throw new BcifParseError('BCIF input must be a Uint8Array', 'INVALID_INPUT');
+  }
+  try {
+    // Keep the sole Mol* dependency behind the call boundary: consumers that
+    // only use @molgpu/table never load this parser or its transitive chunks.
+    const { CIF } = await import('molstar/lib/mol-io/reader/cif.js');
+    const parsed = await CIF.parseBinary(bytes).run();
+    if (parsed.isError) throw new BcifParseError(parsed.message, 'INVALID_BCIF');
+    return parsed.result;
+  } catch (error) {
+    if (error instanceof BcifParseError) throw error;
+    throw new BcifParseError('Unable to load the optional Mol* BCIF parser', 'PARSER_UNAVAILABLE', error);
+  }
+}
+
 /** Lower a BinaryCIF mmCIF block to renderer-independent owned table columns. */
 export async function structureFromBcif(bytes) {
-  const parsed = await CIF.parseBinary(bytes).run();
-  if (parsed.isError) throw new Error(parsed.message);
-  const atom = parsed.result.blocks[0]?.categories.atom_site;
-  if (!atom) throw new TypeError('BCIF has no atom_site category');
+  const parsed = await parseBcif(bytes);
+  const atom = parsed.blocks[0]?.categories.atom_site;
+  if (!atom) throw new BcifParseError('BCIF has no atom_site category', 'MISSING_ATOM_SITE');
   const positions = new Float32Array(atom.rowCount * 3), ids = [], names = [], altloc = [], element = new Uint8Array(atom.rowCount);
   const occupancy = new Float32Array(atom.rowCount), bfactor = new Float32Array(atom.rowCount), radius = new Float32Array(atom.rowCount), atomResidue = new Uint32Array(atom.rowCount);
   const residueRows = new Map(), residues = [], chainRows = new Map(), chains = [];
