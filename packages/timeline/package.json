@@ -1,0 +1,7 @@
+{
+  "name": "@molgpu/timeline", "version": "0.0.0", "type": "module",
+  "exports": { ".": { "types": "./src/index.d.ts", "import": "./src/index.mjs" } },
+  "files": ["src"],
+  "scripts": { "test": "node --test test/*.test.mjs" },
+  "dependencies": { "@use-gpu/core": "0.20.0" }
+}

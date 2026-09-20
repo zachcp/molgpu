@@ -27,10 +27,18 @@ try {
   await page.addInitScript(() => {
     const stats = { createBuffer: 0, writeBuffer: 0, submit: 0, createTexture: 0 };
     window.__gpuStats = stats;
+    window.__storageBuffers = [];
+    window.__storageWrites = [];
     const patch = (proto, name, key) => {
       if (!proto || typeof proto[name] !== 'function') return;
       const orig = proto[name];
-      proto[name] = function (...args) { stats[key]++; return orig.apply(this, args); };
+      proto[name] = function (...args) {
+        stats[key]++;
+        const result = orig.apply(this, args);
+        if (name === 'createBuffer' && (args[0].usage & GPUBufferUsage.STORAGE)) window.__storageBuffers.push(result);
+        if (name === 'writeBuffer' && (args[0].usage & GPUBufferUsage.STORAGE)) window.__storageWrites.push(args[0].label);
+        return result;
+      };
     };
     try { patch(GPUDevice.prototype, 'createBuffer', 'createBuffer'); } catch {}
     try { patch(GPUDevice.prototype, 'createTexture', 'createTexture'); } catch {}
@@ -174,9 +182,90 @@ try {
   const second = await shot();
   assert.deepEqual(second, first, 'scene must settle after orbit, wheel, and resize interaction');
   assert.deepEqual(errors, [], 'scene browser errors');
+
+  // A single sphere has the same silhouette from every orbit angle. With a
+  // world-fixed light, orbiting moves the lit side across that silhouette.
+  await page.goto('http://127.0.0.1:5187/?ex=lighting');
+  await page.waitForFunction(() => window.__example === 'lighting' && document.querySelector('canvas'));
+  await warmup();
+  const litBefore = await shot();
+  await page.mouse.move(380, 300);
+  await page.mouse.down();
+  await page.mouse.move(540, 300, { steps: 12 });
+  await page.mouse.up();
+  await settle(24);
+  const litAfter = await shot();
+  const changedPixels = await page.evaluate(async ([a, b]) => {
+    const decode = async (base64) => {
+      const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+      const bitmap = await createImageBitmap(new Blob([bytes], { type: 'image/png' }));
+      const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(bitmap, 0, 0); bitmap.close();
+      return ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+    };
+    const before = await decode(a), after = await decode(b);
+    let changed = 0;
+    for (let i = 0; i < before.length; i += 4) {
+      if (Math.abs(before[i] - after[i]) + Math.abs(before[i + 1] - after[i + 1]) + Math.abs(before[i + 2] - after[i + 2]) > 30) changed++;
+    }
+    return changed;
+  }, [litBefore.toString('base64'), litAfter.toString('base64')]);
+  assert.ok(changedPixels > 1000, `world-fixed light must move shading across a symmetric sphere (changed ${changedPixels} pixels)`);
+  assert.deepEqual(await page.evaluate(() => window.__gpuErrors), [], 'lighting WebGPU errors');
+  assert.deepEqual(errors, [], 'lighting browser errors');
+
+  // Gate 3: a visible slider scrubs one molecule field and a focus camera over
+  // three named beats. Reversing t must reproduce the same rendered frames.
+  await page.goto('http://127.0.0.1:5187/?ex=timeline');
+  await page.waitForFunction(() => window.__example === 'timeline' && window.__timeline?.pose && document.querySelector('canvas'));
+  await warmup();
+  await settle(24);
+  const timelineStart = await shot();
+  const startPose = await page.evaluate(() => window.__timeline.pose);
+  const storageStart = await page.evaluate(() => ({
+    count: window.__storageBuffers.length,
+    labels: window.__storageBuffers.map((buffer) => buffer.label),
+    writes: window.__storageWrites.length,
+  }));
+  assert.ok(storageStart.labels.includes('molgpu:positions'), 'timeline probe must observe molecular positions');
+  const scrub = async (time) => {
+    await page.locator('#timeline-slider').evaluate((slider, t) => {
+      slider.value = String(t);
+      slider.dispatchEvent(new Event('input', { bubbles: true }));
+    }, time);
+    await settle(24);
+  };
+  await scrub(2);
+  const colourShot = await shot();
+  assert.ok(!colourShot.equals(timelineStart), 'colour beat must change the rendered molecule');
+  assert.deepEqual(await page.evaluate(() => window.__timeline.pose), startPose, 'colour beat keeps camera fixed');
+  assert.match(await page.locator('#timeline-readout').textContent(), /2\.00 s · colour/);
+  await scrub(4);
+  const focusShot = await shot();
+  assert.ok(!focusShot.equals(colourShot), 'focus beat must change the camera view');
+  assert.notDeepEqual(await page.evaluate(() => window.__timeline.pose.target), startPose.target);
+  await scrub(2);
+  assert.ok((await shot()).equals(colourShot), 'backward scrub must reproduce the colour beat');
+  await scrub(0);
+  await settle(24);
+  const timelineReset = await shot();
+  assert.ok(timelineReset.equals(timelineStart), 'backward scrub must reproduce the overview');
+  const storageEnd = await page.evaluate(() => ({
+    count: window.__storageBuffers.length,
+    writes: window.__storageWrites,
+  }));
+  assert.equal(storageEnd.count - storageStart.count, 0, 'time-only scrubbing allocated storage buffers');
+  assert.deepEqual(storageEnd.writes.slice(storageStart.writes).filter((label) =>
+    ['molgpu:positions', 'molgpu:segments', 'molgpu:base-sizes'].includes(label)), [], 'time-only scrubbing rewrote molecular geometry');
+  assert.deepEqual(await page.evaluate(() => window.__gpuErrors), [], 'timeline WebGPU errors');
+  assert.deepEqual(errors, [], 'timeline browser errors');
+
   console.log(JSON.stringify({
     status: 'passed',
     examples: results,
+    lightingOrbitChangedPixels: changedPixels,
+    timelineStorageDelta: storageEnd.count - storageStart.count,
     sceneDrag: { submits: dragDelta.submit, writes: dragDelta.writeBuffer, allocations: dragDelta.createBuffer },
     sceneWheel: { submits: wheelDelta.submit, allocations: wheelDelta.createBuffer },
     sceneResize: { submits: afterResize.submit },

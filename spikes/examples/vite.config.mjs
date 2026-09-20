@@ -13,6 +13,7 @@ export default {
       '@molgpu/select': repo('../../packages/select/src/index.mjs'),
       '@molgpu/fields': repo('../../packages/fields/src/index.mjs'),
       '@molgpu/io': repo('../../packages/io/src/index.mjs'),
+      '@molgpu/timeline': repo('../../packages/timeline/src/index.mjs'),
       '@molgpu/viewer': repo('../../packages/viewer'),
     },
     // Those packages import @use-gpu/* too. Without dedupe they resolve against

@@ -12,16 +12,24 @@ import { render, use, useState } from '@use-gpu/live';
 import { WebGPU, AutoCanvas } from '@use-gpu/webgpu';
 import { OrbitCamera, Pass, AmbientLight, DirectionalLight, useDeviceContext } from '@use-gpu/workbench';
 import { attribute, categorical, colormap, curve } from '@molgpu/fields';
+import { createTimeline, createCurve } from '@molgpu/timeline';
 import { ColumnSource } from '../src/internal/column-source.mjs';
 import { WorldSpacePointLayer } from '../src/world-space-points.mjs';
 import { useField } from '../src/use-field.mjs';
+import { TimelineProvider, useTimelineSample } from '../src/timeline-context.mjs';
 
-const probe = window.__probe = { storage: 0, uniform: 0, errors: [], mounted: false };
+const probe = window.__probe = { storage: 0, storageBuffers: [], storageWrites: [], uniform: 0, errors: [], mounted: false };
 const make = GPUDevice.prototype.createBuffer;
 GPUDevice.prototype.createBuffer = function (desc) {
-  if (desc.usage & GPUBufferUsage.STORAGE) probe.storage++;
+  const buffer = make.call(this, desc);
+  if (desc.usage & GPUBufferUsage.STORAGE) { probe.storage++; probe.storageBuffers.push(buffer); }
   if (desc.usage & GPUBufferUsage.UNIFORM) probe.uniform++;
-  return make.call(this, desc);
+  return buffer;
+};
+const write = GPUQueue.prototype.writeBuffer;
+GPUQueue.prototype.writeBuffer = function (buffer, ...args) {
+  if (buffer.usage & GPUBufferUsage.STORAGE) probe.storageWrites.push(buffer.label);
+  return write.call(this, buffer, ...args);
 };
 const request = GPUAdapter.prototype.requestDevice;
 GPUAdapter.prototype.requestDevice = async function (...args) {
@@ -53,9 +61,35 @@ const PALETTES = [
   colormap(curve([[0, 0], [1, 1]]), [[0, [0.1, 0.2, 0.9, 1]], [1, [0.95, 0.3, 0.2, 1]]]),
 ];
 
-const Points = ({ positions, elementSource, scale, palette, time }) => {
-  const colors = useField(PALETTES[palette], { 'attr:element': elementSource, 'curve:t': time }, { domain: 'atom' });
+const beats = createTimeline([{ name: 'start', time: 0 }, { name: 'reveal', time: 1 }, { name: 'orbit', time: 2 }]);
+const cameraRadius = createCurve([
+  { time: beats.time('start'), value: 34, ease: 'hold' },
+  { time: beats.time('reveal'), value: 34 },
+  { time: beats.time('orbit'), value: 20 },
+]);
+const cameraBearing = createCurve([
+  { time: beats.time('start'), value: 0.6, ease: 'hold' },
+  { time: beats.time('reveal'), value: 0.6 },
+  { time: beats.time('orbit'), value: 1.1 },
+]);
+
+const Points = ({ positions, elementSource, scale, palette }) => {
+  const colors = useField(PALETTES[palette], { 'attr:element': elementSource }, { domain: 'atom' });
   return use(WorldSpacePointLayer, { positions, colors, radii, count: N, scale, shape: 'circle', shaded: true });
+};
+
+const Scene = ({ state }) => {
+  const radius = useTimelineSample(cameraRadius);
+  const bearing = useTimelineSample(cameraBearing);
+  probe.camera = { radius, bearing };
+  return use(ColumnSource, { data: positions, format: 'vec3<f32>', label: 'positions', render: (pos) =>
+    use(ColumnSource, { data: elements, format: 'f32', label: 'elements', render: (elem) =>
+      use(OrbitCamera, { radius, bearing, pitch: 0.35, target: [0, 0, 0], children:
+        use(Pass, { lights: true, children: [
+          use(AmbientLight, { color: [1, 1, 1], intensity: 0.3 }),
+          use(DirectionalLight, { position: [1, 2, 1.5], color: [1, 1, 1], intensity: 1 }),
+          use(Points, { positions: pos, elementSource: elem, scale: state.scale, palette: state.palette }),
+        ] }) }) }) });
 };
 
 const App = () => {
@@ -65,14 +99,7 @@ const App = () => {
   probe.setPalette = (palette) => setState((s) => ({ ...s, palette }));
   probe.setTime = (time) => setState((s) => ({ ...s, time }));
   probe.mounted = true;
-  return use(ColumnSource, { data: positions, format: 'vec3<f32>', render: (pos) =>
-    use(ColumnSource, { data: elements, format: 'f32', render: (elem) =>
-      use(OrbitCamera, { radius: 34, bearing: 0.6, pitch: 0.35, target: [0, 0, 0], children:
-        use(Pass, { lights: true, children: [
-          use(AmbientLight, { color: [1, 1, 1], intensity: 0.3 }),
-          use(DirectionalLight, { position: [1, 2, 1.5], color: [1, 1, 1], intensity: 1 }),
-          use(Points, { positions: pos, elementSource: elem, scale: state.scale, palette: state.palette, time: state.time }),
-        ] }) }) }) });
+  return use(TimelineProvider, { time: state.time, children: use(Scene, { state }) });
 };
 
 render(use(WebGPU, {

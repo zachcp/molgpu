@@ -13,11 +13,12 @@ const server = await createServer({
     '@molgpu/io': `${root}packages/io/src/index.mjs`,
     '@molgpu/table': `${root}packages/table/src/index.mjs`,
     '@molgpu/fields': `${root}packages/fields/src/index.mjs`,
+    '@molgpu/timeline': `${root}packages/timeline/src/index.mjs`,
   } },
   server: { host: '127.0.0.1', port: 5193, strictPort: true },
   optimizeDeps: {
     entries: ['packages/viewer/test/size-field.html'],
-    exclude: ['@molgpu/fields', '@molgpu/table', '@molgpu/io', '@molgpu/viewer'],
+    exclude: ['@molgpu/fields', '@molgpu/table', '@molgpu/io', '@molgpu/viewer', '@molgpu/timeline'],
     include: ['@use-gpu/live', '@use-gpu/workbench', '@use-gpu/webgpu', '@use-gpu/core', '@use-gpu/shader', '@use-gpu/shader/wgsl', '@use-gpu/wgsl', 'lodash'],
   },
 });
@@ -34,11 +35,22 @@ try {
 
   const settle = () => page.evaluate(async () => { for (let i = 0; i < 12; i++) await new Promise(requestAnimationFrame); });
   const shot = () => page.locator('canvas').screenshot();
-  const snap = () => page.evaluate(() => ({ ...window.__probe, setScale: undefined }));
+  const snap = () => page.evaluate(() => ({
+    storage: window.__probe.storage,
+    storageLabels: window.__probe.storageBuffers.map((buffer) => buffer.label),
+    storageWrites: [...window.__probe.storageWrites],
+    uniform: window.__probe.uniform,
+    camera: window.__probe.camera,
+    errors: [...window.__probe.errors],
+  }));
+  const geometryWrites = (after, before) => after.storageWrites.slice(before.storageWrites.length)
+    .filter((label) => ['molgpu:positions', 'molgpu:elements', 'molgpu:base-sizes'].includes(label));
 
   await settle(); await settle();          // reach a resource fixed point
   const before = await snap();
   const beforeShot = await shot();
+  for (const label of ['molgpu:positions', 'molgpu:elements', 'molgpu:base-sizes'])
+    assert.ok(before.storageLabels.includes(label), `probe missed ${label} buffer`);
 
   // A style-only scale change. Larger spheres must appear, but no per-atom
   // (STORAGE) column may be reallocated — only the scale uniform is written.
@@ -74,11 +86,40 @@ try {
   const timeDelta = afterTime.storage - timeBase.storage;
   assert.ok(!timeShot.equals(timeBaseShot), 'time change must change the rendered image');
   assert.equal(timeDelta, 0, `time change reallocated ${timeDelta} storage buffers (expected 0)`);
+  assert.deepEqual(geometryWrites(afterTime, timeBase), [], 'time change rewrote geometry');
+  assert.deepEqual(afterTime.camera, { radius: 34, bearing: 0.6 }, 'style beat keeps camera fixed');
+
+  // The next beat moves the camera with the same controlled t. Rewind through
+  // the style beat and back to zero; no per-atom data is allocated on either leg.
+  await page.evaluate(() => window.__probe.setTime(2));
+  await settle(); await settle();
+  const orbit = await snap();
+  const orbitShot = await shot();
+  assert.deepEqual(orbit.camera, { radius: 20, bearing: 1.1 });
+  assert.ok(!orbitShot.equals(timeShot), 'camera curve must change the rendered image');
+  assert.equal(orbit.storage - afterTime.storage, 0, 'camera scrub reallocated storage');
+  assert.deepEqual(geometryWrites(orbit, afterTime), [], 'camera scrub rewrote geometry');
+
+  await page.evaluate(() => window.__probe.setTime(0.85));
+  await settle(); await settle();
+  const rewind = await snap();
+  const rewindShot = await shot();
+  assert.deepEqual(rewind.camera, { radius: 34, bearing: 0.6 });
+  assert.ok(rewindShot.equals(timeShot), 'reverse scrub must reproduce the prior beat image');
+  assert.equal(rewind.storage - orbit.storage, 0, 'reverse scrub reallocated storage');
+  assert.deepEqual(geometryWrites(rewind, orbit), [], 'reverse scrub rewrote geometry');
+
+  await page.evaluate(() => window.__probe.setTime(0));
+  await settle(); await settle();
+  const reset = await snap();
+  assert.ok((await shot()).equals(timeBaseShot), 'scrub to zero must reproduce the start image');
+  assert.equal(reset.storage - rewind.storage, 0, 'reset scrub reallocated storage');
+  assert.deepEqual(geometryWrites(reset, rewind), [], 'reset scrub rewrote geometry');
 
   assert.deepEqual(errors, [], 'page errors');
-  assert.deepEqual(afterTime.errors, [], 'uncaptured WebGPU errors');
+  assert.deepEqual(reset.errors, [], 'uncaptured WebGPU errors');
 
-  console.log(JSON.stringify({ status: 'passed', storageBefore: before.storage, scaleStorageDelta: storageDelta, paletteStorageDelta: paletteDelta, timeStorageDelta: timeDelta, uniformBefore: before.uniform, browser: browser.version() }));
+  console.log(JSON.stringify({ status: 'passed', storageBefore: before.storage, scaleStorageDelta: storageDelta, paletteStorageDelta: paletteDelta, timeStorageDelta: timeDelta, orbitStorageDelta: orbit.storage - afterTime.storage, rewindStorageDelta: rewind.storage - orbit.storage, uniformBefore: before.uniform, browser: browser.version() }));
 } finally {
   await browser?.close();
   await server.close();

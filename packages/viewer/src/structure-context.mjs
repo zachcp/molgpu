@@ -14,8 +14,8 @@ const AtomSources = ({ resource, children }) => {
   // An empty structure still supplies its CPU resource, but has no GPU source.
   // Both columns are allocated exactly once here, so sibling representations
   // consume identical sources instead of uploading positions independently.
-  return use(ColumnSource, { data: data.positions, format: 'vec3<f32>', revision: resource.positionsRevision,
-    render: positions => positions && radii ? use(ColumnSource, { data: radii, format: 'f32', revision: resource.topologyRevision,
+  return use(ColumnSource, { data: data.positions, format: 'vec3<f32>', revision: resource.positionsRevision, label: 'positions',
+    render: positions => positions && radii ? use(ColumnSource, { data: radii, format: 'f32', revision: resource.topologyRevision, label: 'radii',
       render: radius => provideSources(resource, Object.freeze({ positions, radii: radius }), children),
     }) : provideSources(resource, null, children),
   });

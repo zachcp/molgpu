@@ -1,7 +1,8 @@
-import { useMemo } from '@use-gpu/live';
+import { useContext, useMemo } from '@use-gpu/live';
 import { useShader } from '@use-gpu/workbench';
 import { loadModuleWithCache } from '@use-gpu/shader/wgsl';
 import { compile } from '@molgpu/fields';
+import { TimelineContext } from './timeline-context.mjs';
 
 /**
  * Lower a numeric `@molgpu/fields` Field to a use.gpu shader source, composing
@@ -15,10 +16,11 @@ import { compile } from '@molgpu/fields';
  * `@molgpu/fields` deliberately leaves out (its API exposes no ShaderSource).
  */
 export const useField = (field, inputs, { domain } = {}) => {
+  const time = useContext(TimelineContext);
   const compiled = useMemo(() => compile(field, { target: 'link', domain }), [field, domain]);
   const module = useMemo(() => loadModuleWithCache(compiled.wgsl, 'molgpu-field', 'auto'), [compiled.wgsl]);
   const values = compiled.bindings.map((b) => {
-    const value = inputs?.[b.id];
+    const value = inputs?.[b.id] ?? (b.id === 'curve:t' ? time ?? undefined : undefined);
     if (value === undefined) throw new Error(`useField: no input provided for '${b.id}'`);
     return value;
   });

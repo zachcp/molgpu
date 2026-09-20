@@ -9,6 +9,8 @@ import { mount } from './harness.mjs';
 const EXAMPLES = {
   scene: () => import('./ex/scene.mjs'),
   select: () => import('./ex/select.mjs'),
+  lighting: () => import('./ex/lighting.mjs'),
+  timeline: () => import('./ex/timeline.mjs'),
 };
 
 const which = new URLSearchParams(location.search).get('ex') ?? 'scene';
@@ -20,4 +22,4 @@ for (const a of document.querySelectorAll('nav a')) {
   if (a.dataset.ex === which) a.setAttribute('aria-current', 'page');
 }
 window.__example = EXAMPLES[which] ? which : 'scene';
-mount(mod.body(), mod.camera ?? {});
+mount(mod.body(), { ...mod.camera, cameraComponent: mod.cameraComponent });

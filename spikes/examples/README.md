@@ -1,5 +1,21 @@
 # use.gpu layer examples
 
+The current gallery has four component examples: `?ex=scene` composes the
+crambin figure, `?ex=select` shows selections and fields, `?ex=lighting`
+isolates one sphere under a fixed world-space directional light, and
+`?ex=timeline` shows the Gate 3 story. Its slider scrubs three named beats in
+seconds: overview, colour, and focus on the first residue. The colour field and
+camera share the same controlled time value. The browser test moves the slider
+forward and backward and checks that molecular geometry is not reuploaded.
+
+Drag the lighting example: its silhouette stays centered while the bright side moves
+across it. The light direction is defined once in `harness.mjs`, independently
+of the orbit camera's bearing and pitch. `npm run test:examples` verifies the
+shading change in Chrome WebGPU.
+
+The historical layer notes below document earlier spike examples, some of
+which are no longer linked from the current gallery.
+
 Minimal, verified examples of each use.gpu layer we expect `@molgpu/viewer` to
 need. The point is learning the layer API, not building product — every file is
 short enough to read in one screen.

@@ -43,7 +43,8 @@ export const WorldSpacePointLayer = ({ positions, colors, radii, count = radii.l
   );
   const scaleRef = useShaderRef(scale);
 
-  return use(RawData, { data: base, format: 'f32', render: (baseSource) =>
-    use(ScaledPoints, { baseSource, scaleRef, positions, colors, count, ...props })
-  });
+  return use(RawData, { data: base, format: 'f32', render: (baseSource) => {
+    baseSource.buffer.label = 'molgpu:base-sizes';
+    return use(ScaledPoints, { baseSource, scaleRef, positions, colors, count, ...props });
+  } });
 };

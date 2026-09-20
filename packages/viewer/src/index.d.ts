@@ -4,7 +4,8 @@ import type { ShaderSource } from '@use-gpu/shader';
 import type { PointLayerProps } from '@use-gpu/workbench';
 import type { StructureData } from '@molgpu/table';
 import type { Field } from '@molgpu/fields';
-import type { Selection } from '@molgpu/select';
+import type { Selection, SelectionQuery } from '@molgpu/select';
+import type { Curve, CurveValue } from '@molgpu/timeline';
 
 /** Ångström-space axis-aligned extent, or null for an empty structure. */
 export interface StructureBounds {
@@ -67,6 +68,49 @@ export function useStructure(): StructureContextValue;
 /** A compositional boundary only: it never owns a canvas or GPU device. */
 export const Molecule: LC<{ children?: LiveElement }>;
 
+/** Controlled global time in seconds. The caller sets time when scrubbing. */
+export const TimelineContext: LiveContext<number | null>;
+export const TimelineProvider: LC<{ time: number; children?: LiveElement }>;
+export function useTimelineTime(): number;
+export function useTimelineSample<T extends CurveValue>(curve: Curve<T>): T;
+
+export interface CameraPose {
+  readonly target: readonly number[];
+  readonly radius: number;
+  readonly bearing: number;
+  readonly pitch: number;
+}
+export interface FocusOptions {
+  /** Empty query falls back to the full structure by default. */
+  readonly empty?: 'structure' | 'null' | 'error';
+  readonly fov?: number;
+  readonly aspect?: number;
+  readonly padding?: number;
+  /** Scale of displayed atom radii, e.g. Spacefill.scale. */
+  readonly atomRadiusScale?: number;
+}
+export interface FocusResult {
+  readonly target: readonly number[];
+  readonly radius: number;
+  readonly bounds: StructureBounds | null;
+}
+/** Resolves a reusable query against an explicit current structure resource. */
+export function focusSelection(resource: StructureResource, query: SelectionQuery, options?: FocusOptions): FocusResult | null;
+export interface CameraFrame extends CameraPose {
+  readonly time: number;
+  readonly ease?: 'linear' | 'cosine' | 'hold' | 'bezier';
+  readonly bezier?: readonly [number, number, number, number];
+}
+export type FocusCameraFrame = Omit<CameraFrame, 'target' | 'radius'> & {
+  readonly focus: SelectionQuery;
+  readonly target?: never;
+  readonly radius?: never;
+};
+export type CameraCurve = readonly (CameraFrame | FocusCameraFrame)[];
+export function createCameraCurve(frames: CameraCurve): CameraCurve;
+export function sampleCamera(curve: CameraCurve, time: number, resource: StructureResource, options?: FocusOptions): CameraPose;
+export function useCameraCurve(curve: CameraCurve, resource: StructureResource, options?: FocusOptions): CameraPose;
+
 /** Resolves to StructureData, or to null when `cancelled()` becomes true. */
 export type StructureLoader = (
   src: string,
@@ -112,8 +156,9 @@ export const Spacefill: LC<{
   color?: VectorLike | Field;
 } & Omit<PointLayerProps, 'positions' | 'sizes' | 'count' | 'color'>>;
 
-/** Draw bonds as world-space sticks, optionally restricted to a selection and
- * coloured by a field. Connectivity is the shared bond topology. */
+/** Draw bonds as world-space sticks, optionally restricted to a selection.
+ * By default each bond has two element-coloured halves. An explicit color
+ * preserves a single stroke with the supplied flat color or field. */
 export const Bonds: LC<{
   /** Stick width; defaults to 0.3. */
   width?: number;
@@ -154,10 +199,12 @@ export const WorldSpacePointLayer: LC<{
  * existing GPU inputs. `inputs` maps each compiled binding id to a StorageSource
  * (buffer input) or a number/ShaderRef (uniform), so a per-row column is never
  * materialised and a uniform change is a binding update, not a re-upload.
+ * The `curve:t` binding uses the nearest TimelineProvider unless explicitly
+ * supplied in `inputs`.
  */
 export function useField(
   field: Field,
-  inputs: Record<string, ShaderSource | number | { current: number }>,
+  inputs?: Record<string, ShaderSource | number | { current: number }>,
   options?: { domain?: 'atom' | 'residue' },
 ): ShaderSource;
 

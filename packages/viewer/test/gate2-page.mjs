@@ -6,14 +6,29 @@ import { render, use, useState } from '@use-gpu/live';
 import { WebGPU, AutoCanvas } from '@use-gpu/webgpu';
 import { OrbitCamera, Pass, AmbientLight, DirectionalLight, useDeviceContext } from '@use-gpu/workbench';
 import { createStructure } from '@molgpu/table';
+import { where, resolve } from '@molgpu/select';
 import { attribute, categorical } from '@molgpu/fields';
-import { Structure, Spacefill, Bonds, BallAndStick } from '../src/index.mjs';
+import { Structure, Spacefill, Bonds, BallAndStick, TimelineProvider, createCameraCurve, useCameraCurve, createStructureResource } from '../src/index.mjs';
 
-const probe = window.__probe = { storage: 0, errors: [], mounted: false };
+const probe = window.__probe = { storage: [], storageBuffers: [], storageWrites: [], errors: [], mounted: false };
+const storageInfo = new WeakMap();
 const make = GPUDevice.prototype.createBuffer;
 GPUDevice.prototype.createBuffer = function (desc) {
-  if (desc.usage & GPUBufferUsage.STORAGE) probe.storage++;
-  return make.call(this, desc);
+  const buffer = make.call(this, desc);
+  if (desc.usage & GPUBufferUsage.STORAGE) {
+    const info = { id: probe.storage.length, capacity: desc.size, label: desc.label ?? '' };
+    probe.storage.push(info);
+    probe.storageBuffers.push(buffer);
+    storageInfo.set(buffer, info);
+  }
+  return buffer;
+};
+const write = GPUQueue.prototype.writeBuffer;
+GPUQueue.prototype.writeBuffer = function (buffer, offset, data, dataOffset, size) {
+  if (buffer.usage & GPUBufferUsage.STORAGE) {
+    probe.storageWrites.push({ ...storageInfo.get(buffer), label: buffer.label, offset, bytes: size ?? data.byteLength });
+  }
+  return write.call(this, buffer, offset, data, dataOffset, size);
 };
 const request = GPUAdapter.prototype.requestDevice;
 GPUAdapter.prototype.requestDevice = async function (...args) {
@@ -37,24 +52,43 @@ const data = createStructure({
     instances: { count: 1, chain: Uint32Array.of(0), operatorId: ['1'], transform: Float64Array.of(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1) },
   },
 });
+const selected = resolve(where('atom', 'first three', (_data, i) => i < 3), data);
+const oxygen = where('atom', 'oxygen', (table, i) => table.topology.atoms.element[i] === 8);
+const focusResource = createStructureResource(data);
+const cameraCurve = createCameraCurve([
+  { time: 0, target: [0, 0, 0], radius: 14, bearing: 0.6, pitch: 0.35 },
+  { time: 2, focus: oxygen, bearing: 1.1, pitch: 0.35 },
+]);
 
 const PALETTES = [
   categorical(attribute('element'), { 6: [0.8, 0.8, 0.85, 1], 7: [0.35, 0.5, 0.92, 1], 8: [0.9, 0.36, 0.33, 1], 16: [0.95, 0.8, 0.3, 1] }, [0.5, 0.5, 0.5, 1]),
-  categorical(attribute('element'), { 6: [0.2, 0.7, 0.4, 1], 7: [0.9, 0.2, 0.6, 1], 8: [0.2, 0.7, 0.4, 1], 16: [0.9, 0.2, 0.6, 1] }, [0.5, 0.5, 0.5, 1]),
+  categorical(attribute('bfactor'), { 0: [0.2, 0.7, 0.4, 1] }, [0.9, 0.2, 0.6, 1]),
 ];
 
-const App = () => {
-  useDeviceContext();
-  const [palette, setPalette] = useState(0);
-  probe.setPalette = (p) => setPalette(p);
-  probe.mounted = true;
-  return use(OrbitCamera, { radius: 14, bearing: 0.6, pitch: 0.35, target: [0, 0, 0], children:
+const CameraScene = ({ palette, mode }) => {
+  const camera = useCameraCurve(cameraCurve, focusResource);
+  probe.camera = camera;
+  return use(OrbitCamera, { ...camera, children:
     use(Pass, { lights: true, children: [
       use(AmbientLight, { color: [1, 1, 1], intensity: 0.3 }),
       use(DirectionalLight, { position: [1, 2, 1.5], color: [1, 1, 1], intensity: 1 }),
       // three consumers of one colour field: Spacefill, Bonds, and BallAndStick.
-      use(Structure, { data, children: use(BallAndStick, { ball: 0.35, stick: 0.3, color: PALETTES[palette] }) }),
+      use(Structure, { data, children: mode === 'bonds'
+        ? use(Bonds, { select: selected, width: 0.8 })
+        : use(BallAndStick, { select: selected, ball: 0.35, stick: 0.3, color: PALETTES[palette] }) }),
     ] }) });
+};
+
+const App = () => {
+  useDeviceContext();
+  const [palette, setPalette] = useState(0);
+  const [mode, setMode] = useState('gate2');
+  const [time, setTime] = useState(0);
+  probe.setPalette = setPalette;
+  probe.setMode = setMode;
+  probe.setTime = setTime;
+  probe.mounted = true;
+  return use(TimelineProvider, { time, children: use(CameraScene, { palette, mode }) });
 };
 
 render(use(WebGPU, {

@@ -4,12 +4,11 @@ import { useStructure } from './structure-context.mjs';
 import { useField } from './use-field.mjs';
 import { isField, fieldAttrNames, withColumns } from './internal/representation.mjs';
 
-/** Copy the columns a selection touches into fresh packed arrays. */
-const gather = (data, indices, attrNames) => {
+/** Geometry depends on structure and selection, never on the colour field. */
+const gather = (data, indices) => {
   const n = indices ? indices.length : data.topology.atoms.count;
   const positions = new Float32Array(n * 3);
   const radii = new Float32Array(n);
-  const attrs = Object.fromEntries(attrNames.map((name) => [name, new Float32Array(n)]));
   const R = data.topology.atoms.radius;
   for (let k = 0; k < n; k++) {
     const i = indices ? indices[k] : k;
@@ -17,10 +16,15 @@ const gather = (data, indices, attrNames) => {
     positions[k * 3 + 1] = data.positions[i * 3 + 1];
     positions[k * 3 + 2] = data.positions[i * 3 + 2];
     radii[k] = R[i];
-    for (const name of attrNames) attrs[name][k] = data.topology.atoms[name][i];
   }
-  return { n, positions, radii, attrs };
+  return { n, positions, radii };
 };
+
+const gatherAttributes = (data, indices, names) => Object.fromEntries(names.map((name) => {
+  const column = data.topology.atoms[name];
+  const values = indices ? Float32Array.from(indices, (i) => column[i]) : Float32Array.from(column);
+  return [name, values];
+}));
 
 // A field always colours here, so useField is called unconditionally.
 const FieldPoints = ({ positions, sources, radii, count, field, scale, ...props }) => {
@@ -30,10 +34,11 @@ const FieldPoints = ({ positions, sources, radii, count, field, scale, ...props 
 
 // Owns the gather (memoised by selection identity) and column uploads.
 const GatheredSpacefill = ({ data, indices, selectKey, attrNames, field, sharedPositions, color, scale, ...props }) => {
-  const gathered = useMemo(() => gather(data, indices, attrNames), [data, selectKey, attrNames]);
+  const gathered = useMemo(() => gather(data, indices), [data, selectKey]);
+  const attrs = useMemo(() => gatherAttributes(data, indices, attrNames), [data, selectKey, attrNames]);
   const specs = [];
   if (indices) specs.push({ key: 'positions', data: gathered.positions, format: 'vec3<f32>' });
-  for (const name of attrNames) specs.push({ key: `attr:${name}`, data: gathered.attrs[name], format: 'f32' });
+  for (const name of attrNames) specs.push({ key: `attr:${name}`, data: attrs[name], format: 'f32' });
   return withColumns(specs, (map) => {
     const positions = indices ? map.positions : sharedPositions;
     if (!positions) return null;

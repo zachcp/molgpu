@@ -13,7 +13,7 @@ export const fieldAttrNames = (field) => !field ? [] :
 /** Fold a list of columns into nested owned sources, then render with the map. */
 export const withColumns = (specs, render) => {
   const step = (i, acc) => i === specs.length ? render(acc)
-    : use(ColumnSource, { data: specs[i].data, format: specs[i].format,
+    : use(ColumnSource, { data: specs[i].data, format: specs[i].format, label: specs[i].key,
         render: (source) => step(i + 1, { ...acc, [specs[i].key]: source }) });
   return step(0, {});
 };

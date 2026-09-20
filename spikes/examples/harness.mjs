@@ -5,6 +5,9 @@ import { WebGPU, AutoCanvas } from '@use-gpu/webgpu';
 import { OrbitCamera, Pass, AmbientLight, DirectionalLight, useMouseState, useWheelState } from '@use-gpu/workbench';
 
 const clamp = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v);
+// A scene/world-space direction. OrbitControls changes only the view; the key
+// light never derives from bearing or pitch, so its direction stays fixed.
+const WORLD_KEY_DIRECTION = Object.freeze([-1, -2, -1.5]);
 
 /**
  * Drag-to-rotate, wheel-to-zoom wrapper around `OrbitCamera`. `AutoCanvas`
@@ -41,7 +44,7 @@ const OrbitControls = ({
   return use(OrbitCamera, { bearing, pitch, radius, target, children });
 };
 
-export function mount(body, { radius = 40, target = [0, 0, 0], lights = true, bearing = 0.6, pitch = 0.35 } = {}) {
+export function mount(body, { radius = 40, target = [0, 0, 0], lights = true, bearing = 0.6, pitch = 0.35, cameraComponent } = {}) {
   render(use(WebGPU, {
     fallback: (e) => {
       document.getElementById('err').textContent = 'WebGPU: ' + (e?.message ?? e);
@@ -49,12 +52,12 @@ export function mount(body, { radius = 40, target = [0, 0, 0], lights = true, be
     },
     children: use(AutoCanvas, {
       selector: '#stage', samples: 4, backgroundColor: [0.05, 0.06, 0.075, 1],
-      children: use(OrbitControls, {
+      children: use(cameraComponent ?? OrbitControls, {
         bearing, pitch, radius, target,
         // `lights: true` is required on Pass, or light components warn and do nothing.
         children: use(Pass, { lights, children: [
           lights && use(AmbientLight, { color: [1, 1, 1], intensity: 0.3 }),
-          lights && use(DirectionalLight, { position: [1, 2, 1.5], color: [1, 1, 1], intensity: 1 }),
+          lights && use(DirectionalLight, { direction: WORLD_KEY_DIRECTION, color: [1, 1, 1], intensity: 1 }),
           body,
         ].filter(Boolean) }),
       }),
