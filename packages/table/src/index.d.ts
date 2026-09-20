@@ -59,3 +59,6 @@ export function withPositions(data: StructureData, positions: Float32Array): Str
 export function activeAtoms(data: StructureData, policy?: ViewPolicy): Uint32Array;
 export function residueKey(data: StructureData, row: number): string;
 export function coordinateBounds(data: StructureData, indices?: Uint32Array): null | { min: number[]; max: number[]; center: number[] };
+export interface BondPolicy { readonly padding?: number; readonly interChain?: boolean; }
+export function bondTopology(data: StructureData, policy?: BondPolicy): Bonds;
+export function selectBonds(data: StructureData, atomIndices: Uint32Array, options?: { readonly mode?: 'both' | 'either'; readonly policy?: BondPolicy }): Uint32Array;

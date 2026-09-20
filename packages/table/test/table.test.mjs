@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createStructure, validateStructure, withPositions, activeAtoms, residueKey, coordinateBounds } from '../src/index.mjs';
+import { createStructure, validateStructure, withPositions, activeAtoms, residueKey, coordinateBounds, bondTopology, selectBonds } from '../src/index.mjs';
 import { fixture } from './fixture.mjs';
 
 test('owns packed columns without discarding chemical or instance identity', () => {
@@ -69,4 +69,22 @@ test('validates coordinate update length and selected bounds indices', () => {
   assert.throws(() => withPositions(data, new Float32Array(18).fill(Infinity)), /finite/);
   assert.throws(() => coordinateBounds(data, Uint32Array.of(99)), /atom out of range/);
   assert.throws(() => residueKey(data, -1), /row out of range/);
+});
+
+test('shares explicit topology and makes bond-selection endpoint policy explicit', () => {
+  const data = createStructure(fixture());
+  assert.equal(bondTopology(data), data.topology.bonds);
+  assert.deepEqual([...selectBonds(data, Uint32Array.of(0), { mode: 'both' })], []);
+  assert.deepEqual([...selectBonds(data, Uint32Array.of(0), { mode: 'either' })], [0]);
+  assert.deepEqual([...selectBonds(data, Uint32Array.of(0, 2), { mode: 'both' })], [0]);
+});
+
+test('infers cached element-aware topology without cross-model or incompatible-altloc bonds', () => {
+  const input = fixture();
+  input.topology.bonds = { count: 0, a: new Uint32Array(), b: new Uint32Array(), order: new Uint8Array(), source: [] };
+  input.positions = Float32Array.from([0,0,0, 1.4,0,0, 10,0,0, 20,0,0, 40,0,0, 40,0,0]);
+  const data = createStructure(input), first = bondTopology(data);
+  assert.equal(first, bondTopology(data), 'one topology build per structure revision/policy');
+  assert.deepEqual([...first.a], [0]); assert.deepEqual([...first.b], [1]);
+  assert.deepEqual(first.source, ['inferred']);
 });

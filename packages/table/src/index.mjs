@@ -1,6 +1,7 @@
 // Pure molecular values. Arrays are packed CPU columns and immutable by contract.
 // No renderer, parser, or global platform API is required by this module.
 const revisions = new WeakMap();
+const inferredBondCache = new WeakMap();
 const fail = (path, message) => { throw new TypeError(`${path}: ${message}`); };
 const finite = (value, path) => { if (!Number.isFinite(value)) fail(path, 'expected finite number'); };
 const count = (n, path) => { if (!Number.isSafeInteger(n) || n < 0) fail(path, 'expected nonnegative safe integer'); };
@@ -157,4 +158,61 @@ export function coordinateBounds(data, indices) {
     }
   }
   return { min, max, center: min.map((v, i) => (v + max[i]) / 2) };
+}
+
+const COVALENT_RADIUS = { 1: .31, 6: .76, 7: .71, 8: .66, 15: 1.07, 16: 1.05 };
+
+const compatibleBondRows = (data, a, b, interChain) => {
+  const { atoms, residues, chains } = data.topology;
+  const ra = atoms.residue[a], rb = atoms.residue[b];
+  if (chains.model[residues.chain[ra]] !== chains.model[residues.chain[rb]]) return false;
+  if (!interChain && residues.chain[ra] !== residues.chain[rb]) return false;
+  return ra !== rb || !atoms.altloc[a] || !atoms.altloc[b] || atoms.altloc[a] === atoms.altloc[b];
+};
+
+/** Shared topology for one structure revision. Explicit connectivity wins. */
+export function bondTopology(data, { padding = .45, interChain = true } = {}) {
+  if (!revisions.has(data.identity)) fail('identity', 'expected a structure created by this module');
+  finite(padding, 'policy.padding');
+  if (padding < 0 || padding > 1) fail('policy.padding', 'expected value in [0, 1]');
+  if (typeof interChain !== 'boolean') fail('policy.interChain', 'expected boolean');
+  if (data.topology.bonds.count) return data.topology.bonds;
+  const key = `${data.revision.positions}:${padding}:${interChain}`;
+  let byPolicy = inferredBondCache.get(data);
+  if (!byPolicy) inferredBondCache.set(data, byPolicy = new Map());
+  const cached = byPolicy.get(key);
+  if (cached) return cached;
+  const { atoms } = data.topology, cellSize = 3, cells = new Map(), a = [], b = [];
+  const cellKey = (x, y, z) => `${x},${y},${z}`;
+  for (let i = 0; i < atoms.count; i++) {
+    const radius = COVALENT_RADIUS[atoms.element[i]];
+    if (!radius) continue;
+    const x = data.positions[i * 3], y = data.positions[i * 3 + 1], z = data.positions[i * 3 + 2];
+    const cx = Math.floor(x / cellSize), cy = Math.floor(y / cellSize), cz = Math.floor(z / cellSize);
+    for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) for (let dz = -1; dz <= 1; dz++) {
+      for (const j of cells.get(cellKey(cx + dx, cy + dy, cz + dz)) ?? []) {
+        if (!compatibleBondRows(data, i, j, interChain)) continue;
+        const cutoff = radius + COVALENT_RADIUS[atoms.element[j]] + padding;
+        const px = x - data.positions[j * 3], py = y - data.positions[j * 3 + 1], pz = z - data.positions[j * 3 + 2];
+        if (px * px + py * py + pz * pz <= cutoff * cutoff) { a.push(j); b.push(i); }
+      }
+    }
+    const cell = cellKey(cx, cy, cz), rows = cells.get(cell) ?? []; rows.push(i); cells.set(cell, rows);
+  }
+  const result = Object.freeze({ count: a.length, a: Uint32Array.from(a), b: Uint32Array.from(b),
+    order: new Uint8Array(a.length).fill(1), source: Object.freeze(new Array(a.length).fill('inferred')) });
+  byPolicy.set(key, result);
+  return result;
+}
+
+/** Resolve bond rows whose endpoints are both selected, or either selected. */
+export function selectBonds(data, atomIndices, { mode = 'both', policy } = {}) {
+  if (!(atomIndices instanceof Uint32Array)) fail('atomIndices', 'expected Uint32Array');
+  if (!['both', 'either'].includes(mode)) fail('mode', 'expected both or either');
+  const selected = new Set(atomIndices), bonds = bondTopology(data, policy), rows = [];
+  for (let i = 0; i < bonds.count; i++) {
+    const hitA = selected.has(bonds.a[i]), hitB = selected.has(bonds.b[i]);
+    if (mode === 'both' ? hitA && hitB : hitA || hitB) rows.push(i);
+  }
+  return Uint32Array.from(rows);
 }
