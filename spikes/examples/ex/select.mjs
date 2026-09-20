@@ -1,33 +1,35 @@
-// @molgpu/select on real data. Every button resolves a SelectionQuery against
-// the SAME crambin StructureData and highlights the resolved atoms over a dim
-// copy of the whole protein. The title shows the selection's domain, atom count,
-// and library-owned id — note the id changes with membership but never with the
-// caller's label, and that residue/set/within queries all land back on atoms for
-// rendering through the documented conversions.
+// Gate 2, end to end: one @molgpu/select selection and one @molgpu/fields colour
+// field drive a real <Spacefill> through <Structure>. The dim context is the
+// whole structure in a flat colour; the highlighted subset is the resolved
+// selection coloured by `byElement`, composed shader-side (no per-atom colour
+// upload). Every button reselects; the title shows the selection's label, atom
+// count, and library id.
 //
-//   all     every atom (all('atom'))
+//   all     every atom
 //   sulfur  element(16)
-//   cys     comp(['CYS']) resolved on residues, then toAtoms (keeps a source map)
-//   near    within(5, comp(['CYS']))            — position-dependent
-//   shell   near \ cys                          — set difference of the two
+//   cys     comp(['CYS']) resolved on residues, then toAtoms
+//   near    within(5, comp(['CYS']))
+//   shell   near \ cys
 import { use, useState } from '@use-gpu/live';
 import { coordinateBounds } from '@molgpu/table';
 import { all, element, comp, within, difference, toAtoms, resolve, count } from '@molgpu/select';
-import { WorldSpacePointLayer } from '@molgpu/viewer';
-import { ColumnSource } from '@molgpu/viewer/src/internal/column-source.mjs';
-import { crambinStructure, elementColors } from '../lib/crambin-structure.mjs';
+import { attribute, categorical } from '@molgpu/fields';
+import { Structure, Spacefill } from '@molgpu/viewer';
+import { crambinStructure } from '../lib/crambin-structure.mjs';
 
-export const title = 'Selections — @molgpu/select';
+export const title = 'Selections × fields — Gate 2';
 
 const data = crambinStructure();
-const colors = elementColors(data);
-const radius = data.topology.atoms.radius;
 const bounds = coordinateBounds(data);
 const extent = Math.max(...bounds.max.map((v, i) => v - bounds.min[i]));
 export const camera = { radius: extent * 1.7, target: bounds.center };
 
-// Each entry resolves to an ATOM-domain Selection against the passed dataset, so
-// a residue query (`cys`) and set/within queries all render the same way.
+// A categorical colour field: element atomic number -> colour, composed on the GPU.
+const byElement = categorical(attribute('element'), {
+  6: [0.80, 0.80, 0.85, 1], 7: [0.35, 0.50, 0.92, 1], 8: [0.90, 0.36, 0.33, 1],
+  16: [0.95, 0.80, 0.30, 1], 15: [0.95, 0.55, 0.25, 1],
+}, [0.5, 0.5, 0.5, 1]);
+
 const SELECTIONS = {
   all:    (d) => resolve(all('atom'), d),
   sulfur: (d) => resolve(element(16), d),
@@ -36,40 +38,6 @@ const SELECTIONS = {
   shell:  (d) => difference(resolve(within(5, comp(['CYS'])), d), toAtoms(resolve(comp(['CYS']), d), d)),
 };
 
-/** Copy the selected atoms' columns into fresh packed arrays (the accepted
- *  correctness-first gather; indirect draw is a separate optimization). */
-function gather(indices) {
-  const n = indices.length;
-  const positions = new Float32Array(n * 3);
-  const colorCols = new Float32Array(n * 4);
-  const radii = new Float32Array(n);
-  for (let k = 0; k < n; k++) {
-    const i = indices[k];
-    positions[k * 3] = data.positions[i * 3];
-    positions[k * 3 + 1] = data.positions[i * 3 + 1];
-    positions[k * 3 + 2] = data.positions[i * 3 + 2];
-    colorCols.set(colors.subarray(i * 4, i * 4 + 4), k * 4);
-    radii[k] = radius[i];
-  }
-  return { positions, colors: colorCols, radii, count: n };
-}
-
-/** A spacefill layer over a pre-gathered column set. A flat `color` overrides
- *  the per-atom element colours (used to draw the dim context layer). */
-function points({ positions, colors, radii, count: n }, { scale, color }) {
-  if (!n) return null;
-  const layer = (posSrc, colSrc) => use(WorldSpacePointLayer, {
-    positions: posSrc, colors: color ? undefined : colSrc, radii, count: n,
-    scale, color, shape: 'circle', shaded: true,
-  });
-  return use(ColumnSource, { data: positions, format: 'vec3<f32>', render: (posSrc) =>
-    use(ColumnSource, { data: colors, format: 'vec4<f32>', render: (colSrc) => layer(posSrc, colSrc) }) });
-}
-
-// Context is the whole protein, gathered once and drawn small and dim.
-const context = gather(Uint32Array.from({ length: data.topology.atoms.count }, (_, i) => i));
-
-// DOM toolbar <-> live state bridge (built once, outside the live tree).
 let setWhich = null;
 
 function buildToolbar(initial) {
@@ -83,7 +51,6 @@ function buildToolbar(initial) {
     bar.appendChild(btn);
   }
 }
-
 function syncToolbar(which) {
   for (const btn of document.querySelectorAll('#toolbar button')) {
     btn.setAttribute('aria-current', String(btn.textContent === which));
@@ -97,14 +64,14 @@ const SelectionView = ({ initial }) => {
 
   const sel = (SELECTIONS[which] ?? SELECTIONS.all)(data);
   document.getElementById('title').textContent =
-    `@molgpu/select — ${sel.label}: ${count(sel)} ${sel.domain}s · id ${sel.id}`;
+    `select × fields — ${sel.label}: ${count(sel)} ${sel.domain}s · id ${sel.id}`;
 
-  return [
-    // faint whole-protein context so the highlighted selection reads in place
-    points(context, { scale: 0.35, color: [0.30, 0.33, 0.40, 1] }),
-    // the resolved selection, element-coloured at full size
-    points(gather(sel.indices), { scale: 1 }),
-  ];
+  return use(Structure, { data, children: [
+    // dim whole-structure context in a flat colour (keeps the shared source)
+    use(Spacefill, { scale: 0.35, color: [0.30, 0.33, 0.40, 1] }),
+    // the resolved selection, coloured by the element field
+    use(Spacefill, { select: sel, scale: 1, color: byElement }),
+  ] });
 };
 
 export function body() {

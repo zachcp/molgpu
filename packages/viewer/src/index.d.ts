@@ -4,6 +4,7 @@ import type { ShaderSource } from '@use-gpu/shader';
 import type { PointLayerProps } from '@use-gpu/workbench';
 import type { StructureData } from '@molgpu/table';
 import type { Field } from '@molgpu/fields';
+import type { Selection } from '@molgpu/select';
 
 /** Ångström-space axis-aligned extent, or null for an empty structure. */
 export interface StructureBounds {
@@ -100,13 +101,15 @@ export type StructureProps = PreloadedStructureProps | LoadedStructureProps;
 
 export const Structure: LC<StructureProps>;
 
-/** Render every active atom site as a world-space shaded sphere. */
+/** Render atom sites as world-space shaded spheres, optionally restricted to a
+ * selection and coloured by a field. */
 export const Spacefill: LC<{
   /** Multiplies each atom's Ångström radius; defaults to 1. */
   scale?: number;
-  /** Reserved for @molgpu/select; passing one currently throws. */
-  select?: AtomSelection | null;
-  color?: VectorLike;
+  /** A @molgpu/select atom Selection for this structure; restricts the draw. */
+  select?: Selection | null;
+  /** A flat colour, or a @molgpu/fields Field composed shader-side per atom. */
+  color?: VectorLike | Field;
 } & Omit<PointLayerProps, 'positions' | 'sizes' | 'count' | 'color'>>;
 
 /** Draw Ångström radii through PointLayer's camera-normalized `sizes` API. */
