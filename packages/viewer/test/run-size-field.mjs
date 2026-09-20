@@ -61,10 +61,24 @@ try {
   assert.ok(!paletteShot.equals(afterShot), 'palette change must change the rendered image');
   assert.equal(paletteDelta, 0, `palette change reallocated ${paletteDelta} storage buffers (expected 0)`);
 
-  assert.deepEqual(errors, [], 'page errors');
-  assert.deepEqual(afterPalette.errors, [], 'uncaptured WebGPU errors');
+  // Time field: switch to the time-driven colour, then advance t. The colour
+  // must change from a uniform write with no per-atom re-upload.
+  await page.evaluate(() => window.__probe.setPalette(2));
+  await settle(); await settle();
+  const timeBase = await snap();
+  const timeBaseShot = await shot();
+  await page.evaluate(() => window.__probe.setTime(0.85));
+  await settle(); await settle();
+  const afterTime = await snap();
+  const timeShot = await shot();
+  const timeDelta = afterTime.storage - timeBase.storage;
+  assert.ok(!timeShot.equals(timeBaseShot), 'time change must change the rendered image');
+  assert.equal(timeDelta, 0, `time change reallocated ${timeDelta} storage buffers (expected 0)`);
 
-  console.log(JSON.stringify({ status: 'passed', storageBefore: before.storage, scaleStorageDelta: storageDelta, paletteStorageDelta: paletteDelta, uniformBefore: before.uniform, browser: browser.version() }));
+  assert.deepEqual(errors, [], 'page errors');
+  assert.deepEqual(afterTime.errors, [], 'uncaptured WebGPU errors');
+
+  console.log(JSON.stringify({ status: 'passed', storageBefore: before.storage, scaleStorageDelta: storageDelta, paletteStorageDelta: paletteDelta, timeStorageDelta: timeDelta, uniformBefore: before.uniform, browser: browser.version() }));
 } finally {
   await browser?.close();
   await server.close();

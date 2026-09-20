@@ -11,7 +11,7 @@
 import { render, use, useState } from '@use-gpu/live';
 import { WebGPU, AutoCanvas } from '@use-gpu/webgpu';
 import { OrbitCamera, Pass, AmbientLight, DirectionalLight, useDeviceContext } from '@use-gpu/workbench';
-import { attribute, categorical } from '@molgpu/fields';
+import { attribute, categorical, colormap, curve } from '@molgpu/fields';
 import { ColumnSource } from '../src/internal/column-source.mjs';
 import { WorldSpacePointLayer } from '../src/world-space-points.mjs';
 import { useField } from '../src/use-field.mjs';
@@ -48,18 +48,22 @@ for (let i = 0; i < N; i++) {
 const PALETTES = [
   categorical(attribute('element'), { 6: [0.8, 0.8, 0.85, 1], 7: [0.35, 0.5, 0.92, 1], 8: [0.9, 0.36, 0.33, 1], 16: [0.95, 0.8, 0.3, 1] }, [0.5, 0.5, 0.5, 1]),
   categorical(attribute('element'), { 6: [0.2, 0.7, 0.4, 1], 7: [0.2, 0.7, 0.4, 1], 8: [0.9, 0.2, 0.6, 1], 16: [0.9, 0.2, 0.6, 1] }, [0.5, 0.5, 0.5, 1]),
+  // Time-driven colour: a curve over the global t uniform ramps a gradient. The
+  // t change must be a uniform write, not a per-atom re-upload.
+  colormap(curve([[0, 0], [1, 1]]), [[0, [0.1, 0.2, 0.9, 1]], [1, [0.95, 0.3, 0.2, 1]]]),
 ];
 
-const Points = ({ positions, elementSource, scale, palette }) => {
-  const colors = useField(PALETTES[palette], { 'attr:element': elementSource }, { domain: 'atom' });
+const Points = ({ positions, elementSource, scale, palette, time }) => {
+  const colors = useField(PALETTES[palette], { 'attr:element': elementSource, 'curve:t': time }, { domain: 'atom' });
   return use(WorldSpacePointLayer, { positions, colors, radii, count: N, scale, shape: 'circle', shaded: true });
 };
 
 const App = () => {
   useDeviceContext();
-  const [state, setState] = useState({ scale: 1, palette: 0 });
+  const [state, setState] = useState({ scale: 1, palette: 0, time: 0 });
   probe.setScale = (scale) => setState((s) => ({ ...s, scale }));
   probe.setPalette = (palette) => setState((s) => ({ ...s, palette }));
+  probe.setTime = (time) => setState((s) => ({ ...s, time }));
   probe.mounted = true;
   return use(ColumnSource, { data: positions, format: 'vec3<f32>', render: (pos) =>
     use(ColumnSource, { data: elements, format: 'f32', render: (elem) =>
@@ -67,7 +71,7 @@ const App = () => {
         use(Pass, { lights: true, children: [
           use(AmbientLight, { color: [1, 1, 1], intensity: 0.3 }),
           use(DirectionalLight, { position: [1, 2, 1.5], color: [1, 1, 1], intensity: 1 }),
-          use(Points, { positions: pos, elementSource: elem, scale: state.scale, palette: state.palette }),
+          use(Points, { positions: pos, elementSource: elem, scale: state.scale, palette: state.palette, time: state.time }),
         ] }) }) }) });
 };
 
