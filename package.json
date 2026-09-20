@@ -6,7 +6,8 @@
     "packages/*"
   ],
   "scripts": {
-    "test": "node --test packages/table/test/*.test.mjs packages/select/test/*.test.mjs packages/io/test/*.test.mjs packages/geo/test/*.test.mjs packages/viewer/test/*.test.mjs",
+    "test": "node --test packages/table/test/*.test.mjs packages/select/test/*.test.mjs packages/fields/test/*.test.mjs packages/io/test/*.test.mjs packages/geo/test/*.test.mjs packages/viewer/test/*.test.mjs",
+    "test:fields:gpu": "node packages/fields/test/run-browser.mjs",
     "test:corpus": "node --test packages/io/test/corpus.test.mjs",
     "test:gpu": "node packages/viewer/test/run-browser.mjs",
     "test:components": "node packages/viewer/test/run-components.mjs",
