@@ -6,7 +6,7 @@
     "packages/*"
   ],
   "scripts": {
-    "test": "node --test packages/table/test/*.test.mjs packages/io/test/*.test.mjs packages/viewer/test/*.test.mjs",
+    "test": "node --test packages/table/test/*.test.mjs packages/io/test/*.test.mjs packages/geo/test/*.test.mjs packages/viewer/test/*.test.mjs",
     "test:corpus": "node --test packages/io/test/corpus.test.mjs",
     "test:gpu": "node packages/viewer/test/run-browser.mjs",
     "test:examples": "node spikes/examples/test/run-browser.mjs",

@@ -3,7 +3,8 @@
 // ?method=quadratic switches the contour fit.
 import { render, use } from '@use-gpu/live';
 import { WebGPU, AutoCanvas } from '@use-gpu/webgpu';
-import { OrbitCamera, Pass, RawData, DualContourLayer, PointLayer } from '@use-gpu/workbench';
+import { OrbitCamera, Pass, RawData, DualContourLayer, PointLayer, GeometryData, FaceLayer } from '@use-gpu/workbench';
+import { marchingCubes } from '../../packages/geo/src/index.mjs';
 
 const hud = (s) => { document.getElementById('hud').textContent = s; };
 const qs = new URLSearchParams(location.search);
@@ -25,12 +26,21 @@ for (let i = 0; i < P; i++) {
   pts[i*3] = R*Math.sin(phi)*Math.cos(th); pts[i*3+1] = R*Math.sin(phi)*Math.sin(th); pts[i*3+2] = R*Math.cos(phi);
 }
 
+const mesh = marchingCubes({ values, dims: [N, N, N], level: 0,
+  origin: [-0.5, -0.5, -0.5], spacing: [1 / (N - 1), 1 / (N - 1), 1 / (N - 1)] });
+
 hud(`layer=${LAYER}  method=${METHOD}\nanalytic sphere, isolevel 0, ${N}^3`);
 
 const body =
   LAYER === 'point'
     ? use(RawData, { data: pts, format: 'vec3<f32>', render: (src) =>
         use(PointLayer, { positions: src, count: P, size: 8, color: [0.6,0.85,0.7,1], shape: 'circle' }) })
+    : LAYER === 'mesh'
+      ? use(GeometryData, { count: mesh.indices.length, topology: 'triangle-list',
+          attributes: { positions: mesh.positions, normals: mesh.normals, indices: mesh.indices },
+          formats: { positions: 'vec3<f32>', normals: 'vec3<f32>', indices: 'u32' },
+          render: (geo) => use(FaceLayer, { mesh: geo, side: 'both', shaded: true, color: [0.6, 0.75, 0.95, 1] }),
+        })
     : use(RawData, { data: values, format: 'f32', render: (src) =>
         use(DualContourLayer, {
           values: src, size: [N,N,N],
