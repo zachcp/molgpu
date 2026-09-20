@@ -7,7 +7,8 @@
   ],
   "scripts": {
     "test": "node --test packages/table/test/*.test.mjs packages/viewer/test/*.test.mjs",
-    "test:gpu": "node packages/viewer/test/run-browser.mjs"
+    "test:gpu": "node packages/viewer/test/run-browser.mjs",
+    "test:examples": "node spikes/examples/test/run-browser.mjs"
   },
   "devDependencies": {
     "@use-gpu/live": "0.20.0",
