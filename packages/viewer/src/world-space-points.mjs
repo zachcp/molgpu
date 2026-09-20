@@ -1,11 +1,33 @@
 import { use, useMemo } from '@use-gpu/live';
-import { PointLayer, RawData, useViewContext } from '@use-gpu/workbench';
+import { PointLayer, RawData, useViewContext, useShader, useShaderRef } from '@use-gpu/workbench';
+import { wgsl } from '@use-gpu/shader/wgsl';
 import { pointSizesForRadii } from './internal/point-size.mjs';
+
+// Compose `scale` as a uniform over the per-atom base-size source instead of
+// baking it into the size column. `getScale` binds to a shader ref, so changing
+// scale (or an animated time driving it) is a uniform write — no new per-atom
+// array, no re-upload. This is the derived-style-field shape from molgpu-sept-urn.5.
+const SCALED_SIZE = wgsl`
+@link fn getBase(index: u32) -> f32;
+@link fn getScale() -> f32;
+@export fn getSize(index: u32) -> f32 { return getBase(index) * getScale(); }
+`;
+
+// The size shader consumes a base column and the scale uniform; kept out of the
+// RawData render callback so its hooks run in a stable component body.
+const ScaledPoints = ({ baseSource, scaleRef, ...props }) => {
+  const sizes = useShader(SCALED_SIZE, [baseSource, scaleRef]);
+  return use(PointLayer, { sizes, depth: 1, ...props });
+};
 
 /**
  * Draw atom radii expressed in Ångström through PointLayer's camera-normalized
- * `sizes` API. It deliberately owns only the derived size column; positions
- * and colours remain caller-provided GPU sources.
+ * `sizes` API. It owns only the derived size column; positions and colours
+ * remain caller-provided GPU sources.
+ *
+ * The base size column excludes `scale` (and depends only on the radii and the
+ * camera's combined world-units term), so a style-only `scale` change never
+ * rebuilds or re-uploads it — the scale is applied shader-side from a uniform.
  */
 export const WorldSpacePointLayer = ({ positions, colors, radii, count = radii.length, scale = 1, ...props }) => {
   const { uniforms } = useViewContext();
@@ -15,12 +37,13 @@ export const WorldSpacePointLayer = ({ positions, colors, radii, count = radii.l
   // only consumes their product for depth:1, so depending on them separately
   // needlessly recreates and uploads the whole size column on every drag.
   const worldUnitsPerSize = pixelRatio * viewScale * worldScale;
-  const sizes = useMemo(
-    () => pointSizesForRadii(radii, { pixelRatio: 1, viewScale: worldUnitsPerSize, worldScale: 1 }, scale),
-    [radii, worldUnitsPerSize, scale],
+  const base = useMemo(
+    () => pointSizesForRadii(radii, { pixelRatio: 1, viewScale: worldUnitsPerSize, worldScale: 1 }, 1),
+    [radii, worldUnitsPerSize],
   );
+  const scaleRef = useShaderRef(scale);
 
-  return use(RawData, { data: sizes, format: 'f32', render: (sizeSource) =>
-    use(PointLayer, { positions, colors, sizes: sizeSource, count, depth: 1, ...props })
+  return use(RawData, { data: base, format: 'f32', render: (baseSource) =>
+    use(ScaledPoints, { baseSource, scaleRef, positions, colors, count, ...props })
   });
 };
