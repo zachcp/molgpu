@@ -134,6 +134,22 @@ export function useField(
   options?: { domain?: 'atom' | 'residue' },
 ): ShaderSource;
 
+/** Join annotation records (or a fetched JSON `src`) onto the nearest Structure
+ * by identity, returning a field. `options` must be stable across renders. */
+export function useAnnotation(input: {
+  records?: readonly any[];
+  src?: string;
+  loader?: (src: string, cancelled: () => boolean) => unknown;
+  domain?: 'residue' | 'chain';
+  fields: readonly string[];
+  value?: (record: any) => number | readonly number[];
+  type?: unknown;
+  policy?: 'fallback' | 'fail';
+  fallback?: number | readonly number[];
+  duplicate?: 'error' | 'first' | 'last';
+  lift?: boolean;
+}): { field: Field | null; pending: boolean; error: unknown };
+
 export interface ViewScale {
   readonly pixelRatio: number;
   readonly viewScale: number;

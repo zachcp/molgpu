@@ -36,3 +36,18 @@ continuous × domain / overflow matrix.
 The CPU evaluator and the generated WGSL share numeric definitions and are proven
 equal within tolerance by `npm run test:fields:gpu` (a raw-WebGPU compute pass, no
 use.gpu). Node contract tests run under `npm test`.
+
+## Built-ins and annotation joins
+
+`byElement`, `byBfactor`, `bySeq`, and `byChain` are a small closed set of colour
+presets composed from the primitives (no expression language); `columnRange(data,
+name)` auto-ranges a domain from a column's min/max.
+
+`joinAnnotation(data, records, options)` matches external per-residue or
+per-chain records onto the table by an explicit identity policy — a chain field
+plus residue discriminators, never a raw sequence number alone — and returns an
+ordinary `annotation` field (lifted onto atoms by default). Missing rows follow
+`policy` (`fallback`/`fail`); colliding keys follow `duplicate` (`error`/`first`/
+`last`). The result composes like any other field, e.g. `colormap(linear(joined,
+{ domain }), stops)`. The join is pure CPU work; the viewer's `useAnnotation`
+adds fetching and loading state.

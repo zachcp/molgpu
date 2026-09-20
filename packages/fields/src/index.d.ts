@@ -71,3 +71,34 @@ export function byElement(fallback?: Color): Field;
 export function byBfactor(options?: { domain?: readonly [number, number]; stops?: ReadonlyArray<readonly [number, Color]> }): Field;
 export function bySeq(options?: { domain?: readonly [number, number]; stops?: ReadonlyArray<readonly [number, Color]> }): Field;
 export function byChain(options?: { palette?: ReadonlyArray<Color>; fallback?: Color }): Field;
+
+// ---- identity-keyed annotation joins --------------------------------------
+
+export interface ResidueIdentity {
+  model: number; chainLabel: string; chainAuth: string;
+  labelSeq: number; authSeq: string; insCode: string; comp: string;
+}
+export interface ChainIdentity { model: number; chainLabel: string; chainAuth: string; }
+export type IdentityField = keyof ResidueIdentity;
+
+export function residueIdentity(data: StructureData, row: number): ResidueIdentity;
+export function chainIdentity(data: StructureData, row: number): ChainIdentity;
+export function identityKey(identity: Record<string, unknown>, fields: readonly string[]): string;
+
+export interface JoinOptions {
+  /** Domain the records key to. Defaults to 'residue'. */
+  domain?: 'residue' | 'chain';
+  /** Identity fields to match on; must include a chain field. */
+  fields: readonly IdentityField[];
+  /** Extract a record's value; defaults to `r => r.value`. */
+  value?: (record: any) => number | Color;
+  type?: ValueType;
+  policy?: 'fallback' | 'fail';
+  fallback?: number | Color;
+  duplicate?: 'error' | 'first' | 'last';
+  /** Lift a residue/chain annotation onto atoms. Defaults to true. */
+  lift?: boolean;
+}
+
+/** Join external records onto the table by identity and return an annotation Field. */
+export function joinAnnotation(data: StructureData, records: readonly any[], options: JoinOptions): Field;

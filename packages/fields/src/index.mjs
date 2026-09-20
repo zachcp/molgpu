@@ -377,3 +377,6 @@ export { domainOf as fieldDomain };
 
 // Built-in colour presets composed from the primitives above.
 export { byElement, byBfactor, bySeq, byChain } from './builtins.mjs';
+
+// Identity-keyed annotation joins that produce annotation fields.
+export { joinAnnotation, residueIdentity, chainIdentity, identityKey } from './annotation-join.mjs';
