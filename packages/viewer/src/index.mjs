@@ -5,6 +5,7 @@ export { Molecule } from './molecule.mjs';
 export { Structure } from './structure.mjs';
 export { Spacefill } from './spacefill.mjs';
 export { Bonds } from './bonds.mjs';
+export { BallAndStick } from './ball-and-stick.mjs';
 export { useField } from './use-field.mjs';
 export { useAnnotation } from './use-annotation.mjs';
 export { pointSizeForRadius, pointSizeForCameraRadius, pointSizesForRadii } from './internal/point-size.mjs';

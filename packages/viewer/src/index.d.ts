@@ -127,6 +127,18 @@ export const Bonds: LC<{
   shaded?: boolean;
 }>;
 
+/** Balls (Spacefill) + sticks (Bonds) over one selection and one colour. */
+export const BallAndStick: LC<{
+  select?: Selection | null;
+  /** A flat colour or a @molgpu/fields Field, applied to balls and sticks. */
+  color?: VectorLike | Field;
+  /** Ball radius scale; defaults to 0.3. */
+  ball?: number;
+  /** Stick width; defaults to 0.28. */
+  stick?: number;
+  endpoints?: 'both' | 'either';
+}>;
+
 /** Draw Ångström radii through PointLayer's camera-normalized `sizes` API. */
 export const WorldSpacePointLayer: LC<{
   positions: ShaderSource;

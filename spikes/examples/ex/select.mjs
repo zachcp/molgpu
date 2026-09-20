@@ -14,7 +14,7 @@ import { use, useState } from '@use-gpu/live';
 import { coordinateBounds } from '@molgpu/table';
 import { all, element, comp, within, difference, toAtoms, resolve, count } from '@molgpu/select';
 import { byElement } from '@molgpu/fields';
-import { Structure, Spacefill } from '@molgpu/viewer';
+import { Structure, Spacefill, BallAndStick } from '@molgpu/viewer';
 import { crambinStructure } from '../lib/crambin-structure.mjs';
 
 export const title = 'Selections × fields — Gate 2';
@@ -67,8 +67,8 @@ const SelectionView = ({ initial }) => {
   return use(Structure, { data, children: [
     // dim whole-structure context in a flat colour (keeps the shared source)
     use(Spacefill, { scale: 0.35, color: [0.30, 0.33, 0.40, 1] }),
-    // the resolved selection, coloured by the element field
-    use(Spacefill, { select: sel, scale: 1, color: elementColor }),
+    // the resolved selection, coloured by the element field, as ball-and-stick
+    use(BallAndStick, { select: sel, ball: 0.35, stick: 0.28, color: elementColor }),
   ] });
 };
 
