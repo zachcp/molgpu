@@ -62,3 +62,12 @@ export interface Compiled {
 export function compile(field: Field, options?: { domain?: Domain; target?: Target }): Compiled;
 
 export function fieldDomain(field: Field): Domain | 'any';
+
+/** Min/max of an attribute column over a dataset, for auto-ranging a domain. */
+export function columnRange(data: StructureData, name: string): [number, number];
+
+// Built-in colour presets (a closed set) composed from the primitives.
+export function byElement(fallback?: Color): Field;
+export function byBfactor(options?: { domain?: readonly [number, number]; stops?: ReadonlyArray<readonly [number, Color]> }): Field;
+export function bySeq(options?: { domain?: readonly [number, number]; stops?: ReadonlyArray<readonly [number, Color]> }): Field;
+export function byChain(options?: { palette?: ReadonlyArray<Color>; fallback?: Color }): Field;

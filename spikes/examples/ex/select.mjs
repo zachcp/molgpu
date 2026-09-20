@@ -13,7 +13,7 @@
 import { use, useState } from '@use-gpu/live';
 import { coordinateBounds } from '@molgpu/table';
 import { all, element, comp, within, difference, toAtoms, resolve, count } from '@molgpu/select';
-import { attribute, categorical } from '@molgpu/fields';
+import { byElement } from '@molgpu/fields';
 import { Structure, Spacefill } from '@molgpu/viewer';
 import { crambinStructure } from '../lib/crambin-structure.mjs';
 
@@ -24,11 +24,9 @@ const bounds = coordinateBounds(data);
 const extent = Math.max(...bounds.max.map((v, i) => v - bounds.min[i]));
 export const camera = { radius: extent * 1.7, target: bounds.center };
 
-// A categorical colour field: element atomic number -> colour, composed on the GPU.
-const byElement = categorical(attribute('element'), {
-  6: [0.80, 0.80, 0.85, 1], 7: [0.35, 0.50, 0.92, 1], 8: [0.90, 0.36, 0.33, 1],
-  16: [0.95, 0.80, 0.30, 1], 15: [0.95, 0.55, 0.25, 1],
-}, [0.5, 0.5, 0.5, 1]);
+// The byElement built-in field: element atomic number -> CPK colour, composed
+// shader-side (molgpu-sept-urn.3).
+const elementColor = byElement();
 
 const SELECTIONS = {
   all:    (d) => resolve(all('atom'), d),
@@ -70,7 +68,7 @@ const SelectionView = ({ initial }) => {
     // dim whole-structure context in a flat colour (keeps the shared source)
     use(Spacefill, { scale: 0.35, color: [0.30, 0.33, 0.40, 1] }),
     // the resolved selection, coloured by the element field
-    use(Spacefill, { select: sel, scale: 1, color: byElement }),
+    use(Spacefill, { select: sel, scale: 1, color: elementColor }),
   ] });
 };
 

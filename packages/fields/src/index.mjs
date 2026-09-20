@@ -31,9 +31,23 @@ const ATTRIBUTES = {
   bfactor:   { domain: 'atom', read: (d) => d.topology.atoms.bfactor },
   radius:    { domain: 'atom', read: (d) => d.topology.atoms.radius },
   residue:   { domain: 'atom', read: (d) => d.topology.atoms.residue },
+  // Derived atom->chain (via residue): a per-atom chain index for byChain.
+  atomChain: { domain: 'atom', read: (d) => Uint32Array.from(d.topology.atoms.residue, (r) => d.topology.residues.chain[r]) },
   labelSeq:  { domain: 'residue', read: (d) => d.topology.residues.labelSeq },
   chain:     { domain: 'residue', read: (d) => d.topology.residues.chain },
 };
+
+/** Min/max of a column over a dataset, for auto-ranging a built-in field's
+ *  domain. Returns [lo, lo+1] for an empty or constant column. */
+export function columnRange(data, name) {
+  const spec = ATTRIBUTES[name];
+  if (!spec) fail('columnRange', `unknown column ${name}; known: ${Object.keys(ATTRIBUTES).join(', ')}`);
+  const column = spec.read(data);
+  if (!column.length) return [0, 1];
+  let lo = Infinity, hi = -Infinity;
+  for (const v of column) { if (v < lo) lo = v; if (v > hi) hi = v; }
+  return lo === hi ? [lo, lo + 1] : [lo, hi];
+}
 
 const rowCount = (domain, data) =>
   domain === 'atom' ? data.topology.atoms.count :
@@ -360,3 +374,6 @@ function bakeAnnotation(node, n) {
 }
 
 export { domainOf as fieldDomain };
+
+// Built-in colour presets composed from the primitives above.
+export { byElement, byBfactor, bySeq, byChain } from './builtins.mjs';
