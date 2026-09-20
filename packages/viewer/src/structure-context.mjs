@@ -32,5 +32,10 @@ export const StructureProvider = ({ data, maxSelections, children }) => {
   return use(AtomSources, { resource, children });
 };
 
-/** Returns { resource, sources }; sources is null for an empty structure. */
-export const useStructure = () => useContext(StructureContext);
+/** Returns { resource, sources }; sources is null for an empty structure.
+ * Missing context is a composition mistake, not a renderable empty state. */
+export const useStructure = () => {
+  const context = useContext(StructureContext);
+  if (!context) throw new Error('useStructure() requires a <Structure> ancestor');
+  return context;
+};

@@ -1,5 +1,7 @@
 {
-  "name": "@molgpu/viewer", "version": "0.0.0", "private": true, "type": "module", "exports": "./src/index.mjs",
+  "name": "@molgpu/viewer", "version": "0.0.0", "private": true, "type": "module",
+  "exports": { ".": { "types": "./src/index.d.ts", "import": "./src/index.mjs" } },
+  "files": ["src"],
   "dependencies": { "@molgpu/io": "0.0.0", "@molgpu/table": "0.0.0" },
   "peerDependencies": { "@use-gpu/live": "0.20.0", "@use-gpu/workbench": "0.20.0" }
 }
