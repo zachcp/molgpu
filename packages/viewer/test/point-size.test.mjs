@@ -29,3 +29,12 @@ test('conversion preserves physical radius ratios and produces a derived size co
   close(sizes[2] / sizes[0], 2);
   assert.throws(() => pointSizeForRadius(1, { ...view, viewScale: 0 }), /positive/);
 });
+
+test('OrbitCamera radius changes keep the PointLayer size-column input stable', () => {
+  const sizeAt = radius => {
+    const viewScale = radius * 2 * Math.tan(Math.PI / 6) / 600;
+    const worldScale = 5 / radius;
+    return pointSizeForRadius(1.7, { pixelRatio: 2, viewScale, worldScale });
+  };
+  close(sizeAt(20), sizeAt(80));
+});

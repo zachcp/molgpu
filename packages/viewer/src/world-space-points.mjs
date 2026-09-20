@@ -11,9 +11,13 @@ export const WorldSpacePointLayer = ({ positions, colors, radii, count = radii.l
   const { uniforms } = useViewContext();
   const pixelRatio = uniforms.viewPixelRatio.current;
   const [viewScale, worldScale] = uniforms.viewWorldScale.current;
+  // OrbitCamera changes these two terms inversely while dollying. PointLayer
+  // only consumes their product for depth:1, so depending on them separately
+  // needlessly recreates and uploads the whole size column on every drag.
+  const worldUnitsPerSize = pixelRatio * viewScale * worldScale;
   const sizes = useMemo(
-    () => pointSizesForRadii(radii, { pixelRatio, viewScale, worldScale }, scale),
-    [radii, pixelRatio, viewScale, worldScale, scale],
+    () => pointSizesForRadii(radii, { pixelRatio: 1, viewScale: worldUnitsPerSize, worldScale: 1 }, scale),
+    [radii, worldUnitsPerSize, scale],
   );
 
   return use(RawData, { data: sizes, format: 'f32', render: (sizeSource) =>
