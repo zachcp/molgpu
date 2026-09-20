@@ -16,6 +16,8 @@ const EXAMPLES = {
   labels:   () => import('./ex/labels.mjs'),
   linemin:  () => import('./ex/linemin.mjs'),
   facemin:  () => import('./ex/facemin.mjs'),
+  // Intentional failing upstream repro; not linked in the interactive gallery.
+  instances: () => import('./ex/instances.mjs'),
 };
 
 const which = new URLSearchParams(location.search).get('ex') ?? 'points';
