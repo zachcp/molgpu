@@ -2,11 +2,12 @@
 import { render, use } from '@use-gpu/live';
 import { WebGPU, AutoCanvas } from '@use-gpu/webgpu';
 import {
-  OrbitCamera, Pass, RawData, DualContourLayer,
+  OrbitCamera, Pass, GeometryData, FaceLayer,
   AmbientLight, DirectionalLight, PBRMaterial,
 } from '@use-gpu/workbench';
 import { parsePDBText } from './pdb.mjs';
 import { molecularSurfaceField } from './lift.mjs';
+import { marchingCubes } from '../../packages/geo/src/index.mjs';
 
 const hud = (s) => { document.getElementById('hud').textContent = s; };
 const qs = new URLSearchParams(location.search);
@@ -39,6 +40,8 @@ const m = f.transform;
 const [sx, sy, sz] = [m[0], m[5], m[10]];
 const [tx, ty, tz] = [m[12], m[13], m[14]];
 const [nx, ny, nz] = f.dims;
+const mesh = marchingCubes({ values, dims: f.dims, level: f.level,
+  origin: [tx, ty, tz], spacing: [sx, sy, sz] });
 const range = [
   [tx, tx + (nx - 1) * sx],
   [ty, ty + (ny - 1) * sy],
@@ -53,6 +56,7 @@ hud([
   `parse ${tParse.toFixed(0)}ms   field ${tField.toFixed(0)}ms`,
   `isolevel ${f.level}   sentinel ${CLAMP ? 'clamped' : 'RAW'}`,
   `field ${(values.byteLength/1048576).toFixed(1)}MB`,
+  `mesh ${mesh.vertexCount.toLocaleString()} vertices  ${mesh.triangleCount.toLocaleString()} triangles`,
 ].join('\n'));
 
 const Scene = () =>
@@ -64,17 +68,11 @@ const Scene = () =>
         use(DirectionalLight, { position: [1, 2, 1.5], color: [1, 1, 1], intensity: 1.0 }),
         use(PBRMaterial, {
           metalness: 0.1, roughness: 0.45,
-          children: use(RawData, {
-            data: values, format: 'f32',
-            render: (source) => use(DualContourLayer, {
-              values: source,
-              size: [nx, ny, nz],
-              range,
-              level: f.level,
-              method: 'linear',
-              color: [0.55, 0.72, 0.92, 1],
-              shaded: true,
-            }),
+          children: use(GeometryData, {
+            count: mesh.indices.length, topology: 'triangle-list',
+            attributes: { positions: mesh.positions, normals: mesh.normals, indices: mesh.indices },
+            formats: { positions: 'vec3<f32>', normals: 'vec3<f32>', indices: 'u32' },
+            render: (geo) => use(FaceLayer, { mesh: geo, side: 'both', color: [0.55, 0.72, 0.92, 1], shaded: true }),
           }),
         }),
       ],
