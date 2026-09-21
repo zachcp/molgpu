@@ -10,6 +10,8 @@ import { Bonds } from './bonds.mjs';
  * composing representations needs no data plumbing.
  *
  * `ball` scales the van der Waals radius; `stick` is the world-space stick width.
+ * A `material` (in `...props`) forwards to both halves, so balls and sticks
+ * share one shading model.
  */
 export const BallAndStick = ({ select = null, color, ball = 0.3, stick = 0.28, endpoints = 'both', ...props }) => {
   const shared = color !== undefined ? { color } : {};

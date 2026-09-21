@@ -3,6 +3,7 @@ import { LineLayer } from '@use-gpu/workbench';
 import { activeAtoms, traceTable } from '@molgpu/table';
 import { useStructure } from './structure-context.mjs';
 import { withColumns } from './internal/representation.mjs';
+import { withMaterial } from './materials.mjs';
 import { buildTubeGeometry } from './internal/tube-geometry.mjs';
 import { lineWidthForRadius } from './internal/line-size.mjs';
 
@@ -19,7 +20,7 @@ import { lineWidthForRadius } from './internal/line-size.mjs';
  * empirical floor. Only `select` and `smooth` (samples per guide segment)
  * rebuild the trace/spline geometry; `radius` and `color` update bindings.
  */
-export const Tube = ({ select, radius = 0.3, sides = 8, join = 'round', smooth = 6, color = [0.45, 0.78, 0.95, 1], ...props }) => {
+export const Tube = ({ select, radius = 0.3, sides = 8, join = 'round', smooth = 6, color = [0.45, 0.78, 0.95, 1], material, ...props }) => {
   const { resource } = useStructure();
   const { data } = resource;
 
@@ -37,8 +38,8 @@ export const Tube = ({ select, radius = 0.3, sides = 8, join = 'round', smooth =
     { key: 'positions', data: built.positions, format: 'vec3<f32>' },
     { key: 'segments', data: built.segments, format: 'i32' },
   ];
-  return withColumns(specs, (map) => use(LineLayer, {
+  return withColumns(specs, (map) => withMaterial(material, use(LineLayer, {
     positions: map.positions, segments: map.segments, width, color,
     shaded: true, sides, join, depth: -1, ...props,
-  }));
+  })));
 };

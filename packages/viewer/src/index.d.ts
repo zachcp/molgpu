@@ -1,7 +1,13 @@
 import type { LC, LiveContext, LiveElement } from '@use-gpu/live';
 import type { VectorLike } from '@use-gpu/core';
 import type { ShaderSource } from '@use-gpu/shader';
-import type { PointLayerProps } from '@use-gpu/workbench';
+import type {
+  PointLayerProps,
+  PBRMaterialProps, BasicMaterialProps, NormalMaterialProps,
+  ShaderFlatMaterialProps, ShaderLitMaterialProps, FresnelMaterialEffectProps,
+  AmbientLightProps, DirectionalLightProps, PointLightProps,
+  SpotLightProps, DomeLightProps, EnvironmentProps,
+} from '@use-gpu/workbench';
 import type { StructureData } from '@molgpu/table';
 import type { Field } from '@molgpu/fields';
 import type { Selection, SelectionQuery } from '@molgpu/select';
@@ -11,6 +17,18 @@ import type { Curve, CurveValue } from '@molgpu/timeline';
 export interface StructureBounds {
   readonly min: number[]; readonly max: number[]; readonly center: number[];
 }
+
+/** Material `type` names accepted by a representation's `material` prop. */
+export type MaterialType = 'pbr' | 'basic' | 'normal' | 'flat' | 'lit';
+
+/**
+ * A representation's `material` prop. Either a spec object — `{ type?, ...props }`
+ * where `type` defaults to 'pbr' and the rest forward to the matching material
+ * component — or a `(children) => element` wrapper function for full control.
+ */
+export type MaterialSpec =
+  | ({ type?: MaterialType } & Record<string, unknown>)
+  | ((children: LiveElement) => LiveElement);
 
 /** A resolved atom set, valid only for the resource and revisions that made it. */
 export interface AtomSelection {
@@ -154,6 +172,8 @@ export const Spacefill: LC<{
   select?: Selection | null;
   /** A flat colour, or a @molgpu/fields Field composed shader-side per atom. */
   color?: VectorLike | Field;
+  /** Wraps the shaded point layer; without one, the ambient scene material. */
+  material?: MaterialSpec;
 } & Omit<PointLayerProps, 'positions' | 'sizes' | 'count' | 'color'>>;
 
 /** Draw bonds as world-space sticks, optionally restricted to a selection.
@@ -170,6 +190,8 @@ export const Bonds: LC<{
   color?: VectorLike | Field;
   sides?: number;
   shaded?: boolean;
+  /** Wraps the shaded stick layer; without one, the ambient scene material. */
+  material?: MaterialSpec;
 }>;
 
 /** Balls (Spacefill) + sticks (Bonds) over one selection and one colour. */
@@ -182,6 +204,8 @@ export const BallAndStick: LC<{
   /** Stick width; defaults to 0.28. */
   stick?: number;
   endpoints?: 'both' | 'either';
+  /** Forwarded to both balls and sticks, so they share one shading model. */
+  material?: MaterialSpec;
 }>;
 
 /** Draw the polymer backbone as a GPU-extruded tube (LineLayer's shaded
@@ -199,6 +223,8 @@ export const Tube: LC<{
   color?: VectorLike;
   sides?: number;
   join?: 'tangent' | 'bevel' | 'miter' | 'round';
+  /** Wraps the shaded tube layer; without one, the ambient scene material. */
+  material?: MaterialSpec;
 }>;
 
 /** Draw the polymer backbone as a flat, oriented ribbon (0sj.1's
@@ -214,6 +240,8 @@ export const Ribbon: LC<{
   smooth?: number;
   color?: VectorLike;
   opacity?: number;
+  /** Wraps the shaded ribbon layer; without one, the ambient scene material. */
+  material?: MaterialSpec;
 }>;
 
 /** A molecular (solvent-excluded) surface via Mol*'s scalar-field kernel,
@@ -232,9 +260,55 @@ export const Surface: LC<{
   maxBytes?: number;
   color?: VectorLike;
   opacity?: number;
+  /** Wraps the shaded face layer; without one, the ambient scene material. */
+  material?: MaterialSpec;
   loading?: LiveElement | (() => LiveElement);
   error?: LiveElement | ((failure: unknown) => LiveElement);
 }>;
+
+// --- Materials --------------------------------------------------------------
+// Thin wrappers over @use-gpu/workbench materials with molecular defaults. A
+// material provides the shading model that `shaded` layers beneath it read; use
+// as a wrapping element, or via a representation's `material` prop.
+
+/** Physically based material; defaults matte and non-metallic (metalness 0, roughness 0.6). */
+export const PBRMaterial: LC<PBRMaterialProps>;
+/** Unlit flat colour (ignores lights). */
+export const BasicMaterial: LC<BasicMaterialProps>;
+/** Surface-normal debug material. */
+export const NormalMaterial: LC<NormalMaterialProps>;
+/** Custom flat (unlit) fragment shader. */
+export const FlatMaterial: LC<ShaderFlatMaterialProps>;
+/** Custom lit fragment shader — the general escape hatch under PBR. */
+export const LitMaterial: LC<ShaderLitMaterialProps>;
+/** Fresnel rim effect, composed over another material's children. */
+export const FresnelMaterialEffect: LC<FresnelMaterialEffectProps>;
+
+/** The material `type` names accepted by a representation's `material` prop. */
+export const materialTypes: ReadonlyArray<MaterialType>;
+
+/** Wrap an element in a material spec so `shaded` layers beneath it read its model. */
+export function withMaterial(material: MaterialSpec | null | undefined, element: LiveElement): LiveElement;
+
+// --- Lights -----------------------------------------------------------------
+// Thin wrappers over @use-gpu/workbench lights with molecular defaults. Each
+// must sit inside the shaded `<Pass lights>`.
+
+/** A fixed world-space key-light direction shared across molgpu scenes. */
+export const KEY_LIGHT_DIRECTION: readonly [number, number, number];
+
+/** Soft fill; defaults to intensity 0.3. */
+export const AmbientLight: LC<AmbientLightProps>;
+/** Key light; defaults to KEY_LIGHT_DIRECTION at full intensity. */
+export const DirectionalLight: LC<DirectionalLightProps>;
+/** A positioned, falloff light. */
+export const PointLight: LC<PointLightProps>;
+/** A positioned, cone-limited light. */
+export const SpotLight: LC<SpotLightProps>;
+/** A gradient sky/ground dome for soft, even illumination. */
+export const DomeLight: LC<DomeLightProps>;
+/** Image-based lighting: the environment map PBR materials reflect. */
+export const Environment: LC<EnvironmentProps>;
 
 /** Draw Ångström radii through PointLayer's camera-normalized `sizes` API. */
 export const WorldSpacePointLayer: LC<{

@@ -3,6 +3,7 @@ import { WorldSpacePointLayer } from './world-space-points.mjs';
 import { useStructure } from './structure-context.mjs';
 import { useField } from './use-field.mjs';
 import { isField, fieldAttrNames, withColumns } from './internal/representation.mjs';
+import { withMaterial } from './materials.mjs';
 
 /** Geometry depends on structure and selection, never on the colour field. */
 const gather = (data, indices) => {
@@ -53,9 +54,11 @@ const GatheredSpacefill = ({ data, indices, selectKey, attrNames, field, sharedP
  * @molgpu/select atom Selection) restricts to a subset, gathered once per
  * selection change. `color` is either a flat colour or a @molgpu/fields Field,
  * which is composed shader-side over the atoms' columns (no per-atom colour
- * upload) via the viewer's useField.
+ * upload) via the viewer's useField. `material` (a @molgpu/viewer material
+ * spec) wraps the shaded point layer; without one the atoms use the ambient
+ * scene material.
  */
-export const Spacefill = ({ scale = 1, select, color = [0.72, 0.72, 0.76, 1], ...props }) => {
+export const Spacefill = ({ scale = 1, select, color = [0.72, 0.72, 0.76, 1], material, ...props }) => {
   const { resource, sources } = useStructure();
   const { data } = resource;
 
@@ -72,14 +75,14 @@ export const Spacefill = ({ scale = 1, select, color = [0.72, 0.72, 0.76, 1], ..
 
   // Whole structure with a flat colour keeps the shared, already-uploaded source.
   if (!indices && !field) {
-    return use(WorldSpacePointLayer, {
+    return withMaterial(material, use(WorldSpacePointLayer, {
       positions: sources.positions, radii: data.topology.atoms.radius, count: n,
       scale, color, shape: 'circle', shaded: true, ...props,
-    });
+    }));
   }
 
-  return use(GatheredSpacefill, {
+  return withMaterial(material, use(GatheredSpacefill, {
     data, indices, selectKey: select?.id ?? 'all', attrNames, field,
     sharedPositions: sources.positions, color, scale, ...props,
-  });
+  }));
 };

@@ -4,6 +4,7 @@ import { byElement } from '@molgpu/fields';
 import { useStructure } from './structure-context.mjs';
 import { useField } from './use-field.mjs';
 import { isField, fieldAttrNames, withColumns } from './internal/representation.mjs';
+import { withMaterial } from './materials.mjs';
 import { buildBondColumns, endpointAttributes } from './internal/bond-columns.mjs';
 
 // One stable default field; passing any explicit colour preserves the existing
@@ -28,7 +29,7 @@ const FieldBonds = ({ map, field, width, sides, shaded, ...props }) => {
  * and accepts a flat colour or a @molgpu/fields Field. Connectivity comes from
  * the shared bond topology (explicit, else inferred).
  */
-export const Bonds = ({ width = 0.3, select, color, endpoints = 'both', sides = 6, shaded = true, ...props }) => {
+export const Bonds = ({ width = 0.3, select, color, endpoints = 'both', sides = 6, shaded = true, material, ...props }) => {
   const { resource } = useStructure();
   const { data } = resource;
 
@@ -51,7 +52,7 @@ export const Bonds = ({ width = 0.3, select, color, endpoints = 'both', sides = 
     { key: 'segments', data: built.segments, format: 'i32' },
     ...attrNames.map((name) => ({ key: `attr:${name}`, data: attrs[name], format: 'f32' })),
   ];
-  return withColumns(specs, (map) => field
+  return withColumns(specs, (map) => withMaterial(material, field
     ? use(FieldBonds, { map, field, width, sides, shaded, ...props })
-    : line(map.positions, map.segments, width, sides, shaded, { color: effectiveColor }, props));
+    : line(map.positions, map.segments, width, sides, shaded, { color: effectiveColor }, props)));
 };

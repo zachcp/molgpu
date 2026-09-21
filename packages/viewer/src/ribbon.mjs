@@ -3,6 +3,7 @@ import { FaceLayer } from '@use-gpu/workbench';
 import { activeAtoms, traceTable, secondaryStructureTrace } from '@molgpu/table';
 import { useStructure } from './structure-context.mjs';
 import { withColumns } from './internal/representation.mjs';
+import { withMaterial } from './materials.mjs';
 import { buildRibbonGeometry } from './internal/ribbon-geometry.mjs';
 
 /**
@@ -20,7 +21,7 @@ import { buildRibbonGeometry } from './internal/ribbon-geometry.mjs';
  * `smooth` (samples per guide segment) rebuild the trace/spline geometry;
  * `color`/`opacity` update bindings.
  */
-export const Ribbon = ({ select, smooth = 8, color = [0.85, 0.55, 0.35, 1], ...props }) => {
+export const Ribbon = ({ select, smooth = 8, color = [0.85, 0.55, 0.35, 1], material, ...props }) => {
   const { resource } = useStructure();
   const { data } = resource;
 
@@ -39,8 +40,8 @@ export const Ribbon = ({ select, smooth = 8, color = [0.85, 0.55, 0.35, 1], ...p
     { key: 'normals', data: built.normals, format: 'vec3<f32>' },
     { key: 'indices', data: built.indices, format: 'u32' },
   ];
-  return withColumns(specs, (map) => use(FaceLayer, {
+  return withColumns(specs, (map) => withMaterial(material, use(FaceLayer, {
     positions: map.positions, normals: map.normals, indices: map.indices,
     color, shaded: true, side: 'both', ...props,
-  }));
+  })));
 };

@@ -3,6 +3,7 @@ import { FaceLayer } from '@use-gpu/workbench';
 import { activeAtoms } from '@molgpu/table';
 import { useStructure } from './structure-context.mjs';
 import { withColumns } from './internal/representation.mjs';
+import { withMaterial } from './materials.mjs';
 import { useGeometryJob } from './use-geometry-job.mjs';
 import { buildSurfaceGeometry } from './internal/surface-geometry.mjs';
 
@@ -20,8 +21,10 @@ import { buildSurfaceGeometry } from './internal/surface-geometry.mjs';
  * before the field is computed, not after. Each vertex carries the atom row
  * it is nearest to (`sourceAtom` on the raw geometry, not yet surfaced as a
  * prop here — picking/field colouring is future work built on top of it).
+ * `material` (a @molgpu/viewer material spec) wraps the shaded face layer;
+ * without one the surface uses the ambient scene material.
  */
-export const Surface = ({ select, probeRadius = 1.4, resolution = 0.5, maxBytes, color = [0.75, 0.75, 0.8, 0.9], loading = null, error = null, ...props }) => {
+export const Surface = ({ select, probeRadius = 1.4, resolution = 0.5, maxBytes, color = [0.75, 0.75, 0.8, 0.9], material, loading = null, error = null, ...props }) => {
   const { resource } = useStructure();
   const { data } = resource;
 
@@ -42,8 +45,8 @@ export const Surface = ({ select, probeRadius = 1.4, resolution = 0.5, maxBytes,
     { key: 'normals', data: mesh.normals, format: 'vec3<f32>' },
     { key: 'indices', data: mesh.indices, format: 'u32' },
   ];
-  return withColumns(specs, (map) => use(FaceLayer, {
+  return withColumns(specs, (map) => withMaterial(material, use(FaceLayer, {
     positions: map.positions, normals: map.normals, indices: map.indices,
     color, shaded: true, side: 'both', ...props,
-  }));
+  })));
 };
