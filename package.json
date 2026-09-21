@@ -22,6 +22,7 @@
     "test:components": "node packages/viewer/test/run-components.mjs",
     "typecheck": "tsc -p packages/viewer/test/tsx/tsconfig.json",
     "test:examples": "node spikes/examples/test/run-browser.mjs",
+    "test:examples:figure": "node spikes/examples/test/run-figure.mjs",
     "build:io:measure": "vite build --config packages/io/vite.config.mjs"
   },
   "devDependencies": {
