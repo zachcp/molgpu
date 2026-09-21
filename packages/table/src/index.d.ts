@@ -20,6 +20,8 @@ export interface Residues {
   readonly insertionCode: readonly string[];
   readonly comp: readonly string[];
   readonly polymer: readonly ('protein' | 'rna' | 'dna' | 'other')[];
+  /** Imported annotation (mmCIF struct_conf/struct_sheet_range) when the source provided one; absent otherwise. */
+  readonly secondaryStructure?: readonly ('helix' | 'sheet' | 'coil')[];
 }
 export interface Chains {
   readonly count: number;
@@ -76,3 +78,13 @@ export interface Trace {
   readonly runKind: readonly ('protein' | 'rna' | 'dna')[];
 }
 export function traceTable(data: StructureData, atomIndices: Uint32Array): Trace;
+/** Per-sample direction vectors + secondary-structure labels/block-boundary flags over an existing Trace. */
+export interface SecondaryStructureTrace {
+  readonly count: number;
+  readonly direction: Float32Array;
+  readonly kind: readonly ('helix' | 'sheet' | 'coil')[];
+  /** 1 where a sample starts/ends a stable-frame block (run boundary or an SS-kind change), else 0. */
+  readonly first: Uint8Array;
+  readonly last: Uint8Array;
+}
+export function secondaryStructureTrace(data: StructureData, atomIndices: Uint32Array, trace: Trace): SecondaryStructureTrace;

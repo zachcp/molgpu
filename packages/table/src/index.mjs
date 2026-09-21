@@ -1,6 +1,7 @@
 // Pure molecular values. Arrays are packed CPU columns and immutable by contract.
 // No renderer, parser, or global platform API is required by this module.
 export { traceTable } from './trace.mjs';
+export { secondaryStructureTrace } from './secondary-structure.mjs';
 const revisions = new WeakMap();
 const inferredBondCache = new WeakMap();
 const fail = (path, message) => { throw new TypeError(`${path}: ${message}`); };
@@ -52,6 +53,10 @@ export function validateStructure(data) {
   column(r.labelSeq, r.count, Int32Array, 'residues.labelSeq');
   for (const k of ['authSeq', 'insertionCode', 'comp', 'polymer']) strings(r[k], r.count, `residues.${k}`);
   r.polymer.forEach((v, i) => { if (!['protein', 'rna', 'dna', 'other'].includes(v)) fail(`residues.polymer[${i}]`, 'unknown polymer kind'); });
+  if (r.secondaryStructure !== undefined) {
+    strings(r.secondaryStructure, r.count, 'residues.secondaryStructure');
+    r.secondaryStructure.forEach((v, i) => { if (!['helix', 'sheet', 'coil'].includes(v)) fail(`residues.secondaryStructure[${i}]`, 'unknown secondary structure kind'); });
+  }
   column(c.model, c.count, Int32Array, 'chains.model');
   for (const k of ['labelId', 'authId']) strings(c[k], c.count, `chains.${k}`);
   const chainKeys = new Set();

@@ -56,10 +56,49 @@ async function parseBcif(bytes) {
   }
 }
 
+/**
+ * Mark residues [begSeq, endSeq] on chain `chainLabel` with `kind`, by
+ * label_seq_id (the compact, gap-aware numbering already used for
+ * residues.labelSeq — no auth/insertion-code ambiguity to resolve here).
+ */
+function markSecondaryStructure(secondaryStructure, residues, chains, chainLabel, begSeq, endSeq, kind) {
+  for (let r = 0; r < residues.length; r++) {
+    if (chains[residues[r].chain].labelId !== chainLabel) continue;
+    if (residues[r].seq < begSeq || residues[r].seq > endSeq) continue;
+    secondaryStructure[r] = kind;
+  }
+}
+
+/**
+ * Imported secondary-structure annotation from mmCIF struct_conf (helices)
+ * and struct_sheet_range (beta strands), by label_seq_id range per chain.
+ * Every residue defaults to 'coil': this project does not (yet) compute
+ * secondary structure from geometry when a file carries no annotation —
+ * see molgpu-sept-0sj.2's notes for that documented scope boundary.
+ */
+function readSecondaryStructure(categories, residues, chains) {
+  const secondaryStructure = new Array(residues.length).fill('coil');
+  const conf = categories.struct_conf;
+  for (let i = 0; conf && i < conf.rowCount; i++) {
+    if (!str(conf, 'conf_type_id', i).toUpperCase().startsWith('HELX')) continue;
+    markSecondaryStructure(secondaryStructure, residues, chains,
+      str(conf, 'beg_label_asym_id', i), Math.trunc(num(conf, 'beg_label_seq_id', i, NaN)),
+      Math.trunc(num(conf, 'end_label_seq_id', i, NaN)), 'helix');
+  }
+  const sheet = categories.struct_sheet_range;
+  for (let i = 0; sheet && i < sheet.rowCount; i++) {
+    markSecondaryStructure(secondaryStructure, residues, chains,
+      str(sheet, 'beg_label_asym_id', i), Math.trunc(num(sheet, 'beg_label_seq_id', i, NaN)),
+      Math.trunc(num(sheet, 'end_label_seq_id', i, NaN)), 'sheet');
+  }
+  return secondaryStructure;
+}
+
 /** Lower a BinaryCIF mmCIF block to renderer-independent owned table columns. */
 export async function structureFromBcif(bytes) {
   const parsed = await parseBcif(bytes);
-  const atom = parsed.blocks[0]?.categories.atom_site;
+  const categories = parsed.blocks[0]?.categories ?? {};
+  const atom = categories.atom_site;
   if (!atom) throw new BcifParseError('BCIF has no atom_site category', 'MISSING_ATOM_SITE');
   const positions = new Float32Array(atom.rowCount * 3), ids = [], names = [], altloc = [], element = new Uint8Array(atom.rowCount);
   const occupancy = new Float32Array(atom.rowCount), bfactor = new Float32Array(atom.rowCount), radius = new Float32Array(atom.rowCount), atomResidue = new Uint32Array(atom.rowCount);
@@ -84,9 +123,10 @@ export async function structureFromBcif(bytes) {
     occupancy[i] = num(atom, 'occupancy', i, 1); bfactor[i] = num(atom, 'B_iso_or_equiv', i, 0);
   }
   const residueCount = residues.length, chainCount = chains.length;
+  const secondaryStructure = readSecondaryStructure(categories, residues, chains);
   return createStructure({ positions, topology: {
     atoms: { count: atom.rowCount, id: ids, name: names, altloc, residue: atomResidue, element, occupancy, bfactor, radius },
-    residues: { count: residueCount, chain: Uint32Array.from(residues, r => r.chain), labelSeq: Int32Array.from(residues, r => r.seq), authSeq: residues.map(r => r.authSeq), insertionCode: residues.map(r => r.insertion), comp: residues.map(r => r.comp), polymer: residues.map(r => polymerKind(r.comp)) },
+    residues: { count: residueCount, chain: Uint32Array.from(residues, r => r.chain), labelSeq: Int32Array.from(residues, r => r.seq), authSeq: residues.map(r => r.authSeq), insertionCode: residues.map(r => r.insertion), comp: residues.map(r => r.comp), polymer: residues.map(r => polymerKind(r.comp)), secondaryStructure },
     chains: { count: chainCount, model: Int32Array.from(chains, c => c.model), labelId: chains.map(c => c.labelId), authId: chains.map(c => c.authId) },
     bonds: { count: 0, a: new Uint32Array(), b: new Uint32Array(), order: new Uint8Array(), source: [] },
     instances: { count: chainCount, chain: Uint32Array.from({ length: chainCount }, (_, i) => i), operatorId: new Array(chainCount).fill('identity'), transform: Float64Array.from({ length: chainCount * 16 }, (_, i) => i % 16 === 0 || i % 16 === 5 || i % 16 === 10 || i % 16 === 15 ? 1 : 0) },
