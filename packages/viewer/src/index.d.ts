@@ -201,6 +201,21 @@ export const Tube: LC<{
   join?: 'tangent' | 'bevel' | 'miter' | 'round';
 }>;
 
+/** Draw the polymer backbone as a flat, oriented ribbon (0sj.1's
+ * curve-segment kernel oriented by 0sj.2's per-residue direction/secondary-
+ * structure data), fed to FaceLayer as a mesh. Helix/sheet get a wide
+ * cross-section, coil a narrow one; there is no beta-strand arrowhead taper
+ * yet. Only `select`/`smooth` rebuild the mesh; `color`/`opacity` update
+ * bindings. */
+export const Ribbon: LC<{
+  /** A @molgpu/select atom Selection; without one, active model/primary-altloc atoms are used. */
+  select?: Selection | null;
+  /** Samples per guide segment; defaults to 8. */
+  smooth?: number;
+  color?: VectorLike;
+  opacity?: number;
+}>;
+
 /** A molecular (solvent-excluded) surface via Mol*'s scalar-field kernel,
  * @molgpu/geo's marching-cubes port, and FaceLayer. Only `select`,
  * `probeRadius`, and `resolution` rebuild the field/mesh (scheduled through

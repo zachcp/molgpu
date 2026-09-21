@@ -12,6 +12,7 @@
     "test:viewer:gate2": "node packages/viewer/test/run-gate2.mjs",
     "test:viewer:tube": "node packages/viewer/test/run-tube.mjs",
     "test:viewer:surface": "node packages/viewer/test/run-surface.mjs",
+    "test:viewer:ribbon": "node packages/viewer/test/run-ribbon.mjs",
     "test:corpus": "node --test packages/io/test/corpus.test.mjs",
     "test:gpu": "node packages/viewer/test/run-browser.mjs",
     "test:components": "node packages/viewer/test/run-components.mjs",
