@@ -1,0 +1,44 @@
+import { use, useMemo } from '@use-gpu/live';
+import { LineLayer } from '@use-gpu/workbench';
+import { activeAtoms, traceTable } from '@molgpu/table';
+import { useStructure } from './structure-context.mjs';
+import { withColumns } from './internal/representation.mjs';
+import { buildTubeGeometry } from './internal/tube-geometry.mjs';
+import { lineWidthForRadius } from './internal/line-size.mjs';
+
+/**
+ * Draw the polymer backbone as a GPU-extruded tube: RawLines' shaded mode
+ * (@use-gpu/wgsl/geometry/tube via LineLayer), zero CPU mesh building.
+ * `select` (a @molgpu/select atom Selection) restricts which atoms feed the
+ * trace; without one, the active model/primary-altloc atoms are used, never
+ * every altloc conformer at once (which would jumble the guide path).
+ * Missing residues, chain/model breaks, and a selection that drops a
+ * residue's guide atom all end a run rather than being bridged across.
+ * `radius` is an Ångström tube radius, converted through the verified
+ * depth:-1 LineLayer width contract (internal/line-size.mjs) with no
+ * empirical floor. Only `select` and `smooth` (samples per guide segment)
+ * rebuild the trace/spline geometry; `radius` and `color` update bindings.
+ */
+export const Tube = ({ select, radius = 0.3, sides = 8, join = 'round', smooth = 6, color = [0.45, 0.78, 0.95, 1], ...props }) => {
+  const { resource } = useStructure();
+  const { data } = resource;
+
+  if (select !== undefined && select !== null && (select.dataset !== resource.identity || select.domain !== 'atom')) {
+    throw new TypeError('Tube received a foreign or non-atom selection');
+  }
+  const selectKey = select?.id ?? 'active';
+  const indices = useMemo(() => select ? select.indices : activeAtoms(data), [data, selectKey]);
+  const trace = useMemo(() => traceTable(data, indices), [data, indices]);
+  const built = useMemo(() => buildTubeGeometry(trace, smooth), [trace, smooth]);
+  if (!built.count) return null;
+
+  const width = lineWidthForRadius(radius, -1);
+  const specs = [
+    { key: 'positions', data: built.positions, format: 'vec3<f32>' },
+    { key: 'segments', data: built.segments, format: 'i32' },
+  ];
+  return withColumns(specs, (map) => use(LineLayer, {
+    positions: map.positions, segments: map.segments, width, color,
+    shaded: true, sides, join, depth: -1, ...props,
+  }));
+};

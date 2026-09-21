@@ -7,3 +7,12 @@ export function lineRadiusForWidth(width, depth, { pixelRatio = 1, viewScale = 1
   const scale = depth < 0 ? 1 : pixelRatio * viewScale * (depth === 0 ? clipW : worldScale);
   return width * scale / 2;
 }
+
+/** Inverse of lineRadiusForWidth: the `width`/`widths` input that renders an Ångström radius. */
+export function lineWidthForRadius(radius, depth, { pixelRatio = 1, viewScale = 1, worldScale = 1, clipW = 1 } = {}) {
+  for (const [name, value] of Object.entries({ radius, pixelRatio, viewScale, worldScale, clipW })) {
+    if (!Number.isFinite(value) || value <= 0) throw new RangeError(`${name} must be a positive finite number`);
+  }
+  const scale = depth < 0 ? 1 : pixelRatio * viewScale * (depth === 0 ? clipW : worldScale);
+  return 2 * radius / scale;
+}

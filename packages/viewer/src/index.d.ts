@@ -184,6 +184,23 @@ export const BallAndStick: LC<{
   endpoints?: 'both' | 'either';
 }>;
 
+/** Draw the polymer backbone as a GPU-extruded tube (LineLayer's shaded
+ * `@use-gpu/wgsl/geometry/tube` extrusion; no CPU mesh). Missing residues,
+ * chain/model breaks, and a selection gap all end a run rather than
+ * bridging across it. Only `select`/`smooth` rebuild trace/spline geometry;
+ * `radius`/`color` update bindings. */
+export const Tube: LC<{
+  /** A @molgpu/select atom Selection; without one, active model/primary-altloc atoms are used. */
+  select?: Selection | null;
+  /** Ångström tube radius; defaults to 0.3. */
+  radius?: number;
+  /** Samples per guide segment; defaults to 6. */
+  smooth?: number;
+  color?: VectorLike;
+  sides?: number;
+  join?: 'tangent' | 'bevel' | 'miter' | 'round';
+}>;
+
 /** Draw Ångström radii through PointLayer's camera-normalized `sizes` API. */
 export const WorldSpacePointLayer: LC<{
   positions: ShaderSource;

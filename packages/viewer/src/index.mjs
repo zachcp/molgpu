@@ -6,6 +6,7 @@ export { Structure } from './structure.mjs';
 export { Spacefill } from './spacefill.mjs';
 export { Bonds } from './bonds.mjs';
 export { BallAndStick } from './ball-and-stick.mjs';
+export { Tube } from './tube.mjs';
 export { useField } from './use-field.mjs';
 export { TimelineContext, TimelineProvider, useTimelineTime, useTimelineSample } from './timeline-context.mjs';
 export { focusSelection, createCameraCurve, sampleCamera } from './camera-curve.mjs';
