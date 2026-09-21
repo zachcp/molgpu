@@ -4,6 +4,7 @@ import { useStructure } from './structure-context.mjs';
 import { useField } from './use-field.mjs';
 import { isField, fieldAttrNames, withColumns } from './internal/representation.mjs';
 import { withMaterial } from './materials.mjs';
+import { Pickable } from './picking.mjs';
 
 /** Geometry depends on structure and selection, never on the colour field. */
 const gather = (data, indices) => {
@@ -56,9 +57,11 @@ const GatheredSpacefill = ({ data, indices, selectKey, attrNames, field, sharedP
  * which is composed shader-side over the atoms' columns (no per-atom colour
  * upload) via the viewer's useField. `material` (a @molgpu/viewer material
  * spec) wraps the shaded point layer; without one the atoms use the ambient
- * scene material.
+ * scene material. `pickable` draws the atoms into the picking buffer so
+ * usePicking() can resolve the cursor to an atom row (needs a <PickingProvider>
+ * and a <Pass picking>).
  */
-export const Spacefill = ({ scale = 1, select, color = [0.72, 0.72, 0.76, 1], material, ...props }) => {
+export const Spacefill = ({ scale = 1, select, color = [0.72, 0.72, 0.76, 1], material, pickable = false, ...props }) => {
   const { resource, sources } = useStructure();
   const { data } = resource;
 
@@ -73,16 +76,22 @@ export const Spacefill = ({ scale = 1, select, color = [0.72, 0.72, 0.76, 1], ma
   const n = indices ? indices.length : data.topology.atoms.count;
   if (!sources || n === 0) return null;
 
-  // Whole structure with a flat colour keeps the shared, already-uploaded source.
-  if (!indices && !field) {
-    return withMaterial(material, use(WorldSpacePointLayer, {
-      positions: sources.positions, radii: data.topology.atoms.radius, count: n,
-      scale, color, shape: 'circle', shaded: true, ...props,
-    }));
-  }
+  // Build the shaded layer, given the picking id to draw under (undefined when
+  // not pickable → PointLayer emits no picking id). The whole-structure flat
+  // path keeps the shared, already-uploaded source; both paths forward `id`.
+  const draw = (id) => withMaterial(material, (!indices && !field)
+    ? use(WorldSpacePointLayer, {
+        positions: sources.positions, radii: data.topology.atoms.radius, count: n,
+        scale, color, shape: 'circle', shaded: true, id, ...props,
+      })
+    : use(GatheredSpacefill, {
+        data, indices, selectKey: select?.id ?? 'all', attrNames, field,
+        sharedPositions: sources.positions, color, scale, id, ...props,
+      }));
 
-  return withMaterial(material, use(GatheredSpacefill, {
-    data, indices, selectKey: select?.id ?? 'all', attrNames, field,
-    sharedPositions: sources.positions, color, scale, ...props,
-  }));
+  // The drawn instance order is the gather order: for a selection that is
+  // `indices`, otherwise identity (instance index === atom row).
+  return pickable
+    ? use(Pickable, { resource, indices, render: draw })
+    : draw(undefined);
 };

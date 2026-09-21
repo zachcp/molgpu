@@ -175,6 +175,9 @@ export const Spacefill: LC<{
   color?: VectorLike | Field;
   /** Wraps the shaded point layer; without one, the ambient scene material. */
   material?: MaterialSpec;
+  /** Draw the atoms into the picking buffer so usePicking() can resolve them
+   *  (needs a <PickingProvider> and a <Pass picking>). Defaults to false. */
+  pickable?: boolean;
 } & Omit<PointLayerProps, 'positions' | 'sizes' | 'count' | 'color'>>;
 
 /** Draw bonds as world-space sticks, optionally restricted to a selection.
@@ -321,6 +324,45 @@ export const Environment: LC<EnvironmentProps>;
  * offered; it does not exist upstream in this version (tracked as hj0.5).
  */
 export const Pass: LC<PassProps>;
+
+// --- Picking ----------------------------------------------------------------
+
+/** An atom resolved from a picking hit. `resource` is the StructureResource the
+ *  atom belongs to; `atom` is its row; `instance` is the drawn instance index. */
+export interface PickHit {
+  readonly id: number;
+  readonly resource: StructureResource;
+  readonly atom: number;
+  readonly instance: number;
+}
+
+/** Owns the picking registry; wrap both the pickable representations and any
+ *  usePicking() caller in one. Must sit inside an <AutoCanvas>. */
+export const PickingProvider: LC<{ children?: LiveElement }>;
+
+/**
+ * Resolve the atom under the cursor. `hover` tracks the pointer; `pick` is the
+ * atom the last left press landed on — the click-to-seek hook, where the caller
+ * maps the picked atom to a beat and seeks its own <TimelineProvider> (time
+ * stays caller-owned). Optional `onHover`/`onPick` fire on change.
+ */
+export function usePicking(options?: {
+  onHover?: (hit: PickHit | null) => void;
+  onPick?: (hit: PickHit | null) => void;
+}): { hover: PickHit | null; pick: PickHit | null };
+
+/**
+ * Read a set of @molgpu/fields for one picked atom, for a tooltip. `fields` maps
+ * a label to an atom-domain Field; the result maps the same labels to the atom's
+ * value (number, number[], or string). `t` is the timeline time for any
+ * time-dependent field. Evaluations are cached per (field, data, t).
+ */
+export function tooltipFields(
+  fields: Record<string, Field>,
+  data: StructureData,
+  atom: number,
+  options?: { t?: number },
+): Record<string, number | number[] | string>;
 
 /** Draw Ångström radii through PointLayer's camera-normalized `sizes` API. */
 export const WorldSpacePointLayer: LC<{

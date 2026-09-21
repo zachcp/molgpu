@@ -12,6 +12,7 @@ export { Surface } from './surface.mjs';
 export { PBRMaterial, BasicMaterial, NormalMaterial, FlatMaterial, LitMaterial, FresnelMaterialEffect, withMaterial, materialTypes } from './materials.mjs';
 export { AmbientLight, DirectionalLight, PointLight, SpotLight, DomeLight, Environment, KEY_LIGHT_DIRECTION } from './lights.mjs';
 export { Pass } from './pass.mjs';
+export { PickingProvider, usePicking, tooltipFields } from './picking.mjs';
 export { useField } from './use-field.mjs';
 export { TimelineContext, TimelineProvider, useTimelineTime, useTimelineSample } from './timeline-context.mjs';
 export { focusSelection, createCameraCurve, sampleCamera } from './camera-curve.mjs';
