@@ -1,4 +1,4 @@
-// Pure CPU shape for <Tube>: per-run Catmull-Rom subdivision of a
+// Pure CPU shape for <Tube>: per-run centripetal Catmull-Rom subdivision of a
 // @molgpu/table trace, plus the RawLines segment codes that keep GPU tube
 // extrusion (@use-gpu/wgsl/geometry/tube via LineLayer's `shaded` mode) from
 // bridging one run into the next.
@@ -8,14 +8,23 @@
 // draws but extrudes each vertex pair as its own cone when shaded — the
 // spiky artifact this avoids. A run needs at least 2 guide points to have a
 // direction at all, so a single-residue run contributes no tube geometry.
+// A namespace import, not a named one: Vite resolves @use-gpu/core's real ESM
+// build (named export works directly), but plain `node --test` resolves its
+// CJS build, whose named exports Node's static CJS/ESM interop cannot always
+// see — falling back to the namespace's `default` (the full module.exports)
+// covers that case too.
+import * as useGpuCore from '@use-gpu/core';
+const catmullRomWeighted = useGpuCore.catmullRomWeighted ?? useGpuCore.default.catmullRomWeighted;
 const fail = message => { throw new TypeError(`Tube geometry: ${message}`); };
 
-function catmullRom(p0, p1, p2, p3, t) {
-  const t2 = t * t, t3 = t * t2;
-  return 0.5 * (2 * p1 + (-p0 + p2) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t2 + (-p0 + 3 * p1 - 3 * p2 + p3) * t3);
-}
+const dist3 = (guide, i, j) => Math.hypot(guide[i] - guide[j], guide[i + 1] - guide[j + 1], guide[i + 2] - guide[j + 2]);
 
-/** Subdivide one run's guide points; `at(k)` clamps to this run's own ends, never a neighbor run's. */
+/**
+ * Subdivide one run's guide points with @use-gpu/core's centripetal
+ * (power=0.5) Catmull-Rom, which — unlike a uniform parameterization — stays
+ * well-behaved when consecutive guide points are unevenly spaced. `at(k)`
+ * clamps to this run's own ends, never a neighbor run's.
+ */
 function subdivideRun(guide, residue, start, count, perSegment) {
   const at = k => Math.min(count - 1, Math.max(0, k));
   const segs = count - 1;
@@ -24,12 +33,12 @@ function subdivideRun(guide, residue, start, count, perSegment) {
   const sourceResidue = new Uint32Array(n);
   let w = 0;
   for (let s = 0; s < segs; s++) {
+    const i0 = (start + at(s - 1)) * 3, i1 = (start + at(s)) * 3, i2 = (start + at(s + 1)) * 3, i3 = (start + at(s + 2)) * 3;
+    const ab = dist3(guide, i0, i1), bc = dist3(guide, i1, i2), cd = dist3(guide, i2, i3);
     for (let j = 0; j < perSegment; j++) {
       const t = j / perSegment;
       for (let c = 0; c < 3; c++) {
-        const p0 = guide[(start + at(s - 1)) * 3 + c], p1 = guide[(start + at(s)) * 3 + c];
-        const p2 = guide[(start + at(s + 1)) * 3 + c], p3 = guide[(start + at(s + 2)) * 3 + c];
-        positions[w * 3 + c] = catmullRom(p0, p1, p2, p3, t);
+        positions[w * 3 + c] = catmullRomWeighted(t, guide[i0 + c], guide[i1 + c], guide[i2 + c], guide[i3 + c], ab, bc, cd);
       }
       sourceResidue[w] = residue[start + s];
       w++;
