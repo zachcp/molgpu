@@ -201,6 +201,26 @@ export const Tube: LC<{
   join?: 'tangent' | 'bevel' | 'miter' | 'round';
 }>;
 
+/** A molecular (solvent-excluded) surface via Mol*'s scalar-field kernel,
+ * @molgpu/geo's marching-cubes port, and FaceLayer. Only `select`,
+ * `probeRadius`, and `resolution` rebuild the field/mesh (scheduled through
+ * 0sj.7's cancellation/budget contract); `color`/`opacity` update bindings.
+ * An oversize grid throws before the field is computed. */
+export const Surface: LC<{
+  /** A @molgpu/select atom Selection; without one, active model/primary-altloc atoms are used. */
+  select?: Selection | null;
+  /** Ångström probe radius; defaults to 1.4 (water). */
+  probeRadius?: number;
+  /** Grid spacing in Ångströms; defaults to 0.5. Smaller is finer and slower. */
+  resolution?: number;
+  /** Grid byte budget override; see assertGridBudget's default. */
+  maxBytes?: number;
+  color?: VectorLike;
+  opacity?: number;
+  loading?: LiveElement | (() => LiveElement);
+  error?: LiveElement | ((failure: unknown) => LiveElement);
+}>;
+
 /** Draw Ångström radii through PointLayer's camera-normalized `sizes` API. */
 export const WorldSpacePointLayer: LC<{
   positions: ShaderSource;

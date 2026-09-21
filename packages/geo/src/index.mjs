@@ -9,6 +9,8 @@ export {
   interpolatePointsAndTangents, interpolateNormals, interpolateSizes,
 } from './curve-segment.mjs';
 
+export { nearestAtomAttribution } from './attribution.mjs';
+
 const offset = (x, y, z, nx, ny) => x + nx * (y + ny * z);
 
 function unit(x, y, z) {
