@@ -16,6 +16,7 @@
     "test:viewer:materials": "node packages/viewer/test/run-materials.mjs",
     "test:viewer:postprocess": "node packages/viewer/test/run-postprocess.mjs",
     "test:viewer:picking": "node packages/viewer/test/run-picking.mjs",
+    "test:viewer:annotations": "node packages/viewer/test/run-annotations.mjs",
     "test:corpus": "node --test packages/io/test/corpus.test.mjs",
     "test:gpu": "node packages/viewer/test/run-browser.mjs",
     "test:components": "node packages/viewer/test/run-components.mjs",

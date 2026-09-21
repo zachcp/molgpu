@@ -364,6 +364,41 @@ export function tooltipFields(
   options?: { t?: number },
 ): Record<string, number | number[] | string>;
 
+// --- Anchored labels & primitives -------------------------------------------
+
+/** A flat text label anchored to the centroid of a selection (its mean atom
+ *  position), not a literal coordinate. `select` chooses the atoms (whole active
+ *  structure without one); `at` overrides with an explicit point. Needs
+ *  <FontLoader> + <SDFFontProvider> ancestors for the glyphs. */
+export const Label: LC<{
+  select?: Selection | null;
+  /** Explicit [x, y, z] anchor, overriding the selection centroid. */
+  at?: readonly number[];
+  text?: string;
+  size?: number;
+  color?: VectorLike;
+  offset?: readonly number[];
+  family?: string;
+}>;
+
+/** A distance measurement between two selections' centroids: a connecting line
+ *  plus a midpoint label of the separation in Ångström. Needs <FontLoader> +
+ *  <SDFFontProvider> ancestors for the label. */
+export const Distance: LC<{
+  a: Selection;
+  b: Selection;
+  color?: VectorLike;
+  width?: number;
+  size?: number;
+  labelColor?: VectorLike;
+  /** Customise the label text; receives the distance in Ångström. */
+  format?: (distance: number) => string;
+}>;
+
+/** The centroid (mean atom position, Ångström) of a selection, or of the whole
+ *  structure when `select` is null — the anchor <Label>/<Distance> use. */
+export function centroid(data: StructureData, select?: Selection | null): [number, number, number];
+
 /** Draw Ångström radii through PointLayer's camera-normalized `sizes` API. */
 export const WorldSpacePointLayer: LC<{
   positions: ShaderSource;
