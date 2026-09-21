@@ -62,3 +62,17 @@ export function coordinateBounds(data: StructureData, indices?: Uint32Array): nu
 export interface BondPolicy { readonly padding?: number; readonly interChain?: boolean; }
 export function bondTopology(data: StructureData, policy?: BondPolicy): Bonds;
 export function selectBonds(data: StructureData, atomIndices: Uint32Array, options?: { readonly mode?: 'both' | 'either'; readonly policy?: BondPolicy }): Uint32Array;
+/** Segmented polymer trace: guide points, per-sample frames, and CSR-style run offsets. */
+export interface Trace {
+  readonly count: number;
+  readonly guide: Float32Array;
+  readonly tangent: Float32Array;
+  readonly normal: Float32Array;
+  readonly binormal: Float32Array;
+  /** Source residue row per sample (sample-to-residue mapping / retained residue IDs). */
+  readonly residue: Uint32Array;
+  /** Run r spans [runs[r], runs[r + 1]); length is runCount + 1. */
+  readonly runs: Uint32Array;
+  readonly runKind: readonly ('protein' | 'rna' | 'dna')[];
+}
+export function traceTable(data: StructureData, atomIndices: Uint32Array): Trace;

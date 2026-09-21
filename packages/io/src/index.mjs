@@ -2,6 +2,29 @@ import { createStructure } from '@molgpu/table';
 
 const ELEMENT = { H: 1, C: 6, N: 7, O: 8, P: 15, S: 16, SE: 34, FE: 26 };
 const RADIUS = { 1: 1.1, 6: 1.7, 7: 1.55, 8: 1.52, 15: 1.8, 16: 1.8, 26: 2.05, 34: 1.9 };
+
+// Chemical-component name sets ported from Mol* 5.11.0's MIT-licensed
+// mol-model/structure/model/types.js (AminoAcidNamesL/D, RnaBaseNames,
+// DnaBaseNames), used to classify each residue by its `comp` (label_comp_id)
+// so trace/cartoon consumers can pick guide atoms without re-deriving this.
+const AMINO_ACID_NAMES = new Set([
+  'HIS', 'ARG', 'LYS', 'ILE', 'PHE', 'LEU', 'TRP', 'ALA', 'MET', 'PRO', 'CYS',
+  'ASN', 'VAL', 'GLY', 'SER', 'GLN', 'TYR', 'ASP', 'GLU', 'THR', 'SEC', 'PYL',
+  'UNK', 'MSE', 'SEP', 'TPO', 'PTR', 'PCA', 'HYP',
+  'HSD', 'HSE', 'HSP', 'LSN', 'ASPP', 'GLUP',
+  'HID', 'HIE', 'HIP', 'LYN', 'ASH', 'GLH',
+  'DAL', 'DAR', 'DSG', 'DAS', 'DCY', 'DGL', 'DGN', 'DHI', 'DIL', 'DLE',
+  'DLY', 'MED', 'DPN', 'DPR', 'DSN', 'DTH', 'DTR', 'DTY', 'DVA', 'DNE',
+]);
+const RNA_BASE_NAMES = new Set(['A', 'C', 'T', 'G', 'I', 'U', 'N']);
+const DNA_BASE_NAMES = new Set(['DA', 'DC', 'DT', 'DG', 'DI', 'DU', 'DN']);
+const polymerKind = comp => {
+  const name = comp.toUpperCase();
+  if (AMINO_ACID_NAMES.has(name)) return 'protein';
+  if (RNA_BASE_NAMES.has(name)) return 'rna';
+  if (DNA_BASE_NAMES.has(name)) return 'dna';
+  return 'other';
+};
 const clean = value => value === '.' || value === '?' ? '' : value;
 const field = (category, name) => category.getField(name);
 const str = (category, name, row, fallback = '') => clean(field(category, name)?.str(row) ?? fallback);
@@ -63,7 +86,7 @@ export async function structureFromBcif(bytes) {
   const residueCount = residues.length, chainCount = chains.length;
   return createStructure({ positions, topology: {
     atoms: { count: atom.rowCount, id: ids, name: names, altloc, residue: atomResidue, element, occupancy, bfactor, radius },
-    residues: { count: residueCount, chain: Uint32Array.from(residues, r => r.chain), labelSeq: Int32Array.from(residues, r => r.seq), authSeq: residues.map(r => r.authSeq), insertionCode: residues.map(r => r.insertion), comp: residues.map(r => r.comp), polymer: new Array(residueCount).fill('other') },
+    residues: { count: residueCount, chain: Uint32Array.from(residues, r => r.chain), labelSeq: Int32Array.from(residues, r => r.seq), authSeq: residues.map(r => r.authSeq), insertionCode: residues.map(r => r.insertion), comp: residues.map(r => r.comp), polymer: residues.map(r => polymerKind(r.comp)) },
     chains: { count: chainCount, model: Int32Array.from(chains, c => c.model), labelId: chains.map(c => c.labelId), authId: chains.map(c => c.authId) },
     bonds: { count: 0, a: new Uint32Array(), b: new Uint32Array(), order: new Uint8Array(), source: [] },
     instances: { count: chainCount, chain: Uint32Array.from({ length: chainCount }, (_, i) => i), operatorId: new Array(chainCount).fill('identity'), transform: Float64Array.from({ length: chainCount * 16 }, (_, i) => i % 16 === 0 || i % 16 === 5 || i % 16 === 10 || i % 16 === 15 ? 1 : 0) },
