@@ -13,3 +13,5 @@ export { useCameraCurve } from './use-camera-curve.mjs';
 export { useAnnotation } from './use-annotation.mjs';
 export { pointSizeForRadius, pointSizeForCameraRadius, pointSizesForRadii } from './internal/point-size.mjs';
 export { lineRadiusForWidth } from './internal/line-size.mjs';
+export { geometryDeps, assertGridBudget, copyOwned, runGeometryJob } from './internal/geometry-job.mjs';
+export { useGeometryJob } from './use-geometry-job.mjs';

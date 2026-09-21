@@ -243,3 +243,16 @@ export function pointSizesForRadii(
 export function lineRadiusForWidth(width: number, depth: number, view?: {
   pixelRatio?: number; viewScale?: number; worldScale?: number; clipW?: number;
 }): number;
+
+/** useAwait dependency key: structure identity/revisions plus geometry-only
+ * params. Throws if `params` holds a style key (color, opacity). */
+export function geometryDeps(resource: StructureResource, params?: Record<string, unknown>): readonly unknown[];
+export interface GridBudget { maxBytes?: number; bytesPerCell?: number; }
+/** Throws a RangeError (code GEOMETRY_BUDGET_EXCEEDED) before a grid this size would be allocated. */
+export function assertGridBudget(dims: readonly [number, number, number], budget?: GridBudget): number;
+export function copyOwned<T extends { slice(): T }>(typedArray: T): T;
+export function runGeometryJob<T>(kernel: () => T | Promise<T>, cancelled: () => boolean): Promise<T | null>;
+/** Schedule a cancellable geometry build; see use-geometry-job.mjs for the full contract. */
+export function useGeometryJob<P extends Record<string, unknown>, T>(
+  resource: StructureResource, params: P, kernel: (resource: StructureResource, params: P) => T | Promise<T>,
+): readonly [T | undefined, unknown, boolean];
