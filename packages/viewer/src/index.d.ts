@@ -7,6 +7,7 @@ import type {
   ShaderFlatMaterialProps, ShaderLitMaterialProps, FresnelMaterialEffectProps,
   AmbientLightProps, DirectionalLightProps, PointLightProps,
   SpotLightProps, DomeLightProps, EnvironmentProps,
+  PassProps,
 } from '@use-gpu/workbench';
 import type { StructureData } from '@molgpu/table';
 import type { Field } from '@molgpu/fields';
@@ -309,6 +310,17 @@ export const SpotLight: LC<SpotLightProps>;
 export const DomeLight: LC<DomeLightProps>;
 /** Image-based lighting: the environment map PBR materials reflect. */
 export const Environment: LC<EnvironmentProps>;
+
+// --- Pass / postprocessing --------------------------------------------------
+
+/**
+ * The scene-level render pass that draws representations and hosts lights. Thin
+ * wrapper over @use-gpu/workbench's <Pass>: `lights` defaults on, and the
+ * postprocessing flags forward untouched — `ssao`, `outline`, and `oit` (the
+ * one that matters for transparent molecular surfaces). Depth of field is not
+ * offered; it does not exist upstream in this version (tracked as hj0.5).
+ */
+export const Pass: LC<PassProps>;
 
 /** Draw Ångström radii through PointLayer's camera-normalized `sizes` API. */
 export const WorldSpacePointLayer: LC<{
