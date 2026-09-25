@@ -20,7 +20,11 @@ export type Scalar = number;
 export type Color = readonly [number, number, number, number];
 
 export function constant(value: number | string | Color): Field;
-export function attribute(name: 'element' | 'occupancy' | 'bfactor' | 'radius' | 'residue' | 'labelSeq' | 'chain'): Field;
+/**
+ * `atomChain` is a derived per-atom chain index (atom -> residue -> chain);
+ * `labelSeq` and `chain` live on the residue domain, the rest on atoms.
+ */
+export function attribute(name: 'element' | 'occupancy' | 'bfactor' | 'radius' | 'residue' | 'atomChain' | 'labelSeq' | 'chain'): Field;
 export function categorical(input: Field, cases: Record<number, number | Color>, fallback: number | Color): Field;
 export function linear(input: Field, options: { domain: readonly [number, number]; range?: readonly [number, number]; overflow?: Overflow }): Field;
 export function colormap(input: Field, stops: ReadonlyArray<readonly [number, Color]>): Field;
@@ -47,7 +51,8 @@ export interface Binding {
 
 export interface Compiled {
   readonly valueType: ValueType;
-  readonly domain: Domain;
+  /** 'any' when a broadcast field (constant/curve) is compiled without `options.domain`. */
+  readonly domain: Domain | 'any';
   readonly target: Target;
   /** Entry name: `evalField` (raw) or `getField` (link). */
   readonly entry: string;
@@ -61,15 +66,21 @@ export interface Compiled {
 }
 export function compile(field: Field, options?: { domain?: Domain; target?: Target }): Compiled;
 
-export function fieldDomain(field: Field): Domain | 'any';
-
-/** Min/max of an attribute column over a dataset, for auto-ranging a domain. */
+/**
+ * Min/max of an attribute column (any name `attribute` accepts) over a dataset,
+ * for auto-ranging a domain. Returns [0, 1] for an empty column and [v, v+1]
+ * for a constant one; throws on an unknown column.
+ */
 export function columnRange(data: StructureData, name: string): [number, number];
 
 // Built-in colour presets (a closed set) composed from the primitives.
+/** CPK colour by element; unlisted elements take `fallback`. */
 export function byElement(fallback?: Color): Field;
+/** B-factor on a cool-to-warm ramp over `domain` (default [0, 100]). */
 export function byBfactor(options?: { domain?: readonly [number, number]; stops?: ReadonlyArray<readonly [number, Color]> }): Field;
+/** Residue index on a rainbow ramp over `domain` (default [0, 1]; pass `columnRange(data, 'residue')`). */
 export function bySeq(options?: { domain?: readonly [number, number]; stops?: ReadonlyArray<readonly [number, Color]> }): Field;
+/** Chain index from a cyclic `palette`; chains beyond it take `fallback`. */
 export function byChain(options?: { palette?: ReadonlyArray<Color>; fallback?: Color }): Field;
 
 // ---- identity-keyed annotation joins --------------------------------------
@@ -83,15 +94,18 @@ export type IdentityField = keyof ResidueIdentity;
 
 export function residueIdentity(data: StructureData, row: number): ResidueIdentity;
 export function chainIdentity(data: StructureData, row: number): ChainIdentity;
-export function identityKey(identity: Record<string, unknown>, fields: readonly string[]): string;
 
-export interface JoinOptions {
-  /** Domain the records key to. Defaults to 'residue'. */
+/** `R` is the caller's record shape (inferred from `records`). */
+export interface JoinOptions<R = unknown> {
+  /**
+   * Domain the records key to. Defaults to 'residue'. `'chain'` requires
+   * `lift: true` (annotations exist only on atom/residue domains).
+   */
   domain?: 'residue' | 'chain';
   /** Identity fields to match on; must include a chain field. */
   fields: readonly IdentityField[];
-  /** Extract a record's value; defaults to `r => r.value`. */
-  value?: (record: any) => number | Color;
+  /** Extract a record's value; defaults to reading `record.value`. */
+  value?: (record: R) => number | Color;
   type?: ValueType;
   policy?: 'fallback' | 'fail';
   fallback?: number | Color;
@@ -100,5 +114,9 @@ export interface JoinOptions {
   lift?: boolean;
 }
 
-/** Join external records onto the table by identity and return an annotation Field. */
-export function joinAnnotation(data: StructureData, records: readonly any[], options: JoinOptions): Field;
+/**
+ * Join external records onto the table by identity and return an annotation
+ * Field. Each record carries the identity fields named in `options.fields` plus
+ * a value (see `JoinOptions.value`).
+ */
+export function joinAnnotation<R>(data: StructureData, records: readonly R[], options: JoinOptions<R>): Field;
