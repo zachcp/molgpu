@@ -2,7 +2,7 @@
 // No data props: that is the point of the intermediary.
 import { use, useMemo } from '@use-gpu/live';
 import { RawData } from '@use-gpu/workbench';
-import { WorldSpacePointLayer } from '../../../packages/viewer/src/advanced.mjs'; // @molgpu/viewer/advanced; vite.config aliases only the package root
+import { WorldSpacePointLayer } from '@molgpu/viewer/advanced';
 import { useStructure } from './structure.mjs';
 
 export const Spacefill = ({ scale = 1, select = null }) => {

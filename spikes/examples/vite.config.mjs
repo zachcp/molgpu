@@ -14,6 +14,8 @@ export default {
       '@molgpu/fields': repo('../../packages/fields/src/index.mjs'),
       '@molgpu/io': repo('../../packages/io/src/index.mjs'),
       '@molgpu/timeline': repo('../../packages/timeline/src/index.mjs'),
+      // Subpath entries must precede the package root: vite matches aliases by prefix, in order.
+      '@molgpu/viewer/advanced': repo('../../packages/viewer/src/advanced.mjs'),
       '@molgpu/viewer': repo('../../packages/viewer'),
     },
     // Those packages import @use-gpu/* too. Without dedupe they resolve against
