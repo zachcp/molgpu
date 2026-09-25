@@ -320,9 +320,7 @@ const KNOWN = {
   'distance / display size (width/size)': 'VIOLATION: style edit re-uploads the line positions/segments (fresh arrays every render)',
   // WorldSpacePointLayer's base-size RawData buffer is never destroyed
   // (world-space-points.mjs:51; RawData 0.20.0 does not destroy buffers).
-  ownedLeak: 'VIOLATION: +2 viewer-owned buffers per mount/unmount cycle (Spacefill and BallAndStick base-sizes RawData never destroyed)',
-  deviceLeak: 'VIOLATION: +14 device buffers per cycle: the 2 base-sizes buffers plus 12 use.gpu-internal buffers not destroyed on unmount',
-  churnLeak: 'VIOLATION: base-sizes RawData reallocates on growth without destroying the old buffer, so owned buffers grow with selection churn',
+  deviceLeak: 'VIOLATION: +12 device buffers per cycle: use.gpu-internal buffers not destroyed on unmount',
 };
 
 for (const [kind, rows] of Object.entries(MATRIX)) {
@@ -377,7 +375,7 @@ async function mountCycles() {
   return lifetime;
 }
 
-test(`mount/unmount every representation ${MOUNT_CYCLES}x: viewer-owned live GPU buffers return to baseline`, { todo: KNOWN.ownedLeak }, async () => {
+test(`mount/unmount every representation ${MOUNT_CYCLES}x: viewer-owned live GPU buffers return to baseline`, async () => {
   const l = await mountCycles();
   assert.deepEqual(l.errors, []);
   assert.ok(l.mounted.every((m) => m.owned > l.baseline.owned), `mounting must allocate owned buffers: ${JSON.stringify(l)}`);
@@ -391,7 +389,7 @@ test(`mount/unmount every representation ${MOUNT_CYCLES}x: device live GPU buffe
 
 // ---- churn --------------------------------------------------------------------
 
-test('selection churn: 64 distinct Spacefill selections keep owned live GPU buffers bounded', { todo: KNOWN.churnLeak }, async () => {
+test('selection churn: 64 distinct Spacefill selections keep owned live GPU buffers bounded', async () => {
   await setScene(EMPTY);
   await settle();
   const liveAfter = [];

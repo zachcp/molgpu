@@ -5,7 +5,7 @@ import { count, trackOwnedBuffer, releaseOwnedBuffer } from './instrumentation.m
 
 // The source and its buffer are owned by this subtree. Consumers must not retain
 // either beyond render/resource lifetime. RawData 0.20.0 does not destroy buffers.
-const OwnedSource = ({ source, label, counter, render }) => {
+export const OwnedSource = ({ source, label, counter, render }) => {
   if (label) source.buffer.label = `molgpu:${label}`;
   useResource(dispose => {
     trackOwnedBuffer(source.buffer, counter);
