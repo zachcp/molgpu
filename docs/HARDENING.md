@@ -96,3 +96,11 @@ described:
 - The docs and examples gallery link to each package README.
 - A dry-run publish of the whole workspace succeeds in dependency order.
   Actually publishing to npm is a separate human decision.
+
+Status (2026-09-25): all packages are at `0.1.0` with a `CHANGELOG.md`
+(manual procedure in [RELEASING.md](RELEASING.md)). `geo`, `io` and `table`
+carry the Mol* MIT notice in `LICENSE`. The root [README](../README.md) and
+the examples gallery link every package README. `npm run release:dry-run`
+passes in dependency order. `.github/workflows/ci.yml` runs the three scripts
+plus the dry-run. Still open until a remote exists: the `repository` fields and
+a first green CI run.

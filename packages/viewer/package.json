@@ -1,5 +1,5 @@
 {
-  "name": "@molgpu/viewer", "version": "0.0.0", "type": "module",
+  "name": "@molgpu/viewer", "version": "0.1.0", "type": "module",
   "description": "use.gpu Live components for molecular scenes: structures, representations, materials, lights, picking, annotations and timeline-driven cameras.",
   "license": "MIT",
   "sideEffects": false,
@@ -7,7 +7,7 @@
     ".": { "types": "./src/index.d.ts", "import": "./src/index.mjs" },
     "./advanced": { "types": "./src/advanced.d.ts", "import": "./src/advanced.mjs" }
   },
-  "files": ["src"],
-  "dependencies": { "@molgpu/io": "0.0.0", "@molgpu/geo": "0.0.0", "@molgpu/fields": "0.0.0", "@molgpu/select": "0.0.0", "@molgpu/timeline": "0.0.0" },
-  "peerDependencies": { "@molgpu/table": "0.0.0", "@use-gpu/live": "0.20.0", "@use-gpu/workbench": "0.20.0", "@use-gpu/shader": "0.20.0", "@use-gpu/core": "0.20.0" }
+  "files": ["src", "CHANGELOG.md"],
+  "dependencies": { "@molgpu/io": "0.1.0", "@molgpu/geo": "0.1.0", "@molgpu/fields": "0.1.0", "@molgpu/select": "0.1.0", "@molgpu/timeline": "0.1.0" },
+  "peerDependencies": { "@molgpu/table": "^0.1.0", "@use-gpu/live": "0.20.0", "@use-gpu/workbench": "0.20.0", "@use-gpu/shader": "0.20.0", "@use-gpu/core": "0.20.0" }
 }

@@ -10,6 +10,11 @@ cd spikes/examples && npm i
 npx vite .          # http://localhost:5185
 ```
 
+Package docs: [table](../../packages/table/README.md) ·
+[select](../../packages/select/README.md) · [fields](../../packages/fields/README.md) ·
+[io](../../packages/io/README.md) · [geo](../../packages/geo/README.md) ·
+[timeline](../../packages/timeline/README.md) · [viewer](../../packages/viewer/README.md)
+
 | Example | Shows | Variants |
 |---|---|---|
 | `?ex=scene` | the composed crambin figure: tube fold, ball-and-stick site, spacefill callouts | `&site=`, `&shell=`, `&tube=` |

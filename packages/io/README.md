@@ -21,7 +21,7 @@ npm install @molgpu/io @molgpu/table molstar
 
 | Package | Range | Notes |
 | --- | --- | --- |
-| `@molgpu/table` | `0.0.0` | Required. Provides the `StructureData` output type; a peer so the app shares one copy (structure identity is module-private). |
+| `@molgpu/table` | `^0.1.0` | Required. Provides the `StructureData` output type; a peer so the app shares one copy (structure identity is module-private). |
 | `molstar` | `^5.11.0` | Optional peer. Only needed when you call `structureFromBcif` or `molecularSurfaceField`; without it they reject with code `PARSER_UNAVAILABLE` / `FIELD_UNAVAILABLE`. |
 
 ## Example

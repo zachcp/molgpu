@@ -26,7 +26,8 @@
     "typecheck": "tsc -p packages/viewer/test/tsx/tsconfig.json",
     "test:examples": "node spikes/examples/test/run-browser.mjs",
     "test:examples:figure": "node spikes/examples/test/run-figure.mjs",
-    "build:io:measure": "vite build --config packages/io/vite.config.mjs"
+    "build:io:measure": "vite build --config packages/io/vite.config.mjs",
+    "release:dry-run": "node scripts/publish-dry-run.mjs"
   },
   "devDependencies": {
     "@use-gpu/core": "0.20.0",

@@ -1,12 +1,12 @@
 {
   "name": "@molgpu/timeline",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Pure, scrubbable time values for molgpu: named beats and keyframe curves sampled at an explicit time in seconds.",
   "license": "MIT",
   "type": "module",
   "sideEffects": false,
   "exports": { ".": { "types": "./src/index.d.ts", "import": "./src/index.mjs" } },
-  "files": ["src"],
+  "files": ["src", "CHANGELOG.md"],
   "scripts": { "test": "node --test test/*.test.mjs" },
   "dependencies": { "@use-gpu/core": "0.20.0" }
 }

@@ -1,6 +1,6 @@
 {
   "name": "@molgpu/geo",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Pure molecular geometry kernels (curve segments, marching cubes, surface attribution): typed arrays in, owned typed arrays out.",
   "license": "MIT",
   "type": "module",
@@ -11,7 +11,5 @@
       "import": "./src/index.mjs"
     }
   },
-  "files": [
-    "src"
-  ]
+  "files": ["src", "CHANGELOG.md"]
 }
