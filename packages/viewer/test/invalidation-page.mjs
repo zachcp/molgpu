@@ -54,7 +54,15 @@ const base = withBonds(raw, () => true);
 const moved = withPositions(base, base.positions.map((v, i) => v + (i % 3 === 0 ? 0.25 : -0.1)));
 // Connectivity change: a new topology (every other bond dropped), same atoms.
 const rebonded = withBonds(raw, (r) => r % 2 === 0);
-const DATA = { base, moved, rebonded };
+// Inferred connectivity (no explicit bonds): bonds follow coordinates. A small
+// nudge keeps every bond; pulling atom 0 far away breaks its bonds, so the
+// endpoint rows (and the attribute columns gathered for them) must change.
+const inferred = createStructure({ positions: raw.positions, topology: { ...raw.topology, bonds: {
+  count: 0, a: new Uint32Array(), b: new Uint32Array(), order: new Uint8Array(), source: [],
+} } });
+const nudged = withPositions(inferred, inferred.positions.map((v) => v + 0.01));
+const pulled = withPositions(inferred, inferred.positions.map((v, i) => i < 3 ? v + 50 : v));
+const DATA = { base, moved, rebonded, inferred, nudged, pulled };
 
 // Selections resolve per dataset identity; `moved` shares base's identity.
 const residueRange = (label, lo, hi) => where('atom', label, (d, i) => {

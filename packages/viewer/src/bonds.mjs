@@ -1,4 +1,4 @@
-import { use, useMemo } from '@use-gpu/live';
+import { use, useMemo, useRef } from '@use-gpu/live';
 import { LineLayer } from '@use-gpu/workbench';
 import { byElement } from '@molgpu/fields';
 import { useStructure } from './structure-context.mjs';
@@ -14,6 +14,32 @@ import { useBindingProbe } from './internal/use-binding-probe.mjs';
 // One stable default field; passing any explicit colour preserves the existing
 // unsplit geometry and styling behavior.
 const DEFAULT_COLOR = byElement();
+
+const sameRows = (a, b) => {
+  if (a === b) return true;
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+  return true;
+};
+
+// Endpoint attribute columns are a function of the topology columns, the
+// endpoint rows and the column names. The rows are compared by content rather
+// than by the geometry build: a coordinate edit rebuilds geometry but usually
+// keeps the same rows. Inferred bonds can change with coordinates, and then the
+// rows change too, so the columns are rebuilt.
+const useEndpointAttributes = (resource, rows, attrNames) => {
+  const cache = useRef(null);
+  const names = attrNames.join();
+  const hit = cache.current;
+  if (hit && hit.identity === resource.identity && hit.topologyRevision === resource.topologyRevision
+    && hit.names === names && sameRows(hit.rows, rows)) {
+    hit.rows = rows;
+    return hit.columns;
+  }
+  const columns = endpointAttributes(resource.data, rows, attrNames);
+  cache.current = { identity: resource.identity, topologyRevision: resource.topologyRevision, names, rows, columns };
+  return columns;
+};
 
 const line = (positions, segments, width, sides, shaded, extra, props) =>
   use(LineLayer, { positions, segments, width, join: 'round', ...(shaded ? { shaded: true, sides, depth: -1 } : {}), ...extra, ...props });
@@ -55,10 +81,7 @@ export const Bonds = ({ width = 0.3, select, color, opacity = 1, mode, endpoints
   const indices = select ? select.indices : null;
   const selectKey = select?.id ?? 'all';
   const built = useMemo(() => buildBondColumns(data, indices, endpoints, defaultColor), [data, selectKey, endpoints, defaultColor]);
-  // Endpoint rows depend on topology, selection and the split, never on
-  // coordinates; key the attribute gather on those and on the column names.
-  const attrs = useMemo(() => endpointAttributes(data, built.rows, attrNames),
-    [resource.identity, resource.topologyRevision, selectKey, endpoints, defaultColor, attrNames.join()]);
+  const attrs = useEndpointAttributes(resource, built.rows, attrNames);
   if (!built.n) return null;
 
   const specs = [

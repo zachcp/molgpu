@@ -181,6 +181,21 @@ function splitModeSwitch(s) {
 }
 splitModeSwitch.rebuilds = true;
 
+// Inferred bonds depend on coordinates. When a coordinate edit keeps every
+// bond, the endpoint attribute columns are reused. When it changes the bonds,
+// they are re-gathered and stay row-aligned with the new geometry (one f32 per
+// endpoint row, against one vec3<f32> of positions).
+const inferredBondsKept = Object.assign((s) => {
+  noErrors(s);
+  assert.ok(s.detail['geometryBuilds:bonds:columns'] > 0, `bond geometry not rebuilt: ${brief(s)}`);
+  assert.deepEqual(keysOf(s, /attr:/), [], `attribute columns re-derived for unchanged bonds: ${brief(s)}`);
+}, { rebuilds: true });
+const inferredBondsChanged = Object.assign((s) => {
+  noErrors(s);
+  assert.ok(s.detail['gathers:bonds:attr:element'] > 0, `stale attribute columns after bonds changed: ${brief(s)}`);
+  assert.equal(s.detail['uploadBytes:attr:element'] * 3, s.detail['uploadBytes:positions'], `attribute and position rows disagree: ${brief(s)}`);
+}, { rebuilds: true });
+
 // ---- the matrix ------------------------------------------------------------
 
 const GREY = [0.7, 0.7, 0.7, 1], RED = [1, 0, 0, 1];
@@ -214,6 +229,8 @@ const MATRIX = {
     selection: { from: { props: { color: GREY, select: 'A' } }, to: { props: { color: GREY, select: 'B' } }, expect: selectionOnly },
     coordinates: { from: { props: { color: GREY } }, to: { props: { color: GREY }, dataKey: 'moved' }, expect: coordinatesOnly(['geometryBuilds:bonds:columns']) },
     'coordinates (default colour)': { from: { props: {} }, to: { props: {}, dataKey: 'moved' }, expect: coordinatesOnly(['geometryBuilds:bonds:columns']) },
+    'coordinates (inferred, same bonds)': { from: { props: {}, dataKey: 'inferred' }, to: { props: {}, dataKey: 'nudged' }, expect: inferredBondsKept },
+    'coordinates (inferred, bonds change)': { from: { props: {}, dataKey: 'inferred' }, to: { props: {}, dataKey: 'pulled' }, expect: inferredBondsChanged },
     connectivity: { from: { props: { color: GREY } }, to: { props: { color: GREY }, dataKey: 'rebonded' }, expect: rebuilds(['geometryBuilds:bonds:columns']) },
     'model/altloc policy': NA('no representation exposes a model/altloc view-policy prop'),
     'surface probe/resolution': NA('Bonds has no surface parameters'),
