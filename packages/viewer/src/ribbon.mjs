@@ -5,6 +5,7 @@ import { useStructure } from './structure-context.mjs';
 import { withColumns } from './internal/representation.mjs';
 import { withMaterial } from './materials.mjs';
 import { buildRibbonGeometry } from './internal/ribbon-geometry.mjs';
+import { useRepaint } from './internal/use-repaint.mjs';
 
 /**
  * Draw the polymer backbone as a flat, oriented ribbon: a CPU-extruded
@@ -22,6 +23,7 @@ import { buildRibbonGeometry } from './internal/ribbon-geometry.mjs';
  * `color`/`opacity` update bindings.
  */
 export const Ribbon = ({ select, smooth = 8, color = [0.85, 0.55, 0.35, 1], material, ...props }) => {
+  useRepaint();
   const { resource } = useStructure();
   const { data } = resource;
 

@@ -42,19 +42,9 @@ const nothing = resolve(where('atom', 'none', () => false), data);
 const bounds = coordinateBounds(data);
 const extent = Math.max(...bounds.max.map((v, i) => v - bounds.min[i]));
 
-const Scene = ({ mode, probeRadius, resolution, color }) => {
-  const props = mode === 'empty' ? { select: nothing, probeRadius, resolution, color }
-    : { probeRadius, resolution, color };
-  return use(OrbitCamera, { radius: extent * 1.6, target: bounds.center, children:
-    use(Pass, { lights: true, children: [
-      use(AmbientLight, { color: [1, 1, 1], intensity: 0.3 }),
-      use(DirectionalLight, { position: [1, 2, 1.5], color: [1, 1, 1], intensity: 1 }),
-      use(Structure, { data, children: use(Surface, props) }),
-    ] }) });
-};
-
-const App = () => {
-  useDeviceContext();
+// The edited state lives BELOW a stable <Pass>, as in a real app, so a style
+// edit must repaint on its own (molgpu-sept-jrr).
+const SurfaceProbe = () => {
   const [mode, setMode] = useState('surface');
   const [probeRadius, setProbeRadius] = useState(1.4);
   const [resolution, setResolution] = useState(1.0);
@@ -64,7 +54,19 @@ const App = () => {
   probe.setResolution = setResolution;
   probe.setColor = setColor;
   probe.mounted = true;
-  return use(Scene, { mode, probeRadius, resolution, color });
+  const props = mode === 'empty' ? { select: nothing, probeRadius, resolution, color }
+    : { probeRadius, resolution, color };
+  return use(Structure, { data, children: use(Surface, props) });
+};
+
+const App = () => {
+  useDeviceContext();
+  return use(OrbitCamera, { radius: extent * 1.6, target: bounds.center, children:
+    use(Pass, { lights: true, children: [
+      use(AmbientLight, { color: [1, 1, 1], intensity: 0.3 }),
+      use(DirectionalLight, { position: [1, 2, 1.5], color: [1, 1, 1], intensity: 1 }),
+      use(SurfaceProbe, {}),
+    ] }) });
 };
 
 render(use(WebGPU, {

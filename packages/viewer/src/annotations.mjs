@@ -3,6 +3,7 @@ import { LabelLayer, LineLayer } from '@use-gpu/workbench';
 import { useStructure } from './structure-context.mjs';
 import { withColumns } from './internal/representation.mjs';
 import { centroidOf, distanceBetween, midpoint } from './internal/centroid.mjs';
+import { useRepaint } from './internal/use-repaint.mjs';
 
 /** Guard a selection is this structure's atom domain (or null / a raw point). */
 const checkSelection = (select, resource, who) => {
@@ -33,6 +34,7 @@ const toPoint = (p) => (p.length >= 4 ? p : [p[0], p[1], p[2], 1]);
  * the anchor; `text`/`color`/`size` are style.
  */
 export const Label = ({ select, at, text, size = 16, color = [1, 1, 1, 1], offset = [0, 0], family, ...props }) => {
+  useRepaint();
   const { resource } = useStructure();
   const { data } = resource;
   checkSelection(select, resource, 'Label');
@@ -50,6 +52,7 @@ export const Label = ({ select, at, text, size = 16, color = [1, 1, 1, 1], offse
  * <FontLoader> + <SDFFontProvider> ancestors for the label (as <Label> does).
  */
 export const Distance = ({ a, b, color = [0.9, 0.9, 0.95, 1], width = 2, size = 14, labelColor, format, ...props }) => {
+  useRepaint();
   const { resource } = useStructure();
   const { data } = resource;
   checkSelection(a, resource, 'Distance');

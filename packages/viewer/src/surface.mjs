@@ -6,6 +6,7 @@ import { withColumns } from './internal/representation.mjs';
 import { withMaterial } from './materials.mjs';
 import { useGeometryJob } from './use-geometry-job.mjs';
 import { buildSurfaceGeometry } from './internal/surface-geometry.mjs';
+import { useRepaint } from './internal/use-repaint.mjs';
 
 /**
  * A molecular (solvent-excluded) surface: Mol*'s scalar-field kernel lifted
@@ -25,6 +26,7 @@ import { buildSurfaceGeometry } from './internal/surface-geometry.mjs';
  * without one the surface uses the ambient scene material.
  */
 export const Surface = ({ select, probeRadius = 1.4, resolution = 0.5, maxBytes, color = [0.75, 0.75, 0.8, 0.9], material, loading = null, error = null, ...props }) => {
+  useRepaint();
   const { resource } = useStructure();
   const { data } = resource;
 

@@ -3,15 +3,12 @@
 // `?v=<key>` picks the starting variant. Same pattern as ex/select.mjs, shared
 // so single-knob representation examples stay a screen long.
 //
-// Each variant is keyed, so switching remounts it rather than editing props in
-// place. Variants are distinct scenes, so that is the honest model — and it
-// sidesteps molgpu-sept-jrr: a style-only prop edit (e.g. <Tube radius>)
-// under a stable <Pass> updates the draw's uniforms but schedules no redraw.
-import { use, keyed, useState } from '@use-gpu/live';
+// Switching edits props in place under the harness's stable <Pass>, the way an
+// app would — so a style-only variant (tube thin -> thick) exercises the
+// representation's own repaint request (molgpu-sept-jrr).
+import { use, useState } from '@use-gpu/live';
 
 let setCurrent = null;
-
-const Variant = ({ render }) => render();
 
 const sync = (which) => {
   for (const btn of document.querySelectorAll('#toolbar button')) {
@@ -24,8 +21,7 @@ const VariantView = ({ variants, initial }) => {
   setCurrent = set;
   sync(which);
   window.__variant = which;
-  // Keys only reconcile within an array; a lone keyed child is matched by position.
-  return [keyed(Variant, which, { render: variants[which] })];
+  return variants[which]();
 };
 
 export function withVariants(variants) {

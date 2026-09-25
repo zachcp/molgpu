@@ -6,6 +6,7 @@ import { withColumns } from './internal/representation.mjs';
 import { withMaterial } from './materials.mjs';
 import { buildTubeGeometry } from './internal/tube-geometry.mjs';
 import { lineWidthForRadius } from './internal/line-size.mjs';
+import { useRepaint } from './internal/use-repaint.mjs';
 
 /**
  * Draw the polymer backbone as a GPU-extruded tube: RawLines' shaded mode
@@ -21,6 +22,7 @@ import { lineWidthForRadius } from './internal/line-size.mjs';
  * rebuild the trace/spline geometry; `radius` and `color` update bindings.
  */
 export const Tube = ({ select, radius = 0.3, sides = 8, join = 'round', smooth = 6, color = [0.45, 0.78, 0.95, 1], material, ...props }) => {
+  useRepaint();
   const { resource } = useStructure();
   const { data } = resource;
 

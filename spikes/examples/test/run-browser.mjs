@@ -301,6 +301,12 @@ try {
       for (let i = 0; i < 20; i++) { await settle(12); const next = await shot(); if (next.equals(frame)) break; frame = next; }
       const n = await painted(frame);
       assert.ok(n > 2000, `${ex}/${v} must paint the molecule (only ${n} non-background pixels)`);
+      // Viewer representations request repaints when they render (useRepaint,
+      // molgpu-sept-jrr); at rest they must not, or the scene never idles.
+      const rest = await snap();
+      await settle(24);
+      const idle = delta(rest, await snap());
+      assert.equal(idle.submit, 0, `${ex}/${v} must not redraw at rest (got ${idle.submit} submits)`);
       shots.push(frame);
       results.representations[`${ex}/${v}`] = n;
     }
@@ -312,7 +318,7 @@ try {
   }
 
   // The toolbar must switch variants live, including a style-only change (the
-  // tube radius), which only repaints because variants remount (lib/variants.mjs).
+  // tube radius) edited in place under a stable Pass (molgpu-sept-jrr).
   await page.goto('http://127.0.0.1:5187/?ex=tube&v=thin');
   await page.waitForFunction(() => window.__variant === 'thin' && document.querySelector('canvas'));
   await warmup();

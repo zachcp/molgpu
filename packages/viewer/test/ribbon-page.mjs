@@ -42,24 +42,26 @@ const nothing = resolve(where('atom', 'none', () => false), data);
 const bounds = coordinateBounds(data);
 const extent = Math.max(...bounds.max.map((v, i) => v - bounds.min[i]));
 
-const Scene = ({ mode, color }) => {
-  const props = mode === 'empty' ? { select: nothing, color } : { color };
-  return use(OrbitCamera, { radius: extent * 1.6, target: bounds.center, children:
-    use(Pass, { lights: true, children: [
-      use(AmbientLight, { color: [1, 1, 1], intensity: 0.3 }),
-      use(DirectionalLight, { position: [1, 2, 1.5], color: [1, 1, 1], intensity: 1 }),
-      use(Structure, { data, children: use(Ribbon, props) }),
-    ] }) });
-};
-
-const App = () => {
-  useDeviceContext();
+// The edited state lives BELOW a stable <Pass>, as in a real app, so a style
+// edit must repaint on its own (molgpu-sept-jrr).
+const RibbonProbe = () => {
   const [mode, setMode] = useState('ribbon');
   const [color, setColor] = useState([0.85, 0.55, 0.35, 1]);
   probe.setMode = setMode;
   probe.setColor = setColor;
   probe.mounted = true;
-  return use(Scene, { mode, color });
+  const props = mode === 'empty' ? { select: nothing, color } : { color };
+  return use(Structure, { data, children: use(Ribbon, props) });
+};
+
+const App = () => {
+  useDeviceContext();
+  return use(OrbitCamera, { radius: extent * 1.6, target: bounds.center, children:
+    use(Pass, { lights: true, children: [
+      use(AmbientLight, { color: [1, 1, 1], intensity: 0.3 }),
+      use(DirectionalLight, { position: [1, 2, 1.5], color: [1, 1, 1], intensity: 1 }),
+      use(RibbonProbe, {}),
+    ] }) });
 };
 
 render(use(WebGPU, {

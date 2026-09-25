@@ -5,6 +5,7 @@ import { useField } from './use-field.mjs';
 import { isField, fieldAttrNames, withColumns } from './internal/representation.mjs';
 import { withMaterial } from './materials.mjs';
 import { Pickable } from './picking.mjs';
+import { useRepaint } from './internal/use-repaint.mjs';
 
 /** Geometry depends on structure and selection, never on the colour field. */
 const gather = (data, indices) => {
@@ -62,6 +63,7 @@ const GatheredSpacefill = ({ data, indices, selectKey, attrNames, field, sharedP
  * and a <Pass picking>).
  */
 export const Spacefill = ({ scale = 1, select, color = [0.72, 0.72, 0.76, 1], material, pickable = false, ...props }) => {
+  useRepaint();
   const { resource, sources } = useStructure();
   const { data } = resource;
 

@@ -6,6 +6,7 @@ import { useField } from './use-field.mjs';
 import { isField, fieldAttrNames, withColumns } from './internal/representation.mjs';
 import { withMaterial } from './materials.mjs';
 import { buildBondColumns, endpointAttributes } from './internal/bond-columns.mjs';
+import { useRepaint } from './internal/use-repaint.mjs';
 
 // One stable default field; passing any explicit colour preserves the existing
 // unsplit geometry and styling behavior.
@@ -30,6 +31,7 @@ const FieldBonds = ({ map, field, width, sides, shaded, ...props }) => {
  * the shared bond topology (explicit, else inferred).
  */
 export const Bonds = ({ width = 0.3, select, color, endpoints = 'both', sides = 6, shaded = true, material, ...props }) => {
+  useRepaint();
   const { resource } = useStructure();
   const { data } = resource;
 

@@ -62,18 +62,10 @@ const data = createStructure({
 });
 const nothing = resolve(where('atom', 'none', () => false), data);
 
-const Scene = ({ mode, radius, color }) => {
-  const props = mode === 'empty' ? { select: nothing, radius, color } : { radius, color };
-  return use(OrbitCamera, { radius: 16, target: [0, 0.5, 0], children:
-    use(Pass, { lights: true, children: [
-      use(AmbientLight, { color: [1, 1, 1], intensity: 0.3 }),
-      use(DirectionalLight, { position: [1, 2, 1.5], color: [1, 1, 1], intensity: 1 }),
-      use(Structure, { data, children: use(Tube, props) }),
-    ] }) });
-};
-
-const App = () => {
-  useDeviceContext();
+// The edited state lives BELOW a stable <Pass>, as in a real app: a style edit
+// must repaint on its own, not because the whole pass happened to re-render
+// (molgpu-sept-jrr — holding it above the Pass masked a missing repaint).
+const TubeProbe = () => {
   const [mode, setMode] = useState('multi');
   const [radius, setRadius] = useState(0.3);
   const [color, setColor] = useState([0.45, 0.78, 0.95, 1]);
@@ -81,7 +73,18 @@ const App = () => {
   probe.setRadius = setRadius;
   probe.setColor = setColor;
   probe.mounted = true;
-  return use(Scene, { mode, radius, color });
+  const props = mode === 'empty' ? { select: nothing, radius, color } : { radius, color };
+  return use(Structure, { data, children: use(Tube, props) });
+};
+
+const App = () => {
+  useDeviceContext();
+  return use(OrbitCamera, { radius: 16, target: [0, 0.5, 0], children:
+    use(Pass, { lights: true, children: [
+      use(AmbientLight, { color: [1, 1, 1], intensity: 0.3 }),
+      use(DirectionalLight, { position: [1, 2, 1.5], color: [1, 1, 1], intensity: 1 }),
+      use(TubeProbe, {}),
+    ] }) });
 };
 
 render(use(WebGPU, {

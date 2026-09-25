@@ -2,6 +2,7 @@ import { use, useMemo } from '@use-gpu/live';
 import { PointLayer, RawData, useViewContext, useShader, useShaderRef } from '@use-gpu/workbench';
 import { wgsl } from '@use-gpu/shader/wgsl';
 import { pointSizesForRadii } from './internal/point-size.mjs';
+import { useRepaint } from './internal/use-repaint.mjs';
 
 // Compose `scale` as a uniform over the per-atom base-size source instead of
 // baking it into the size column. `getScale` binds to a shader ref, so changing
@@ -30,6 +31,7 @@ const ScaledPoints = ({ baseSource, scaleRef, ...props }) => {
  * rebuilds or re-uploads it — the scale is applied shader-side from a uniform.
  */
 export const WorldSpacePointLayer = ({ positions, colors, radii, count = radii.length, scale = 1, ...props }) => {
+  useRepaint();
   const { uniforms } = useViewContext();
   const pixelRatio = uniforms.viewPixelRatio.current;
   const [viewScale, worldScale] = uniforms.viewWorldScale.current;
