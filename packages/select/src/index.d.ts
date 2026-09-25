@@ -3,7 +3,15 @@ import type { StructureData } from '@molgpu/table';
 export type Domain = 'atom' | 'residue' | 'bond';
 export type RevisionStream = 'topology' | 'positions' | 'attributes';
 
-/** A pure, dataset-independent recipe. Build once, resolve against many datasets. */
+/**
+ * A pure, dataset-independent recipe. Build once, resolve against many datasets.
+ *
+ * Opaque: create queries only with `all`, `where`, `element`, `comp` and
+ * `within`, and pass them only to this package's functions. The four fields
+ * below are the public surface. Runtime query objects carry further
+ * per-kind fields (for example a `where` predicate or a `within` cutoff) that
+ * are internal and may change in any release.
+ */
 export interface SelectionQuery {
   readonly type: string;
   readonly domain: Domain;
