@@ -105,7 +105,7 @@ const Figure = () => {
         use(Ribbon, { material: { metalness: 0.0, roughness: 0.5 }, color: [0.86, 0.55, 0.35, 1] }),
         // A faint glassy solvent surface — the OIT case; kept very transparent
         // and smooth so it haloes the fold rather than hiding it.
-        use(Surface, { resolution: 0.5, color: [0.55, 0.72, 0.98, 0.12], material: { metalness: 0.0, roughness: 0.25 } }),
+        use(Surface, { resolution: 0.5, color: [0.55, 0.72, 0.98, 1], opacity: 0.12, material: { metalness: 0.0, roughness: 0.25 } }),
         // The interactive sulfur sites: pickable, glossy, outlined (hj0.3).
         use(Spacefill, { select: sulfurs, scale: 0.6, color: [0.98, 0.82, 0.2, 1], material: { metalness: 0.5, roughness: 0.3 }, pickable: true }),
         // Centroid-anchored annotations (hj0.4): the S–S label at the sulfur

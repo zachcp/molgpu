@@ -3,6 +3,7 @@ import { LineLayer } from '@use-gpu/workbench';
 import { activeAtoms, traceTable } from '@molgpu/table';
 import { useStructure } from './structure-context.mjs';
 import { withColumns } from './internal/representation.mjs';
+import { checkOpacity, applyOpacity, flatAlpha, modeProps } from './internal/opacity.mjs';
 import { withMaterial } from './materials.mjs';
 import { buildTubeGeometry } from './internal/tube-geometry.mjs';
 import { lineWidthForRadius } from './internal/line-size.mjs';
@@ -23,9 +24,12 @@ import { useBindingProbe } from './internal/use-binding-probe.mjs';
  * empirical floor. Only `select` and `smooth` (samples per guide segment)
  * rebuild the trace/spline geometry; `radius` and `color` update bindings.
  */
-export const Tube = ({ select, radius = 0.3, sides = 8, join = 'round', smooth = 6, color = [0.45, 0.78, 0.95, 1], material, ...props }) => {
+export const Tube = ({ select, radius = 0.3, sides = 8, join = 'round', smooth = 6, color = [0.45, 0.78, 0.95, 1], opacity = 1, mode, material, ...props }) => {
   useRepaint();
-  useBindingProbe('tube', color, radius);
+  useBindingProbe('tube', color, opacity, radius);
+  checkOpacity(opacity, 'Tube');
+  const drawColor = useMemo(() => applyOpacity(color, opacity), [color, opacity]);
+  const drawMode = modeProps(mode, flatAlpha(color, false) * opacity);
   const { resource } = useStructure();
   const { data } = resource;
 
@@ -44,7 +48,7 @@ export const Tube = ({ select, radius = 0.3, sides = 8, join = 'round', smooth =
     { key: 'segments', data: built.segments, format: 'i32' },
   ];
   return withColumns(specs, (map) => withMaterial(material, use(LineLayer, {
-    positions: map.positions, segments: map.segments, width, color,
-    shaded: true, sides, join, depth: -1, ...props,
+    positions: map.positions, segments: map.segments, width, color: drawColor,
+    shaded: true, sides, join, depth: -1, ...drawMode, ...props,
   })));
 };

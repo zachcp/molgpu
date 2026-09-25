@@ -172,7 +172,7 @@ const geometryParam = (key, upstream) => Object.assign((s) => {
 
 // ---- the matrix ------------------------------------------------------------
 
-const GREY = [0.7, 0.7, 0.7, 1], RED = [1, 0, 0, 1], HALF = [0.7, 0.7, 0.7, 0.5];
+const GREY = [0.7, 0.7, 0.7, 1], RED = [1, 0, 0, 1];
 const NA = (reason) => ({ na: reason });
 const hasMesh = (s) => (s.detail['uploadBytes:indices'] ?? 0) > 0;
 const surfaceReady = (s) => hasMesh(s) || s.errors.length > 0;
@@ -181,7 +181,7 @@ const surfaceReady = (s) => hasMesh(s) || s.errors.length > 0;
 const MATRIX = {
   spacefill: {
     color: { from: { props: { color: GREY } }, to: { props: { color: RED } }, expect: styleOnly },
-    opacity: { from: { props: { color: GREY } }, to: { props: { color: HALF } }, expect: styleOnly },
+    opacity: { from: { props: { color: GREY } }, to: { props: { color: GREY, opacity: 0.5 } }, expect: styleOnly },
     'color field swap': { from: { props: { color: 'field:element' } }, to: { props: { color: 'field:element2' } }, expect: styleOnly },
     clock: { from: { props: { color: 'field:clock' }, time: 0 }, to: { props: { color: 'field:clock' }, time: 0.5 }, expect: styleOnly },
     selection: { from: { props: { color: GREY, select: 'A' } }, to: { props: { color: GREY, select: 'B' } }, expect: selectionOnly },
@@ -196,7 +196,7 @@ const MATRIX = {
   },
   bonds: {
     color: { from: { props: { color: GREY } }, to: { props: { color: RED } }, expect: styleOnly },
-    opacity: { from: { props: { color: GREY } }, to: { props: { color: HALF } }, expect: styleOnly },
+    opacity: { from: { props: { color: GREY } }, to: { props: { color: GREY, opacity: 0.5 } }, expect: styleOnly },
     'color field swap': { from: { props: { color: 'field:element' } }, to: { props: { color: 'field:element2' } }, expect: styleOnly },
     'color default -> explicit': { from: { props: {} }, to: { props: { color: RED } }, expect: styleOnly },
     clock: { from: { props: { color: 'field:clock' }, time: 0 }, to: { props: { color: 'field:clock' }, time: 0.5 }, expect: styleOnly },
@@ -211,7 +211,7 @@ const MATRIX = {
   },
   ballAndStick: {
     color: { from: { props: { color: GREY } }, to: { props: { color: RED } }, expect: styleOnly },
-    opacity: { from: { props: { color: GREY } }, to: { props: { color: HALF } }, expect: styleOnly },
+    opacity: { from: { props: { color: GREY } }, to: { props: { color: GREY, opacity: 0.5 } }, expect: styleOnly },
     'color field swap': { from: { props: { color: 'field:element' } }, to: { props: { color: 'field:element2' } }, expect: styleOnly },
     clock: { from: { props: { color: 'field:clock' }, time: 0 }, to: { props: { color: 'field:clock' }, time: 0.5 }, expect: styleOnly },
     selection: { from: { props: { color: GREY, select: 'A' } }, to: { props: { color: GREY, select: 'B' } }, expect: selectionOnly },
@@ -224,7 +224,7 @@ const MATRIX = {
   },
   tube: {
     color: { from: { props: { color: GREY } }, to: { props: { color: RED } }, expect: styleOnly },
-    opacity: { from: { props: { color: GREY } }, to: { props: { color: HALF } }, expect: styleOnly },
+    opacity: { from: { props: { color: GREY } }, to: { props: { color: GREY, opacity: 0.5 } }, expect: styleOnly },
     clock: NA('Tube takes a flat colour only (no Field), so there is no clock uniform'),
     selection: { from: { props: { color: GREY, select: 'A' } }, to: { props: { color: GREY, select: 'B' } }, expect: selectionOnly },
     coordinates: { from: { props: { color: GREY } }, to: { props: { color: GREY }, dataKey: 'moved' }, expect: coordinatesOnly(['geometryBuilds:tube:spline']) },
@@ -238,7 +238,7 @@ const MATRIX = {
   },
   ribbon: {
     color: { from: { props: { color: GREY } }, to: { props: { color: RED } }, expect: styleOnly },
-    opacity: { from: { props: { color: GREY } }, to: { props: { color: HALF } }, expect: styleOnly },
+    opacity: { from: { props: { color: GREY } }, to: { props: { color: GREY, opacity: 0.5 } }, expect: styleOnly },
     clock: NA('Ribbon takes a flat colour only (no Field), so there is no clock uniform'),
     selection: { from: { props: { color: GREY, select: 'A' } }, to: { props: { color: GREY, select: 'B' } }, expect: selectionOnly },
     coordinates: { from: { props: { color: GREY } }, to: { props: { color: GREY }, dataKey: 'moved' }, expect: coordinatesOnly(['geometryBuilds:ribbon:mesh']) },
@@ -252,7 +252,7 @@ const MATRIX = {
   },
   surface: {
     color: { from: { props: { color: GREY, resolution: 0.8 } }, to: { props: { color: RED, resolution: 0.8 } }, expect: styleOnly, until: surfaceReady },
-    opacity: { from: { props: { color: GREY, resolution: 0.8 } }, to: { props: { color: HALF, resolution: 0.8 } }, expect: styleOnly, until: surfaceReady },
+    opacity: { from: { props: { color: GREY, resolution: 0.8 } }, to: { props: { color: GREY, opacity: 0.5, resolution: 0.8 } }, expect: styleOnly, until: surfaceReady },
     clock: NA('Surface takes a flat colour only (no Field), so there is no clock uniform'),
     selection: { from: { props: { color: GREY, resolution: 0.8, select: 'A' } }, to: { props: { color: GREY, resolution: 0.8, select: 'B' } }, expect: selectionOnly, until: surfaceReady },
     coordinates: { from: { props: { color: GREY, resolution: 0.8 } }, to: { props: { color: GREY, resolution: 0.8 }, dataKey: 'moved' }, expect: coordinatesOnly(['geometryBuilds:surface:mesh']), until: surfaceReady },
@@ -266,7 +266,7 @@ const MATRIX = {
   },
   label: {
     color: { from: { props: { select: 'A', text: 'site', color: [1, 1, 0, 1] } }, to: { props: { select: 'A', text: 'site', color: RED } }, expect: styleOnly },
-    opacity: { from: { props: { select: 'A', text: 'site', color: [1, 1, 0, 1] } }, to: { props: { select: 'A', text: 'site', color: [1, 1, 0, 0.5] } }, expect: styleOnly },
+    opacity: { from: { props: { select: 'A', text: 'site', color: [1, 1, 0, 1] } }, to: { props: { select: 'A', text: 'site', color: [1, 1, 0, 1], opacity: 0.5 } }, expect: styleOnly },
     'text': { from: { props: { select: 'A', text: 'site', color: RED } }, to: { props: { select: 'A', text: 'other', color: RED } }, expect: styleOnly },
     clock: NA('Label takes a flat colour only, so there is no clock uniform'),
     selection: { from: { props: { select: 'A', text: 'site', color: RED } }, to: { props: { select: 'B', text: 'site', color: RED } }, expect: selectionOnly },
@@ -279,7 +279,7 @@ const MATRIX = {
   },
   distance: {
     color: { from: { props: { a: 'A', b: 'B', color: GREY } }, to: { props: { a: 'A', b: 'B', color: RED } }, expect: styleOnly },
-    opacity: { from: { props: { a: 'A', b: 'B', color: GREY } }, to: { props: { a: 'A', b: 'B', color: HALF } }, expect: styleOnly },
+    opacity: { from: { props: { a: 'A', b: 'B', color: GREY } }, to: { props: { a: 'A', b: 'B', color: GREY, opacity: 0.5 } }, expect: styleOnly },
     clock: NA('Distance takes a flat colour only, so there is no clock uniform'),
     selection: { from: { props: { a: 'A', b: 'B', color: GREY } }, to: { props: { a: 'C', b: 'B', color: GREY } }, expect: selectionOnly },
     coordinates: { from: { props: { a: 'A', b: 'B', color: GREY } }, to: { props: { a: 'A', b: 'B', color: GREY }, dataKey: 'moved' }, expect: coordinatesOnly(['geometryBuilds:distance:anchor']) },

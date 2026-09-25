@@ -166,6 +166,21 @@ export type StructureProps = PreloadedStructureProps | LoadedStructureProps;
 
 export const Structure: ViewerComponent<StructureProps>;
 
+/** How a representation's layer draws: opaque (writes depth, hides what is
+ *  behind) or transparent (blended after opaques; exact under <Pass oit>). */
+export type DrawMode = 'opaque' | 'transparent';
+
+/** Transparency props shared by every representation. */
+export interface Translucency {
+  /** 0–1, multiplied into the colour's alpha. A uniform: changing it (a fade,
+   *  a timeline curve) never rebuilds or re-uploads geometry. Defaults to 1. */
+  opacity?: number;
+  /** Draw mode override. By default it is 'transparent' whenever the effective
+   *  alpha (colour alpha × opacity) is below 1, else the layer's opaque mode.
+   *  Pair translucent representations with <Pass oit>. */
+  mode?: DrawMode;
+}
+
 /** Point-layer drawing flags that <Spacefill> forwards to its layer. */
 export interface PointLayerOptions {
   shape?: 'circle' | 'diamond' | 'square' | 'up' | 'down' | 'left' | 'right';
@@ -175,7 +190,6 @@ export interface PointLayerOptions {
   shaded?: boolean;
   depth?: number;
   zBias?: number;
-  mode?: string;
   blend?: BlendMode | null;
   shadow?: boolean;
   depthTest?: boolean;
@@ -198,7 +212,7 @@ export const Spacefill: ViewerComponent<{
   /** Draw the atoms into the picking buffer so usePicking() can resolve them
    *  (needs a <PickingProvider> and a <Pass picking>). Defaults to false. */
   pickable?: boolean;
-} & PointLayerOptions>;
+} & Translucency & PointLayerOptions>;
 
 /** Draw bonds as world-space sticks, optionally restricted to a selection.
  * By default each bond has two element-coloured halves. An explicit color
@@ -216,7 +230,7 @@ export const Bonds: ViewerComponent<{
   shaded?: boolean;
   /** Wraps the shaded stick layer; without one, the ambient scene material. */
   material?: MaterialSpec;
-}>;
+} & Translucency>;
 
 /** Balls (Spacefill) + sticks (Bonds) over one selection and one colour. */
 export const BallAndStick: ViewerComponent<{
@@ -230,7 +244,7 @@ export const BallAndStick: ViewerComponent<{
   endpoints?: 'both' | 'either';
   /** Forwarded to both balls and sticks, so they share one shading model. */
   material?: MaterialSpec;
-}>;
+} & Translucency>;
 
 /** Draw the polymer backbone as a GPU-extruded tube (LineLayer's shaded
  * `@use-gpu/wgsl/geometry/tube` extrusion; no CPU mesh). Missing residues,
@@ -249,7 +263,7 @@ export const Tube: ViewerComponent<{
   join?: 'tangent' | 'bevel' | 'miter' | 'round';
   /** Wraps the shaded tube layer; without one, the ambient scene material. */
   material?: MaterialSpec;
-}>;
+} & Translucency>;
 
 /** Draw the polymer backbone as a flat, oriented ribbon (0sj.1's
  * curve-segment kernel oriented by 0sj.2's per-residue direction/secondary-
@@ -263,10 +277,9 @@ export const Ribbon: ViewerComponent<{
   /** Samples per guide segment; defaults to 8. */
   smooth?: number;
   color?: VectorLike;
-  opacity?: number;
   /** Wraps the shaded ribbon layer; without one, the ambient scene material. */
   material?: MaterialSpec;
-}>;
+} & Translucency>;
 
 /** A molecular (solvent-excluded) surface via Mol*'s scalar-field kernel,
  * @molgpu/geo's marching-cubes port, and FaceLayer. Only `select`,
@@ -283,12 +296,11 @@ export const Surface: ViewerComponent<{
   /** Grid byte budget override; see assertGridBudget's default. */
   maxBytes?: number;
   color?: VectorLike;
-  opacity?: number;
   /** Wraps the shaded face layer; without one, the ambient scene material. */
   material?: MaterialSpec;
   loading?: ViewerElement | (() => ViewerElement);
   error?: ViewerElement | ((failure: unknown) => ViewerElement);
-}>;
+} & Translucency>;
 
 // --- Materials --------------------------------------------------------------
 // Thin wrappers over @use-gpu/workbench materials with molecular defaults. A
@@ -497,6 +509,8 @@ export const Label: ViewerComponent<{
   color?: VectorLike;
   offset?: readonly number[];
   family?: string;
+  /** 0–1, multiplied into the text colour's alpha (text always blends). */
+  opacity?: number;
 }>;
 
 /** A distance measurement between two selections' centroids: a connecting line
@@ -509,6 +523,8 @@ export const Distance: ViewerComponent<{
   width?: number;
   size?: number;
   labelColor?: VectorLike;
+  /** 0–1, fades the line and label together. */
+  opacity?: number;
   /** Customise the label text; receives the distance in Ångström. */
   format?: (distance: number) => string;
 }>;

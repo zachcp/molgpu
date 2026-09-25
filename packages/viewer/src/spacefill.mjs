@@ -3,6 +3,8 @@ import { WorldSpacePointLayer } from './world-space-points.mjs';
 import { useStructure } from './structure-context.mjs';
 import { useField } from './use-field.mjs';
 import { isField, fieldAttrNames, withColumns } from './internal/representation.mjs';
+import { checkOpacity, applyOpacity, flatAlpha, modeProps } from './internal/opacity.mjs';
+import { useOpacityColors } from './internal/use-opacity-colors.mjs';
 import { withMaterial } from './materials.mjs';
 import { Pickable } from './picking.mjs';
 import { useRepaint } from './internal/use-repaint.mjs';
@@ -34,13 +36,13 @@ const gatherAttributes = (data, indices, names) => Object.fromEntries(names.map(
 }));
 
 // A field always colours here, so useField is called unconditionally.
-const FieldPoints = ({ positions, sources, radii, count, field, scale, ...props }) => {
-  const colors = useField(field, sources, { domain: 'atom' });
+const FieldPoints = ({ positions, sources, radii, count, field, opacity, scale, ...props }) => {
+  const colors = useOpacityColors(useField(field, sources, { domain: 'atom' }), opacity);
   return use(WorldSpacePointLayer, { positions, colors, radii, count, scale, shape: 'circle', shaded: true, ...props });
 };
 
 // Owns the gather (memoised by selection identity) and column uploads.
-const GatheredSpacefill = ({ data, indices, selectKey, attrNames, field, sharedPositions, color, scale, ...props }) => {
+const GatheredSpacefill = ({ data, indices, selectKey, attrNames, field, opacity, sharedPositions, color, scale, ...props }) => {
   const gathered = useMemo(() => gather(data, indices), [data, selectKey]);
   const attrs = useMemo(() => gatherAttributes(data, indices, attrNames), [data, selectKey, attrNames]);
   const specs = [];
@@ -50,7 +52,7 @@ const GatheredSpacefill = ({ data, indices, selectKey, attrNames, field, sharedP
     const positions = indices ? map.positions : sharedPositions;
     if (!positions) return null;
     return field
-      ? use(FieldPoints, { positions, sources: map, radii: gathered.radii, count: gathered.n, field, scale, ...props })
+      ? use(FieldPoints, { positions, sources: map, radii: gathered.radii, count: gathered.n, field, opacity, scale, ...props })
       : use(WorldSpacePointLayer, { positions, radii: gathered.radii, count: gathered.n, scale, color, shape: 'circle', shaded: true, ...props });
   });
 };
@@ -62,13 +64,15 @@ const GatheredSpacefill = ({ data, indices, selectKey, attrNames, field, sharedP
  * which is composed shader-side over the atoms' columns (no per-atom colour
  * upload) via the viewer's useField. `material` (a @molgpu/viewer material
  * spec) wraps the shaded point layer; without one the atoms use the ambient
- * scene material. `pickable` draws the atoms into the picking buffer so
+ * scene material. `opacity` (0–1) multiplies the colour's alpha — a uniform,
+ * so fading never touches geometry — and below 1 the atoms draw in transparent
+ * mode (pair with <Pass oit>); an explicit `mode` overrides. `pickable` draws the atoms into the picking buffer so
  * usePicking() can resolve the cursor to an atom row (needs a <PickingProvider>
  * and a <Pass picking>).
  */
-export const Spacefill = ({ scale = 1, select, color = [0.72, 0.72, 0.76, 1], material, pickable = false, ...props }) => {
+export const Spacefill = ({ scale = 1, select, color = [0.72, 0.72, 0.76, 1], opacity = 1, mode, material, pickable = false, ...props }) => {
   useRepaint();
-  useBindingProbe('spacefill', color, scale);
+  useBindingProbe('spacefill', color, opacity, scale);
   const { resource, sources } = useStructure();
   const { data } = resource;
 
@@ -78,6 +82,9 @@ export const Spacefill = ({ scale = 1, select, color = [0.72, 0.72, 0.76, 1], ma
   const field = isField(color) ? color : null;
   // A colour field names the atom columns it reads; gather exactly those.
   const attrNames = useMemo(() => fieldAttrNames(field), [field]);
+  checkOpacity(opacity, 'Spacefill');
+  const flatColor = useMemo(() => field ? color : applyOpacity(color, opacity), [field, color, opacity]);
+  const drawMode = modeProps(mode, flatAlpha(color, !!field) * opacity);
 
   const indices = select ? select.indices : null;
   const n = indices ? indices.length : data.topology.atoms.count;
@@ -89,11 +96,11 @@ export const Spacefill = ({ scale = 1, select, color = [0.72, 0.72, 0.76, 1], ma
   const draw = (id) => withMaterial(material, (!indices && !field)
     ? use(WorldSpacePointLayer, {
         positions: sources.positions, radii: data.topology.atoms.radius, count: n,
-        scale, color, shape: 'circle', shaded: true, id, ...props,
+        scale, color: flatColor, shape: 'circle', shaded: true, id, ...drawMode, ...props,
       })
     : use(GatheredSpacefill, {
-        data, indices, selectKey: select?.id ?? 'all', attrNames, field,
-        sharedPositions: sources.positions, color, scale, id, ...props,
+        data, indices, selectKey: select?.id ?? 'all', attrNames, field, opacity,
+        sharedPositions: sources.positions, color: flatColor, scale, id, ...drawMode, ...props,
       }));
 
   // The drawn instance order is the gather order: for a selection that is

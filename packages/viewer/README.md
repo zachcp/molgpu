@@ -56,6 +56,25 @@ representation), and [`spikes/examples/figure.mjs`](../../spikes/examples/figure
 which composes materials, postprocessing, picking, labels and a timeline camera
 on one structure.
 
+## Transparency
+
+Every representation takes `opacity` (0–1), which is multiplied into the
+colour's alpha. That works the same whether `color` is a flat colour or a
+`@molgpu/fields` Field. When the result is below 1, the representation draws
+in transparent mode on its own. Add `oit` to the `<Pass>` so overlapping
+translucent geometry composites correctly:
+
+```js
+use(Pass, { oit: true, children: use(Structure, { data, children: [
+  use(BallAndStick, { color: byElement() }),
+  use(Surface, { opacity: 0.3 }),
+] }) });
+```
+
+`opacity` is a uniform, so animating it never rebuilds or re-uploads geometry.
+Pass `mode: 'opaque'` or `mode: 'transparent'` to override the automatic
+choice.
+
 ## Entries
 
 - **`@molgpu/viewer`** (`.`) carries **no use.gpu types**. Components are typed
@@ -94,6 +113,8 @@ may change before 0.1.0; *advanced* — only from `@molgpu/viewer/advanced`.
 | `VectorLike` | experimental | Plain or typed numeric vector. |
 | `ColorLike` | experimental | Colour as number, vector, `{ rgb }`/`{ rgba }` or CSS string. |
 | `BlendMode` | experimental | Blend-mode names for layer and outline options. |
+| `Translucency` | stable | `opacity` (0–1, a uniform) and `mode`, shared by every representation. |
+| `DrawMode` | stable | `'opaque' \| 'transparent'`; transparent is chosen automatically when colour alpha × opacity < 1. |
 | `PointLayerOptions` | experimental | Point-layer flags `<Spacefill>` forwards. |
 | `StructureProvider` | experimental | The provider `<Structure>` wraps; prefer `<Structure>`. |
 | `StructureResource` | experimental | CPU-side owner of one structure's shared values. |

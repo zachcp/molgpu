@@ -3,6 +3,7 @@ import { FaceLayer } from '@use-gpu/workbench';
 import { activeAtoms } from '@molgpu/table';
 import { useStructure } from './structure-context.mjs';
 import { withColumns } from './internal/representation.mjs';
+import { checkOpacity, applyOpacity, flatAlpha, modeProps } from './internal/opacity.mjs';
 import { withMaterial } from './materials.mjs';
 import { useGeometryJob } from './use-geometry-job.mjs';
 import { buildSurfaceGeometry } from './internal/surface-geometry.mjs';
@@ -27,9 +28,12 @@ import { useBindingProbe } from './internal/use-binding-probe.mjs';
  * `material` (a @molgpu/viewer material spec) wraps the shaded face layer;
  * without one the surface uses the ambient scene material.
  */
-export const Surface = ({ select, probeRadius = 1.4, resolution = 0.5, maxBytes, color = [0.75, 0.75, 0.8, 0.9], material, loading = null, error = null, ...props }) => {
+export const Surface = ({ select, probeRadius = 1.4, resolution = 0.5, maxBytes, color = [0.75, 0.75, 0.8, 1], opacity = 1, mode, material, loading = null, error = null, ...props }) => {
   useRepaint();
-  useBindingProbe('surface', color);
+  useBindingProbe('surface', color, opacity);
+  checkOpacity(opacity, 'Surface');
+  const drawColor = useMemo(() => applyOpacity(color, opacity), [color, opacity]);
+  const drawMode = modeProps(mode, flatAlpha(color, false) * opacity);
   const { resource } = useStructure();
   const { data } = resource;
 
@@ -52,6 +56,6 @@ export const Surface = ({ select, probeRadius = 1.4, resolution = 0.5, maxBytes,
   ];
   return withColumns(specs, (map) => withMaterial(material, use(FaceLayer, {
     positions: map.positions, normals: map.normals, indices: map.indices,
-    color, shaded: true, side: 'both', ...props,
+    color: drawColor, shaded: true, side: 'both', ...drawMode, ...props,
   })));
 };
