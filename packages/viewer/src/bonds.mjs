@@ -55,7 +55,10 @@ export const Bonds = ({ width = 0.3, select, color, opacity = 1, mode, endpoints
   const indices = select ? select.indices : null;
   const selectKey = select?.id ?? 'all';
   const built = useMemo(() => buildBondColumns(data, indices, endpoints, defaultColor), [data, selectKey, endpoints, defaultColor]);
-  const attrs = useMemo(() => endpointAttributes(data, built.rows, attrNames), [data, built, attrNames]);
+  // Endpoint rows depend on topology, selection and the split, never on
+  // coordinates; key the attribute gather on those and on the column names.
+  const attrs = useMemo(() => endpointAttributes(data, built.rows, attrNames),
+    [resource.identity, resource.topologyRevision, selectKey, endpoints, defaultColor, attrNames.join()]);
   if (!built.n) return null;
 
   const specs = [

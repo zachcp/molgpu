@@ -11,21 +11,25 @@ import { useRepaint } from './internal/use-repaint.mjs';
 import { count } from './internal/instrumentation.mjs';
 import { useBindingProbe } from './internal/use-binding-probe.mjs';
 
-/** Geometry depends on structure and selection, never on the colour field. */
-const gather = (data, indices) => {
+/** Selected positions: the only gathered column a coordinate edit changes. */
+const gatherPositions = (data, indices) => {
   count('gathers', 'spacefill:atoms');
-  const n = indices ? indices.length : data.topology.atoms.count;
-  const positions = new Float32Array(n * 3);
-  const radii = new Float32Array(n);
-  const R = data.topology.atoms.radius;
-  for (let k = 0; k < n; k++) {
-    const i = indices ? indices[k] : k;
+  const positions = new Float32Array(indices.length * 3);
+  for (let k = 0; k < indices.length; k++) {
+    const i = indices[k];
     positions[k * 3] = data.positions[i * 3];
     positions[k * 3 + 1] = data.positions[i * 3 + 1];
     positions[k * 3 + 2] = data.positions[i * 3 + 2];
-    radii[k] = R[i];
   }
-  return { n, positions, radii };
+  return positions;
+};
+
+/** Selected radii depend on topology and selection only, so they (and the
+ * point sizes derived from them) survive coordinate edits. */
+const gatherRadii = (data, indices) => {
+  count('gathers', 'spacefill:radii');
+  const R = data.topology.atoms.radius;
+  return Float32Array.from(indices, (i) => R[i]);
 };
 
 const gatherAttributes = (data, indices, names) => Object.fromEntries(names.map((name) => {
@@ -41,19 +45,22 @@ const FieldPoints = ({ positions, sources, radii, count, field, opacity, scale, 
   return use(WorldSpacePointLayer, { positions, colors, radii, count, scale, shape: 'circle', shaded: true, ...props });
 };
 
-// Owns the gather (memoised by selection identity) and column uploads.
-const GatheredSpacefill = ({ data, indices, selectKey, attrNames, field, opacity, sharedPositions, color, scale, ...props }) => {
-  const gathered = useMemo(() => gather(data, indices), [data, selectKey]);
-  const attrs = useMemo(() => gatherAttributes(data, indices, attrNames), [data, selectKey, attrNames]);
+// Owns the gathers and column uploads. Positions follow the dataset; radii and
+// attribute columns follow topology, selection and the set of column names.
+const GatheredSpacefill = ({ data, identity, topologyRevision, indices, selectKey, attrNames, field, opacity, sharedPositions, color, scale, ...props }) => {
+  const n = indices ? indices.length : data.topology.atoms.count;
+  const positions = useMemo(() => indices ? gatherPositions(data, indices) : null, [data, selectKey]);
+  const radii = useMemo(() => indices ? gatherRadii(data, indices) : data.topology.atoms.radius, [identity, topologyRevision, selectKey]);
+  const attrs = useMemo(() => gatherAttributes(data, indices, attrNames), [identity, topologyRevision, selectKey, attrNames.join()]);
   const specs = [];
-  if (indices) specs.push({ key: 'positions', data: gathered.positions, format: 'vec3<f32>' });
+  if (indices) specs.push({ key: 'positions', data: positions, format: 'vec3<f32>' });
   for (const name of attrNames) specs.push({ key: `attr:${name}`, data: attrs[name], format: 'f32' });
   return withColumns(specs, (map) => {
     const positions = indices ? map.positions : sharedPositions;
     if (!positions) return null;
     return field
-      ? use(FieldPoints, { positions, sources: map, radii: gathered.radii, count: gathered.n, field, opacity, scale, ...props })
-      : use(WorldSpacePointLayer, { positions, radii: gathered.radii, count: gathered.n, scale, color, shape: 'circle', shaded: true, ...props });
+      ? use(FieldPoints, { positions, sources: map, radii, count: n, field, opacity, scale, ...props })
+      : use(WorldSpacePointLayer, { positions, radii, count: n, scale, color, shape: 'circle', shaded: true, ...props });
   });
 };
 
@@ -99,7 +106,7 @@ export const Spacefill = ({ scale = 1, select, color = [0.72, 0.72, 0.76, 1], op
         scale, color: flatColor, shape: 'circle', shaded: true, id, ...drawMode, ...props,
       })
     : use(GatheredSpacefill, {
-        data, indices, selectKey: select?.id ?? 'all', attrNames, field, opacity,
+        data, identity: resource.identity, topologyRevision: resource.topologyRevision, indices, selectKey: select?.id ?? 'all', attrNames, field, opacity,
         sharedPositions: sources.positions, color: flatColor, scale, id, ...drawMode, ...props,
       }));
 

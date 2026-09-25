@@ -144,7 +144,7 @@ selectionOnly.rebuilds = true;
 // Coordinates: positions/bounds and coordinate-dependent derivations only.
 // Topology-only derived columns (attribute gathers, radius-derived point
 // sizes) must not be redone: their inputs did not change.
-const TOPOLOGY_ONLY = /^(gathers:(spacefill|bonds):attr:|uploadBytes:attr:|geometryBuilds:points:base-sizes|uploadBytes:base-sizes)/;
+const TOPOLOGY_ONLY = /^(gathers:(spacefill|bonds):attr:|gathers:spacefill:radii|uploadBytes:attr:|geometryBuilds:points:base-sizes|uploadBytes:base-sizes)/;
 const coordinatesOnly = (mustRebuild) => Object.assign((s) => {
   noErrors(s);
   assert.ok(s.detail['uploadBytes:structure:positions'] > 0, `shared positions not re-uploaded: ${brief(s)}`);
@@ -294,32 +294,16 @@ const MATRIX = {
 // Known contract violations found by this audit. Each is a separate bug; the
 // assertion stays in place and is reported as `todo` until it is fixed.
 const KNOWN = {
-  // Colour-field swap (same columns, new Field object) re-gathers and
-  // re-uploads the attribute columns: attrNames is memoised on the field's
-  // identity (spacefill.mjs:80, bonds.mjs:47), and the attribute gathers are
-  // keyed on that array (spacefill.mjs:45, bonds.mjs:51).
-  'spacefill / color field swap': 'VIOLATION: colour-field swap re-gathers/re-uploads attr columns (attrNames keyed on field identity)',
-  'bonds / color field swap': 'VIOLATION: colour-field swap re-gathers/re-uploads endpoint attr columns (attrNames keyed on field identity)',
-  'ballAndStick / color field swap': 'VIOLATION: colour-field swap re-gathers/re-uploads attr columns in both halves',
   // Default two-tone bonds vs an explicit colour are different geometry
   // (split at the midpoint or not): bonds.mjs:50 keys buildBondColumns on
   // defaultColor, so a colour edit rebuilds and re-uploads bond geometry.
   'bonds / color default -> explicit': 'VIOLATION: colour edit from default to explicit rebuilds bond geometry (split/unsplit baked into vertices)',
-  // Coordinate edits re-derive topology-only columns because the memos are
-  // keyed on the whole StructureData rather than on the columns they read.
-  'spacefill / coordinates (field colour)': 'VIOLATION: coordinate edit re-gathers/re-uploads attr:element and rebuilds radius-derived base sizes (spacefill.mjs:44-45 keyed on data)',
-  'spacefill / coordinates (selection)': 'VIOLATION: coordinate edit re-gathers radii and rebuilds/re-uploads base sizes (spacefill.mjs:44 gathers positions and radii together)',
-  'bonds / coordinates (default colour)': 'VIOLATION: coordinate edit re-gathers/re-uploads endpoint attr:element (bonds.mjs:51 keyed on built)',
-  'tube / coordinates': 'VIOLATION: coordinate edit re-runs activeAtoms view policy (tube.mjs:36 keyed on data)',
-  'ribbon / coordinates': 'VIOLATION: coordinate edit re-runs activeAtoms view policy (ribbon.mjs:37 keyed on data)',
-  'surface / coordinates': 'VIOLATION: coordinate edit re-runs activeAtoms view policy (surface.mjs:40 keyed on data)',
   // <Distance> builds its two-point line arrays inline on every render
   // (annotations.mjs:74-75), so any re-render re-uploads them.
   'distance / color': 'VIOLATION: style edit re-uploads the line positions/segments (fresh arrays every render)',
   'distance / opacity': 'VIOLATION: style edit re-uploads the line positions/segments (fresh arrays every render)',
   'distance / display size (width/size)': 'VIOLATION: style edit re-uploads the line positions/segments (fresh arrays every render)',
-  // WorldSpacePointLayer's base-size RawData buffer is never destroyed
-  // (world-space-points.mjs:51; RawData 0.20.0 does not destroy buffers).
+  // use.gpu keeps some per-draw buffers alive after unmount (bead i2e).
   deviceLeak: 'VIOLATION: +12 device buffers per cycle: use.gpu-internal buffers not destroyed on unmount',
 };
 
