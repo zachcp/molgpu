@@ -1,3 +1,6 @@
+// Explicit module: only `export`ed declarations are public (keeps `brand` private).
+export {};
+
 /** Owned CPU columns, read-only by contract. Never modify typed arrays in place. */
 export interface Atoms {
   readonly count: number;
@@ -49,6 +52,7 @@ export interface Topology {
   readonly bonds: Bonds; readonly instances: Instances;
 }
 export interface StructureInput { readonly topology: Topology; readonly positions: Float32Array; }
+/** Private nominal brand for dataset identity; deliberately not exported. */
 declare const brand: unique symbol;
 export interface StructureData extends StructureInput {
   readonly identity: { readonly [brand]: true };
