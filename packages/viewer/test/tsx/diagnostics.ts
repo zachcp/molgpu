@@ -17,11 +17,13 @@ export interface Probe {
   /** Every phase change since the last reset; a final state hides transitions. */
   history: Phase[];
   failure: string | null;
+  /** Atom count seen through useStructureResource() when the subtree was ready. */
+  atoms: number | null;
   errors: string[];
   pending: Pending[];
   update(patch: Partial<State>): void;
   reset(): void;
-  snapshot(): { phase: Phase; history: Phase[]; failure: string | null; pending: number; errors: string[] };
+  snapshot(): { phase: Phase; history: Phase[]; failure: string | null; atoms: number | null; pending: number; errors: string[] };
   /** Resolve the nth outstanding load; reports whether Live had cancelled it. */
   settle(index: number, which: 'left' | 'right' | null): boolean;
   /** Runtime messages for the prop combinations the type system also rejects. */
@@ -29,10 +31,10 @@ export interface Probe {
 }
 
 export const probe: Probe = {
-  mounted: false, phase: 'idle', history: [], failure: null, errors: [], pending: [],
+  mounted: false, phase: 'idle', history: [], failure: null, atoms: null, errors: [], pending: [],
   update: () => {},
-  reset: () => { probe.history = []; probe.failure = null; },
-  snapshot: () => ({ phase: probe.phase, history: [...probe.history], failure: probe.failure, pending: probe.pending.length, errors: [...probe.errors] }),
+  reset: () => { probe.history = []; probe.failure = null; probe.atoms = null; },
+  snapshot: () => ({ phase: probe.phase, history: [...probe.history], failure: probe.failure, atoms: probe.atoms, pending: probe.pending.length, errors: [...probe.errors] }),
   settle: () => false,
   invalid: () => [],
 };

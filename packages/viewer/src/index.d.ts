@@ -79,13 +79,9 @@ export function createStructureResource(
   options?: { readonly maxSelections?: number },
 ): StructureResource;
 
-/** Provides one StructureResource (and its shared GPU columns) to descendant
- *  representations. <Structure> wraps it; prefer <Structure>. */
-export const StructureProvider: ViewerComponent<{
-  data: StructureData;
-  maxSelections?: number;
-  children?: ViewerElement;
-}>;
+/** The nearest <Structure>'s resource, for focusSelection, useCameraCurve and
+ *  other resource-taking APIs. Throws outside a <Structure>. */
+export function useStructureResource(): StructureResource;
 
 /** A compositional boundary only: it never owns a canvas or GPU device. */
 export const Molecule: ViewerComponent<{ children?: ViewerElement }>;
@@ -293,7 +289,7 @@ export const Surface: ViewerComponent<{
   probeRadius?: number;
   /** Grid spacing in Ångströms; defaults to 0.5. Smaller is finer and slower. */
   resolution?: number;
-  /** Grid byte budget override; see assertGridBudget's default. */
+  /** Grid byte budget override; defaults to 256 MiB. */
   maxBytes?: number;
   color?: VectorLike;
   /** Wraps the shaded face layer; without one, the ambient scene material. */
@@ -548,39 +544,6 @@ export function useAnnotation<R = unknown>(input: {
   duplicate?: 'error' | 'first' | 'last';
   lift?: boolean;
 }): { field: Field | null; pending: boolean; error: unknown };
-
-export interface ViewScale {
-  readonly pixelRatio: number;
-  readonly viewScale: number;
-  readonly worldScale: number;
-}
-
-/** Convert an Ångström radius to PointLayer's `sizes` input for `depth: 1`. */
-export function pointSizeForRadius(radius: number, view: ViewScale): number;
-export function pointSizeForCameraRadius(radius: number, view: {
-  height: number; pixelRatio?: number; fov?: number; focus?: number;
-}): number;
-export function pointSizesForRadii(
-  radii: Float32Array, view: ViewScale, scale?: number,
-): Float32Array;
-
-/** World-space radius emitted by shaded LineLayer for a width/depth pair. */
-export function lineRadiusForWidth(width: number, depth: number, view?: {
-  pixelRatio?: number; viewScale?: number; worldScale?: number; clipW?: number;
-}): number;
-
-/** useAwait dependency key: structure identity/revisions plus geometry-only
- * params. Throws if `params` holds a style key (color, opacity). */
-export function geometryDeps(resource: StructureResource, params?: Record<string, unknown>): readonly unknown[];
-export interface GridBudget { maxBytes?: number; bytesPerCell?: number; }
-/** Throws a RangeError (code GEOMETRY_BUDGET_EXCEEDED) before a grid this size would be allocated. */
-export function assertGridBudget(dims: readonly [number, number, number], budget?: GridBudget): number;
-export function copyOwned<T extends { slice(): T }>(typedArray: T): T;
-export function runGeometryJob<T>(kernel: () => T | Promise<T>, cancelled: () => boolean): Promise<T | null>;
-/** Schedule a cancellable geometry build; see use-geometry-job.mjs for the full contract. */
-export function useGeometryJob<P extends Record<string, unknown>, T>(
-  resource: StructureResource, params: P, kernel: (resource: StructureResource, params: P) => T | Promise<T>,
-): readonly [T | undefined, unknown, boolean];
 
 // Only the declarations marked `export` above are public.
 export {};

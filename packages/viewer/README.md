@@ -118,11 +118,11 @@ may change before 0.1.0; *advanced* — only from `@molgpu/viewer/advanced`.
 | `Translucency` | stable | `opacity` (0–1, a uniform) and `mode`, shared by every representation. |
 | `DrawMode` | stable | `'opaque' \| 'transparent'`; transparent is chosen automatically when colour alpha × opacity < 1. |
 | `PointLayerOptions` | experimental | Point-layer flags `<Spacefill>` forwards. |
-| `StructureProvider` | experimental | The provider `<Structure>` wraps; prefer `<Structure>`. |
 | `StructureResource` | experimental | CPU-side owner of one structure's shared values. |
 | `StructureBounds` | experimental | Ångström extent of a structure or selection. |
 | `AtomSelection` | experimental | Resource-bound resolved atom set. |
 | `createStructureResource` | experimental | Create a StructureResource outside a `<Structure>`. |
+| `useStructureResource` | experimental | The nearest `<Structure>`'s `StructureResource`, for `focusSelection` and other resource-taking APIs. |
 | `MaterialType` | experimental | Material `type` names for a `material` spec. |
 | `MaterialSpec` | experimental | A representation's `material` prop. |
 | `MaterialProps` | experimental | Props shared by the material wrappers. |
@@ -175,17 +175,6 @@ may change before 0.1.0; *advanced* — only from `@molgpu/viewer/advanced`.
 | `createCameraCurve` | experimental | Validate camera keyframes. |
 | `sampleCamera` | experimental | Sample a camera curve at a time. |
 | `useCameraCurve` | experimental | Sample a camera curve at the timeline time. |
-| `ViewScale` | experimental | Pixel/view/world scale for size conversion. |
-| `pointSizeForRadius` | experimental | Ångström radius to PointLayer size. |
-| `pointSizeForCameraRadius` | experimental | Ångström radius to size for a camera. |
-| `pointSizesForRadii` | experimental | Batch `pointSizeForRadius`. |
-| `lineRadiusForWidth` | experimental | World radius of a shaded LineLayer stroke. |
-| `GridBudget` | experimental | Grid byte budget options. |
-| `assertGridBudget` | experimental | Throw before allocating an oversize grid. |
-| `geometryDeps` | experimental | Geometry-only dependency key for a resource. |
-| `copyOwned` | experimental | Copy a typed array the caller will own. |
-| `runGeometryJob` | experimental | Run a cancellable geometry kernel. |
-| `useGeometryJob` | experimental | Schedule a cancellable geometry build. |
 | `StructureContext` | advanced | Live context carrying the nearest structure's resource and sources. |
 | `StructureContextValue` | advanced | `{ resource, sources }` from the structure context. |
 | `StructureSources` | advanced | Shared positions/radii shader sources. |

@@ -176,6 +176,7 @@ try {
   await until(() => window.__viewer.snapshot().phase === 'ready');
   const loaded = await snapshot();
   assert.deepEqual(loaded.history, ['loading', 'ready'], 'a BCIF source shows loading, then its structure');
+  assert.equal(loaded.atoms, 327, 'useStructureResource() reads the loaded structure');
   const protein = await blobs('protein', 'components-1crn');
   assert.ok(protein.length >= 1 && protein[0].size > 20000, `1CRN renders as a protein-sized body: ${JSON.stringify(protein)}`);
   assert.ok(molstar() > 0, 'a BCIF source does load the lazy parser');

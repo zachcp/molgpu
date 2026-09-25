@@ -14,7 +14,7 @@ import { AutoCanvas, WebGPU } from '@use-gpu/webgpu';
 import { AmbientLight, DirectionalLight, OrbitCamera, Pass } from '@use-gpu/workbench';
 import { createStructure } from '@molgpu/table';
 import type { StructureData } from '@molgpu/table';
-import { Molecule, Spacefill, Structure } from '@molgpu/viewer';
+import { Molecule, Spacefill, Structure, useStructureResource } from '@molgpu/viewer';
 import type { StructureLoader, StructureProps } from '@molgpu/viewer';
 import { probe } from './diagnostics';
 import type { Mode, Phase, State } from './diagnostics';
@@ -85,7 +85,10 @@ const report = (next: Phase, failure: unknown = null): null => {
 };
 
 /** Reports readiness from inside the loaded subtree, then draws it. */
-const Ready = (): LiveElement => [report('ready'), <Spacefill />];
+const Ready = (): LiveElement => {
+  probe.atoms = useStructureResource().data.topology.atoms.count;
+  return [report('ready'), <Spacefill />];
+};
 
 const Scene = ({ mode, src }: { mode: Mode; src: string }): LiveElement => {
   if (mode === 'preloaded') return <Structure data={left}><Spacefill /></Structure>;

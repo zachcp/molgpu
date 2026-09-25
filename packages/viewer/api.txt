@@ -52,8 +52,6 @@ FresnelMaterialEffect
   export const FresnelMaterialEffect: ViewerComponent<FresnelMaterialEffectProps>;
 FresnelMaterialEffectProps
   export interface FresnelMaterialEffectProps extends MaterialProps { opacity?: number; }
-GridBudget
-  export interface GridBudget { maxBytes?: number; bytesPerCell?: number; }
 KEY_LIGHT_DIRECTION
   export const KEY_LIGHT_DIRECTION: readonly [number, number, number];
 Label
@@ -116,12 +114,10 @@ StructureLoader
   export type StructureLoader = ( src: string, cancelled: () => boolean, ) => StructureData | null | Promise<StructureData | null>;
 StructureProps
   export type StructureProps = PreloadedStructureProps | LoadedStructureProps;
-StructureProvider
-  export const StructureProvider: ViewerComponent<{ data: StructureData; maxSelections?: number; children?: ViewerElement; }>;
 StructureResource
   export interface StructureResource { readonly data: StructureData; readonly identity: StructureData['identity']; readonly topologyRevision: number; readonly positionsRevision: number; /** Lazily computed and cached; throws once the resource is disposed. */ readonly bounds: StructureBounds | null; /** Indices must be sorted, unique and in range. Results are LRU-cached. */ selection(indices: Uint32Array): AtomSelection; /** False for foreign, stale or post-dispose selection handles. */ accepts(value: unknown): boolean; dispose(): void; }
 Surface
-  export const Surface: ViewerComponent<{ /** A @molgpu/select atom Selection; without one, active model/primary-altloc atoms are used. */ select?: Selection | null; /** Ångström probe radius; defaults to 1.4 (water). */ probeRadius?: number; /** Grid spacing in Ångströms; defaults to 0.5. Smaller is finer and slower. */ resolution?: number; /** Grid byte budget override; see assertGridBudget's default. */ maxBytes?: number; color?: VectorLike; /** Wraps the shaded face layer; without one, the ambient scene material. */ material?: MaterialSpec; loading?: ViewerElement | (() => ViewerElement); error?: ViewerElement | ((failure: unknown) => ViewerElement); } & Translucency>;
+  export const Surface: ViewerComponent<{ /** A @molgpu/select atom Selection; without one, active model/primary-altloc atoms are used. */ select?: Selection | null; /** Ångström probe radius; defaults to 1.4 (water). */ probeRadius?: number; /** Grid spacing in Ångströms; defaults to 0.5. Smaller is finer and slower. */ resolution?: number; /** Grid byte budget override; defaults to 256 MiB. */ maxBytes?: number; color?: VectorLike; /** Wraps the shaded face layer; without one, the ambient scene material. */ material?: MaterialSpec; loading?: ViewerElement | (() => ViewerElement); error?: ViewerElement | ((failure: unknown) => ViewerElement); } & Translucency>;
 TimelineProvider
   export const TimelineProvider: ViewerComponent<{ time: number; children?: ViewerElement }>;
 Translucency
@@ -132,38 +128,20 @@ TypedArray
   export type TypedArray = | Int8Array | Uint8Array | Uint8ClampedArray | Int16Array | Uint16Array | Int32Array | Uint32Array | Float32Array | Float64Array;
 VectorLike
   export type VectorLike = readonly number[] | TypedArray;
-ViewScale
-  export interface ViewScale { readonly pixelRatio: number; readonly viewScale: number; readonly worldScale: number; }
 ViewerComponent
   export type ViewerComponent<P = {}> = (props: P) => ViewerElement;
 ViewerElement
   export type ViewerElement = object | null | undefined | false;
-assertGridBudget
-  export function assertGridBudget(dims: readonly [number, number, number], budget?: GridBudget): number;
 centroid
   export function centroid(data: StructureData, select?: Selection | null): [number, number, number];
-copyOwned
-  export function copyOwned<T extends { slice(): T }>(typedArray: T): T;
 createCameraCurve
   export function createCameraCurve(frames: CameraCurve): CameraCurve;
 createStructureResource
   export function createStructureResource( data: StructureData, options?: { readonly maxSelections?: number }, ): StructureResource;
 focusSelection
   export function focusSelection(resource: StructureResource, query: SelectionQuery, options?: FocusOptions): FocusResult | null;
-geometryDeps
-  export function geometryDeps(resource: StructureResource, params?: Record<string, unknown>): readonly unknown[];
-lineRadiusForWidth
-  export function lineRadiusForWidth(width: number, depth: number, view?: { pixelRatio?: number; viewScale?: number; worldScale?: number; clipW?: number; }): number;
 materialTypes
   export const materialTypes: ReadonlyArray<MaterialType>;
-pointSizeForCameraRadius
-  export function pointSizeForCameraRadius(radius: number, view: { height: number; pixelRatio?: number; fov?: number; focus?: number; }): number;
-pointSizeForRadius
-  export function pointSizeForRadius(radius: number, view: ViewScale): number;
-pointSizesForRadii
-  export function pointSizesForRadii( radii: Float32Array, view: ViewScale, scale?: number, ): Float32Array;
-runGeometryJob
-  export function runGeometryJob<T>(kernel: () => T | Promise<T>, cancelled: () => boolean): Promise<T | null>;
 sampleCamera
   export function sampleCamera(curve: CameraCurve, time: number, resource: StructureResource, options?: FocusOptions): CameraPose;
 tooltipFields
@@ -172,10 +150,10 @@ useAnnotation
   export function useAnnotation<R = unknown>(input: { records?: readonly R[]; src?: string; loader?: (src: string, cancelled: () => boolean) => unknown; domain?: 'residue' | 'chain'; fields: readonly string[]; value?: (record: R) => number | readonly number[]; type?: unknown; policy?: 'fallback' | 'fail'; fallback?: number | readonly number[]; duplicate?: 'error' | 'first' | 'last'; lift?: boolean; }): { field: Field | null; pending: boolean; error: unknown };
 useCameraCurve
   export function useCameraCurve(curve: CameraCurve, resource: StructureResource, options?: FocusOptions): CameraPose;
-useGeometryJob
-  export function useGeometryJob<P extends Record<string, unknown>, T>( resource: StructureResource, params: P, kernel: (resource: StructureResource, params: P) => T | Promise<T>, ): readonly [T | undefined, unknown, boolean];
 usePicking
   export function usePicking(options?: { onHover?: (hit: PickHit | null) => void; onPick?: (hit: PickHit | null) => void; }): { hover: PickHit | null; pick: PickHit | null };
+useStructureResource
+  export function useStructureResource(): StructureResource;
 useTimelineSample
   export function useTimelineSample<T extends CurveValue>(curve: Curve<T>): T;
 useTimelineTime

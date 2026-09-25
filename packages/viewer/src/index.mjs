@@ -1,5 +1,5 @@
 export { createStructureResource } from './internal/structure-resource.mjs';
-export { StructureProvider } from './structure-context.mjs';
+export { useStructureResource } from './structure-context.mjs';
 export { Molecule } from './molecule.mjs';
 export { Structure } from './structure.mjs';
 export { Spacefill } from './spacefill.mjs';
@@ -17,7 +17,3 @@ export { TimelineProvider, useTimelineTime, useTimelineSample } from './timeline
 export { focusSelection, createCameraCurve, sampleCamera } from './camera-curve.mjs';
 export { useCameraCurve } from './use-camera-curve.mjs';
 export { useAnnotation } from './use-annotation.mjs';
-export { pointSizeForRadius, pointSizeForCameraRadius, pointSizesForRadii } from './internal/point-size.mjs';
-export { lineRadiusForWidth } from './internal/line-size.mjs';
-export { geometryDeps, assertGridBudget, copyOwned, runGeometryJob } from './internal/geometry-job.mjs';
-export { useGeometryJob } from './use-geometry-job.mjs';
