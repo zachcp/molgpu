@@ -125,6 +125,14 @@ it applies to. Copy that pattern for appearance state generally.
 'SDFFontContext' was used without a provider". `@use-gpu` ships **no** default
 font — `assets/font.ttf` here is Roboto (Apache-2.0).
 
+**A singular `position` is a `vec4`, so pass `[x, y, z, 1]`.** `LabelLayer`
+(and `PointLayer` etc.) bind a lone `position` prop as a `vec4<f32>` constant;
+a bare `[x, y, z]` gets `w = 0`, which projects to infinity, so the glyphs
+land off-screen — **a blank label with no error at all**, while the atlas,
+shaping and draw call all look healthy. `<Label>`/`<Distance>` in
+`@molgpu/viewer` pad their anchors for you. Also note the text prop is
+`label`/`labels`, not `text` — an unknown prop just draws zero glyphs.
+
 **`@use-gpu/glyph` must be in `optimizeDeps.exclude`.** It uses a Rust/wasm text
 shaper and vite's dep optimizer breaks the wasm init
 ("Cannot read properties of undefined (reading 'userusttext_new')"). Meanwhile

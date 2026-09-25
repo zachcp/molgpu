@@ -109,10 +109,9 @@ const Figure = () => {
         // The interactive sulfur sites: pickable, glossy, outlined (hj0.3).
         use(Spacefill, { select: sulfurs, scale: 0.6, color: [0.98, 0.82, 0.2, 1], material: { metalness: 0.5, roughness: 0.3 }, pickable: true }),
         // Centroid-anchored annotations (hj0.4): the S–S label at the sulfur
-        // centroid and a distance across the fold. The distance LINE renders;
-        // the text glyphs do not yet paint (tracked as an open LabelLayer/SDF
-        // text issue — see the bead filed from this session).
-        use(Label, { select: sulfurs, text: 'S–S core', family: 'sans', size: 28, detail: 48, color: [1, 1, 0.8, 1], zBias: 8 }),
+        // centroid (lifted clear of the distance readout) and a distance across
+        // the fold. zBias keeps the text from sinking into the surface.
+        use(Label, { select: sulfurs, text: 'S–S core', family: 'sans', size: 28, detail: 48, color: [1, 1, 0.8, 1], zBias: 8, offset: [0, 36] }),
         use(Distance, { a: firstRes, b: lastRes, family: 'sans', size: 20, detail: 36, color: [0.7, 0.9, 1, 1], zBias: 8 }),
       ] }),
       use(Readout, {}),

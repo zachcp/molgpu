@@ -15,6 +15,14 @@ const checkSelection = (select, resource, who) => {
 const anchorOf = (data, select) => centroidOf(data, select ? select.indices : null);
 
 /**
+ * LabelLayer binds a singular `position` as a vec4<f32> constant, so a bare
+ * [x,y,z] arrives with w = 0 — a direction, projected to infinity — and the
+ * glyphs silently land off-screen (hj0.6). Promote anchors to a homogeneous
+ * point before handing them over.
+ */
+const toPoint = (p) => (p.length >= 4 ? p : [p[0], p[1], p[2], 1]);
+
+/**
  * A flat text label anchored to the centroid of a selection (its mean atom
  * position), not a literal coordinate — so it tracks the group it names even as
  * the underlying atoms move. `select` (a @molgpu/select atom Selection) chooses
@@ -30,7 +38,7 @@ export const Label = ({ select, at, text, size = 16, color = [1, 1, 1, 1], offse
   checkSelection(select, resource, 'Label');
   const selectKey = select?.id ?? 'active';
   const computed = useMemo(() => anchorOf(data, select), [data, selectKey, resource.positionsRevision]);
-  const position = at ?? computed;
+  const position = useMemo(() => toPoint(at ?? computed), [at, computed]);
   return use(LabelLayer, { position, label: text ?? '', size, color, offset, family, ...props });
 };
 
@@ -61,7 +69,7 @@ export const Distance = ({ a, b, color = [0.9, 0.9, 0.95, 1], width = 2, size = 
   ];
   return withColumns(specs, (map) => [
     use(LineLayer, { positions: map.positions, segments: map.segments, width, color, join: 'round' }),
-    use(LabelLayer, { position: mid, label: text, size, color: labelColor ?? color, ...props }),
+    use(LabelLayer, { position: toPoint(mid), label: text, size, color: labelColor ?? color, ...props }),
   ]);
 };
 
