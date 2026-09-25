@@ -131,14 +131,13 @@ test('selection cache honours a custom bound and releases everything on dispose'
 
 // focusSelection caches one framing per (resource, query, options). The
 // options key includes the continuous `aspect`, so resizing a canvas while
-// focused on one query adds one entry per distinct aspect, with no bound
-// (camera-curve.mjs: `byOptions` is a plain Map). Violation filed from X2.
-test('focus framing cache stays bounded under aspect churn', {
-  todo: 'VIOLATION: camera-curve.mjs focusSelection byOptions Map grows by one entry per distinct aspect/fov/padding (unbounded)',
-}, () => {
+// focused on one query must not grow the cache without bound.
+test('focus framing cache stays bounded under aspect churn', () => {
   const resource = createStructureResource(structure());
   const query = where('atom', 'all', () => true);
   for (let k = 0; k < 500; k++) focusSelection(resource, query, { aspect: 1 + k / 1000 });
   const size = snapshotCounters().gauges.focusCacheOptions;
   assert.ok(size <= 64, `focus framing cache holds ${size} entries after 500 aspect values`);
+  const recent = focusSelection(resource, query, { aspect: 1.499 });
+  assert.equal(focusSelection(resource, query, { aspect: 1.499 }), recent, 'a recent framing is still cached');
 });

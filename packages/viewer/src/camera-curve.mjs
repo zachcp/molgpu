@@ -11,6 +11,17 @@ const point = (value, name) => {
   return [...value];
 };
 const focusCache = new WeakMap();
+// Framings per (resource, query). The options key includes the continuous
+// `aspect`, so a resizing canvas would otherwise add an entry per size: keep
+// the most recently used ones, like StructureResource's selection cache.
+const MAX_FRAMINGS = 64;
+const remember = (byOptions, key, value) => {
+  byOptions.delete(key);
+  byOptions.set(key, value);
+  if (byOptions.size > MAX_FRAMINGS) byOptions.delete(byOptions.keys().next().value);
+  gauge('focusCacheOptions', byOptions.size);
+  return value;
+};
 
 /** Framing bounds include displayed atom radii and every assembly instance. */
 const displayBounds = (data, indices, atomRadiusScale) => {
@@ -62,20 +73,18 @@ export function focusSelection(resource, query, {
   let byOptions = byQuery.get(query);
   if (!byOptions) byQuery.set(query, byOptions = new Map());
   const cacheKey = `${empty}|${fov}|${aspect}|${padding}|${atomRadiusScale}`;
-  if (byOptions.has(cacheKey)) return byOptions.get(cacheKey);
+  if (byOptions.has(cacheKey)) return remember(byOptions, cacheKey, byOptions.get(cacheKey));
   const data = resource.data;
   let indices = toAtoms(resolve(query, data), data).indices;
   if (!indices.length) {
     if (empty === 'error') throw new RangeError('focus selection is empty');
-    if (empty === 'null') { byOptions.set(cacheKey, null); return null; }
+    if (empty === 'null') return remember(byOptions, cacheKey, null);
     indices = Uint32Array.from({ length: data.topology.atoms.count }, (_, i) => i);
   }
   resource.selection(indices); // validates the explicit handle is still live
   const bounds = displayBounds(data, indices, atomRadiusScale);
   if (!bounds) {
-    const neutral = Object.freeze({ target: Object.freeze([0, 0, 0]), radius: 5, bounds: null });
-    byOptions.set(cacheKey, neutral);
-    return neutral;
+    return remember(byOptions, cacheKey, Object.freeze({ target: Object.freeze([0, 0, 0]), radius: 5, bounds: null }));
   }
   const half = bounds.max.map((v, i) => (v - bounds.min[i]) / 2);
   const sphereRadius = Math.hypot(...half);
@@ -85,10 +94,7 @@ export function focusSelection(resource, query, {
   const frozenBounds = Object.freeze({
     min: Object.freeze(bounds.min), max: Object.freeze(bounds.max), center: Object.freeze(bounds.center),
   });
-  const view = Object.freeze({ target: frozenBounds.center, radius, bounds: frozenBounds });
-  byOptions.set(cacheKey, view);
-  gauge('focusCacheOptions', byOptions.size);
-  return view;
+  return remember(byOptions, cacheKey, Object.freeze({ target: frozenBounds.center, radius, bounds: frozenBounds }));
 }
 
 /** Camera frames may target a fixed point/radius or a reusable focus query.
