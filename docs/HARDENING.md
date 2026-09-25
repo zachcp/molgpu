@@ -81,7 +81,10 @@ described:
   and annotations), a test drives each table row and asserts which counters move.
   A color or opacity edit moves no geometry or position counters.
 - Mounting and unmounting a `<Structure>` with every representation N times
-  returns the live GPU buffer count to its baseline.
+  returns the viewer-owned live GPU buffer count to its baseline. After a
+  forced GC, no device buffer created during the cycles is still referenced.
+  use.gpu 0.20.0 drops some small per-draw buffers without calling destroy();
+  the browser frees them on GC, so they don't count as a leak.
 - The selection cache stays bounded under churn.
 - Any violation found becomes its own bug bead. It is not fixed silently inside
   the audit.

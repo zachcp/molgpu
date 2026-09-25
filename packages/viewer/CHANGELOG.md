@@ -6,9 +6,7 @@ All notable changes to `@molgpu/viewer` are recorded here. The format follows
 
 ## [Unreleased]
 
-## [0.1.0] - Unreleased
-
-First public release. APIs marked *experimental* in the README may still change
+First public release (0.1.0). APIs marked *experimental* in the README may still change
 in 0.x minor releases.
 
 - use.gpu Live components for molecular scenes: `<Molecule>`, `<Structure>` (preloaded or loaded), Spacefill, Bonds, BallAndStick, Tube, Ribbon and Surface representations with a shared `opacity` prop, materials, lights, `<Pass>` postprocessing (SSAO, outline, OIT), picking, annotations, timeline-driven cameras and `useStructureResource()`. use.gpu-typed escape hatches live in `@molgpu/viewer/advanced`.

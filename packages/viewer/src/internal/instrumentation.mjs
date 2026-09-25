@@ -99,6 +99,7 @@ export function releaseOwnedBuffer(buffer) {
 // Created-but-not-destroyed buffers, held weakly so a buffer the page dropped
 // (and the browser garbage-collected) can be told apart from one still retained.
 const liveDevice = new Map();
+let collectedDevice = 0;
 const refs = new WeakMap();
 const originOf = ({ label = '', size, usage }) => {
   const frames = (new Error().stack ?? '').split('\n').slice(1)
@@ -142,15 +143,15 @@ export function instrumentDevice(gpuDevice) {
 
 /** Live device buffers grouped by origin: `usage size label @ caller frames`,
  * where the frames are the first few non-instrumentation stack frames. Used to
- * attribute device-level leaks to the code that allocated them. */
+ * attribute device-level leaks to the code that allocated them. `collected`
+ * counts buffers the browser garbage-collected without a destroy() call. */
 export function deviceBufferOrigins() {
   const retained = {};
-  let collected = 0;
   for (const [ref, origin] of liveDevice) {
     if (ref.deref()) retained[origin] = (retained[origin] ?? 0) + 1;
-    else collected += 1;
+    else { liveDevice.delete(ref); collectedDevice += 1; }
   }
-  return { retained, collected };
+  return { retained, collected: collectedDevice };
 }
 
 /** A plain, JSON-serialisable copy of every counter. */
@@ -171,6 +172,7 @@ export function resetAllInstrumentation() {
   owned.created = owned.destroyed = 0;
   device.created = device.destroyed = 0;
   liveDevice.clear();
+  collectedDevice = 0;
   device.writeBytes = { storage: 0, uniform: 0, other: 0 };
   seenOwned = new WeakSet();
   onceKeys = new WeakMap();

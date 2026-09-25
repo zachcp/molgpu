@@ -6,9 +6,7 @@ All notable changes to `@molgpu/geo` are recorded here. The format follows
 
 ## [Unreleased]
 
-## [0.1.0] - Unreleased
-
-First public release. APIs marked *experimental* in the README may still change
+First public release (0.1.0). APIs marked *experimental* in the README may still change
 in 0.x minor releases.
 
 - Pure geometry kernels ported from Mol* 5.11.0: curve segments for tubes and cartoons, marching cubes and nearest-atom surface attribution. Has no dependencies.
