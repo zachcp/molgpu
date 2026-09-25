@@ -54,8 +54,6 @@ const rowCount = (domain, data) =>
   domain === 'residue' ? data.topology.residues.count :
   fail('domain', `unknown domain ${domain}`);
 
-/** Concrete domain of a field tree, or 'any' for a pure constant/uniform field. */
-const domainOf = (f) => f.domain;
 const reconcileDomain = (a, b, field) => {
   if (a === 'any') return b;
   if (b === 'any') return a;
@@ -373,10 +371,8 @@ function bakeAnnotation(node, n) {
   return out;
 }
 
-export { domainOf as fieldDomain };
-
 // Built-in colour presets composed from the primitives above.
 export { byElement, byBfactor, bySeq, byChain } from './builtins.mjs';
 
 // Identity-keyed annotation joins that produce annotation fields.
-export { joinAnnotation, residueIdentity, chainIdentity, identityKey } from './annotation-join.mjs';
+export { joinAnnotation, residueIdentity, chainIdentity } from './annotation-join.mjs';

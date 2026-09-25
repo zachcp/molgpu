@@ -1,6 +1,12 @@
 {
-  "name": "@molgpu/fields", "version": "0.0.0", "type": "module",
+  "name": "@molgpu/fields",
+  "version": "0.0.0",
+  "description": "Typed per-row value fields (colour, scalar, label) over molecular tables, with a pure CPU evaluator and a renderer-free WGSL code generator.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
   "exports": { ".": { "types": "./src/index.d.ts", "import": "./src/index.mjs" } },
-  "files": ["src"], "scripts": { "test": "node --test test/*.test.mjs" },
+  "files": ["src"],
+  "scripts": { "test": "node --test test/*.test.mjs" },
   "dependencies": { "@molgpu/table": "0.0.0" }
 }
