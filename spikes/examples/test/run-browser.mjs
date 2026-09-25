@@ -96,6 +96,13 @@ try {
   // *reactive* contract (no unconditional redraw, no per-input allocation);
   // catching a resize/picking feedback loop needs a real-GPU run.
   const results = {};
+  // Warm up: ribbon/surface pull in @molgpu/io and molstar, which vite
+  // optimizes on first sight and then auto-reloads the page. Visit them once so
+  // that reload cannot land in the middle of the scene assertions below.
+  for (const ex of ['ribbon', 'surface']) {
+    await page.goto(`http://127.0.0.1:5187/?ex=${ex}`);
+    await page.waitForTimeout(6000);
+  }
   await page.goto('http://127.0.0.1:5187/?ex=scene');
   await page.waitForFunction(() => window.__example === 'scene' && document.querySelector('canvas'));
 
@@ -260,6 +267,60 @@ try {
     ['molgpu:positions', 'molgpu:segments', 'molgpu:base-sizes'].includes(label)), [], 'time-only scrubbing rewrote molecular geometry');
   assert.deepEqual(await page.evaluate(() => window.__gpuErrors), [], 'timeline WebGPU errors');
   assert.deepEqual(errors, [], 'timeline browser errors');
+
+  // Representation gallery: every variant of every single-component example
+  // must actually paint the molecule (not just mount), and its variants must
+  // differ from one another. Loaded fresh per variant via ?v=.
+  const REPRESENTATIONS = {
+    bonds: ['element', 'flat', 'cys only'],
+    tube: ['thin', 'thick', 'gapped'],
+    ribbon: ['smooth', 'coarse', 'with tube'],
+    surface: ['opaque', 'no probe', 'glass'],
+  };
+  // Pixels clearly off the harness background (0.05, 0.06, 0.075 -> ~13,15,19).
+  const painted = (png) => page.evaluate(async (base64) => {
+    const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+    const bitmap = await createImageBitmap(new Blob([bytes], { type: 'image/png' }));
+    const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(bitmap, 0, 0); bitmap.close();
+    const px = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+    let n = 0;
+    for (let i = 0; i < px.length; i += 4) if (Math.abs(px[i] - 13) + Math.abs(px[i + 1] - 15) + Math.abs(px[i + 2] - 19) > 40) n++;
+    return n;
+  }, png.toString('base64'));
+  results.representations = {};
+  for (const [ex, variants] of Object.entries(REPRESENTATIONS)) {
+    const shots = [];
+    for (const v of variants) {
+      await page.goto(`http://127.0.0.1:5187/?ex=${ex}&v=${encodeURIComponent(v)}`);
+      await page.waitForFunction((want) => window.__variant === want && document.querySelector('canvas'), v, { timeout: 30000 });
+      await warmup();
+      // Surface meshes build asynchronously; wait until the frame stops changing.
+      let frame = await shot();
+      for (let i = 0; i < 20; i++) { await settle(12); const next = await shot(); if (next.equals(frame)) break; frame = next; }
+      const n = await painted(frame);
+      assert.ok(n > 2000, `${ex}/${v} must paint the molecule (only ${n} non-background pixels)`);
+      shots.push(frame);
+      results.representations[`${ex}/${v}`] = n;
+    }
+    for (let i = 1; i < shots.length; i++) {
+      assert.ok(!shots[i].equals(shots[0]), `${ex}/${variants[i]} must render differently from ${variants[0]}`);
+    }
+    assert.deepEqual(await page.evaluate(() => window.__gpuErrors), [], `${ex} WebGPU errors`);
+    assert.deepEqual(errors, [], `${ex} browser errors`);
+  }
+
+  // The toolbar must switch variants live, including a style-only change (the
+  // tube radius), which only repaints because variants remount (lib/variants.mjs).
+  await page.goto('http://127.0.0.1:5187/?ex=tube&v=thin');
+  await page.waitForFunction(() => window.__variant === 'thin' && document.querySelector('canvas'));
+  await warmup();
+  const thinShot = await shot();
+  await page.click('#toolbar button[data-v="thick"]');
+  await page.waitForFunction(() => window.__variant === 'thick');
+  await warmup();
+  assert.ok(!(await shot()).equals(thinShot), 'clicking a toolbar variant must repaint the canvas');
 
   console.log(JSON.stringify({
     status: 'passed',

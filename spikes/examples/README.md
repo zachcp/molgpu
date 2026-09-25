@@ -1,44 +1,48 @@
-# use.gpu layer examples
+# molgpu examples gallery
 
-The current gallery has four component examples: `?ex=scene` composes the
-crambin figure, `?ex=select` shows selections and fields, `?ex=lighting`
-isolates one sphere under a fixed world-space directional light, and
-`?ex=timeline` shows the Gate 3 story. Its slider scrubs three named beats in
-seconds: overview, colour, and focus on the first residue. The colour field and
-camera share the same controlled time value. The browser test moves the slider
-forward and backward and checks that molecular geometry is not reuploaded.
-
-Drag the lighting example: its silhouette stays centered while the bright side moves
-across it. The light direction is defined once in `harness.mjs`, independently
-of the orbit camera's bearing and pitch. `npm run test:examples` verifies the
-shading change in Chrome WebGPU.
-
-The historical layer notes below document earlier spike examples, some of
-which are no longer linked from the current gallery.
-
-Minimal, verified examples of each use.gpu layer we expect `@molgpu/viewer` to
-need. The point is learning the layer API, not building product — every file is
-short enough to read in one screen.
+One browsable page for every `@molgpu/viewer` representation and the stories
+built on them. Each `?ex=` entry is a module in `ex/` exporting
+`{ title, camera?, body }`, mounted by `harness.mjs`; representation examples
+add a toolbar of variants (`lib/variants.mjs`, also selectable as `&v=<name>`).
 
 ```bash
 cd spikes/examples && npm i
 npx vite .          # http://localhost:5185
 ```
 
-| Example | Layer | Shows |
+| Example | Shows | Variants |
 |---|---|---|
-| `?ex=points` | `PointLayer` | spacefill; 3 bound attribute sources |
-| `?ex=lines` | `LineLayer` | bonds as discrete segments |
-| `?ex=trace` | `LineLayer` | one continuous polyline (the cartoon path shape) |
-| `?ex=faces` | `FaceLayer` | real triangle geometry from a mesh |
-| `?ex=material` | `PBRMaterial` | material as a context provider; roughness ramp |
-| `?ex=labels` | `LabelLayer` | SDF text anchored to 3D positions |
-| `?ex=adapter` | `PointLayer` + `LineLayer` | the real `@molgpu/table` + `ColumnSource`, on crambin |
+| `?ex=scene` | the composed crambin figure: tube fold, ball-and-stick site, spacefill callouts | `&site=`, `&shell=`, `&tube=` |
+| `?ex=select` | Gate 2: one selection + one colour field driving `<Spacefill>`/`<BallAndStick>` | all · sulfur · cys · near · shell |
+| `?ex=lighting` | one sphere under a world-fixed key light — drag to see the lit side move | — |
+| `?ex=timeline` | Gate 3: a slider scrubs three named beats (colour field + camera focus) | slider |
+| `?ex=bonds` | `<Bonds>`: sticks from bond topology, split into element colours | element · flat · cys only |
+| `?ex=tube` | `<Tube>`: GPU-extruded backbone; a gapped selection ends the run | thin · thick · gapped |
+| `?ex=ribbon` | `<Ribbon>`: secondary-structure cartoon (real 1CRN BinaryCIF, for its helices) | smooth · coarse · with tube |
+| `?ex=surface` | `<Surface>`: solvent-excluded molecular surface | opaque · no probe · glass |
+| `figure.html` | Phase 5 showcase: PBR + SSAO/outline/OIT, picking + click-to-seek, `<Label>`/`<Distance>` | — |
 
-Plus two isolation harnesses kept because they document how the conventions were
-found: `?ex=linemin` (`&seg=1,2,1,2`) and `?ex=facemin` (`&v=tri|both|flat`).
+`figure.html` is standalone rather than a `?ex=` entry: it needs the viewer's
+own `<Pass>` (postprocessing), a `<PickingProvider>` and the font stack, which
+the shared harness's fixed `Pass` + lights cannot host.
 
-**Every example here was verified to render by screenshot.** That discipline is
+`npm run test:examples` (from the repo root) drives the gallery in Chrome
+WebGPU: the scene's reactive-render contract, the lighting orbit, the timeline
+scrub, and **every representation variant painting the molecule** (and
+differing from its siblings). `npm run test:examples:figure` smoke-tests the
+figure. The focused regression harnesses in `packages/viewer/test`
+(`run-tube.mjs`, `run-ribbon.mjs`, `run-surface.mjs`, `run-gate2.mjs`, …) stay:
+they check invariants a picture cannot, such as a style edit uploading zero new
+GPU buffers.
+
+## Historical layer notes
+
+The notes below come from the earlier per-layer spike gallery (`?ex=points`,
+`lines`, `trace`, `faces`, `material`, `labels`, `adapter`, `linemin`,
+`facemin`), since deleted (molgpu-sept-s15). They still document how the
+use.gpu layer conventions were found.
+
+**Every example must be verified to render by screenshot.** That discipline is
 not optional: `DualContourLayer` is present in the package and completely broken
 (see `docs/findings/2026-09-15-s3-molecular-surface.md`), so presence is not
 usability.

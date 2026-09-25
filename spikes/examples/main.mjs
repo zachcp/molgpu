@@ -11,6 +11,10 @@ const EXAMPLES = {
   select: () => import('./ex/select.mjs'),
   lighting: () => import('./ex/lighting.mjs'),
   timeline: () => import('./ex/timeline.mjs'),
+  bonds: () => import('./ex/bonds.mjs'),
+  tube: () => import('./ex/tube.mjs'),
+  ribbon: () => import('./ex/ribbon.mjs'),
+  surface: () => import('./ex/surface.mjs'),
 };
 
 const which = new URLSearchParams(location.search).get('ex') ?? 'scene';
