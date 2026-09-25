@@ -10,7 +10,7 @@ already exist; hardening only requires that they keep passing.
 
 ## Per-package criteria
 
-**H1 — Manifest.** `package.json` has: `name`, a real `version`, `license`,
+**H1 — Manifest.** `package.json` has: `name`, a semver `version` (the `0.1.0` bump itself happens in X3), `license`,
 `repository` (with `directory`), `description`, `"type": "module"`,
 `"sideEffects": false` (or an explicit list), and an `exports` map of the form
 `{ ".": { "types", "import" } }`. It has no `private: true`, and `files` is set
@@ -39,16 +39,21 @@ advanced entry (`@molgpu/viewer/advanced`), never from `.`.
 
 **H5 — Reviewed public API.**
 - Each export is classified in the README as *stable*, *experimental* or
-  *advanced*. Anything internal is removed from `index.mjs`.
+  *advanced*. Anything internal is removed from `index.mjs`. The checker reads
+  this from a `## API` section containing a table whose rows start
+  `` | `name` | stable | `` (further columns are free-form).
 - A committed snapshot, `packages/<pkg>/api.txt`, holds the sorted export names
   and their d.ts signatures. The check fails when the snapshot and the source
   disagree, so an API change always shows up in the diff.
 
 **H6 — Packs and imports cleanly.**
 - `npm pack --dry-run` lists only the intended files.
-- In a clean temp directory, installing the packed tarball and running
-  `import('@molgpu/<pkg>')` succeeds in Node. `viewer` and anything browser-only
-  instead get a documented browser smoke page.
+- In a clean temp directory, laying out the packed files as
+  `node_modules/@molgpu/<pkg>` and running `import('@molgpu/<pkg>')` succeeds in
+  Node. Other dependencies are linked from the workspace root, so this proves
+  the tarball and its exports map, not a registry install. `viewer` is
+  browser-only, so the checker only resolves its entries. It also needs a
+  documented browser smoke page, which is checked by hand.
 - No import has to reach into `/src/internal`.
 
 **H7 — README.**
@@ -61,8 +66,10 @@ advanced entry (`@molgpu/viewer/advanced`), never from `.`.
 ## Cross-cutting criteria
 
 **X1 — Shared check tooling.** `npm run check:hardening [pkg]` automates H1–H6
-and runs in CI next to `npm test`. A per-package bead is verified by running
-this script.
+(`--update` rewrites `api.txt`; `--json` for machine output). A per-package bead
+is verified by running this script. `npm run test:hardening` proves that each
+criterion fails on a deliberately broken copy of `test/hardening/fixture`. The
+repo has no CI or remote yet; wiring both scripts into CI is part of X3.
 
 **X2 — Invalidation and resource audit.** The change→work table in
 `docs/findings/2026-09-17-architecture-review.md` is enforced by tests, not just
@@ -79,6 +86,7 @@ described:
   the audit.
 
 **X3 — Release.**
+- CI runs `npm test`, `npm run test:hardening` and `npm run check:hardening`.
 - Every package moves to `0.1.0` and gains a top-level `CHANGELOG.md`, managed by
   changesets or a documented manual procedure.
 - `LICENSE` is present, and the upstream attribution for the Mol*-ported `geo`
