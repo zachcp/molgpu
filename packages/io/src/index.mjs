@@ -70,9 +70,9 @@ export class SurfaceFieldError extends Error {
  * calcMolecularSurface — kept behind this runtime import boundary exactly
  * like parseBcif, so consumers of @molgpu/table/@molgpu/geo alone never
  * load it. `atoms` is plain owned columns (x/y/z/radius Float32Array[count]),
- * never a Mol* Structure/Unit. `values` keeps Mol*'s z-fastest layout
- * (values[k + nz * (j + ny * i)]); @molgpu/geo's marchingCubes reads an
- * x-fastest grid, so it is NOT a drop-in input for it without reordering.
+ * never a Mol* Structure/Unit. `values` is x-fastest
+ * (values[i + nx * (j + ny * k)]), the layout @molgpu/geo's marchingCubes
+ * reads, so the field feeds it directly.
  * `transform` is a column-major scale+translate Mat4 — read its diagonal as
  * `spacing` and its translation row as `origin` — and `level` is the isovalue
  * (the solvent-excluded-surface convention: the probe radius itself).
@@ -111,9 +111,17 @@ export async function molecularSurfaceField(atoms, { probeRadius = 1.4, resoluti
     // stub stands in for mol-task's RuntimeContext (a type-only import, erased at runtime).
     const stubContext = { shouldUpdate: false, update: async () => {} };
     const result = await calcMolecularSurface(stubContext, position, boundary, maxRadius, null, { probeRadius, resolution, probePositions });
-    const values = result.field.data instanceof Float32Array ? result.field.data.slice() : Float32Array.from(result.field.data);
+    // Mol*'s tensor stores the grid in its own axis order (z fastest). Lower
+    // it to the x-fastest layout @molgpu/geo's marchingCubes reads, reading
+    // through space.get so this stays correct whatever Mol*'s order is.
+    const { space, data } = result.field;
+    const [nx, ny, nz] = space.dimensions;
+    const values = new Float32Array(nx * ny * nz);
+    for (let k = 0; k < nz; k++) for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
+      values[i + nx * (j + ny * k)] = space.get(data, i, j, k);
+    }
     return {
-      values, dims: [...result.field.space.dimensions], transform: Float32Array.from(result.transform),
+      values, dims: [nx, ny, nz], transform: Float32Array.from(result.transform),
       resolution: result.resolution, maxRadius: result.maxRadius, level: probeRadius,
     };
   } catch (error) {

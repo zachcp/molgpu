@@ -51,9 +51,9 @@ try { await structureFromBcif(new Uint8Array([0, 1, 2])); }
 catch (error) { if (error instanceof BcifParseError) console.log(error.code); } // INVALID_BCIF
 ```
 
-`field.values` keeps Mol*'s **z-fastest** layout: sample `(i, j, k)` is
-`values[k + dims[2] * (j + dims[1] * i)]`. `@molgpu/geo`'s `marchingCubes`
-reads an x-fastest grid, so reorder before passing the field to it. Grid index
+`field.values` is **x-fastest**: sample `(i, j, k)` is
+`values[i + dims[0] * (j + dims[1] * k)]`, the layout `@molgpu/geo`'s
+`marchingCubes` reads, so the field can be passed to it directly. Grid index
 maps to Angstrom through `field.transform` (column-major; spacing on the
 diagonal, origin in elements 12–14), and the surface is the `field.level`
 isosurface.
@@ -72,9 +72,7 @@ isosurface.
 | `SurfaceFieldOptions` | experimental | `probeRadius`, `resolution` and `probePositions`. |
 | `SurfaceField` | experimental | Result grid: `values`, `dims`, `transform`, `resolution`, `maxRadius`, `level`. |
 
-The surface exports are experimental because the grid layout does not yet match
-what `@molgpu/geo` consumes (see above), and the result shape may change when
-that is reconciled.
+The surface exports are experimental while the result shape settles.
 
 ## Place in the dependency graph
 

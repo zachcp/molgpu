@@ -9,8 +9,13 @@ function identity16() { return [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]; }
 
 /** A small tetrahedral cluster of carbons, close enough to form a real, if tiny, surface. */
 function smallCluster() {
-  const n = 5;
-  const positions = Float32Array.from([0,0,0, 1.5,0,0, -0.5,1.4,0, -0.5,-0.7,1.2, -0.5,-0.7,-1.2]);
+  return carbons([0,0,0, 1.5,0,0, -0.5,1.4,0, -0.5,-0.7,1.2, -0.5,-0.7,-1.2]);
+}
+
+/** Carbon atoms (radius 1.7) at the given packed xyz positions. */
+function carbons(xyz) {
+  const positions = Float32Array.from(xyz);
+  const n = positions.length / 3;
   return createStructure({
     positions,
     topology: {
@@ -41,6 +46,25 @@ test('an oversize grid throws before the field is computed', async () => {
     buildSurfaceGeometry({ data }, { indices, probeRadius: 1.4, resolution: 0.5, maxBytes: 10 }),
     /GEOMETRY_BUDGET_EXCEEDED|exceeds the/,
   );
+});
+
+test('surface vertices lie on the atom spheres for an asymmetric grid (field axis order matches the mesher)', async () => {
+  // Two atoms 12 Å apart along x, offset in y/z, give a grid whose three
+  // dimensions all differ. Far apart, the solvent-excluded surface is just
+  // each atom's van der Waals sphere, so every vertex must sit ~1.7 Å from its
+  // nearest atom. A transposed grid (z-fastest values read x-fastest) puts
+  // most vertices nowhere near either sphere.
+  const xyz = [0, 0, 0, 12, 1, 3];
+  const data = carbons(xyz);
+  const mesh = await buildSurfaceGeometry({ data }, { indices: Uint32Array.of(0, 1), probeRadius: 1.4, resolution: 0.5 });
+  assert.ok(mesh && mesh.vertexCount > 100);
+  let off = 0;
+  for (let v = 0; v < mesh.vertexCount; v++) {
+    const [px, py, pz] = [mesh.positions[v * 3], mesh.positions[v * 3 + 1], mesh.positions[v * 3 + 2]];
+    const d = Math.min(Math.hypot(px - xyz[0], py - xyz[1], pz - xyz[2]), Math.hypot(px - xyz[3], py - xyz[4], pz - xyz[5]));
+    if (Math.abs(d - 1.7) > 0.5 * 0.75) off++; // within 3/4 of a grid cell
+  }
+  assert.equal(off, 0, `${off}/${mesh.vertexCount} vertices off the atom spheres`);
 });
 
 test('builds a real mesh with finite geometry and in-range source attribution', async () => {

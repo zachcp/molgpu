@@ -64,9 +64,9 @@ export interface SurfaceFieldOptions {
 /** A solvent-excluded-surface scalar grid. Every array is freshly owned by the caller. */
 export interface SurfaceField {
   /**
-   * Grid samples, length `dims[0] * dims[1] * dims[2]`, laid out **z-fastest**
-   * (Mol*'s layout): the sample at grid `(i, j, k)` is
-   * `values[k + dims[2] * (j + dims[1] * i)]`. Unvisited cells far from every
+   * Grid samples, length `dims[0] * dims[1] * dims[2]`, laid out **x-fastest**
+   * (the layout `@molgpu/geo`'s `marchingCubes` reads): the sample at grid
+   * `(i, j, k)` is `values[i + dims[0] * (j + dims[1] * k)]`. Unvisited cells far from every
    * atom hold the sentinel -1001.
    */
   values: Float32Array;

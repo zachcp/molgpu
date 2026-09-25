@@ -77,7 +77,12 @@ test('matches Mol\'s own probe-radius-inflated search radius (mol-repr/.../util/
   );
 
   assert.deepEqual([...ours.dims], [...oracle.field.space.dimensions]);
-  assert.deepEqual([...ours.values], [...oracle.field.data]);
+  // Same samples as Mol*, re-laid out x-fastest for @molgpu/geo.
+  const [nx, ny, nz] = ours.dims;
+  const { space, data } = oracle.field;
+  for (let k = 0; k < nz; k++) for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
+    assert.equal(ours.values[i + nx * (j + ny * k)], space.get(data, i, j, k), `sample (${i}, ${j}, ${k})`);
+  }
 });
 
 test('owns its output: mutating the returned arrays cannot affect a second call', async () => {
