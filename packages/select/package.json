@@ -1,6 +1,12 @@
 {
-  "name": "@molgpu/select", "version": "0.0.0", "type": "module",
+  "name": "@molgpu/select",
+  "version": "0.0.0",
+  "description": "Pure selection queries, dataset-bound resolution, set operations and domain conversions over @molgpu/table structures.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
   "exports": { ".": { "types": "./src/index.d.ts", "import": "./src/index.mjs" } },
-  "files": ["src"], "scripts": { "test": "node --test test/*.test.mjs" },
+  "files": ["src"],
+  "scripts": { "test": "node --test test/*.test.mjs" },
   "dependencies": { "@molgpu/table": "0.0.0" }
 }
