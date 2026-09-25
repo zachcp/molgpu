@@ -3,10 +3,18 @@
   "version": "0.1.0",
   "description": "Hardening checker fixture: a package that meets H1–H6.",
   "license": "MIT",
-  "repository": { "type": "git", "url": "git+https://example.invalid/molgpu.git", "directory": "test/hardening/fixture" },
   "type": "module",
   "sideEffects": false,
-  "exports": { ".": { "types": "./src/index.d.ts", "import": "./src/index.mjs" } },
-  "files": ["src"],
-  "dependencies": { "@use-gpu/core": "0.20.0" }
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "import": "./src/index.mjs"
+    }
+  },
+  "files": [
+    "src"
+  ],
+  "dependencies": {
+    "@use-gpu/core": "0.20.0"
+  }
 }

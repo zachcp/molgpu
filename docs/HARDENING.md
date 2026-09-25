@@ -10,11 +10,12 @@ already exist; hardening only requires that they keep passing.
 
 ## Per-package criteria
 
-**H1 — Manifest.** `package.json` has: `name`, a semver `version` (the `0.1.0` bump itself happens in X3), `license`,
-`repository` (with `directory`), `description`, `"type": "module"`,
+**H1 — Manifest.** `package.json` has: `name`, a semver `version` (the `0.1.0` bump itself happens in X3), `license` (`MIT`),
+`description`, `"type": "module"`,
 `"sideEffects": false` (or an explicit list), and an `exports` map of the form
 `{ ".": { "types", "import" } }`. It has no `private: true`, and `files` is set
-to `src`, README and LICENSE. Every bare import in `src/` is declared in
+to `src` (npm adds README and LICENSE itself; each package
+keeps a copy of the root MIT `LICENSE`). Every bare import in `src/` is declared in
 `dependencies` or `peerDependencies`. `@use-gpu/*` versions are pinned exactly
 (risk R3), and `molstar` is a peer range.
 
@@ -89,6 +90,7 @@ described:
 - CI runs `npm test`, `npm run test:hardening` and `npm run check:hardening`.
 - Every package moves to `0.1.0` and gains a top-level `CHANGELOG.md`, managed by
   changesets or a documented manual procedure.
+- `repository` (with `directory`) is added once a remote exists.
 - `LICENSE` is present, and the upstream attribution for the Mol*-ported `geo`
   code is preserved.
 - The docs and examples gallery link to each package README.

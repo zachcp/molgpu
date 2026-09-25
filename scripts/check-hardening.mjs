@@ -168,10 +168,11 @@ function checkPackage(dir, { update = false } = {}) {
   // H1 — manifest.
   for (const key of ['name', 'version', 'license', 'description']) if (!m[key]) fail('H1', `missing "${key}"`);
   if (m.version && !/^\d+\.\d+\.\d+(-[\w.]+)?$/.test(m.version)) fail('H1', `version "${m.version}" is not semver`);
+  if (m.license && m.license !== 'MIT') fail('H1', `license must be "MIT", got "${m.license}"`);
+  if (!existsSync(join(dir, 'LICENSE'))) fail('H1', 'missing LICENSE file');
   if (m.private) fail('H1', '"private": true');
   if (m.type !== 'module') fail('H1', '"type" must be "module"');
   if (!('sideEffects' in m)) fail('H1', 'missing "sideEffects"');
-  if (!m.repository?.directory) fail('H1', 'missing "repository.directory"');
   if (!Array.isArray(m.files) || !m.files.includes('src')) fail('H1', '"files" must include "src"');
   if (!ents.length) fail('H1', '"exports" must be a map with a "." entry');
   else if (!ents.some(e => e.subpath === '.')) fail('H1', '"exports" has no "." entry');
