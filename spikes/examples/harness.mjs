@@ -44,7 +44,9 @@ const OrbitControls = ({
   return use(OrbitCamera, { bearing, pitch, radius, target, children });
 };
 
-export function mount(body, { radius = 40, target = [0, 0, 0], lights = true, bearing = 0.6, pitch = 0.35, cameraComponent } = {}) {
+// `pass` is extra <Pass> props an example opts into, e.g. `{ oit: true }` for
+// order-independent transparency so translucent surfaces show what's inside.
+export function mount(body, { radius = 40, target = [0, 0, 0], lights = true, bearing = 0.6, pitch = 0.35, cameraComponent, pass } = {}) {
   render(use(WebGPU, {
     fallback: (e) => {
       document.getElementById('err').textContent = 'WebGPU: ' + (e?.message ?? e);
@@ -55,7 +57,7 @@ export function mount(body, { radius = 40, target = [0, 0, 0], lights = true, be
       children: use(cameraComponent ?? OrbitControls, {
         bearing, pitch, radius, target,
         // `lights: true` is required on Pass, or light components warn and do nothing.
-        children: use(Pass, { lights, children: [
+        children: use(Pass, { ...pass, lights, children: [
           lights && use(AmbientLight, { color: [1, 1, 1], intensity: 0.3 }),
           lights && use(DirectionalLight, { direction: WORLD_KEY_DIRECTION, color: [1, 1, 1], intensity: 1 }),
           body,

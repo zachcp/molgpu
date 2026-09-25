@@ -15,6 +15,9 @@ const data = crambinStructure();
 const bounds = coordinateBounds(data);
 const extent = Math.max(...bounds.max.map((v, i) => v - bounds.min[i]));
 export const camera = { radius: extent * 1.7, target: bounds.center };
+// Order-independent transparency: without it the translucent glass surface
+// writes depth and hides the atoms inside it.
+export const pass = { oit: true };
 
 // On top of the harness's ambient + key light: a cool fill from the opposite
 // side, a warm rim from behind, and a little more ambient, so the concave
@@ -31,7 +34,7 @@ export const body = () => withVariants({
   'no probe': () => lit(use(Surface, { probeRadius: 0, color: [0.86, 0.78, 0.7, 1] })),
   glass: () => lit(
     use(BallAndStick, { ball: 0.25, stick: 0.18, color: byElement() }),
-    use(Surface, { color: [0.55, 0.72, 0.98, 0.3] }),
+    use(Surface, { color: [0.55, 0.72, 0.98, 0.3], mode: 'transparent' }),
   ),
   // A small probe and a fine grid keep every atom's bump and crevice, and a
   // fully rough, non-metallic stone albedo reads as porous volcanic rock.

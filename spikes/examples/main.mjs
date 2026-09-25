@@ -26,4 +26,4 @@ for (const a of document.querySelectorAll('nav a')) {
   if (a.dataset.ex === which) a.setAttribute('aria-current', 'page');
 }
 window.__example = EXAMPLES[which] ? which : 'scene';
-mount(mod.body(), { ...mod.camera, cameraComponent: mod.cameraComponent });
+mount(mod.body(), { ...mod.camera, cameraComponent: mod.cameraComponent, pass: mod.pass });
