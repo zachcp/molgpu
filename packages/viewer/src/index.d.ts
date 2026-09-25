@@ -1,18 +1,36 @@
-import type { LC, LiveContext, LiveElement } from '@use-gpu/live';
-import type { VectorLike } from '@use-gpu/core';
-import type { ShaderSource } from '@use-gpu/shader';
-import type {
-  PointLayerProps,
-  PBRMaterialProps, BasicMaterialProps, NormalMaterialProps,
-  ShaderFlatMaterialProps, ShaderLitMaterialProps, FresnelMaterialEffectProps,
-  AmbientLightProps, DirectionalLightProps, PointLightProps,
-  SpotLightProps, DomeLightProps, EnvironmentProps,
-  PassProps,
-} from '@use-gpu/workbench';
+// The "." entry carries no use.gpu types: everything below is owned by
+// @molgpu/viewer. Exports that are inherently use.gpu-shaped (shader sources,
+// Live contexts, custom-shader materials) live in `@molgpu/viewer/advanced`.
 import type { StructureData } from '@molgpu/table';
 import type { Field } from '@molgpu/fields';
 import type { Selection, SelectionQuery } from '@molgpu/select';
 import type { Curve, CurveValue } from '@molgpu/timeline';
+
+// --- Owned element, component and value types -------------------------------
+
+/**
+ * One node of a rendered scene, as produced by JSX or by calling a component.
+ * Opaque by design: its concrete shape belongs to the renderer (a use.gpu Live
+ * element; `@molgpu/viewer/advanced` is where upstream types are exposed).
+ */
+export type ViewerElement = object | null | undefined | false;
+
+/** A viewer component: a function of props that renders a scene element. Use
+ *  it in JSX (`<Spacefill />`) or through the renderer's `use()`. */
+export type ViewerComponent<P = {}> = (props: P) => ViewerElement;
+
+export type TypedArray =
+  | Int8Array | Uint8Array | Uint8ClampedArray | Int16Array | Uint16Array
+  | Int32Array | Uint32Array | Float32Array | Float64Array;
+
+/** A numeric vector: a plain array or a typed array. */
+export type VectorLike = readonly number[] | TypedArray;
+
+/** A colour: packed number, [r, g, b(, a)] vector, `{ rgb }`/`{ rgba }`, or a CSS string. */
+export type ColorLike = number | VectorLike | { rgb: VectorLike } | { rgba: VectorLike } | string;
+
+/** Blend-mode names accepted by layer and outline options. */
+export type BlendMode = 'none' | 'alpha' | 'premultiply' | 'add' | 'subtract' | 'multiply';
 
 /** Ångström-space axis-aligned extent, or null for an empty structure. */
 export interface StructureBounds {
@@ -29,7 +47,7 @@ export type MaterialType = 'pbr' | 'basic' | 'normal' | 'flat' | 'lit';
  */
 export type MaterialSpec =
   | ({ type?: MaterialType } & Record<string, unknown>)
-  | ((children: LiveElement) => LiveElement);
+  | ((children: ViewerElement) => ViewerElement);
 
 /** A resolved atom set, valid only for the resource and revisions that made it. */
 export interface AtomSelection {
@@ -61,35 +79,19 @@ export function createStructureResource(
   options?: { readonly maxSelections?: number },
 ): StructureResource;
 
-/** GPU columns allocated once per structure and shared by representations. */
-export interface StructureSources {
-  readonly positions: ShaderSource;
-  readonly radii: ShaderSource;
-}
-
-export interface StructureContextValue {
-  readonly resource: StructureResource;
-  /** Null for an empty structure, which owns no GPU source. */
-  readonly sources: StructureSources | null;
-}
-
-export const StructureContext: LiveContext<StructureContextValue | undefined>;
-
-export const StructureProvider: LC<{
+/** Provides one StructureResource (and its shared GPU columns) to descendant
+ *  representations. <Structure> wraps it; prefer <Structure>. */
+export const StructureProvider: ViewerComponent<{
   data: StructureData;
   maxSelections?: number;
-  children?: LiveElement;
+  children?: ViewerElement;
 }>;
 
-/** Throws when called outside a <Structure> subtree. */
-export function useStructure(): StructureContextValue;
-
 /** A compositional boundary only: it never owns a canvas or GPU device. */
-export const Molecule: LC<{ children?: LiveElement }>;
+export const Molecule: ViewerComponent<{ children?: ViewerElement }>;
 
 /** Controlled global time in seconds. The caller sets time when scrubbing. */
-export const TimelineContext: LiveContext<number | null>;
-export const TimelineProvider: LC<{ time: number; children?: LiveElement }>;
+export const TimelineProvider: ViewerComponent<{ time: number; children?: ViewerElement }>;
 export function useTimelineTime(): number;
 export function useTimelineSample<T extends CurveValue>(curve: Curve<T>): T;
 
@@ -139,7 +141,7 @@ export type StructureLoader = (
 interface StructureCommonProps {
   /** Per-structure selection cache bound; defaults to 64. */
   maxSelections?: number;
-  children?: LiveElement;
+  children?: ViewerElement;
 }
 
 /** Preloaded values. This path never loads a parser. */
@@ -155,18 +157,36 @@ export interface LoadedStructureProps extends StructureCommonProps {
   /** Defaults to fetch + BCIF lowering through @molgpu/io. Its identity is a
    * reload dependency alongside `src`, so pass a stable or memoized function. */
   loader?: StructureLoader;
-  loading?: LiveElement | (() => LiveElement);
-  error?: LiveElement | ((failure: unknown) => LiveElement);
+  loading?: ViewerElement | (() => ViewerElement);
+  error?: ViewerElement | ((failure: unknown) => ViewerElement);
 }
 
 /** `data` and `src` are mutually exclusive, and exactly one is required. */
 export type StructureProps = PreloadedStructureProps | LoadedStructureProps;
 
-export const Structure: LC<StructureProps>;
+export const Structure: ViewerComponent<StructureProps>;
+
+/** Point-layer drawing flags that <Spacefill> forwards to its layer. */
+export interface PointLayerOptions {
+  shape?: 'circle' | 'diamond' | 'square' | 'up' | 'down' | 'left' | 'right';
+  hard?: boolean;
+  hollow?: boolean;
+  outline?: number;
+  shaded?: boolean;
+  depth?: number;
+  zBias?: number;
+  mode?: string;
+  blend?: BlendMode | null;
+  shadow?: boolean;
+  depthTest?: boolean;
+  depthWrite?: boolean;
+  alphaToCoverage?: boolean;
+  alphaToDiscard?: boolean;
+}
 
 /** Render atom sites as world-space shaded spheres, optionally restricted to a
  * selection and coloured by a field. */
-export const Spacefill: LC<{
+export const Spacefill: ViewerComponent<{
   /** Multiplies each atom's Ångström radius; defaults to 1. */
   scale?: number;
   /** A @molgpu/select atom Selection for this structure; restricts the draw. */
@@ -178,12 +198,12 @@ export const Spacefill: LC<{
   /** Draw the atoms into the picking buffer so usePicking() can resolve them
    *  (needs a <PickingProvider> and a <Pass picking>). Defaults to false. */
   pickable?: boolean;
-} & Omit<PointLayerProps, 'positions' | 'sizes' | 'count' | 'color'>>;
+} & PointLayerOptions>;
 
 /** Draw bonds as world-space sticks, optionally restricted to a selection.
  * By default each bond has two element-coloured halves. An explicit color
  * preserves a single stroke with the supplied flat color or field. */
-export const Bonds: LC<{
+export const Bonds: ViewerComponent<{
   /** Stick width; defaults to 0.3. */
   width?: number;
   /** A @molgpu/select atom Selection for this structure. */
@@ -199,7 +219,7 @@ export const Bonds: LC<{
 }>;
 
 /** Balls (Spacefill) + sticks (Bonds) over one selection and one colour. */
-export const BallAndStick: LC<{
+export const BallAndStick: ViewerComponent<{
   select?: Selection | null;
   /** A flat colour or a @molgpu/fields Field, applied to balls and sticks. */
   color?: VectorLike | Field;
@@ -217,7 +237,7 @@ export const BallAndStick: LC<{
  * chain/model breaks, and a selection gap all end a run rather than
  * bridging across it. Only `select`/`smooth` rebuild trace/spline geometry;
  * `radius`/`color` update bindings. */
-export const Tube: LC<{
+export const Tube: ViewerComponent<{
   /** A @molgpu/select atom Selection; without one, active model/primary-altloc atoms are used. */
   select?: Selection | null;
   /** Ångström tube radius; defaults to 0.3. */
@@ -237,7 +257,7 @@ export const Tube: LC<{
  * cross-section, coil a narrow one; there is no beta-strand arrowhead taper
  * yet. Only `select`/`smooth` rebuild the mesh; `color`/`opacity` update
  * bindings. */
-export const Ribbon: LC<{
+export const Ribbon: ViewerComponent<{
   /** A @molgpu/select atom Selection; without one, active model/primary-altloc atoms are used. */
   select?: Selection | null;
   /** Samples per guide segment; defaults to 8. */
@@ -253,7 +273,7 @@ export const Ribbon: LC<{
  * `probeRadius`, and `resolution` rebuild the field/mesh (scheduled through
  * 0sj.7's cancellation/budget contract); `color`/`opacity` update bindings.
  * An oversize grid throws before the field is computed. */
-export const Surface: LC<{
+export const Surface: ViewerComponent<{
   /** A @molgpu/select atom Selection; without one, active model/primary-altloc atoms are used. */
   select?: Selection | null;
   /** Ångström probe radius; defaults to 1.4 (water). */
@@ -266,8 +286,8 @@ export const Surface: LC<{
   opacity?: number;
   /** Wraps the shaded face layer; without one, the ambient scene material. */
   material?: MaterialSpec;
-  loading?: LiveElement | (() => LiveElement);
-  error?: LiveElement | ((failure: unknown) => LiveElement);
+  loading?: ViewerElement | (() => ViewerElement);
+  error?: ViewerElement | ((failure: unknown) => ViewerElement);
 }>;
 
 // --- Materials --------------------------------------------------------------
@@ -275,24 +295,39 @@ export const Surface: LC<{
 // material provides the shading model that `shaded` layers beneath it read; use
 // as a wrapping element, or via a representation's `material` prop.
 
+/** Props shared by the material wrappers. Texture maps and `render` callbacks
+ *  forward at runtime but are typed only upstream (@use-gpu/workbench). */
+export interface MaterialProps {
+  children?: ViewerElement;
+}
+export interface PBRMaterialProps extends MaterialProps {
+  albedo?: ColorLike;
+  metalness?: number;
+  roughness?: number;
+  emissive?: VectorLike;
+}
+export interface BasicMaterialProps extends MaterialProps {
+  color?: ColorLike;
+}
+export type NormalMaterialProps = MaterialProps;
+export interface FresnelMaterialEffectProps extends MaterialProps {
+  opacity?: number;
+}
+
 /** Physically based material; defaults matte and non-metallic (metalness 0, roughness 0.6). */
-export const PBRMaterial: LC<PBRMaterialProps>;
+export const PBRMaterial: ViewerComponent<PBRMaterialProps>;
 /** Unlit flat colour (ignores lights). */
-export const BasicMaterial: LC<BasicMaterialProps>;
+export const BasicMaterial: ViewerComponent<BasicMaterialProps>;
 /** Surface-normal debug material. */
-export const NormalMaterial: LC<NormalMaterialProps>;
-/** Custom flat (unlit) fragment shader. */
-export const FlatMaterial: LC<ShaderFlatMaterialProps>;
-/** Custom lit fragment shader — the general escape hatch under PBR. */
-export const LitMaterial: LC<ShaderLitMaterialProps>;
+export const NormalMaterial: ViewerComponent<NormalMaterialProps>;
 /** Fresnel rim effect, composed over another material's children. */
-export const FresnelMaterialEffect: LC<FresnelMaterialEffectProps>;
+export const FresnelMaterialEffect: ViewerComponent<FresnelMaterialEffectProps>;
 
 /** The material `type` names accepted by a representation's `material` prop. */
 export const materialTypes: ReadonlyArray<MaterialType>;
 
 /** Wrap an element in a material spec so `shaded` layers beneath it read its model. */
-export function withMaterial(material: MaterialSpec | null | undefined, element: LiveElement): LiveElement;
+export function withMaterial(material: MaterialSpec | null | undefined, element: ViewerElement): ViewerElement;
 
 // --- Lights -----------------------------------------------------------------
 // Thin wrappers over @use-gpu/workbench lights with molecular defaults. Each
@@ -301,18 +336,70 @@ export function withMaterial(material: MaterialSpec | null | undefined, element:
 /** A fixed world-space key-light direction shared across molgpu scenes. */
 export const KEY_LIGHT_DIRECTION: readonly [number, number, number];
 
+/** Shadow-map settings for a shadow-casting light (needs `<Pass shadows>`). */
+export interface ShadowMapOptions {
+  size?: readonly number[];
+  depth?: readonly number[];
+  bias?: readonly number[];
+  span?: readonly number[];
+  up?: readonly number[];
+  blur?: number;
+  resolution?: number;
+  fov?: number;
+}
+export interface AmbientLightProps {
+  color?: ColorLike;
+  intensity?: number;
+}
+export interface DirectionalLightProps {
+  position?: VectorLike;
+  direction?: VectorLike;
+  color?: ColorLike;
+  intensity?: number;
+  shadowMap?: ShadowMapOptions;
+  debug?: boolean;
+}
+export interface PointLightProps {
+  position?: VectorLike;
+  color?: ColorLike;
+  intensity?: number;
+  cutoff?: number;
+  shadowMap?: ShadowMapOptions;
+  infinite?: boolean;
+  debug?: boolean;
+}
+export interface SpotLightProps extends PointLightProps {
+  direction?: VectorLike;
+  fov?: number;
+  feather?: number;
+}
+export interface DomeLightProps {
+  direction?: VectorLike;
+  horizon?: ColorLike;
+  zenith?: ColorLike;
+  intensity?: number;
+  bleed?: number;
+}
+/** A custom environment `map` (a shader source) forwards at runtime but is
+ *  typed only upstream; use a named `preset` here. */
+export interface EnvironmentProps {
+  preset?: string;
+  gain?: number;
+  children?: ViewerElement;
+}
+
 /** Soft fill; defaults to intensity 0.3. */
-export const AmbientLight: LC<AmbientLightProps>;
+export const AmbientLight: ViewerComponent<AmbientLightProps>;
 /** Key light; defaults to KEY_LIGHT_DIRECTION at full intensity. */
-export const DirectionalLight: LC<DirectionalLightProps>;
+export const DirectionalLight: ViewerComponent<DirectionalLightProps>;
 /** A positioned, falloff light. */
-export const PointLight: LC<PointLightProps>;
+export const PointLight: ViewerComponent<PointLightProps>;
 /** A positioned, cone-limited light. */
-export const SpotLight: LC<SpotLightProps>;
+export const SpotLight: ViewerComponent<SpotLightProps>;
 /** A gradient sky/ground dome for soft, even illumination. */
-export const DomeLight: LC<DomeLightProps>;
+export const DomeLight: ViewerComponent<DomeLightProps>;
 /** Image-based lighting: the environment map PBR materials reflect. */
-export const Environment: LC<EnvironmentProps>;
+export const Environment: ViewerComponent<EnvironmentProps>;
 
 // --- Pass / postprocessing --------------------------------------------------
 
@@ -323,7 +410,38 @@ export const Environment: LC<EnvironmentProps>;
  * one that matters for transparent molecular surfaces). Depth of field is not
  * offered; it does not exist upstream in this version (tracked as hj0.5).
  */
-export const Pass: LC<PassProps>;
+export const Pass: ViewerComponent<PassProps>;
+
+export interface SSAOOptions {
+  opacity: number; indirect: number; radius: number;
+  depthRamp: number; normalRamp: number; temporalBlend: number;
+}
+export interface OutlineOptions {
+  inner: number; outer: number; color: VectorLike; blend: BlendMode;
+  depthRamp: number; normalRamp: number;
+}
+export interface OverscanOptions { range: number; all: boolean; }
+
+/** <Pass> props: render-pass flags plus the postprocessing options. */
+export interface PassProps {
+  children?: ViewerElement;
+  mode?: 'forward' | 'deferred' | 'fullscreen';
+  /** Defaults to true (unlike upstream). */
+  lights?: boolean;
+  shadows?: boolean;
+  picking?: boolean;
+  facets?: boolean;
+  color?: boolean;
+  overlay?: boolean | { color?: boolean; picking?: boolean };
+  merge?: boolean;
+  /** Order-independent transparency, for transparent surfaces. */
+  oit?: boolean;
+  ssao?: boolean | number | Partial<SSAOOptions>;
+  outline?: boolean | number | Partial<OutlineOptions>;
+  overscan?: number | Partial<OverscanOptions>;
+  debug?: string;
+  debugIndex?: number;
+}
 
 // --- Picking ----------------------------------------------------------------
 
@@ -338,7 +456,7 @@ export interface PickHit {
 
 /** Owns the picking registry; wrap both the pickable representations and any
  *  usePicking() caller in one. Must sit inside an <AutoCanvas>. */
-export const PickingProvider: LC<{ children?: LiveElement }>;
+export const PickingProvider: ViewerComponent<{ children?: ViewerElement }>;
 
 /**
  * Resolve the atom under the cursor. `hover` tracks the pointer; `pick` is the
@@ -370,7 +488,7 @@ export function tooltipFields(
  *  position), not a literal coordinate. `select` chooses the atoms (whole active
  *  structure without one); `at` overrides with an explicit point. Needs
  *  <FontLoader> + <SDFFontProvider> ancestors for the glyphs. */
-export const Label: LC<{
+export const Label: ViewerComponent<{
   select?: Selection | null;
   /** Explicit [x, y, z] anchor, overriding the selection centroid. */
   at?: readonly number[];
@@ -384,7 +502,7 @@ export const Label: LC<{
 /** A distance measurement between two selections' centroids: a connecting line
  *  plus a midpoint label of the separation in Ångström. Needs <FontLoader> +
  *  <SDFFontProvider> ancestors for the label. */
-export const Distance: LC<{
+export const Distance: ViewerComponent<{
   a: Selection;
   b: Selection;
   color?: VectorLike;
@@ -399,39 +517,15 @@ export const Distance: LC<{
  *  structure when `select` is null — the anchor <Label>/<Distance> use. */
 export function centroid(data: StructureData, select?: Selection | null): [number, number, number];
 
-/** Draw Ångström radii through PointLayer's camera-normalized `sizes` API. */
-export const WorldSpacePointLayer: LC<{
-  positions: ShaderSource;
-  colors?: ShaderSource;
-  radii: Float32Array;
-  /** Defaults to `radii.length`. */
-  count?: number;
-  scale?: number;
-} & Omit<PointLayerProps, 'positions' | 'colors' | 'sizes' | 'count' | 'depth'>>;
-
-/**
- * Lower a numeric @molgpu/fields Field to a use.gpu shader source, composed over
- * existing GPU inputs. `inputs` maps each compiled binding id to a StorageSource
- * (buffer input) or a number/ShaderRef (uniform), so a per-row column is never
- * materialised and a uniform change is a binding update, not a re-upload.
- * The `curve:t` binding uses the nearest TimelineProvider unless explicitly
- * supplied in `inputs`.
- */
-export function useField(
-  field: Field,
-  inputs?: Record<string, ShaderSource | number | { current: number }>,
-  options?: { domain?: 'atom' | 'residue' },
-): ShaderSource;
-
 /** Join annotation records (or a fetched JSON `src`) onto the nearest Structure
  * by identity, returning a field. `options` must be stable across renders. */
-export function useAnnotation(input: {
-  records?: readonly any[];
+export function useAnnotation<R = unknown>(input: {
+  records?: readonly R[];
   src?: string;
   loader?: (src: string, cancelled: () => boolean) => unknown;
   domain?: 'residue' | 'chain';
   fields: readonly string[];
-  value?: (record: any) => number | readonly number[];
+  value?: (record: R) => number | readonly number[];
   type?: unknown;
   policy?: 'fallback' | 'fail';
   fallback?: number | readonly number[];
@@ -471,3 +565,6 @@ export function runGeometryJob<T>(kernel: () => T | Promise<T>, cancelled: () =>
 export function useGeometryJob<P extends Record<string, unknown>, T>(
   resource: StructureResource, params: P, kernel: (resource: StructureResource, params: P) => T | Promise<T>,
 ): readonly [T | undefined, unknown, boolean];
+
+// Only the declarations marked `export` above are public.
+export {};
