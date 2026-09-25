@@ -263,7 +263,7 @@ export function toAtoms(sel, data) {
   return makeSelection('atom', data, rows, Object.keys(sel.deps), `atoms(${sel.label})`, null);
 }
 
-/** Collapse an atom (or residue) selection to the residues it touches. */
+/** Collapse an atom, residue or bond selection to the residues it touches. */
 export function toResidues(sel, data) {
   assertOwns(sel, data);
   if (sel.domain === 'residue') return sel;
@@ -276,9 +276,9 @@ export function toResidues(sel, data) {
 
 /**
  * Bonds incident on a selection. `endpoints: 'both'` keeps only bonds whose two
- * endpoints are both selected; `'either'` keeps any touched bond. Uses the
- * table's declared/inferred topology via selectBonds, and retains a source map
- * of the endpoint atom rows per bond.
+ * endpoints are both selected; `'either'` keeps any touched bond. Scans the
+ * bond rows already present in `data.topology.bonds` (no inference here), and
+ * retains a source map of the endpoint atom rows per bond.
  */
 export function toBonds(sel, data, { endpoints = 'both' } = {}) {
   assertOwns(sel, data);
