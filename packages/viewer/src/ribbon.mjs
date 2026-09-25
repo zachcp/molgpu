@@ -38,7 +38,8 @@ export const Ribbon = ({ select, smooth = 8, color = [0.85, 0.55, 0.35, 1], opac
     throw new TypeError('Ribbon received a foreign or non-atom selection');
   }
   const selectKey = select?.id ?? 'active';
-  const indices = useMemo(() => select ? select.indices : (count('topologyBuilds', 'ribbon:activeAtoms'), activeAtoms(data)), [data, selectKey]);
+  // activeAtoms is a topology-only view policy: coordinate edits keep it.
+  const indices = useMemo(() => select ? select.indices : (count('topologyBuilds', 'ribbon:activeAtoms'), activeAtoms(data)), [resource.identity, resource.topologyRevision, selectKey]);
   const trace = useMemo(() => (count('geometryBuilds', 'ribbon:trace'), traceTable(data, indices)), [data, indices]);
   const ss = useMemo(() => (count('geometryBuilds', 'ribbon:ss'), secondaryStructureTrace(data, indices, trace)), [data, indices, trace]);
   const built = useMemo(() => buildRibbonGeometry(trace, ss, smooth), [trace, ss, smooth]);

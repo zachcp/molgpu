@@ -41,7 +41,8 @@ export const Surface = ({ select, probeRadius = 1.4, resolution = 0.5, maxBytes,
     throw new TypeError('Surface received a foreign or non-atom selection');
   }
   const selectKey = select?.id ?? 'active';
-  const indices = useMemo(() => select ? select.indices : (count('topologyBuilds', 'surface:activeAtoms'), activeAtoms(data)), [data, selectKey]);
+  // activeAtoms is a topology-only view policy: coordinate edits keep it.
+  const indices = useMemo(() => select ? select.indices : (count('topologyBuilds', 'surface:activeAtoms'), activeAtoms(data)), [resource.identity, resource.topologyRevision, selectKey]);
   const params = useMemo(() => ({ indices, probeRadius, resolution, maxBytes }), [indices, probeRadius, resolution, maxBytes]);
   const [mesh, failure, pending] = useGeometryJob(resource, params, buildSurfaceGeometry);
 

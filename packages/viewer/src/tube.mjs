@@ -37,7 +37,8 @@ export const Tube = ({ select, radius = 0.3, sides = 8, join = 'round', smooth =
     throw new TypeError('Tube received a foreign or non-atom selection');
   }
   const selectKey = select?.id ?? 'active';
-  const indices = useMemo(() => select ? select.indices : (count('topologyBuilds', 'tube:activeAtoms'), activeAtoms(data)), [data, selectKey]);
+  // activeAtoms is a topology-only view policy: coordinate edits keep it.
+  const indices = useMemo(() => select ? select.indices : (count('topologyBuilds', 'tube:activeAtoms'), activeAtoms(data)), [resource.identity, resource.topologyRevision, selectKey]);
   const trace = useMemo(() => (count('geometryBuilds', 'tube:trace'), traceTable(data, indices)), [data, indices]);
   const built = useMemo(() => buildTubeGeometry(trace, smooth), [trace, smooth]);
   if (!built.count) return null;
