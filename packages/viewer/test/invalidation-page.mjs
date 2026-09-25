@@ -25,7 +25,7 @@ import { Surface } from '../src/surface.mjs';
 import { Label, Distance } from '../src/annotations.mjs';
 import { TimelineProvider } from '../src/timeline-context.mjs';
 import {
-  enableInstrumentation, instrumentDevice, resetCounters, snapshotCounters,
+  enableInstrumentation, instrumentDevice, resetCounters, snapshotCounters, deviceBufferOrigins,
 } from '../src/internal/instrumentation.mjs';
 
 enableInstrumentation();
@@ -120,6 +120,7 @@ const App = () => {
 
 probe.reset = () => resetCounters();
 probe.snapshot = () => ({ ...snapshotCounters(), errors: [...probe.errors] });
+probe.origins = () => deviceBufferOrigins();
 
 render(use(WebGPU, {
   fallback: (e) => { probe.errors.push(String(e)); return null; },

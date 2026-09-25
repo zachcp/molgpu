@@ -96,6 +96,17 @@ export function releaseOwnedBuffer(buffer) {
  * destroys, and every queue.writeBuffer, is counted. This sees use.gpu's own
  * internal buffers too, which the viewer-owned counters above cannot.
  */
+// Created-but-not-destroyed buffers, held weakly so a buffer the page dropped
+// (and the browser garbage-collected) can be told apart from one still retained.
+const liveDevice = new Map();
+const refs = new WeakMap();
+const originOf = ({ label = '', size, usage }) => {
+  const frames = (new Error().stack ?? '').split('\n').slice(1)
+    .filter((line) => !line.includes('instrumentation.mjs'))
+    .slice(0, 4).map((line) => line.trim().replace(/^at /, '').replace(/\?[^:)]*/, '').replace(/^.*\/node_modules\//, ''));
+  return `${usage} ${size} ${label} @ ${frames.join(' < ')}`;
+};
+
 export function instrumentDevice(gpuDevice) {
   if (gpuDevice.__molgpuInstrumented) return gpuDevice;
   const create = gpuDevice.createBuffer;
@@ -104,9 +115,12 @@ export function instrumentDevice(gpuDevice) {
     const buffer = create.call(this, descriptor);
     if (!enabled) return buffer;
     device.created += 1;
+    const ref = new WeakRef(buffer);
+    liveDevice.set(ref, originOf(descriptor));
+    refs.set(buffer, ref);
     const destroy = buffer.destroy;
     buffer.destroy = function () {
-      if (!destroyed.has(this)) { destroyed.add(this); device.destroyed += 1; }
+      if (!destroyed.has(this)) { destroyed.add(this); device.destroyed += 1; liveDevice.delete(refs.get(this)); }
       return destroy.call(this);
     };
     return buffer;
@@ -126,6 +140,19 @@ export function instrumentDevice(gpuDevice) {
   return gpuDevice;
 }
 
+/** Live device buffers grouped by origin: `usage size label @ caller frames`,
+ * where the frames are the first few non-instrumentation stack frames. Used to
+ * attribute device-level leaks to the code that allocated them. */
+export function deviceBufferOrigins() {
+  const retained = {};
+  let collected = 0;
+  for (const [ref, origin] of liveDevice) {
+    if (ref.deref()) retained[origin] = (retained[origin] ?? 0) + 1;
+    else collected += 1;
+  }
+  return { retained, collected };
+}
+
 /** A plain, JSON-serialisable copy of every counter. */
 export function snapshotCounters() {
   return {
@@ -143,6 +170,7 @@ export function resetAllInstrumentation() {
   clear();
   owned.created = owned.destroyed = 0;
   device.created = device.destroyed = 0;
+  liveDevice.clear();
   device.writeBytes = { storage: 0, uniform: 0, other: 0 };
   seenOwned = new WeakSet();
   onceKeys = new WeakMap();
