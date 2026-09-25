@@ -7,6 +7,8 @@ import { withMaterial } from './materials.mjs';
 import { useGeometryJob } from './use-geometry-job.mjs';
 import { buildSurfaceGeometry } from './internal/surface-geometry.mjs';
 import { useRepaint } from './internal/use-repaint.mjs';
+import { count } from './internal/instrumentation.mjs';
+import { useBindingProbe } from './internal/use-binding-probe.mjs';
 
 /**
  * A molecular (solvent-excluded) surface: Mol*'s scalar-field kernel lifted
@@ -27,6 +29,7 @@ import { useRepaint } from './internal/use-repaint.mjs';
  */
 export const Surface = ({ select, probeRadius = 1.4, resolution = 0.5, maxBytes, color = [0.75, 0.75, 0.8, 0.9], material, loading = null, error = null, ...props }) => {
   useRepaint();
+  useBindingProbe('surface', color);
   const { resource } = useStructure();
   const { data } = resource;
 
@@ -34,7 +37,7 @@ export const Surface = ({ select, probeRadius = 1.4, resolution = 0.5, maxBytes,
     throw new TypeError('Surface received a foreign or non-atom selection');
   }
   const selectKey = select?.id ?? 'active';
-  const indices = useMemo(() => select ? select.indices : activeAtoms(data), [data, selectKey]);
+  const indices = useMemo(() => select ? select.indices : (count('topologyBuilds', 'surface:activeAtoms'), activeAtoms(data)), [data, selectKey]);
   const params = useMemo(() => ({ indices, probeRadius, resolution, maxBytes }), [indices, probeRadius, resolution, maxBytes]);
   const [mesh, failure, pending] = useGeometryJob(resource, params, buildSurfaceGeometry);
 

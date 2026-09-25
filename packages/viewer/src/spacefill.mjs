@@ -6,9 +6,12 @@ import { isField, fieldAttrNames, withColumns } from './internal/representation.
 import { withMaterial } from './materials.mjs';
 import { Pickable } from './picking.mjs';
 import { useRepaint } from './internal/use-repaint.mjs';
+import { count } from './internal/instrumentation.mjs';
+import { useBindingProbe } from './internal/use-binding-probe.mjs';
 
 /** Geometry depends on structure and selection, never on the colour field. */
 const gather = (data, indices) => {
+  count('gathers', 'spacefill:atoms');
   const n = indices ? indices.length : data.topology.atoms.count;
   const positions = new Float32Array(n * 3);
   const radii = new Float32Array(n);
@@ -24,6 +27,7 @@ const gather = (data, indices) => {
 };
 
 const gatherAttributes = (data, indices, names) => Object.fromEntries(names.map((name) => {
+  count('gathers', `spacefill:attr:${name}`);
   const column = data.topology.atoms[name];
   const values = indices ? Float32Array.from(indices, (i) => column[i]) : Float32Array.from(column);
   return [name, values];
@@ -64,6 +68,7 @@ const GatheredSpacefill = ({ data, indices, selectKey, attrNames, field, sharedP
  */
 export const Spacefill = ({ scale = 1, select, color = [0.72, 0.72, 0.76, 1], material, pickable = false, ...props }) => {
   useRepaint();
+  useBindingProbe('spacefill', color, scale);
   const { resource, sources } = useStructure();
   const { data } = resource;
 
