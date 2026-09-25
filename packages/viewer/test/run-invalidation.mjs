@@ -170,6 +170,17 @@ const geometryParam = (key, upstream) => Object.assign((s) => {
   assert.deepEqual(keysOf(s, /structure:/), [], `shared Structure columns re-uploaded: ${brief(s)}`);
 }, { rebuilds: true });
 
+// Bonds' default two-tone split vs an explicit colour is a geometry mode
+// (sanctioned exception in the contract table): exactly one bond-column build,
+// no topology work, and no shared Structure columns re-uploaded.
+function splitModeSwitch(s) {
+  noErrors(s);
+  assert.equal(s.detail['geometryBuilds:bonds:columns'], 1, `expected one bond-column build: ${brief(s)}`);
+  assert.equal(s.topologyBuilds, 0, `topology rebuilt on a colour-mode switch: ${brief(s)}`);
+  assert.deepEqual(keysOf(s, /structure:/), [], `shared Structure columns re-uploaded: ${brief(s)}`);
+}
+splitModeSwitch.rebuilds = true;
+
 // ---- the matrix ------------------------------------------------------------
 
 const GREY = [0.7, 0.7, 0.7, 1], RED = [1, 0, 0, 1];
@@ -198,7 +209,7 @@ const MATRIX = {
     color: { from: { props: { color: GREY } }, to: { props: { color: RED } }, expect: styleOnly },
     opacity: { from: { props: { color: GREY } }, to: { props: { color: GREY, opacity: 0.5 } }, expect: styleOnly },
     'color field swap': { from: { props: { color: 'field:element' } }, to: { props: { color: 'field:element2' } }, expect: styleOnly },
-    'color default -> explicit': { from: { props: {} }, to: { props: { color: RED } }, expect: styleOnly },
+    'color default -> explicit': { from: { props: {} }, to: { props: { color: RED } }, expect: splitModeSwitch },
     clock: { from: { props: { color: 'field:clock' }, time: 0 }, to: { props: { color: 'field:clock' }, time: 0.5 }, expect: styleOnly },
     selection: { from: { props: { color: GREY, select: 'A' } }, to: { props: { color: GREY, select: 'B' } }, expect: selectionOnly },
     coordinates: { from: { props: { color: GREY } }, to: { props: { color: GREY }, dataKey: 'moved' }, expect: coordinatesOnly(['geometryBuilds:bonds:columns']) },
@@ -294,10 +305,6 @@ const MATRIX = {
 // Known contract violations found by this audit. Each is a separate bug; the
 // assertion stays in place and is reported as `todo` until it is fixed.
 const KNOWN = {
-  // Default two-tone bonds vs an explicit colour are different geometry
-  // (split at the midpoint or not): bonds.mjs:50 keys buildBondColumns on
-  // defaultColor, so a colour edit rebuilds and re-uploads bond geometry.
-  'bonds / color default -> explicit': 'VIOLATION: colour edit from default to explicit rebuilds bond geometry (split/unsplit baked into vertices)',
   // use.gpu keeps some per-draw buffers alive after unmount (bead i2e).
   deviceLeak: 'VIOLATION: +12 device buffers per cycle: use.gpu-internal buffers not destroyed on unmount',
 };

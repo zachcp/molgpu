@@ -91,6 +91,16 @@ Treat typed arrays as immutable between revisions; document and validate updates
 | Surface probe radius/resolution | Recompute surface field/mesh |
 | Tube display radius | Shader style update when the backend supports it |
 | CPU ribbon profile/width baked into vertices | Geometry rebuild; classify as a geometry parameter |
+| Bonds default two-tone ↔ explicit colour | Geometry rebuild of bond columns only (sanctioned exception, below) |
+
+Sanctioned exception (2026-09-25, bead akh): Bonds' default colour splits each
+bond at its midpoint into two strokes (rows `[A,A,B,B]`), while an explicit
+colour keeps one stroke per bond (rows `[A,B]`), so a field colours it as a
+gradient. Switching between the two is a change of geometry mode, not of style.
+It rebuilds and re-uploads the bond positions and segments. It never rebuilds
+topology or touches the shared Structure columns. Edits within either mode
+remain style-only. Doing this in the shader would either double the vertices
+for every explicit colour or change how explicit fields look along a bond.
 
 Count topology builds, geometry builds, gathers, allocations, upload bytes, and
 binding updates separately. A component re-evaluation is not a geometry rebuild.
