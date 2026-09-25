@@ -70,11 +70,12 @@ export class SurfaceFieldError extends Error {
  * calcMolecularSurface — kept behind this runtime import boundary exactly
  * like parseBcif, so consumers of @molgpu/table/@molgpu/geo alone never
  * load it. `atoms` is plain owned columns (x/y/z/radius Float32Array[count]),
- * never a Mol* Structure/Unit. Feed the result straight to @molgpu/geo's
- * marchingCubes: `transform` is a column-major scale+translate Mat4 — read
- * its diagonal as `spacing` and its translation row as `origin` — and
- * `level` is the isovalue (the solvent-excluded-surface convention: the
- * probe radius itself).
+ * never a Mol* Structure/Unit. `values` keeps Mol*'s z-fastest layout
+ * (values[k + nz * (j + ny * i)]); @molgpu/geo's marchingCubes reads an
+ * x-fastest grid, so it is NOT a drop-in input for it without reordering.
+ * `transform` is a column-major scale+translate Mat4 — read its diagonal as
+ * `spacing` and its translation row as `origin` — and `level` is the isovalue
+ * (the solvent-excluded-surface convention: the probe radius itself).
  */
 export async function molecularSurfaceField(atoms, { probeRadius = 1.4, resolution = 0.5, probePositions = 36 } = {}) {
   const { x, y, z, radius, count } = atoms;
