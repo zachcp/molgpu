@@ -33,6 +33,8 @@ changelog and a minor bump while we are on 0.x.
    npm run check:hardening
    npm run release:dry-run
    ```
+   `release:dry-run` falls back to `npm pack --dry-run` for any version that is
+   already on the registry, so CI stays green between releases.
    Run the browser suites too (`npm run test:components`, `npm run test:examples`
    and the `test:viewer:*` scripts). They need Chrome with WebGPU, so CI does not
    run them.
