@@ -15,10 +15,9 @@ WGSL. The viewer takes the resulting `Selection` and uploads its indices.
 npm install @molgpu/select @molgpu/table
 ```
 
-`@molgpu/table` is a regular dependency (it provides `StructureData`). You only
-list it yourself when you build structures directly, as the example below does.
-
-**Peer dependencies:** none.
+**Peer dependencies:** `@molgpu/table` (it provides `StructureData`). It is a
+peer so the app holds one shared copy; structure identity is module-private and
+two copies reject each other's structures.
 
 ## Example
 

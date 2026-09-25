@@ -10,11 +10,11 @@ say *what value* each gets. One concept replaces MolViewSpec's `color` /
 ## Install
 
 ```sh
-npm install @molgpu/fields
+npm install @molgpu/fields @molgpu/table
 ```
 
-Runtime dependency: `@molgpu/table` (installed automatically). There are no peer
-dependencies; the package never imports use.gpu or Mol*.
+Peer dependency: `@molgpu/table` (one shared copy per app, since structure
+identity is module-private). The package never imports use.gpu or Mol*.
 
 ## Example
 

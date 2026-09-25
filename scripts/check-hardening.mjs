@@ -188,6 +188,9 @@ function checkPackage(dir, { update = false } = {}) {
     if (dep.startsWith('@use-gpu/') && !/^\d+\.\d+\.\d+$/.test(range)) fail('H1', `${dep} must be pinned exactly, got "${range}"`);
   }
   if (m.dependencies?.molstar) fail('H1', 'molstar must be a peerDependency, not a dependency');
+  // Table identity is module-private (a WeakMap brand), so every dependent must
+  // share the app's one copy of @molgpu/table rather than install its own.
+  if (m.dependencies?.['@molgpu/table']) fail('H1', '@molgpu/table must be a peerDependency, not a dependency');
 
   // H2 — declared types match the runtime, per entry.
   const apis = new Map();

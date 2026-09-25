@@ -13,7 +13,7 @@ a browser with WebGPU only.
 ## Install
 
 ```sh
-npm install @molgpu/viewer @use-gpu/live@0.20.0 @use-gpu/workbench@0.20.0 @use-gpu/shader@0.20.0 @use-gpu/core@0.20.0
+npm install @molgpu/viewer @molgpu/table @use-gpu/live@0.20.0 @use-gpu/workbench@0.20.0 @use-gpu/shader@0.20.0 @use-gpu/core@0.20.0
 ```
 
 ### Peer dependencies
@@ -22,7 +22,9 @@ The use.gpu packages are peers, pinned exactly (their APIs move between
 releases): `@use-gpu/live`, `@use-gpu/workbench`, `@use-gpu/shader` and
 `@use-gpu/core`, all `0.20.0`. An application also needs `@use-gpu/webgpu`
 (for `<WebGPU>`/`<AutoCanvas>`), and `@use-gpu/glyph` if it uses `<Label>` or
-`<Distance>`. The other `@molgpu/*` packages are regular dependencies.
+`<Distance>`. `@molgpu/table` is also a peer, so the app and every
+`@molgpu/*` package share one copy (structure identity is module-private). The
+other `@molgpu/*` packages are regular dependencies.
 
 ## Example
 

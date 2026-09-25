@@ -65,7 +65,10 @@ dataset, including branched updates. Topology/attribute replacement currently
 requires a new dataset; no trajectory system or mutable store is implemented.
 Identity is tracked in module-private state, so `withPositions` and
 `bondTopology` only accept structures made by `createStructure` from the same
-module instance.
+module instance. For that reason every other `@molgpu/*` package declares
+`@molgpu/table` as a **peer** dependency: an app installs exactly one copy and
+all packages share it. If `npm ls @molgpu/table` shows more than one copy,
+structures from one will be rejected by the other.
 
 All source models and alternate locations are retained. `activeAtoms(data)` is
 an explicit default view: first encountered model, plus blank-altloc atoms and

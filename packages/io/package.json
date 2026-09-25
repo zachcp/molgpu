@@ -3,8 +3,7 @@
   "description": "The Mol* import boundary for molgpu: lowers BinaryCIF and molecular surface fields to owned plain data.",
   "license": "MIT",
   "sideEffects": false,
-  "dependencies": { "@molgpu/table": "0.0.0" },
-  "peerDependencies": { "molstar": "^5.11.0" },
+  "peerDependencies": { "@molgpu/table": "0.0.0", "molstar": "^5.11.0" },
   "peerDependenciesMeta": { "molstar": { "optional": true } },
   "exports": { ".": { "types": "./src/index.d.ts", "import": "./src/index.mjs" } },
   "files": ["src"]
