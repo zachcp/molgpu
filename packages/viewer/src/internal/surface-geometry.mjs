@@ -7,8 +7,10 @@
 // useGeometryJob (0sj.7) call wraps.
 import { marchingCubes, nearestAtomAttribution } from '@molgpu/geo';
 import { assertGridBudget } from './geometry-job.mjs';
+import { count } from './instrumentation.mjs';
 
 function gatherAtoms(data, indices) {
+  count('gathers', 'surface:atoms');
   const n = indices.length;
   const x = new Float32Array(n), y = new Float32Array(n), z = new Float32Array(n), radius = new Float32Array(n);
   let maxRadius = 0;
@@ -49,6 +51,7 @@ function predictGridDims({ x, y, z, maxRadius, count }, resolution) {
 export async function buildSurfaceGeometry(resource, { indices, probeRadius = 1.4, resolution = 0.5, maxBytes } = {}) {
   const { data } = resource;
   if (!indices.length) return null;
+  count('geometryBuilds', 'surface:mesh');
   const atoms = gatherAtoms(data, indices);
   assertGridBudget(predictGridDims(atoms, resolution), maxBytes !== undefined ? { maxBytes } : {});
 

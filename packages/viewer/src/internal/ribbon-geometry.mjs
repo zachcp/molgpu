@@ -10,6 +10,7 @@
 // beta-strand arrowhead taper yet. That is real follow-up work, not
 // something silently approximated here.
 import { createCurveSegmentState, interpolateCurveSegment, interpolateSizes } from '@molgpu/geo';
+import { count as countWork } from './instrumentation.mjs';
 
 const RIBBON_WIDTH = { helix: 2.2, sheet: 2.2, coil: 0.7 };
 const RIBBON_HEIGHT = 0.35;
@@ -75,6 +76,7 @@ function buildRun(trace, ss, start, count, linearSegments) {
  */
 export function buildRibbonGeometry(trace, ss, linearSegments = 8) {
   if (!Number.isInteger(linearSegments) || linearSegments < 1) throw new TypeError('Ribbon geometry: linearSegments must be a positive integer');
+  countWork('geometryBuilds', 'ribbon:mesh');
   const positions = [], normals = [], indices = [], residue = [];
   for (let r = 0; r < trace.runs.length - 1; r++) {
     const start = trace.runs[r], count = trace.runs[r + 1] - start;

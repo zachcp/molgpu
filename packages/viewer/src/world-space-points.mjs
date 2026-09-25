@@ -3,6 +3,7 @@ import { PointLayer, RawData, useViewContext, useShader, useShaderRef } from '@u
 import { wgsl } from '@use-gpu/shader/wgsl';
 import { pointSizesForRadii } from './internal/point-size.mjs';
 import { useRepaint } from './internal/use-repaint.mjs';
+import { count as countWork, trackOwnedBuffer } from './internal/instrumentation.mjs';
 
 // Compose `scale` as a uniform over the per-atom base-size source instead of
 // baking it into the size column. `getScale` binds to a shader ref, so changing
@@ -39,14 +40,19 @@ export const WorldSpacePointLayer = ({ positions, colors, radii, count = radii.l
   // only consumes their product for depth:1, so depending on them separately
   // needlessly recreates and uploads the whole size column on every drag.
   const worldUnitsPerSize = pixelRatio * viewScale * worldScale;
-  const base = useMemo(
-    () => pointSizesForRadii(radii, { pixelRatio: 1, viewScale: worldUnitsPerSize, worldScale: 1 }, 1),
-    [radii, worldUnitsPerSize],
-  );
+  const base = useMemo(() => {
+    const sizes = pointSizesForRadii(radii, { pixelRatio: 1, viewScale: worldUnitsPerSize, worldScale: 1 }, 1);
+    countWork('geometryBuilds', 'points:base-sizes');
+    countWork('uploadBytes', 'base-sizes', sizes.byteLength);
+    return sizes;
+  }, [radii, worldUnitsPerSize]);
   const scaleRef = useShaderRef(scale);
 
   return use(RawData, { data: base, format: 'f32', render: (baseSource) => {
     baseSource.buffer.label = 'molgpu:base-sizes';
+    // Counted, deliberately not released: this RawData buffer has no owner
+    // that destroys it (see column-source.mjs's OwnedSource for the pattern).
+    trackOwnedBuffer(baseSource.buffer, 'base-sizes');
     return use(ScaledPoints, { baseSource, scaleRef, positions, colors, count, ...props });
   } });
 };

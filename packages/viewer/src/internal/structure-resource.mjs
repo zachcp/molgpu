@@ -1,4 +1,5 @@
 import { coordinateBounds } from '@molgpu/table';
+import { gauge } from './instrumentation.mjs';
 
 const fail = message => { throw new TypeError(`Structure resource: ${message}`); };
 
@@ -59,6 +60,7 @@ export const createStructureResource = (data, { maxSelections = 64 } = {}) => {
     });
     selections.set(key, value);
     if (selections.size > maxSelections) selections.delete(selections.keys().next().value);
+    gauge('selectionCacheSize', selections.size);
     return value;
   };
 

@@ -6,6 +6,8 @@ import { withColumns } from './internal/representation.mjs';
 import { withMaterial } from './materials.mjs';
 import { buildRibbonGeometry } from './internal/ribbon-geometry.mjs';
 import { useRepaint } from './internal/use-repaint.mjs';
+import { count } from './internal/instrumentation.mjs';
+import { useBindingProbe } from './internal/use-binding-probe.mjs';
 
 /**
  * Draw the polymer backbone as a flat, oriented ribbon: a CPU-extruded
@@ -24,6 +26,7 @@ import { useRepaint } from './internal/use-repaint.mjs';
  */
 export const Ribbon = ({ select, smooth = 8, color = [0.85, 0.55, 0.35, 1], material, ...props }) => {
   useRepaint();
+  useBindingProbe('ribbon', color);
   const { resource } = useStructure();
   const { data } = resource;
 
@@ -31,9 +34,9 @@ export const Ribbon = ({ select, smooth = 8, color = [0.85, 0.55, 0.35, 1], mate
     throw new TypeError('Ribbon received a foreign or non-atom selection');
   }
   const selectKey = select?.id ?? 'active';
-  const indices = useMemo(() => select ? select.indices : activeAtoms(data), [data, selectKey]);
-  const trace = useMemo(() => traceTable(data, indices), [data, indices]);
-  const ss = useMemo(() => secondaryStructureTrace(data, indices, trace), [data, indices, trace]);
+  const indices = useMemo(() => select ? select.indices : (count('topologyBuilds', 'ribbon:activeAtoms'), activeAtoms(data)), [data, selectKey]);
+  const trace = useMemo(() => (count('geometryBuilds', 'ribbon:trace'), traceTable(data, indices)), [data, indices]);
+  const ss = useMemo(() => (count('geometryBuilds', 'ribbon:ss'), secondaryStructureTrace(data, indices, trace)), [data, indices, trace]);
   const built = useMemo(() => buildRibbonGeometry(trace, ss, smooth), [trace, ss, smooth]);
   if (!built.vertexCount) return null;
 

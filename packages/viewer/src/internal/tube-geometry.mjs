@@ -15,6 +15,7 @@
 // covers that case too.
 import * as useGpuCore from '@use-gpu/core';
 const catmullRomWeighted = useGpuCore.catmullRomWeighted ?? useGpuCore.default.catmullRomWeighted;
+import { count as countWork } from './instrumentation.mjs';
 const fail = message => { throw new TypeError(`Tube geometry: ${message}`); };
 
 const dist3 = (guide, i, j) => Math.hypot(guide[i] - guide[j], guide[i + 1] - guide[j + 1], guide[i + 2] - guide[j + 2]);
@@ -58,6 +59,7 @@ function subdivideRun(guide, residue, start, count, perSegment) {
  */
 export function buildTubeGeometry(trace, perSegment = 6) {
   if (!Number.isInteger(perSegment) || perSegment < 1) fail('perSegment must be a positive integer');
+  countWork('geometryBuilds', 'tube:spline');
   const runs = [];
   for (let r = 0; r < trace.runs.length - 1; r++) {
     const start = trace.runs[r], count = trace.runs[r + 1] - start;

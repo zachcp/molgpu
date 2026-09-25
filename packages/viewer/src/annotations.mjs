@@ -4,6 +4,8 @@ import { useStructure } from './structure-context.mjs';
 import { withColumns } from './internal/representation.mjs';
 import { centroidOf, distanceBetween, midpoint } from './internal/centroid.mjs';
 import { useRepaint } from './internal/use-repaint.mjs';
+import { count } from './internal/instrumentation.mjs';
+import { useBindingProbe } from './internal/use-binding-probe.mjs';
 
 /** Guard a selection is this structure's atom domain (or null / a raw point). */
 const checkSelection = (select, resource, who) => {
@@ -13,7 +15,7 @@ const checkSelection = (select, resource, who) => {
 };
 
 /** A selection's centroid, or an explicit [x,y,z] point passed through. */
-const anchorOf = (data, select) => centroidOf(data, select ? select.indices : null);
+const anchorOf = (data, select, label) => (count('geometryBuilds', label), centroidOf(data, select ? select.indices : null));
 
 /**
  * LabelLayer binds a singular `position` as a vec4<f32> constant, so a bare
@@ -35,11 +37,12 @@ const toPoint = (p) => (p.length >= 4 ? p : [p[0], p[1], p[2], 1]);
  */
 export const Label = ({ select, at, text, size = 16, color = [1, 1, 1, 1], offset = [0, 0], family, ...props }) => {
   useRepaint();
+  useBindingProbe('label', text, size, color);
   const { resource } = useStructure();
   const { data } = resource;
   checkSelection(select, resource, 'Label');
   const selectKey = select?.id ?? 'active';
-  const computed = useMemo(() => anchorOf(data, select), [data, selectKey, resource.positionsRevision]);
+  const computed = useMemo(() => anchorOf(data, select, 'label:anchor'), [data, selectKey, resource.positionsRevision]);
   const position = useMemo(() => toPoint(at ?? computed), [at, computed]);
   return use(LabelLayer, { position, label: text ?? '', size, color, offset, family, ...props });
 };
@@ -53,6 +56,7 @@ export const Label = ({ select, at, text, size = 16, color = [1, 1, 1, 1], offse
  */
 export const Distance = ({ a, b, color = [0.9, 0.9, 0.95, 1], width = 2, size = 14, labelColor, format, ...props }) => {
   useRepaint();
+  useBindingProbe('distance', color, width, size, labelColor);
   const { resource } = useStructure();
   const { data } = resource;
   checkSelection(a, resource, 'Distance');
@@ -60,8 +64,8 @@ export const Distance = ({ a, b, color = [0.9, 0.9, 0.95, 1], width = 2, size = 
   if (a == null || b == null) throw new TypeError('Distance requires two selections, a and b');
 
   const rev = resource.positionsRevision;
-  const ca = useMemo(() => anchorOf(data, a), [data, a?.id, rev]);
-  const cb = useMemo(() => anchorOf(data, b), [data, b?.id, rev]);
+  const ca = useMemo(() => anchorOf(data, a, 'distance:anchor'), [data, a?.id, rev]);
+  const cb = useMemo(() => anchorOf(data, b, 'distance:anchor'), [data, b?.id, rev]);
   const dist = distanceBetween(ca, cb);
   const mid = midpoint(ca, cb);
   const text = format ? format(dist) : `${dist.toFixed(2)} Å`;

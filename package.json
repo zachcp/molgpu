@@ -19,6 +19,7 @@
     "test:viewer:postprocess": "node packages/viewer/test/run-postprocess.mjs",
     "test:viewer:picking": "node packages/viewer/test/run-picking.mjs",
     "test:viewer:annotations": "node packages/viewer/test/run-annotations.mjs",
+    "test:viewer:invalidation": "node packages/viewer/test/run-invalidation.mjs",
     "test:corpus": "node --test packages/io/test/corpus.test.mjs",
     "test:gpu": "node packages/viewer/test/run-browser.mjs",
     "test:components": "node packages/viewer/test/run-components.mjs",

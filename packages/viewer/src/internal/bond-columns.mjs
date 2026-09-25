@@ -1,4 +1,5 @@
 import { bondTopology } from '@molgpu/table';
+import { count, countOnce } from './instrumentation.mjs';
 
 /**
  * Build the LineLayer runs for a bond selection. Default two-colour bonds use
@@ -7,6 +8,10 @@ import { bondTopology } from '@molgpu/table';
  * Other styles retain the original [A,B] run and geometry.
  */
 export function buildBondColumns(data, indices, endpoints, splitAtMidpoint = false) {
+  count('geometryBuilds', 'bonds:columns');
+  // Explicit connectivity is returned as-is; inference is cached by table per
+  // (data, positions revision, policy), mirrored here so a hit is not counted.
+  if (!data.topology.bonds.count) countOnce(data, `${data.revision?.positions}`, 'topologyBuilds', 'bonds:infer');
   const bonds = bondTopology(data);
   const keep = indices ? new Set(indices) : null;
   const pairs = [];
@@ -49,6 +54,7 @@ export function buildBondColumns(data, indices, endpoints, splitAtMidpoint = fal
 }
 
 export function endpointAttributes(data, rows, names) {
+  for (const name of names) count('gathers', `bonds:attr:${name}`);
   return Object.fromEntries(names.map((name) => {
     const column = data.topology.atoms[name];
     return [name, Float32Array.from(rows, (i) => column[i])];

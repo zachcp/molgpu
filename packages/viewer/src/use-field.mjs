@@ -3,6 +3,7 @@ import { useShader } from '@use-gpu/workbench';
 import { loadModuleWithCache } from '@use-gpu/shader/wgsl';
 import { compile } from '@molgpu/fields';
 import { TimelineContext } from './timeline-context.mjs';
+import { useBindingProbe } from './internal/use-binding-probe.mjs';
 
 /**
  * Lower a numeric `@molgpu/fields` Field to a use.gpu shader source, composing
@@ -17,6 +18,7 @@ import { TimelineContext } from './timeline-context.mjs';
  */
 export const useField = (field, inputs, { domain } = {}) => {
   const time = useContext(TimelineContext);
+  useBindingProbe('field', field, time);
   const compiled = useMemo(() => compile(field, { target: 'link', domain }), [field, domain]);
   const module = useMemo(() => loadModuleWithCache(compiled.wgsl, 'molgpu-field', 'auto'), [compiled.wgsl]);
   const values = compiled.bindings.map((b) => {

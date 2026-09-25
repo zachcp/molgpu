@@ -1,5 +1,6 @@
 import { resolve, toAtoms } from '@molgpu/select';
 import { createCurve, sample } from '@molgpu/timeline';
+import { gauge } from './internal/instrumentation.mjs';
 
 const finite = (value, name) => {
   if (typeof value !== 'number' || !Number.isFinite(value)) throw new TypeError(`${name} must be finite`);
@@ -86,6 +87,7 @@ export function focusSelection(resource, query, {
   });
   const view = Object.freeze({ target: frozenBounds.center, radius, bounds: frozenBounds });
   byOptions.set(cacheKey, view);
+  gauge('focusCacheOptions', byOptions.size);
   return view;
 }
 
