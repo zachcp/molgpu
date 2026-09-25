@@ -298,11 +298,6 @@ const KNOWN = {
   // (split at the midpoint or not): bonds.mjs:50 keys buildBondColumns on
   // defaultColor, so a colour edit rebuilds and re-uploads bond geometry.
   'bonds / color default -> explicit': 'VIOLATION: colour edit from default to explicit rebuilds bond geometry (split/unsplit baked into vertices)',
-  // <Distance> builds its two-point line arrays inline on every render
-  // (annotations.mjs:74-75), so any re-render re-uploads them.
-  'distance / color': 'VIOLATION: style edit re-uploads the line positions/segments (fresh arrays every render)',
-  'distance / opacity': 'VIOLATION: style edit re-uploads the line positions/segments (fresh arrays every render)',
-  'distance / display size (width/size)': 'VIOLATION: style edit re-uploads the line positions/segments (fresh arrays every render)',
   // use.gpu keeps some per-draw buffers alive after unmount (bead i2e).
   deviceLeak: 'VIOLATION: +12 device buffers per cycle: use.gpu-internal buffers not destroyed on unmount',
 };

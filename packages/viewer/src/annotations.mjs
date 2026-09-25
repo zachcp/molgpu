@@ -51,6 +51,8 @@ export const Label = ({ select, at, text, size = 16, color = [1, 1, 1, 1], opaci
   return use(LabelLayer, { position, label: text ?? '', size, color: drawColor, offset, family, ...props });
 };
 
+const SEGMENTS = Int32Array.of(1, 2); // 1 = start, 2 = end: one open line.
+
 /**
  * A distance measurement between the centroids of two selections: a line
  * connecting them and a label at the midpoint showing the separation. `a` and
@@ -80,10 +82,11 @@ export const Distance = ({ a, b, color = [0.9, 0.9, 0.95, 1], opacity = 1, width
   const textColor = useMemo(() => applyOpacity(labelColor ?? color, opacity), [labelColor, color, opacity]);
   const lineMode = modeProps(undefined, (color.length > 3 ? color[3] : 1) * opacity);
 
-  const specs = [
+  // Built once per anchor pair, so style edits reuse the uploaded columns.
+  const specs = useMemo(() => [
     { key: 'positions', data: Float32Array.of(ca[0], ca[1], ca[2], cb[0], cb[1], cb[2]), format: 'vec3<f32>' },
-    { key: 'segments', data: Int32Array.of(1, 2), format: 'i32' }, // 1 = start, 2 = end: one open line.
-  ];
+    { key: 'segments', data: SEGMENTS, format: 'i32' },
+  ], [ca, cb]);
   return withColumns(specs, (map) => [
     use(LineLayer, { positions: map.positions, segments: map.segments, width, color: lineColor, join: 'round', ...lineMode }),
     use(LabelLayer, { position: toPoint(mid), label: text, size, color: textColor, ...props }),
