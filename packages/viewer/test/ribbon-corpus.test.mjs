@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { activeAtoms, traceTable, secondaryStructureTrace, coordinateBounds } from '@molgpu/table';
 import { structureFromBcif } from '@molgpu/io';
-import { buildRibbonGeometry } from '../src/internal/ribbon-geometry.mjs';
+import { buildRibbonGeometry } from '../src/internal/ribbon-geometry.ts';
 
 async function loadFixture(id) {
   const bytes = new Uint8Array(await readFile(new URL(`../../io/test/fixtures/${id}.bcif`, import.meta.url)));

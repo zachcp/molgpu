@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "license": "MIT",
   "exports": {
-    ".": "./src/index.mjs",
-    "./advanced": "./src/advanced.mjs"
+    ".": "./src/index.ts",
+    "./advanced": "./src/advanced.ts"
   },
   "publish": {
     "include": [

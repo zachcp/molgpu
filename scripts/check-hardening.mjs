@@ -117,13 +117,14 @@ function moduleExports(file) {
   const checker = program.getTypeChecker();
   const sf = program.getSourceFile(file);
   const symbol = sf && checker.getSymbolAtLocation(sf);
-  if (!symbol) return Object.assign(new Map(), { exportedKeys: new Set(), typeRefs: new Map() }); // not a module
+  if (!symbol) return Object.assign(new Map(), { exportedKeys: new Set(), typeRefs: new Map(), externalRefs: new Map() }); // not a module
   const out = new Map();
   // Beside the name -> declarations map: which in-package declarations the
   // entry exports, and which in-package types its public declarations use.
   const packageRoot = file.slice(0, file.lastIndexOf('/src/') + 1);
   out.exportedKeys = new Set();
   out.typeRefs = new Map();
+  out.externalRefs = new Map(); // export name -> upstream packages its types reach
   for (const exp of checker.getExportsOfModule(symbol)) {
     const target = exp.flags & ts.SymbolFlags.Alias ? checker.getAliasedSymbol(exp) : exp;
     const decls = (target.declarations ?? []).map(d => {
@@ -131,15 +132,18 @@ function moduleExports(file) {
       let node = d;
       while (node.parent && !ts.isSourceFile(node.parent) && !ts.isModuleBlock(node.parent)) node = node.parent;
       // Generated and hand-written declarations differ only in `declare`,
-      // optional trailing semicolons and a leading union `|`; normalize them so
-      // diffs show API changes.
-      return node.getText().replace(/\s+/g, ' ').trim().replace(/^export declare /, 'export ').replace(/;\s*\}/g, ' }').replace(/= \| /g, '= ');
+      // optional trailing semicolons and commas, parameter-list line breaks and a
+      // leading union `|`; normalize them so diffs show API changes.
+      return node.getText().replace(/\s+/g, ' ').trim().replace(/^export declare /, 'export ').replace(/;\s*\}/g, ' }').replace(/= \| /g, '= ')
+        .replace(/\( /g, '(').replace(/,\s*\)/g, ')');
     });
     out.set(exp.name, { decls: [...new Set(decls)], anyNodes: decls.length ? countAny(target) : 0 });
+    const external = new Set();
     for (const d of target.declarations ?? []) {
       out.exportedKeys.add(declKey(d, target.name));
-      collectTypeRefs(checker, d, packageRoot, out.typeRefs);
+      collectTypeRefs(checker, d, packageRoot, out.typeRefs, external);
     }
+    if (external.size) out.externalRefs.set(exp.name, [...external]);
   }
   return out;
 }
@@ -149,7 +153,9 @@ const declKey = (decl, name) => `${decl.getSourceFile().fileName}#${name}`;
 /** Record every type a public declaration refers to that is declared inside the
  * package (not another package, a lib file or a type parameter), keyed like
  * declKey, so the caller can check each one is itself exported. */
-function collectTypeRefs(checker, decl, packageRoot, refs) {
+function collectTypeRefs(checker, decl, packageRoot, refs, external = new Set(), seen = new Set()) {
+  if (seen.has(decl)) return;
+  seen.add(decl);
   const visit = node => {
     const nameNode = ts.isTypeReferenceNode(node) ? node.typeName
       : ts.isExpressionWithTypeArguments(node) ? node.expression : null;
@@ -159,7 +165,12 @@ function collectTypeRefs(checker, decl, packageRoot, refs) {
       if (symbol && !(symbol.flags & ts.SymbolFlags.TypeParameter)) {
         for (const d of symbol.declarations ?? []) {
           const file = d.getSourceFile().fileName;
-          if (file.startsWith(packageRoot) && !file.includes('/node_modules/')) refs.set(declKey(d, symbol.name), symbol.name);
+          const upstream = file.match(/\/node_modules\/(@use-gpu\/[^/]+|@webgpu\/types|molstar)\//);
+          if (upstream) external.add(upstream[1]);
+          else if (file.startsWith(packageRoot) && !file.includes('/node_modules/')) {
+            refs.set(declKey(d, symbol.name), symbol.name);
+            collectTypeRefs(checker, d, packageRoot, new Map(), external, seen);
+          }
         }
       }
     }
@@ -302,7 +313,15 @@ function checkPackage(dir, { update = false } = {}) {
   // H3 — no use.gpu / Mol* types in public declarations (viewer: "." entry only).
   for (const e of ents) {
     if (!e.types || !existsSync(join(dir, e.types))) continue;
-    if (isViewer && e.subpath !== '.') continue;
+    if (isViewer) {
+      // The viewer's modules host both "." and advanced exports, so check what
+      // each "." export's types reach, not whole files.
+      if (e.subpath !== '.') continue;
+      for (const [exportName, upstream] of apis.get('.')?.externalRefs ?? []) {
+        for (const spec of upstream) fail('H3', `"${exportName}" (.) exposes a type from "${spec}"`);
+      }
+      continue;
+    }
     for (const file of declarationClosure(join(dir, e.types))) {
       for (const spec of specifiers(file, declarationText(file))) {
         if (/^(@use-gpu\/|@webgpu\/types|molstar)/.test(spec)) fail('H3', `${relative(dir, file)} references "${spec}"`);

@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createStructure } from '@molgpu/table';
-import { createStructureResource } from '../src/internal/structure-resource.mjs';
-import { geometryDeps, assertGridBudget, copyOwned, runGeometryJob } from '../src/internal/geometry-job.mjs';
+import { createStructureResource } from '../src/internal/structure-resource.ts';
+import { geometryDeps, assertGridBudget, copyOwned, runGeometryJob } from '../src/internal/geometry-job.ts';
 
 const structure = () => createStructure({ positions: new Float32Array([0, 0, 0, 2, 4, 6]), topology: {
   atoms: { count: 2, id: ['1', '2'], name: ['C', 'O'], altloc: ['', ''], residue: new Uint32Array([0, 0]), element: new Uint8Array([6, 8]), occupancy: new Float32Array([1, 1]), bfactor: new Float32Array(2) },

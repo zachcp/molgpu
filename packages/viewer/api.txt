@@ -111,7 +111,7 @@ Structure
 StructureBounds
   export interface StructureBounds { readonly min: number[]; readonly max: number[]; readonly center: number[] }
 StructureLoader
-  export type StructureLoader = ( src: string, cancelled: () => boolean, ) => StructureData | null | Promise<StructureData | null>;
+  export type StructureLoader = (src: string, cancelled: () => boolean) => StructureData | null | Promise<StructureData | null>;
 StructureProps
   export type StructureProps = PreloadedStructureProps | LoadedStructureProps;
 StructureResource
@@ -137,7 +137,7 @@ centroid
 createCameraCurve
   export function createCameraCurve(frames: CameraCurve): CameraCurve;
 createStructureResource
-  export function createStructureResource( data: StructureData, options?: { readonly maxSelections?: number }, ): StructureResource;
+  export function createStructureResource(data: StructureData, options?: { readonly maxSelections?: number }): StructureResource;
 focusSelection
   export function focusSelection(resource: StructureResource, query: SelectionQuery, options?: FocusOptions): FocusResult | null;
 materialTypes
@@ -145,7 +145,7 @@ materialTypes
 sampleCamera
   export function sampleCamera(curve: CameraCurve, time: number, resource: StructureResource, options?: FocusOptions): CameraPose;
 tooltipFields
-  export function tooltipFields( fields: Record<string, Field>, data: StructureData, atom: number, options?: { t?: number }, ): Record<string, number | number[] | string>;
+  export function tooltipFields(fields: Record<string, Field>, data: StructureData, atom: number, options?: { t?: number }): Record<string, number | number[] | string>;
 useAnnotation
   export function useAnnotation<R = unknown>(input: { records?: readonly R[]; src?: string; loader?: (src: string, cancelled: () => boolean) => unknown; domain?: 'residue' | 'chain'; fields: readonly string[]; value?: (record: R) => number | readonly number[]; type?: unknown; policy?: 'fallback' | 'fail'; fallback?: number | readonly number[]; duplicate?: 'error' | 'first' | 'last'; lift?: boolean }): { field: Field | null; pending: boolean; error: unknown };
 useCameraCurve
@@ -178,6 +178,6 @@ TimelineContext
 WorldSpacePointLayer
   export const WorldSpacePointLayer: LC<{ positions: ShaderSource; colors?: ShaderSource; radii: Float32Array; /** Defaults to `radii.length`. */ count?: number; scale?: number } & Omit<PointLayerProps, 'positions' | 'colors' | 'sizes' | 'count' | 'depth'>>;
 useField
-  export function useField( field: Field, inputs?: Record<string, ShaderSource | number | { current: number }>, options?: { domain?: 'atom' | 'residue' }, ): ShaderSource;
+  export function useField(field: Field, inputs?: Record<string, ShaderSource | number | { current: number }>, options?: { domain?: 'atom' | 'residue' }): ShaderSource;
 useStructure
   export function useStructure(): StructureContextValue;

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { Molecule } from '../src/molecule.mjs';
+import { Molecule } from '../src/molecule.ts';
 
 // <Structure> and <Spacefill> reach @use-gpu/workbench, which Node cannot
 // import; their contracts are asserted in the browser runner instead.

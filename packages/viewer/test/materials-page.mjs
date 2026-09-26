@@ -9,7 +9,7 @@ import { createStructure } from '@molgpu/table';
 import {
   Structure, Spacefill,
   AmbientLight, DirectionalLight,
-} from '../src/index.mjs';
+} from '../src/index.ts';
 
 const probe = window.__probe = {
   storage: [], storageBuffers: [], pipelines: 0, errors: [], mounted: false,

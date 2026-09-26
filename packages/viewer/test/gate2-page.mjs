@@ -8,7 +8,7 @@ import { OrbitCamera, Pass, AmbientLight, DirectionalLight, useDeviceContext } f
 import { createStructure } from '@molgpu/table';
 import { where, resolve } from '@molgpu/select';
 import { attribute, categorical } from '@molgpu/fields';
-import { Structure, Spacefill, Bonds, BallAndStick, TimelineProvider, createCameraCurve, useCameraCurve, createStructureResource } from '../src/index.mjs';
+import { Structure, Spacefill, Bonds, BallAndStick, TimelineProvider, createCameraCurve, useCameraCurve, createStructureResource } from '../src/index.ts';
 
 const probe = window.__probe = { storage: [], storageBuffers: [], storageWrites: [], errors: [], mounted: false };
 const storageInfo = new WeakMap();

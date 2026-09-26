@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { resolvePick } from '../src/internal/pick-resolve.mjs';
+import { resolvePick } from '../src/internal/pick-resolve.ts';
 
 // The live picking hook and the GPU readback are exercised in the browser
 // runner; this covers the pure sample -> atom resolution.

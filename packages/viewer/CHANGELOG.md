@@ -6,6 +6,13 @@ All notable changes to `@molgpu/viewer` are recorded here. The format follows
 
 ## [Unreleased]
 
+- Source is TypeScript (`src/**/*.ts`); the hand-written `index.d.ts` and
+  `advanced.d.ts` are gone. The public API is unchanged.
+- Fix: `Pickable` now removes its picking-registry entry on unmount (the
+  cleanup was returned from `useResource` instead of registered via `dispose`).
+- Fix: `useAnnotation` no longer re-runs the join on every render; it depends on
+  each option value instead of a rest-spread object rebuilt per render.
+
 First public release (0.1.0). APIs marked *experimental* in the README may still change
 in 0.x minor releases.
 

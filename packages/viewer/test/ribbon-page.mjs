@@ -7,7 +7,7 @@ import { OrbitCamera, Pass, AmbientLight, DirectionalLight, useDeviceContext } f
 import { where, resolve } from '@molgpu/select';
 import { coordinateBounds } from '@molgpu/table';
 import { structureFromBcif } from '@molgpu/io';
-import { Structure, Ribbon } from '../src/index.mjs';
+import { Structure, Ribbon } from '../src/index.ts';
 
 const probe = window.__probe = { storage: [], storageBuffers: [], storageWrites: [], errors: [], mounted: false };
 const storageInfo = new WeakMap();

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildRibbonGeometry } from '../src/internal/ribbon-geometry.mjs';
+import { buildRibbonGeometry } from '../src/internal/ribbon-geometry.ts';
 
 /** Two runs: a 4-residue helix run and a far-away 3-residue coil run, plus a 1-residue run. */
 function fixture() {

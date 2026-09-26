@@ -1,7 +1,7 @@
 import { render, use, useState } from '@use-gpu/live';
 import { WebGPU, AutoCanvas } from '@use-gpu/webgpu';
 import { OrbitCamera, Pass, LineLayer, RawData, useRawSource, useDeviceContext, AmbientLight, DirectionalLight } from '@use-gpu/workbench';
-import { ColumnSource } from '../src/internal/column-source.mjs';
+import { ColumnSource } from '../src/internal/column-source.ts';
 
 const probe = window.__adapter = { errors: [], sources: {}, buffers: [], destroyed: 0, mounted: false };
 // Only the test adds COPY_SRC, to verify uploaded bytes via actual GPU readback.

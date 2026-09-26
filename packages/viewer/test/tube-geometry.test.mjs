@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildTubeGeometry } from '../src/internal/tube-geometry.mjs';
+import { buildTubeGeometry } from '../src/internal/tube-geometry.ts';
 
 /** A trace with: a 4-point run, a 1-point run (undrawable), and a 2-point run. */
 function trace() {
