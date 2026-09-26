@@ -6,6 +6,9 @@ All notable changes to `@molgpu/timeline` are recorded here. The format follows
 
 ## [Unreleased]
 
+- Source is TypeScript (`src/*.ts`); the hand-written `index.d.ts` is gone.
+  The public API is unchanged.
+
 First public release (0.1.0). APIs marked *experimental* in the README may still change
 in 0.x minor releases.
 

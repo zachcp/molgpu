@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createTimeline, createCurve, sample } from '../src/index.mjs';
+import { createTimeline, createCurve, sample } from '../src/index.ts';
 
 test('named beats use explicit seconds and reject ambiguity', () => {
   const timeline = createTimeline([{ name: 'intro', time: 0 }, { name: 'site', time: 2.5 }]);

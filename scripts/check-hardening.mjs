@@ -42,9 +42,23 @@ function walk(dir, filter, out = []) {
   return out;
 }
 
+const DECLARATION_OPTIONS = {
+  allowJs: true, checkJs: false, noEmit: true, skipLibCheck: true, allowImportingTsExtensions: true,
+  module: ts.ModuleKind.NodeNext, moduleResolution: ts.ModuleResolutionKind.NodeNext, target: ts.ScriptTarget.ES2022,
+};
+const isTsSource = file => /\.m?ts$/.test(file) && !/\.d\.m?ts$/.test(file);
+
+/** A file's public declarations: the file itself for .d.ts/JS, or, for TypeScript
+ * source, the declarations TS generates from it (isolatedDeclarations makes that
+ * a per-file transform). Checks on the public surface read this, never bodies. */
+function declarationText(file) {
+  const text = readFileSync(file, 'utf8');
+  return isTsSource(file) ? ts.transpileDeclaration(text, { fileName: file, compilerOptions: DECLARATION_OPTIONS }).outputText : text;
+}
+
 /** Every module specifier a source file references: static, dynamic, re-export, import type. */
-function specifiers(file) {
-  const sf = ts.createSourceFile(file, readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true);
+function specifiers(file, text = readFileSync(file, 'utf8')) {
+  const sf = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true);
   const out = [];
   const visit = node => {
     if ((ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) && node.moduleSpecifier &&
@@ -92,21 +106,14 @@ function expectedDenoManifest(m) {
 
 /** Resolve a module's exports with the TS checker: names and printed declarations. */
 function moduleExports(file) {
-  const options = {
-    allowJs: true, checkJs: false, noEmit: true, skipLibCheck: true, allowImportingTsExtensions: true,
-    module: ts.ModuleKind.NodeNext, moduleResolution: ts.ModuleResolutionKind.NodeNext, target: ts.ScriptTarget.ES2022,
-  };
-  // TypeScript source is read as its generated declarations (isolatedDeclarations
-  // makes that a per-file transform), so the API snapshot and the `any` checks
-  // see signatures rather than function bodies, exactly as a .d.ts would show them.
-  const host = ts.createCompilerHost(options);
+  // TypeScript source is read as its generated declarations, so the API
+  // snapshot and the `any` checks see signatures, as a .d.ts would show them.
+  const host = ts.createCompilerHost(DECLARATION_OPTIONS);
   const read = host.getSourceFile.bind(host);
-  host.getSourceFile = (name, lang, ...rest) => {
-    if (!/\.(ts|mts)$/.test(name) || /\.d\.m?ts$/.test(name) || name.includes('/node_modules/')) return read(name, lang, ...rest);
-    const { outputText } = ts.transpileDeclaration(readFileSync(name, 'utf8'), { fileName: name, compilerOptions: options });
-    return ts.createSourceFile(name, outputText, lang, true);
-  };
-  const program = ts.createProgram([file], options, host);
+  host.getSourceFile = (name, lang, ...rest) => !isTsSource(name) || name.includes('/node_modules/')
+    ? read(name, lang, ...rest)
+    : ts.createSourceFile(name, declarationText(name), lang, true);
+  const program = ts.createProgram([file], DECLARATION_OPTIONS, host);
   const checker = program.getTypeChecker();
   const sf = program.getSourceFile(file);
   const symbol = sf && checker.getSymbolAtLocation(sf);
@@ -150,7 +157,7 @@ function declarationClosure(entry) {
     const file = stack.pop();
     if (seen.has(file) || !existsSync(file)) continue;
     seen.add(file);
-    for (const spec of specifiers(file)) {
+    for (const spec of specifiers(file, declarationText(file))) {
       if (!spec.startsWith('.')) continue;
       const base = resolve(dirname(file), spec);
       const hit = [base, base.replace(/\.m?js$/, '.d.ts'), base.replace(/\.mjs$/, '.d.mts'), `${base}.d.ts`]
@@ -264,7 +271,7 @@ function checkPackage(dir, { update = false } = {}) {
     if (!e.types || !existsSync(join(dir, e.types))) continue;
     if (isViewer && e.subpath !== '.') continue;
     for (const file of declarationClosure(join(dir, e.types))) {
-      for (const spec of specifiers(file)) {
+      for (const spec of specifiers(file, declarationText(file))) {
         if (/^(@use-gpu\/|@webgpu\/types|molstar)/.test(spec)) fail('H3', `${relative(dir, file)} references "${spec}"`);
       }
     }
