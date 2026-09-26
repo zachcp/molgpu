@@ -25,6 +25,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { createServer } from 'vite';
 import { chromium } from 'playwright';
+import { workspaceAliases } from '../../../scripts/workspace-aliases.mjs';
 
 const root = fileURLToPath(new URL('../../../', import.meta.url));
 const out = `${root}packages/viewer/test/results`;
@@ -36,14 +37,7 @@ const evidence = { date: new Date().toISOString(), rows: {} };
 before(async () => {
   server = await createServer({
     root, configFile: false, logLevel: 'warn',
-    resolve: { alias: {
-      '@molgpu/io': `${root}packages/io/src/index.mjs`,
-      '@molgpu/table': `${root}packages/table/src/index.mjs`,
-      '@molgpu/geo': `${root}packages/geo/src/index.mjs`,
-      '@molgpu/select': `${root}packages/select/src/index.mjs`,
-      '@molgpu/fields': `${root}packages/fields/src/index.mjs`,
-      '@molgpu/timeline': `${root}packages/timeline/src/index.mjs`,
-    } },
+    resolve: { alias: workspaceAliases() },
     server: { host: '127.0.0.1', port: PORT, strictPort: true },
     optimizeDeps: {
       entries: ['packages/viewer/test/invalidation.html'],

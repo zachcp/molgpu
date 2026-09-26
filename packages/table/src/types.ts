@@ -1,6 +1,4 @@
-// Explicit module: only `export`ed declarations are public (keeps `brand` private).
-export {};
-
+// Public data types for @molgpu/table. Columns are owned, read-only by contract.
 /** Owned CPU columns, read-only by contract. Never modify typed arrays in place. */
 export interface Atoms {
   readonly count: number;
@@ -59,15 +57,7 @@ export interface StructureData extends StructureInput {
   readonly revision: { readonly topology: number; readonly positions: number; readonly attributes: number };
 }
 export interface ViewPolicy { readonly model?: 'first' | 'all' | number; readonly altloc?: 'primary' | 'all'; }
-export function validateStructure<T extends StructureInput>(data: T): T;
-export function createStructure(input: StructureInput): StructureData;
-export function withPositions(data: StructureData, positions: Float32Array): StructureData;
-export function activeAtoms(data: StructureData, policy?: ViewPolicy): Uint32Array;
-export function residueKey(data: StructureData, row: number): string;
-export function coordinateBounds(data: StructureData, indices?: Uint32Array): null | { min: number[]; max: number[]; center: number[] };
 export interface BondPolicy { readonly padding?: number; readonly interChain?: boolean; }
-export function bondTopology(data: StructureData, policy?: BondPolicy): Bonds;
-export function selectBonds(data: StructureData, atomIndices: Uint32Array, options?: { readonly mode?: 'both' | 'either'; readonly policy?: BondPolicy }): Uint32Array;
 /** Segmented polymer trace: guide points, per-sample frames, and CSR-style run offsets. */
 export interface Trace {
   readonly count: number;
@@ -81,7 +71,6 @@ export interface Trace {
   readonly runs: Uint32Array;
   readonly runKind: readonly ('protein' | 'rna' | 'dna')[];
 }
-export function traceTable(data: StructureData, atomIndices: Uint32Array): Trace;
 /** Per-sample direction vectors + secondary-structure labels/block-boundary flags over an existing Trace. */
 export interface SecondaryStructureTrace {
   readonly count: number;
@@ -91,4 +80,3 @@ export interface SecondaryStructureTrace {
   readonly first: Uint8Array;
   readonly last: Uint8Array;
 }
-export function secondaryStructureTrace(data: StructureData, atomIndices: Uint32Array, trace: Trace): SecondaryStructureTrace;

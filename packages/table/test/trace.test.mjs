@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createStructure, activeAtoms, traceTable } from '../src/index.mjs';
+import { createStructure, activeAtoms, traceTable } from '../src/index.ts';
 
 function identity16() { return [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]; }
 

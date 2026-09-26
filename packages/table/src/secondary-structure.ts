@@ -19,7 +19,11 @@
 // fixture — reports every residue as 'coil'. This project does not (yet)
 // compute secondary structure from geometry alone (no DSSP); that is
 // tracked as separate follow-up work, not silently approximated here.
-const DIRECTION_ATOMS = {
+import type { SecondaryStructureTrace, StructureData, Trace } from './types.ts';
+
+type SSKind = SecondaryStructureTrace['kind'][number];
+
+const DIRECTION_ATOMS: Partial<Record<string, { from: Set<string>; to: Set<string> }>> = {
   protein: { from: new Set(['C']), to: new Set(['O', 'OC1', 'O1', 'OX1', 'OXT', 'OT1']) },
   rna: { from: new Set(["C4'", 'C4*']), to: new Set(["C3'", 'C3*']) },
   dna: { from: new Set(["C3'", 'C3*']), to: new Set(["C1'", 'C1*']) },
@@ -27,7 +31,7 @@ const DIRECTION_ATOMS = {
 // Any fixed, finite, nonzero vector: orthogonalize() downstream (0sj.1's
 // ported Vec3.orthogonalize) already handles a direction parallel to the
 // tangent via its own fallback chain, so this only has to be deterministic.
-const DEFAULT_DIRECTION = [0, 0, 1];
+const DEFAULT_DIRECTION: [number, number, number] = [0, 0, 1];
 
 /**
  * Direction vectors + secondary-structure labels for every sample in
@@ -35,7 +39,7 @@ const DEFAULT_DIRECTION = [0, 0, 1];
  * traceTable, so the direction atom (e.g. the carbonyl O) is looked up
  * within the caller's chosen model/altloc policy, not just anywhere.
  */
-export function secondaryStructureTrace(data, atomIndices, trace) {
+export function secondaryStructureTrace(data: StructureData, atomIndices: Uint32Array, trace: Trace): SecondaryStructureTrace {
   if (!(atomIndices instanceof Uint32Array)) throw new TypeError('atomIndices: expected Uint32Array');
   const { atoms, residues } = data.topology;
 
@@ -53,12 +57,12 @@ export function secondaryStructureTrace(data, atomIndices, trace) {
   const { count } = trace;
   const label = residues.secondaryStructure;
   const direction = new Float32Array(count * 3);
-  const kind = new Array(count);
+  const kind = new Array<SSKind>(count);
   for (let k = 0; k < count; k++) {
     const r = trace.residue[k];
     kind[k] = label ? label[r] : 'coil';
     const from = fromAtom[r], to = toAtom[r];
-    let dx, dy, dz;
+    let dx: number, dy: number, dz: number;
     if (from >= 0 && to >= 0) {
       dx = data.positions[to * 3] - data.positions[from * 3];
       dy = data.positions[to * 3 + 1] - data.positions[from * 3 + 1];

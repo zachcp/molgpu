@@ -5,61 +5,61 @@
 AmbientLight
   export const AmbientLight: ViewerComponent<AmbientLightProps>;
 AmbientLightProps
-  export interface AmbientLightProps { color?: ColorLike; intensity?: number; }
+  export interface AmbientLightProps { color?: ColorLike; intensity?: number }
 AtomSelection
-  export interface AtomSelection { readonly structure: StructureData['identity']; readonly topologyRevision: number; readonly positionsRevision: number; readonly domain: 'atom'; readonly indices: Uint32Array; readonly bounds: StructureBounds | null; }
+  export interface AtomSelection { readonly structure: StructureData['identity']; readonly topologyRevision: number; readonly positionsRevision: number; readonly domain: 'atom'; readonly indices: Uint32Array; readonly bounds: StructureBounds | null }
 BallAndStick
-  export const BallAndStick: ViewerComponent<{ select?: Selection | null; /** A flat colour or a @molgpu/fields Field, applied to balls and sticks. */ color?: VectorLike | Field; /** Ball radius scale; defaults to 0.3. */ ball?: number; /** Stick width; defaults to 0.28. */ stick?: number; endpoints?: 'both' | 'either'; /** Forwarded to both balls and sticks, so they share one shading model. */ material?: MaterialSpec; } & Translucency>;
+  export const BallAndStick: ViewerComponent<{ select?: Selection | null; /** A flat colour or a @molgpu/fields Field, applied to balls and sticks. */ color?: VectorLike | Field; /** Ball radius scale; defaults to 0.3. */ ball?: number; /** Stick width; defaults to 0.28. */ stick?: number; endpoints?: 'both' | 'either'; /** Forwarded to both balls and sticks, so they share one shading model. */ material?: MaterialSpec } & Translucency>;
 BasicMaterial
   export const BasicMaterial: ViewerComponent<BasicMaterialProps>;
 BasicMaterialProps
-  export interface BasicMaterialProps extends MaterialProps { color?: ColorLike; }
+  export interface BasicMaterialProps extends MaterialProps { color?: ColorLike }
 BlendMode
   export type BlendMode = 'none' | 'alpha' | 'premultiply' | 'add' | 'subtract' | 'multiply';
 Bonds
-  export const Bonds: ViewerComponent<{ /** Stick width; defaults to 0.3. */ width?: number; /** A @molgpu/select atom Selection for this structure. */ select?: Selection | null; /** Keep bonds whose endpoints are 'both' (default) or 'either' selected. */ endpoints?: 'both' | 'either'; /** A flat colour, or a @molgpu/fields Field coloured per endpoint atom. */ color?: VectorLike | Field; sides?: number; shaded?: boolean; /** Wraps the shaded stick layer; without one, the ambient scene material. */ material?: MaterialSpec; } & Translucency>;
+  export const Bonds: ViewerComponent<{ /** Stick width; defaults to 0.3. */ width?: number; /** A @molgpu/select atom Selection for this structure. */ select?: Selection | null; /** Keep bonds whose endpoints are 'both' (default) or 'either' selected. */ endpoints?: 'both' | 'either'; /** A flat colour, or a @molgpu/fields Field coloured per endpoint atom. */ color?: VectorLike | Field; sides?: number; shaded?: boolean; /** Wraps the shaded stick layer; without one, the ambient scene material. */ material?: MaterialSpec } & Translucency>;
 CameraCurve
   export type CameraCurve = readonly (CameraFrame | FocusCameraFrame)[];
 CameraFrame
-  export interface CameraFrame extends CameraPose { readonly time: number; readonly ease?: 'linear' | 'cosine' | 'hold' | 'bezier'; readonly bezier?: readonly [number, number, number, number]; }
+  export interface CameraFrame extends CameraPose { readonly time: number; readonly ease?: 'linear' | 'cosine' | 'hold' | 'bezier'; readonly bezier?: readonly [number, number, number, number] }
 CameraPose
-  export interface CameraPose { readonly target: readonly number[]; readonly radius: number; readonly bearing: number; readonly pitch: number; }
+  export interface CameraPose { readonly target: readonly number[]; readonly radius: number; readonly bearing: number; readonly pitch: number }
 ColorLike
   export type ColorLike = number | VectorLike | { rgb: VectorLike } | { rgba: VectorLike } | string;
 DirectionalLight
   export const DirectionalLight: ViewerComponent<DirectionalLightProps>;
 DirectionalLightProps
-  export interface DirectionalLightProps { position?: VectorLike; direction?: VectorLike; color?: ColorLike; intensity?: number; shadowMap?: ShadowMapOptions; debug?: boolean; }
+  export interface DirectionalLightProps { position?: VectorLike; direction?: VectorLike; color?: ColorLike; intensity?: number; shadowMap?: ShadowMapOptions; debug?: boolean }
 Distance
-  export const Distance: ViewerComponent<{ a: Selection; b: Selection; color?: VectorLike; width?: number; size?: number; labelColor?: VectorLike; /** 0–1, fades the line and label together. */ opacity?: number; /** Customise the label text; receives the distance in Ångström. */ format?: (distance: number) => string; }>;
+  export const Distance: ViewerComponent<{ a: Selection; b: Selection; color?: VectorLike; width?: number; size?: number; labelColor?: VectorLike; /** 0–1, fades the line and label together. */ opacity?: number; /** Customise the label text; receives the distance in Ångström. */ format?: (distance: number) => string }>;
 DomeLight
   export const DomeLight: ViewerComponent<DomeLightProps>;
 DomeLightProps
-  export interface DomeLightProps { direction?: VectorLike; horizon?: ColorLike; zenith?: ColorLike; intensity?: number; bleed?: number; }
+  export interface DomeLightProps { direction?: VectorLike; horizon?: ColorLike; zenith?: ColorLike; intensity?: number; bleed?: number }
 DrawMode
   export type DrawMode = 'opaque' | 'transparent';
 Environment
   export const Environment: ViewerComponent<EnvironmentProps>;
 EnvironmentProps
-  export interface EnvironmentProps { preset?: string; gain?: number; children?: ViewerElement; }
+  export interface EnvironmentProps { preset?: string; gain?: number; children?: ViewerElement }
 FocusCameraFrame
-  export type FocusCameraFrame = Omit<CameraFrame, 'target' | 'radius'> & { readonly focus: SelectionQuery; readonly target?: never; readonly radius?: never; };
+  export type FocusCameraFrame = Omit<CameraFrame, 'target' | 'radius'> & { readonly focus: SelectionQuery; readonly target?: never; readonly radius?: never };
 FocusOptions
-  export interface FocusOptions { /** Empty query falls back to the full structure by default. */ readonly empty?: 'structure' | 'null' | 'error'; readonly fov?: number; readonly aspect?: number; readonly padding?: number; /** Scale of displayed atom radii, e.g. Spacefill.scale. */ readonly atomRadiusScale?: number; }
+  export interface FocusOptions { /** Empty query falls back to the full structure by default. */ readonly empty?: 'structure' | 'null' | 'error'; readonly fov?: number; readonly aspect?: number; readonly padding?: number; /** Scale of displayed atom radii, e.g. Spacefill.scale. */ readonly atomRadiusScale?: number }
 FocusResult
-  export interface FocusResult { readonly target: readonly number[]; readonly radius: number; readonly bounds: StructureBounds | null; }
+  export interface FocusResult { readonly target: readonly number[]; readonly radius: number; readonly bounds: StructureBounds | null }
 FresnelMaterialEffect
   export const FresnelMaterialEffect: ViewerComponent<FresnelMaterialEffectProps>;
 FresnelMaterialEffectProps
-  export interface FresnelMaterialEffectProps extends MaterialProps { opacity?: number; }
+  export interface FresnelMaterialEffectProps extends MaterialProps { opacity?: number }
 KEY_LIGHT_DIRECTION
   export const KEY_LIGHT_DIRECTION: readonly [number, number, number];
 Label
-  export const Label: ViewerComponent<{ select?: Selection | null; /** Explicit [x, y, z] anchor, overriding the selection centroid. */ at?: readonly number[]; text?: string; size?: number; color?: VectorLike; offset?: readonly number[]; family?: string; /** 0–1, multiplied into the text colour's alpha (text always blends). */ opacity?: number; }>;
+  export const Label: ViewerComponent<{ select?: Selection | null; /** Explicit [x, y, z] anchor, overriding the selection centroid. */ at?: readonly number[]; text?: string; size?: number; color?: VectorLike; offset?: readonly number[]; family?: string; /** 0–1, multiplied into the text colour's alpha (text always blends). */ opacity?: number }>;
 LoadedStructureProps
-  export interface LoadedStructureProps extends StructureCommonProps { src: string; data?: undefined; /** Defaults to fetch + BCIF lowering through @molgpu/io. Its identity is a * reload dependency alongside `src`, so pass a stable or memoized function. */ loader?: StructureLoader; loading?: ViewerElement | (() => ViewerElement); error?: ViewerElement | ((failure: unknown) => ViewerElement); }
+  export interface LoadedStructureProps extends StructureCommonProps { src: string; data?: undefined; /** Defaults to fetch + BCIF lowering through @molgpu/io. Its identity is a * reload dependency alongside `src`, so pass a stable or memoized function. */ loader?: StructureLoader; loading?: ViewerElement | (() => ViewerElement); error?: ViewerElement | ((failure: unknown) => ViewerElement) }
 MaterialProps
-  export interface MaterialProps { children?: ViewerElement; }
+  export interface MaterialProps { children?: ViewerElement }
 MaterialSpec
   export type MaterialSpec = | ({ type?: MaterialType } & Record<string, unknown>) | ((children: ViewerElement) => ViewerElement);
 MaterialType
@@ -71,59 +71,59 @@ NormalMaterial
 NormalMaterialProps
   export type NormalMaterialProps = MaterialProps;
 OutlineOptions
-  export interface OutlineOptions { inner: number; outer: number; color: VectorLike; blend: BlendMode; depthRamp: number; normalRamp: number; }
+  export interface OutlineOptions { inner: number; outer: number; color: VectorLike; blend: BlendMode; depthRamp: number; normalRamp: number }
 OverscanOptions
-  export interface OverscanOptions { range: number; all: boolean; }
+  export interface OverscanOptions { range: number; all: boolean }
 PBRMaterial
   export const PBRMaterial: ViewerComponent<PBRMaterialProps>;
 PBRMaterialProps
-  export interface PBRMaterialProps extends MaterialProps { albedo?: ColorLike; metalness?: number; roughness?: number; emissive?: VectorLike; }
+  export interface PBRMaterialProps extends MaterialProps { albedo?: ColorLike; metalness?: number; roughness?: number; emissive?: VectorLike }
 Pass
   export const Pass: ViewerComponent<PassProps>;
 PassProps
-  export interface PassProps { children?: ViewerElement; mode?: 'forward' | 'deferred' | 'fullscreen'; /** Defaults to true (unlike upstream). */ lights?: boolean; shadows?: boolean; picking?: boolean; facets?: boolean; color?: boolean; overlay?: boolean | { color?: boolean; picking?: boolean }; merge?: boolean; /** Order-independent transparency, for transparent surfaces. */ oit?: boolean; ssao?: boolean | number | Partial<SSAOOptions>; outline?: boolean | number | Partial<OutlineOptions>; overscan?: number | Partial<OverscanOptions>; debug?: string; debugIndex?: number; }
+  export interface PassProps { children?: ViewerElement; mode?: 'forward' | 'deferred' | 'fullscreen'; /** Defaults to true (unlike upstream). */ lights?: boolean; shadows?: boolean; picking?: boolean; facets?: boolean; color?: boolean; overlay?: boolean | { color?: boolean; picking?: boolean }; merge?: boolean; /** Order-independent transparency, for transparent surfaces. */ oit?: boolean; ssao?: boolean | number | Partial<SSAOOptions>; outline?: boolean | number | Partial<OutlineOptions>; overscan?: number | Partial<OverscanOptions>; debug?: string; debugIndex?: number }
 PickHit
-  export interface PickHit { readonly id: number; readonly resource: StructureResource; readonly atom: number; readonly instance: number; }
+  export interface PickHit { readonly id: number; readonly resource: StructureResource; readonly atom: number; readonly instance: number }
 PickingProvider
   export const PickingProvider: ViewerComponent<{ children?: ViewerElement }>;
 PointLayerOptions
-  export interface PointLayerOptions { shape?: 'circle' | 'diamond' | 'square' | 'up' | 'down' | 'left' | 'right'; hard?: boolean; hollow?: boolean; outline?: number; shaded?: boolean; depth?: number; zBias?: number; blend?: BlendMode | null; shadow?: boolean; depthTest?: boolean; depthWrite?: boolean; alphaToCoverage?: boolean; alphaToDiscard?: boolean; }
+  export interface PointLayerOptions { shape?: 'circle' | 'diamond' | 'square' | 'up' | 'down' | 'left' | 'right'; hard?: boolean; hollow?: boolean; outline?: number; shaded?: boolean; depth?: number; zBias?: number; blend?: BlendMode | null; shadow?: boolean; depthTest?: boolean; depthWrite?: boolean; alphaToCoverage?: boolean; alphaToDiscard?: boolean }
 PointLight
   export const PointLight: ViewerComponent<PointLightProps>;
 PointLightProps
-  export interface PointLightProps { position?: VectorLike; color?: ColorLike; intensity?: number; cutoff?: number; shadowMap?: ShadowMapOptions; infinite?: boolean; debug?: boolean; }
+  export interface PointLightProps { position?: VectorLike; color?: ColorLike; intensity?: number; cutoff?: number; shadowMap?: ShadowMapOptions; infinite?: boolean; debug?: boolean }
 PreloadedStructureProps
-  export interface PreloadedStructureProps extends StructureCommonProps { data: StructureData; src?: undefined; loader?: undefined; loading?: undefined; error?: undefined; }
+  export interface PreloadedStructureProps extends StructureCommonProps { data: StructureData; src?: undefined; loader?: undefined; loading?: undefined; error?: undefined }
 Ribbon
-  export const Ribbon: ViewerComponent<{ /** A @molgpu/select atom Selection; without one, active model/primary-altloc atoms are used. */ select?: Selection | null; /** Samples per guide segment; defaults to 8. */ smooth?: number; color?: VectorLike; /** Wraps the shaded ribbon layer; without one, the ambient scene material. */ material?: MaterialSpec; } & Translucency>;
+  export const Ribbon: ViewerComponent<{ /** A @molgpu/select atom Selection; without one, active model/primary-altloc atoms are used. */ select?: Selection | null; /** Samples per guide segment; defaults to 8. */ smooth?: number; color?: VectorLike; /** Wraps the shaded ribbon layer; without one, the ambient scene material. */ material?: MaterialSpec } & Translucency>;
 SSAOOptions
-  export interface SSAOOptions { opacity: number; indirect: number; radius: number; depthRamp: number; normalRamp: number; temporalBlend: number; }
+  export interface SSAOOptions { opacity: number; indirect: number; radius: number; depthRamp: number; normalRamp: number; temporalBlend: number }
 ShadowMapOptions
-  export interface ShadowMapOptions { size?: readonly number[]; depth?: readonly number[]; bias?: readonly number[]; span?: readonly number[]; up?: readonly number[]; blur?: number; resolution?: number; fov?: number; }
+  export interface ShadowMapOptions { size?: readonly number[]; depth?: readonly number[]; bias?: readonly number[]; span?: readonly number[]; up?: readonly number[]; blur?: number; resolution?: number; fov?: number }
 Spacefill
-  export const Spacefill: ViewerComponent<{ /** Multiplies each atom's Ångström radius; defaults to 1. */ scale?: number; /** A @molgpu/select atom Selection for this structure; restricts the draw. */ select?: Selection | null; /** A flat colour, or a @molgpu/fields Field composed shader-side per atom. */ color?: VectorLike | Field; /** Wraps the shaded point layer; without one, the ambient scene material. */ material?: MaterialSpec; /** Draw the atoms into the picking buffer so usePicking() can resolve them * (needs a <PickingProvider> and a <Pass picking>). Defaults to false. */ pickable?: boolean; } & Translucency & PointLayerOptions>;
+  export const Spacefill: ViewerComponent<{ /** Multiplies each atom's Ångström radius; defaults to 1. */ scale?: number; /** A @molgpu/select atom Selection for this structure; restricts the draw. */ select?: Selection | null; /** A flat colour, or a @molgpu/fields Field composed shader-side per atom. */ color?: VectorLike | Field; /** Wraps the shaded point layer; without one, the ambient scene material. */ material?: MaterialSpec; /** Draw the atoms into the picking buffer so usePicking() can resolve them * (needs a <PickingProvider> and a <Pass picking>). Defaults to false. */ pickable?: boolean } & Translucency & PointLayerOptions>;
 SpotLight
   export const SpotLight: ViewerComponent<SpotLightProps>;
 SpotLightProps
-  export interface SpotLightProps extends PointLightProps { direction?: VectorLike; fov?: number; feather?: number; }
+  export interface SpotLightProps extends PointLightProps { direction?: VectorLike; fov?: number; feather?: number }
 Structure
   export const Structure: ViewerComponent<StructureProps>;
 StructureBounds
-  export interface StructureBounds { readonly min: number[]; readonly max: number[]; readonly center: number[]; }
+  export interface StructureBounds { readonly min: number[]; readonly max: number[]; readonly center: number[] }
 StructureLoader
   export type StructureLoader = ( src: string, cancelled: () => boolean, ) => StructureData | null | Promise<StructureData | null>;
 StructureProps
   export type StructureProps = PreloadedStructureProps | LoadedStructureProps;
 StructureResource
-  export interface StructureResource { readonly data: StructureData; readonly identity: StructureData['identity']; readonly topologyRevision: number; readonly positionsRevision: number; /** Lazily computed and cached; throws once the resource is disposed. */ readonly bounds: StructureBounds | null; /** Indices must be sorted, unique and in range. Results are LRU-cached. */ selection(indices: Uint32Array): AtomSelection; /** False for foreign, stale or post-dispose selection handles. */ accepts(value: unknown): boolean; dispose(): void; }
+  export interface StructureResource { readonly data: StructureData; readonly identity: StructureData['identity']; readonly topologyRevision: number; readonly positionsRevision: number; /** Lazily computed and cached; throws once the resource is disposed. */ readonly bounds: StructureBounds | null; /** Indices must be sorted, unique and in range. Results are LRU-cached. */ selection(indices: Uint32Array): AtomSelection; /** False for foreign, stale or post-dispose selection handles. */ accepts(value: unknown): boolean; dispose(): void }
 Surface
-  export const Surface: ViewerComponent<{ /** A @molgpu/select atom Selection; without one, active model/primary-altloc atoms are used. */ select?: Selection | null; /** Ångström probe radius; defaults to 1.4 (water). */ probeRadius?: number; /** Grid spacing in Ångströms; defaults to 0.5. Smaller is finer and slower. */ resolution?: number; /** Grid byte budget override; defaults to 256 MiB. */ maxBytes?: number; color?: VectorLike; /** Wraps the shaded face layer; without one, the ambient scene material. */ material?: MaterialSpec; loading?: ViewerElement | (() => ViewerElement); error?: ViewerElement | ((failure: unknown) => ViewerElement); } & Translucency>;
+  export const Surface: ViewerComponent<{ /** A @molgpu/select atom Selection; without one, active model/primary-altloc atoms are used. */ select?: Selection | null; /** Ångström probe radius; defaults to 1.4 (water). */ probeRadius?: number; /** Grid spacing in Ångströms; defaults to 0.5. Smaller is finer and slower. */ resolution?: number; /** Grid byte budget override; defaults to 256 MiB. */ maxBytes?: number; color?: VectorLike; /** Wraps the shaded face layer; without one, the ambient scene material. */ material?: MaterialSpec; loading?: ViewerElement | (() => ViewerElement); error?: ViewerElement | ((failure: unknown) => ViewerElement) } & Translucency>;
 TimelineProvider
   export const TimelineProvider: ViewerComponent<{ time: number; children?: ViewerElement }>;
 Translucency
-  export interface Translucency { /** 0–1, multiplied into the colour's alpha. A uniform: changing it (a fade, * a timeline curve) never rebuilds or re-uploads geometry. Defaults to 1. */ opacity?: number; /** Draw mode override. By default it is 'transparent' whenever the effective * alpha (colour alpha × opacity) is below 1, else the layer's opaque mode. * Pair translucent representations with <Pass oit>. */ mode?: DrawMode; }
+  export interface Translucency { /** 0–1, multiplied into the colour's alpha. A uniform: changing it (a fade, * a timeline curve) never rebuilds or re-uploads geometry. Defaults to 1. */ opacity?: number; /** Draw mode override. By default it is 'transparent' whenever the effective * alpha (colour alpha × opacity) is below 1, else the layer's opaque mode. * Pair translucent representations with <Pass oit>. */ mode?: DrawMode }
 Tube
-  export const Tube: ViewerComponent<{ /** A @molgpu/select atom Selection; without one, active model/primary-altloc atoms are used. */ select?: Selection | null; /** Ångström tube radius; defaults to 0.3. */ radius?: number; /** Samples per guide segment; defaults to 6. */ smooth?: number; color?: VectorLike; sides?: number; join?: 'tangent' | 'bevel' | 'miter' | 'round'; /** Wraps the shaded tube layer; without one, the ambient scene material. */ material?: MaterialSpec; } & Translucency>;
+  export const Tube: ViewerComponent<{ /** A @molgpu/select atom Selection; without one, active model/primary-altloc atoms are used. */ select?: Selection | null; /** Ångström tube radius; defaults to 0.3. */ radius?: number; /** Samples per guide segment; defaults to 6. */ smooth?: number; color?: VectorLike; sides?: number; join?: 'tangent' | 'bevel' | 'miter' | 'round'; /** Wraps the shaded tube layer; without one, the ambient scene material. */ material?: MaterialSpec } & Translucency>;
 TypedArray
   export type TypedArray = | Int8Array | Uint8Array | Uint8ClampedArray | Int16Array | Uint16Array | Int32Array | Uint32Array | Float32Array | Float64Array;
 VectorLike
@@ -147,11 +147,11 @@ sampleCamera
 tooltipFields
   export function tooltipFields( fields: Record<string, Field>, data: StructureData, atom: number, options?: { t?: number }, ): Record<string, number | number[] | string>;
 useAnnotation
-  export function useAnnotation<R = unknown>(input: { records?: readonly R[]; src?: string; loader?: (src: string, cancelled: () => boolean) => unknown; domain?: 'residue' | 'chain'; fields: readonly string[]; value?: (record: R) => number | readonly number[]; type?: unknown; policy?: 'fallback' | 'fail'; fallback?: number | readonly number[]; duplicate?: 'error' | 'first' | 'last'; lift?: boolean; }): { field: Field | null; pending: boolean; error: unknown };
+  export function useAnnotation<R = unknown>(input: { records?: readonly R[]; src?: string; loader?: (src: string, cancelled: () => boolean) => unknown; domain?: 'residue' | 'chain'; fields: readonly string[]; value?: (record: R) => number | readonly number[]; type?: unknown; policy?: 'fallback' | 'fail'; fallback?: number | readonly number[]; duplicate?: 'error' | 'first' | 'last'; lift?: boolean }): { field: Field | null; pending: boolean; error: unknown };
 useCameraCurve
   export function useCameraCurve(curve: CameraCurve, resource: StructureResource, options?: FocusOptions): CameraPose;
 usePicking
-  export function usePicking(options?: { onHover?: (hit: PickHit | null) => void; onPick?: (hit: PickHit | null) => void; }): { hover: PickHit | null; pick: PickHit | null };
+  export function usePicking(options?: { onHover?: (hit: PickHit | null) => void; onPick?: (hit: PickHit | null) => void }): { hover: PickHit | null; pick: PickHit | null };
 useStructureResource
   export function useStructureResource(): StructureResource;
 useTimelineSample
@@ -170,13 +170,13 @@ LitMaterial
 StructureContext
   export const StructureContext: LiveContext<StructureContextValue | undefined>;
 StructureContextValue
-  export interface StructureContextValue { readonly resource: StructureResource; /** Null for an empty structure, which owns no GPU source. */ readonly sources: StructureSources | null; }
+  export interface StructureContextValue { readonly resource: StructureResource; /** Null for an empty structure, which owns no GPU source. */ readonly sources: StructureSources | null }
 StructureSources
-  export interface StructureSources { readonly positions: ShaderSource; readonly radii: ShaderSource; }
+  export interface StructureSources { readonly positions: ShaderSource; readonly radii: ShaderSource }
 TimelineContext
   export const TimelineContext: LiveContext<number | null>;
 WorldSpacePointLayer
-  export const WorldSpacePointLayer: LC<{ positions: ShaderSource; colors?: ShaderSource; radii: Float32Array; /** Defaults to `radii.length`. */ count?: number; scale?: number; } & Omit<PointLayerProps, 'positions' | 'colors' | 'sizes' | 'count' | 'depth'>>;
+  export const WorldSpacePointLayer: LC<{ positions: ShaderSource; colors?: ShaderSource; radii: Float32Array; /** Defaults to `radii.length`. */ count?: number; scale?: number } & Omit<PointLayerProps, 'positions' | 'colors' | 'sizes' | 'count' | 'depth'>>;
 useField
   export function useField( field: Field, inputs?: Record<string, ShaderSource | number | { current: number }>, options?: { domain?: 'atom' | 'residue' }, ): ShaderSource;
 useStructure

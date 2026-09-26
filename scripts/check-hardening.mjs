@@ -92,10 +92,21 @@ function expectedDenoManifest(m) {
 
 /** Resolve a module's exports with the TS checker: names and printed declarations. */
 function moduleExports(file) {
-  const program = ts.createProgram([file], {
-    allowJs: true, checkJs: false, noEmit: true, skipLibCheck: true,
+  const options = {
+    allowJs: true, checkJs: false, noEmit: true, skipLibCheck: true, allowImportingTsExtensions: true,
     module: ts.ModuleKind.NodeNext, moduleResolution: ts.ModuleResolutionKind.NodeNext, target: ts.ScriptTarget.ES2022,
-  });
+  };
+  // TypeScript source is read as its generated declarations (isolatedDeclarations
+  // makes that a per-file transform), so the API snapshot and the `any` checks
+  // see signatures rather than function bodies, exactly as a .d.ts would show them.
+  const host = ts.createCompilerHost(options);
+  const read = host.getSourceFile.bind(host);
+  host.getSourceFile = (name, lang, ...rest) => {
+    if (!/\.(ts|mts)$/.test(name) || /\.d\.m?ts$/.test(name) || name.includes('/node_modules/')) return read(name, lang, ...rest);
+    const { outputText } = ts.transpileDeclaration(readFileSync(name, 'utf8'), { fileName: name, compilerOptions: options });
+    return ts.createSourceFile(name, outputText, lang, true);
+  };
+  const program = ts.createProgram([file], options, host);
   const checker = program.getTypeChecker();
   const sf = program.getSourceFile(file);
   const symbol = sf && checker.getSymbolAtLocation(sf);
@@ -107,7 +118,9 @@ function moduleExports(file) {
       // Print the declaring statement, without JSDoc, whitespace-collapsed.
       let node = d;
       while (node.parent && !ts.isSourceFile(node.parent) && !ts.isModuleBlock(node.parent)) node = node.parent;
-      return node.getText().replace(/\s+/g, ' ').trim();
+      // Generated and hand-written declarations differ only in `declare` and
+      // optional trailing semicolons; normalize both so diffs show API changes.
+      return node.getText().replace(/\s+/g, ' ').trim().replace(/^export declare /, 'export ').replace(/;\s*\}/g, ' }');
     });
     out.set(exp.name, { decls: [...new Set(decls)], anyNodes: decls.length ? countAny(target) : 0 });
   }

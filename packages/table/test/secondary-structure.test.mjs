@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createStructure, traceTable, secondaryStructureTrace } from '../src/index.mjs';
+import { createStructure, traceTable, secondaryStructureTrace } from '../src/index.ts';
 
 function identity16() { return [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]; }
 
