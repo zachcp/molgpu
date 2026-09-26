@@ -135,7 +135,7 @@ exactly one wall, and (b) everything correctness-critical is a pure function.
 | Package | Depends on | Purpose |
 |---|---|---|
 | `@molgpu/table` | — | Columnar atom table, schema, typed attribute buffers. No GPU, no Mol*. |
-| `@molgpu/io` | `table`, `molstar` (optional peer) | Importers. Lowers a Mol* `Structure` into a table. **The only package that knows Mol* exists.** |
+| `@molgpu/io` | `table`, `molstar` (loaded lazily) | Importers. Lowers a Mol* `Structure` into a table. **The only package that knows Mol* exists.** |
 | `@molgpu/select` | `table` | Selection language → sorted index buffers. |
 | `@molgpu/fields` | `table`, `@use-gpu/shader` | Field abstraction, expression sublanguage → WGSL. |
 | `@molgpu/geo` | — | Geometry kernels: ported ribbon/spline math, molecular surface, sphere/cylinder instancing. Typed arrays in, typed arrays out. No GPU, no Live. |
@@ -151,6 +151,29 @@ Two rules make the layout load-bearing rather than decorative:
   their public API. use.gpu is pre-1.0 (0.20.0) from a small maintainer; churn
   is a real risk on a library we intend to publish, and this containment is the
   mitigation.
+
+## Source language and publishing
+
+All seven packages are TypeScript source (they were hand-written `.mjs` plus
+`.d.ts` until epic `0lg`), targeting [JSR](https://jsr.io) (findings in
+`docs/findings/2026-09-26-jsr-spike.md`). Each `exports` entry points `types`
+and `import` at the same `src/*.ts` file.
+
+- **Toolchain minimums:** Node 26 (runs `.ts` directly through type stripping)
+  and Deno 2.9. The repo is an npm workspace and a Deno workspace at once.
+- **Manifests:** `package.json` is the single source for name, version, license,
+  exports and dependency ranges. Each package's `deno.json` (its JSR manifest)
+  is generated from it by `npm run sync:deno`, and hardening H1 checks they
+  match. Internal `@molgpu/*` imports resolve through the workspace, and JSR
+  rewrites them to `jsr:` ranges on publish.
+- **TypeScript source** follows `tsconfig.base.json`: `isolatedDeclarations`
+  (explicit types on every export, which is JSR's "no slow types" rule),
+  `erasableSyntaxOnly` (so Node can strip types), `verbatimModuleSyntax`, and
+  relative imports ending in `.ts`.
+- **JSR has no peer dependencies.** use.gpu stays an exact `npm:` pin. Mol* is
+  a regular dependency of `io`, imported lazily with literal specifiers, which
+  keeps it out of every bundle's initial chunk. Internal ranges stay
+  broad so a single copy of `@molgpu/table` is shared.
 
 ## Testing strategy
 

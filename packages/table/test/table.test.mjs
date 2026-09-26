@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createStructure, validateStructure, withPositions, activeAtoms, residueKey, coordinateBounds, bondTopology, selectBonds } from '../src/index.mjs';
+import { createStructure, validateStructure, withPositions, activeAtoms, residueKey, coordinateBounds, bondTopology, selectBonds } from '../src/index.ts';
 import { fixture } from './fixture.mjs';
 
 test('owns packed columns without discarding chemical or instance identity', () => {

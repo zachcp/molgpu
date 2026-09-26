@@ -17,20 +17,25 @@ already exist; hardening only requires that they keep passing.
 to `src` (npm adds README and LICENSE itself; each package
 keeps a copy of the root MIT `LICENSE`). Every bare import in `src/` is declared in
 `dependencies` or `peerDependencies`. `@use-gpu/*` versions are pinned exactly
-(risk R3), and `molstar` is a peer range.
+(risk R3). A `deno.json` (the JSR manifest)
+matches `package.json` in name, version, license, exports and dependency
+ranges, as written by `npm run sync:deno`, and publishes `src`.
 
-**H2 — Types match the runtime.** `src/index.d.ts` exists, and the set of
-exported names is identical between `index.mjs` and `index.d.ts`, as checked by
-script. It has no `any` in public signatures, except where a comment explains
-why.
+**H2 — Types match the runtime.** Each `exports` entry's `types` and `import`
+files exist (for TypeScript source they are the same `src/*.ts` file), and the
+set of exported names is identical between them, as checked by script. It has
+no `any` in public signatures, except where a comment explains why.
 
 **H3 — No leaked dependency types.** For every package except `viewer`,
-`index.d.ts` (and anything it re-exports) mentions neither `@use-gpu/*` nor
+the public entry (and anything it re-exports) mentions neither `@use-gpu/*` nor
 `molstar`. `viewer` may expose use.gpu types only from a separately named
-advanced entry (`@molgpu/viewer/advanced`), never from `.`.
+advanced entry (`@molgpu/viewer/advanced`), never from `.`. Because the
+viewer's modules host both entries, its `.` is checked export by export: the
+types each `.` export reaches must not name use.gpu.
 
 **H4 — Import walls.**
-- The only package that imports `molstar` at runtime is `io`. Other packages may
+- The only package that imports `molstar` at runtime, or declares it as a
+  dependency, is `io`. Other packages may
   use Mol* only in test oracles, as dev dependencies.
 - The only package that imports `@use-gpu/live`, `@use-gpu/workbench` or
   `@use-gpu/shader` is `viewer`.
@@ -40,12 +45,14 @@ advanced entry (`@molgpu/viewer/advanced`), never from `.`.
 
 **H5 — Reviewed public API.**
 - Each export is classified in the README as *stable*, *experimental* or
-  *advanced*. Anything internal is removed from `index.mjs`. The checker reads
+  *advanced*. Anything internal is removed from the entry module. The checker reads
   this from a `## API` section containing a table whose rows start
   `` | `name` | stable | `` (further columns are free-form).
 - A committed snapshot, `packages/<pkg>/api.txt`, holds the sorted export names
-  and their d.ts signatures. The check fails when the snapshot and the source
+  and their declared signatures. The check fails when the snapshot and the source
   disagree, so an API change always shows up in the diff.
+- Public declarations name only types the package exports from some entry. A
+  private alias would show up in the generated docs with nothing to link to.
 
 **H6 — Packs and imports cleanly.**
 - `npm pack --dry-run` lists only the intended files.
@@ -55,6 +62,10 @@ advanced entry (`@molgpu/viewer/advanced`), never from `.`.
   the tarball and its exports map, not a registry install. `viewer` is
   browser-only, so the checker only resolves its entries. It also needs a
   documented browser smoke page, which is checked by hand.
+- `deno publish --dry-run` succeeds for the package: it type-checks, passes
+  JSR's no-slow-types rule, and resolves every import as JSR will. Packages
+  whose entries are TypeScript are imported under Deno instead of from the
+  npm tarball, because Node won't strip types under `node_modules`.
 - No import has to reach into `/src/internal`.
 
 **H7 — README.**

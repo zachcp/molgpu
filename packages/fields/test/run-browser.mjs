@@ -9,7 +9,7 @@ import {
   COLOR,
   attribute, categorical, linear, colormap, annotation, curve,
   evaluate, compile,
-} from '../src/index.mjs';
+} from '../src/index.ts';
 import { structure } from './fixture.mjs';
 
 const RED = [1, 0, 0, 1], BLUE = [0, 0, 1, 1], GREY = [0.5, 0.5, 0.5, 1];

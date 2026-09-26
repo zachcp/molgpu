@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { createStructure } from '@molgpu/table';
 import { structureFromBcif } from '@molgpu/io';
-import { buildSurfaceGeometry } from '../src/internal/surface-geometry.mjs';
+import { buildSurfaceGeometry } from '../src/internal/surface-geometry.ts';
 
 function identity16() { return [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]; }
 

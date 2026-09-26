@@ -6,7 +6,7 @@ import { WebGPU, AutoCanvas } from '@use-gpu/webgpu';
 import { OrbitCamera, Pass, AmbientLight, DirectionalLight, useDeviceContext } from '@use-gpu/workbench';
 import { createStructure } from '@molgpu/table';
 import { where, resolve } from '@molgpu/select';
-import { Structure, Tube } from '../src/index.mjs';
+import { Structure, Tube } from '../src/index.ts';
 
 const probe = window.__probe = { storage: [], storageBuffers: [], storageWrites: [], errors: [], mounted: false };
 const storageInfo = new WeakMap();

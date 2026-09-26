@@ -3,10 +3,11 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { createServer } from 'vite';
 import { chromium } from 'playwright';
+import { workspaceAliases } from '../../../scripts/workspace-aliases.mjs';
 const root = fileURLToPath(new URL('../../../', import.meta.url));
 const out = `${root}packages/viewer/test/results`;
 await mkdir(out, { recursive: true });
-const server = await createServer({ root, configFile: false, resolve: { alias: { '@molgpu/io': `${root}packages/io/src/index.mjs` } }, server: { host: '127.0.0.1', port: 5186, strictPort: true }, optimizeDeps: {
+const server = await createServer({ root, configFile: false, resolve: { alias: workspaceAliases() }, server: { host: '127.0.0.1', port: 5186, strictPort: true }, optimizeDeps: {
   include: ['@use-gpu/live','@use-gpu/workbench','@use-gpu/webgpu','@use-gpu/core','@use-gpu/shader','@use-gpu/wgsl','lodash'],
 } });
 let browser;

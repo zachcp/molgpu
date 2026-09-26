@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { prepareColumn } from '../src/internal/columns.mjs';
+import { prepareColumn } from '../src/internal/columns.ts';
 
 test('offset vec3 view retains two logical rows, no prefix/suffix, independent storage', () => {
   const backing = Float32Array.from([99,1,2,3,4,5,6,88]);

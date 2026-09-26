@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createStructure } from '@molgpu/table';
 import { attribute, constant } from '@molgpu/fields';
-import { tooltipFields } from '../src/internal/tooltip.mjs';
+import { tooltipFields } from '../src/internal/tooltip.ts';
 
 const data = createStructure({
   positions: Float32Array.from([0,0,0, 1,0,0, 2,0,0]),

@@ -5,8 +5,20 @@
   "license": "MIT",
   "type": "module",
   "sideEffects": false,
-  "exports": { ".": { "types": "./src/index.d.ts", "import": "./src/index.mjs" } },
-  "files": ["src", "CHANGELOG.md"],
-  "scripts": { "test": "node --test test/*.test.mjs" },
-  "peerDependencies": { "@molgpu/table": "^0.1.0" }
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    }
+  },
+  "files": [
+    "src",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "peerDependencies": {
+    "@molgpu/table": "^0.1.0"
+  }
 }

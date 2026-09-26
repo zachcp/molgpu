@@ -8,7 +8,7 @@ import { WebGPU, AutoCanvas } from '@use-gpu/webgpu';
 import { OrbitCamera, useDeviceContext } from '@use-gpu/workbench';
 import { createStructure } from '@molgpu/table';
 import { createTimeline } from '@molgpu/timeline';
-import { Structure, Spacefill, Pass, AmbientLight, DirectionalLight, PickingProvider, usePicking, TimelineProvider } from '../src/index.mjs';
+import { Structure, Spacefill, Pass, AmbientLight, DirectionalLight, PickingProvider, usePicking, TimelineProvider } from '../src/index.ts';
 
 const probe = window.__probe = { errors: [], mounted: false, hover: null, pick: null, time: null };
 const request = GPUAdapter.prototype.requestDevice;

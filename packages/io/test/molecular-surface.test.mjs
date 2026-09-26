@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { activeAtoms } from '@molgpu/table';
-import { molecularSurfaceField, structureFromBcif, SurfaceFieldError } from '../src/index.mjs';
+import { molecularSurfaceField, structureFromBcif, SurfaceFieldError } from '../src/index.ts';
 
 async function loadAtoms(id) {
   const bytes = new Uint8Array(await readFile(new URL(`./fixtures/${id}.bcif`, import.meta.url)));

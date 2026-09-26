@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { activeAtoms, traceTable } from '@molgpu/table';
-import { structureFromBcif } from '../src/index.mjs';
+import { structureFromBcif } from '../src/index.ts';
 import { corpus } from './corpus.mjs';
 
 async function loadTrace(id) {

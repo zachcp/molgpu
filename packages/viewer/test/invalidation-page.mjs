@@ -15,18 +15,18 @@ import { bondTopology, coordinateBounds, createStructure, withPositions } from '
 import { where, resolve } from '@molgpu/select';
 import { byElement, colormap, curve } from '@molgpu/fields';
 import { structureFromBcif } from '@molgpu/io';
-import { Structure } from '../src/structure.mjs';
-import { Spacefill } from '../src/spacefill.mjs';
-import { Bonds } from '../src/bonds.mjs';
-import { BallAndStick } from '../src/ball-and-stick.mjs';
-import { Tube } from '../src/tube.mjs';
-import { Ribbon } from '../src/ribbon.mjs';
-import { Surface } from '../src/surface.mjs';
-import { Label, Distance } from '../src/annotations.mjs';
-import { TimelineProvider } from '../src/timeline-context.mjs';
+import { Structure } from '../src/structure.ts';
+import { Spacefill } from '../src/spacefill.ts';
+import { Bonds } from '../src/bonds.ts';
+import { BallAndStick } from '../src/ball-and-stick.ts';
+import { Tube } from '../src/tube.ts';
+import { Ribbon } from '../src/ribbon.ts';
+import { Surface } from '../src/surface.ts';
+import { Label, Distance } from '../src/annotations.ts';
+import { TimelineProvider } from '../src/timeline-context.ts';
 import {
   enableInstrumentation, instrumentDevice, resetCounters, snapshotCounters, deviceBufferOrigins,
-} from '../src/internal/instrumentation.mjs';
+} from '../src/internal/instrumentation.ts';
 
 enableInstrumentation();
 const probe = window.__inv = { errors: [], mounted: false, renders: 0 };

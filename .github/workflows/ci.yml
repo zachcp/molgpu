@@ -13,8 +13,14 @@ jobs:
         with:
           node-version: current
           cache: npm
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
       - run: npm ci
       - run: npm test
+      - run: npm run test:deno
+      - run: npm run typecheck:src
       - run: npm run test:hardening
       - run: npm run check:hardening
+      - run: npm run jsr:check
       - run: npm run release:dry-run

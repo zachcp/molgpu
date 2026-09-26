@@ -7,7 +7,7 @@ import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync, mkdirSync } f
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { checkPackage, CRITERIA } from '../../scripts/check-hardening.mjs';
+import { checkPackage, expectedDenoManifest, CRITERIA } from '../../scripts/check-hardening.mjs';
 
 const FIXTURE = join(dirname(fileURLToPath(import.meta.url)), 'fixture');
 
@@ -24,6 +24,16 @@ function withFixture(mutate, { update = false } = {}) {
         const m = JSON.parse(readFileSync(path, 'utf8'));
         fn(m);
         writeFileSync(path, JSON.stringify(m, null, 2));
+        // Keep the JSR manifest in step, as `npm run sync:deno` would.
+        const denoPath = join(dir, 'deno.json');
+        const deno = JSON.parse(readFileSync(denoPath, 'utf8'));
+        writeFileSync(denoPath, JSON.stringify({ ...deno, ...expectedDenoManifest(m) }, null, 2));
+      },
+      deno: fn => {
+        const path = join(dir, 'deno.json');
+        const d = JSON.parse(readFileSync(path, 'utf8'));
+        fn(d);
+        writeFileSync(path, JSON.stringify(d, null, 2));
       },
     });
     if (update) checkPackage(dir, { update: true }); // refresh api.txt so only the target criterion trips
@@ -53,6 +63,11 @@ test('H1: undeclared import', () =>
     edit('src/index.mjs', s => `import 'typescript';\n${s}`)));
 test('H1: unpinned use.gpu', () =>
   expectOnly('H1', /pinned exactly/, ({ manifest }) => manifest(m => { m.dependencies['@use-gpu/core'] = '^0.20.0'; })));
+
+test('H1: deno.json out of sync with package.json', () =>
+  expectOnly('H1', /deno\.json "version" is out of sync/, ({ deno }) => deno(d => { d.version = '9.9.9'; })));
+test('H1: missing deno.json', () =>
+  expectOnly('H1', /missing deno\.json/, ({ dir }) => rmSync(join(dir, 'deno.json'))));
 
 test('H2: runtime export missing from types', () =>
   expectOnly('H2', /runtime export "extra" is not declared/, ({ edit }) =>
@@ -97,11 +112,18 @@ test('H5: export not classified in README', () =>
   expectOnly('H5', /"Options" is not classified/, ({ edit }) =>
     edit('README.md', s => s.replace(/^\| `Options`.*\n/m, ''))));
 
+test('H5: public signature uses a private type', () =>
+  expectOnly('H5', /use "Num", which no entry exports/, ({ edit }) =>
+    edit('src/index.d.ts', s => `export {};\ntype Num = number;\n${s.replace('midpoint(a: number, b: number)', 'midpoint(a: Num, b: number)')}`)));
+
 test('H6: tarball includes non-shipping files', () =>
   expectOnly('H6', /tarball would include test\/x\.test\.mjs/, ({ manifest, write }) => {
     manifest(m => { m.files = ['src', 'test']; });
     write('test/x.test.mjs', '');
   }));
+test('H6: JSR publish dry-run fails', () =>
+  expectOnly('H6', /deno publish --dry-run failed/, ({ edit }) =>
+    edit('src/index.d.ts', s => s.replace('midpoint(a: number, b: number): number;', 'midpoint(a: number, b: number): Missing;'))));
 test('H6: packed entry fails to import in isolation', () =>
   expectOnly('H6', /importing "@molgpu\/fixture-good" from the packed tree/, ({ edit }) =>
     edit('src/index.mjs', s => `${s}throw new Error('boom at import');\n`)));

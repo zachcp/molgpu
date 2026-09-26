@@ -116,5 +116,5 @@ It must not import:
 - `@use-gpu/live`, `@use-gpu/workbench`, or `@use-gpu/shader` (only
   `@molgpu/viewer` does) — so no components, clocks, or rendering here;
 - `@use-gpu/core` outside `src/internal/`. The adapter in
-  `src/internal/upstream-interpolation.mjs` is the only file that imports it,
+  `src/internal/upstream-interpolation.ts` is the only file that imports it,
   and the public types never mention `@use-gpu/*`.

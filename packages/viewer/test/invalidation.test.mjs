@@ -10,14 +10,14 @@ import test, { beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { createStructure, withPositions } from '@molgpu/table';
 import { where } from '@molgpu/select';
-import { createStructureResource } from '../src/internal/structure-resource.mjs';
-import { buildBondColumns } from '../src/internal/bond-columns.mjs';
-import { focusSelection } from '../src/camera-curve.mjs';
-import { geometryDeps } from '../src/internal/geometry-job.mjs';
+import { createStructureResource } from '../src/internal/structure-resource.ts';
+import { buildBondColumns } from '../src/internal/bond-columns.ts';
+import { focusSelection } from '../src/camera-curve.ts';
+import { geometryDeps } from '../src/internal/geometry-job.ts';
 import {
   count, countOnce, gauge, trackOwnedBuffer, releaseOwnedBuffer, instrumentDevice,
   enableInstrumentation, disableInstrumentation, resetAllInstrumentation, snapshotCounters,
-} from '../src/internal/instrumentation.mjs';
+} from '../src/internal/instrumentation.ts';
 
 const N = 40;
 const structure = ({ bonds = false } = {}) => createStructure({

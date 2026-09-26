@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { checkOpacity, applyOpacity, flatAlpha, modeProps } from '../src/internal/opacity.mjs';
+import { checkOpacity, applyOpacity, flatAlpha, modeProps } from '../src/internal/opacity.ts';
 
 test('opacity multiplies a flat colour alpha, and is the identity at 1', () => {
   const color = [0.2, 0.4, 0.6, 0.5];

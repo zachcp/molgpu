@@ -13,7 +13,7 @@ import { WebGPU, AutoCanvas } from '@use-gpu/webgpu';
 import { OrbitCamera, useDeviceContext } from '@use-gpu/workbench';
 import { coordinateBounds } from '@molgpu/table';
 import { structureFromBcif } from '@molgpu/io';
-import { Structure, Surface, Spacefill, Pass, AmbientLight, DirectionalLight } from '../src/index.mjs';
+import { Structure, Surface, Spacefill, Pass, AmbientLight, DirectionalLight } from '../src/index.ts';
 
 const probe = window.__probe = {
   storage: [], pipelines: 0, textures: 0, errors: [], mounted: false,

@@ -76,11 +76,11 @@ may import Mol* as a golden-file oracle.
 These are ports of MIT-licensed Mol* 5.11.0 code (Copyright (c) 2017 - now,
 Mol* contributors). The attribution headers in each source file must be kept.
 
-- `src/marching-cubes-tables.mjs` is a mechanical copy of the lookup tables in
+- `src/marching-cubes-tables.ts` is a mechanical copy of the lookup tables in
   `mol-geo/util/marching-cubes/tables.js`.
-- `marchingCubes` in `src/index.mjs` ports the inner loop of
+- `marchingCubes` in `src/index.ts` ports the inner loop of
   `mol-geo/util/marching-cubes/algorithm.js`.
-- `src/curve-segment.mjs` ports
+- `src/curve-segment.ts` ports
   `mol-repr/structure/visual/util/polymer/curve-segment.js`.
-- `src/vec3.mjs` ports the needed parts of `mol-math/linear-algebra/3d/vec3.js`
+- `src/vec3.ts` ports the needed parts of `mol-math/linear-algebra/3d/vec3.js`
   and `mol-math/interpolate.js`.

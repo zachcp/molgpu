@@ -42,9 +42,23 @@ function walk(dir, filter, out = []) {
   return out;
 }
 
+const DECLARATION_OPTIONS = {
+  allowJs: true, checkJs: false, noEmit: true, skipLibCheck: true, allowImportingTsExtensions: true,
+  module: ts.ModuleKind.NodeNext, moduleResolution: ts.ModuleResolutionKind.NodeNext, target: ts.ScriptTarget.ES2022,
+};
+const isTsSource = file => /\.m?ts$/.test(file) && !/\.d\.m?ts$/.test(file);
+
+/** A file's public declarations: the file itself for .d.ts/JS, or, for TypeScript
+ * source, the declarations TS generates from it (isolatedDeclarations makes that
+ * a per-file transform). Checks on the public surface read this, never bodies. */
+function declarationText(file) {
+  const text = readFileSync(file, 'utf8');
+  return isTsSource(file) ? ts.transpileDeclaration(text, { fileName: file, compilerOptions: DECLARATION_OPTIONS }).outputText : text;
+}
+
 /** Every module specifier a source file references: static, dynamic, re-export, import type. */
-function specifiers(file) {
-  const sf = ts.createSourceFile(file, readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true);
+function specifiers(file, text = readFileSync(file, 'utf8')) {
+  const sf = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true);
   const out = [];
   const visit = node => {
     if ((ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) && node.moduleSpecifier &&
@@ -69,28 +83,100 @@ function entries(manifest) {
     .map(([subpath, target]) => ({ subpath, types: target?.types, import: target?.import }));
 }
 
+/**
+ * The JSR manifest (deno.json) a package.json implies. package.json is the single
+ * source: `npm run sync:deno` writes these fields and H1 checks they match.
+ * Internal @molgpu deps resolve through the Deno workspace (JSR rewrites them to
+ * jsr: on publish); every other dependency becomes an npm: import at the same range.
+ */
+function expectedDenoManifest(m) {
+  const exports = Object.fromEntries(entries(m).map(e => [e.subpath, e.import]));
+  const imports = {};
+  for (const [dep, range] of Object.entries({ ...m.dependencies, ...m.peerDependencies }).sort(([a], [b]) => a.localeCompare(b))) {
+    if (dep.startsWith('@molgpu/')) continue;
+    imports[dep] = `npm:${dep}@${range}`;
+    imports[`${dep}/`] = `npm:/${dep}@${range}/`;
+  }
+  return {
+    name: m.name, version: m.version, license: m.license,
+    exports: Object.keys(exports).length === 1 && exports['.'] ? exports['.'] : exports,
+    ...(Object.keys(imports).length ? { imports } : {}),
+  };
+}
+
 /** Resolve a module's exports with the TS checker: names and printed declarations. */
 function moduleExports(file) {
-  const program = ts.createProgram([file], {
-    allowJs: true, checkJs: false, noEmit: true, skipLibCheck: true,
-    module: ts.ModuleKind.NodeNext, moduleResolution: ts.ModuleResolutionKind.NodeNext, target: ts.ScriptTarget.ES2022,
-  });
+  // TypeScript source is read as its generated declarations, so the API
+  // snapshot and the `any` checks see signatures, as a .d.ts would show them.
+  const host = ts.createCompilerHost(DECLARATION_OPTIONS);
+  const read = host.getSourceFile.bind(host);
+  host.getSourceFile = (name, lang, ...rest) => !isTsSource(name) || name.includes('/node_modules/')
+    ? read(name, lang, ...rest)
+    : ts.createSourceFile(name, declarationText(name), lang, true);
+  const program = ts.createProgram([file], DECLARATION_OPTIONS, host);
   const checker = program.getTypeChecker();
   const sf = program.getSourceFile(file);
   const symbol = sf && checker.getSymbolAtLocation(sf);
-  if (!symbol) return new Map(); // a file with no import/export is not a module
+  if (!symbol) return Object.assign(new Map(), { exportedKeys: new Set(), typeRefs: new Map(), externalRefs: new Map() }); // not a module
   const out = new Map();
+  // Beside the name -> declarations map: which in-package declarations the
+  // entry exports, and which in-package types its public declarations use.
+  const packageRoot = file.slice(0, file.lastIndexOf('/src/') + 1);
+  out.exportedKeys = new Set();
+  out.typeRefs = new Map();
+  out.externalRefs = new Map(); // export name -> upstream packages its types reach
   for (const exp of checker.getExportsOfModule(symbol)) {
     const target = exp.flags & ts.SymbolFlags.Alias ? checker.getAliasedSymbol(exp) : exp;
     const decls = (target.declarations ?? []).map(d => {
       // Print the declaring statement, without JSDoc, whitespace-collapsed.
       let node = d;
       while (node.parent && !ts.isSourceFile(node.parent) && !ts.isModuleBlock(node.parent)) node = node.parent;
-      return node.getText().replace(/\s+/g, ' ').trim();
+      // Generated and hand-written declarations differ only in `declare`,
+      // optional trailing semicolons and commas, parameter-list line breaks and a
+      // leading union `|`; normalize them so diffs show API changes.
+      return node.getText().replace(/\s+/g, ' ').trim().replace(/^export declare /, 'export ').replace(/;\s*\}/g, ' }').replace(/= \| /g, '= ')
+        .replace(/\( /g, '(').replace(/,\s*\)/g, ')');
     });
     out.set(exp.name, { decls: [...new Set(decls)], anyNodes: decls.length ? countAny(target) : 0 });
+    const external = new Set();
+    for (const d of target.declarations ?? []) {
+      out.exportedKeys.add(declKey(d, target.name));
+      collectTypeRefs(checker, d, packageRoot, out.typeRefs, external);
+    }
+    if (external.size) out.externalRefs.set(exp.name, [...external]);
   }
   return out;
+}
+
+const declKey = (decl, name) => `${decl.getSourceFile().fileName}#${name}`;
+
+/** Record every type a public declaration refers to that is declared inside the
+ * package (not another package, a lib file or a type parameter), keyed like
+ * declKey, so the caller can check each one is itself exported. */
+function collectTypeRefs(checker, decl, packageRoot, refs, external = new Set(), seen = new Set()) {
+  if (seen.has(decl)) return;
+  seen.add(decl);
+  const visit = node => {
+    const nameNode = ts.isTypeReferenceNode(node) ? node.typeName
+      : ts.isExpressionWithTypeArguments(node) ? node.expression : null;
+    if (nameNode) {
+      let symbol = checker.getSymbolAtLocation(nameNode);
+      if (symbol && symbol.flags & ts.SymbolFlags.Alias) symbol = checker.getAliasedSymbol(symbol);
+      if (symbol && !(symbol.flags & ts.SymbolFlags.TypeParameter)) {
+        for (const d of symbol.declarations ?? []) {
+          const file = d.getSourceFile().fileName;
+          const upstream = file.match(/\/node_modules\/(@use-gpu\/[^/]+|@webgpu\/types|molstar)\//);
+          if (upstream) external.add(upstream[1]);
+          else if (file.startsWith(packageRoot) && !file.includes('/node_modules/')) {
+            refs.set(declKey(d, symbol.name), symbol.name);
+            collectTypeRefs(checker, d, packageRoot, new Map(), external, seen);
+          }
+        }
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(decl);
 }
 
 /** Count `any` keywords in a symbol's declarations that lack an explaining comment. */
@@ -116,7 +202,7 @@ function declarationClosure(entry) {
     const file = stack.pop();
     if (seen.has(file) || !existsSync(file)) continue;
     seen.add(file);
-    for (const spec of specifiers(file)) {
+    for (const spec of specifiers(file, declarationText(file))) {
       if (!spec.startsWith('.')) continue;
       const base = resolve(dirname(file), spec);
       const hit = [base, base.replace(/\.m?js$/, '.d.ts'), base.replace(/\.mjs$/, '.d.mts'), `${base}.d.ts`]
@@ -187,7 +273,16 @@ function checkPackage(dir, { update = false } = {}) {
   for (const [dep, range] of Object.entries(declared)) {
     if (dep.startsWith('@use-gpu/') && !/^\d+\.\d+\.\d+$/.test(range)) fail('H1', `${dep} must be pinned exactly, got "${range}"`);
   }
-  if (m.dependencies?.molstar) fail('H1', 'molstar must be a peerDependency, not a dependency');
+  const denoPath = join(dir, 'deno.json');
+  const deno = existsSync(denoPath) ? readJson(denoPath) : null;
+  if (!deno) fail('H1', 'missing deno.json (the JSR manifest; run npm run sync:deno)');
+  else {
+    const expected = expectedDenoManifest(m);
+    for (const key of ['name', 'version', 'license', 'exports', 'imports']) {
+      if (JSON.stringify(deno[key]) !== JSON.stringify(expected[key])) fail('H1', `deno.json "${key}" is out of sync with package.json (run npm run sync:deno)`);
+    }
+    if (!deno.publish?.include?.includes('src')) fail('H1', 'deno.json publish.include must include "src"');
+  }
   // Table identity is module-private (a WeakMap brand), so every dependent must
   // share the app's one copy of @molgpu/table rather than install its own.
   if (m.dependencies?.['@molgpu/table']) fail('H1', '@molgpu/table must be a peerDependency, not a dependency');
@@ -218,15 +313,26 @@ function checkPackage(dir, { update = false } = {}) {
   // H3 — no use.gpu / Mol* types in public declarations (viewer: "." entry only).
   for (const e of ents) {
     if (!e.types || !existsSync(join(dir, e.types))) continue;
-    if (isViewer && e.subpath !== '.') continue;
+    if (isViewer) {
+      // The viewer's modules host both "." and advanced exports, so check what
+      // each "." export's types reach, not whole files.
+      if (e.subpath !== '.') continue;
+      for (const [exportName, upstream] of apis.get('.')?.externalRefs ?? []) {
+        for (const spec of upstream) fail('H3', `"${exportName}" (.) exposes a type from "${spec}"`);
+      }
+      continue;
+    }
     for (const file of declarationClosure(join(dir, e.types))) {
-      for (const spec of specifiers(file)) {
+      for (const spec of specifiers(file, declarationText(file))) {
         if (/^(@use-gpu\/|@webgpu\/types|molstar)/.test(spec)) fail('H3', `${relative(dir, file)} references "${spec}"`);
       }
     }
   }
 
-  // H4 — import walls.
+  // H4 — import walls. Mol* is io's real dependency (imported lazily, so
+  // bundlers split it out); JSR has no optional peers, so no other package
+  // may even declare it.
+  if ('molstar' in declared && name !== '@molgpu/io') fail('H4', 'only @molgpu/io may depend on molstar');
   for (const file of sources) {
     const rel = relative(dir, file);
     const internal = rel.startsWith(join('src', 'internal'));
@@ -248,6 +354,13 @@ function checkPackage(dir, { update = false } = {}) {
 
   // H5 — reviewed API: committed snapshot, and every export classified in the README.
   if (apis.size) {
+    // A public signature may only name types some entry exports: a private
+    // alias would appear in the generated docs with nothing to link to.
+    const exported = new Set([...apis.values()].flatMap(api => [...api.exportedKeys]));
+    const reported = new Set();
+    for (const api of apis.values()) for (const [key, typeName] of api.typeRefs) {
+      if (!exported.has(key) && !reported.has(key)) { reported.add(key); fail('H5', `public declarations use "${typeName}", which no entry exports (${relative(dir, key.split('#')[0])})`); }
+    }
     const snapshot = apiSnapshot(name, apis);
     const snapPath = join(dir, 'api.txt');
     if (update) writeFileSync(snapPath, snapshot);
@@ -275,9 +388,34 @@ function checkPackage(dir, { update = false } = {}) {
     for (const e of ents) for (const f of [e.types, e.import]) {
       if (f && !packed.includes(f.replace(/^\.\//, ''))) fail('H6', `tarball is missing entry file ${f}`);
     }
-    if (!fails.H6.length && ents.length) smokeImport(dir, m, ents, packed, msg => fail('H6', msg));
+    // Node won't strip types under node_modules, so only JS entries can be imported
+    // from the packed tree; TypeScript entries are imported through Deno below.
+    const jsEntries = ents.filter(e => !/\.ts$/.test(e.import));
+    if (!fails.H6.length && jsEntries.length) smokeImport(dir, m, jsEntries, packed, msg => fail('H6', msg));
   }
+  // H6 (JSR) — publishable to JSR. Runs last and only on an otherwise clean
+  // package, since a manifest or import fault above would fail here too.
+  if (deno && CRITERIA.every(c => !fails[c].length)) jsrCheck(dir, ents, !BROWSER_ONLY.has(m.name), msg => fail('H6', msg));
   return { name, dir: relative(ROOT, dir), fails };
+}
+
+const firstError = (err) => String(err.stderr ?? err.message).split('\n')
+  .find(l => /error|Error/.test(l))?.replace(/\x1b\[[0-9;]*m/g, '').trim() ?? 'failed';
+
+/**
+ * `deno publish --dry-run` type-checks the package, enforces JSR's no-slow-types
+ * rule and resolves every import as JSR will. Then, for packages that run
+ * outside a browser, each TypeScript entry is imported under Deno.
+ */
+function jsrCheck(dir, ents, importable, fail) {
+  const deno = (args) => execFileSync('deno', args, { cwd: dir, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, NO_COLOR: '1' } });
+  try { deno(['publish', '--dry-run', '--allow-dirty']); }
+  catch (err) { fail(`deno publish --dry-run failed: ${firstError(err)}`); return; }
+  if (!importable) return;
+  for (const e of ents.filter(e => /\.ts$/.test(e.import))) {
+    try { deno(['eval', `await import(${JSON.stringify(new URL(e.import, `file://${dir}/`).href)})`]); }
+    catch (err) { fail(`importing ${e.import} under Deno: ${firstError(err)}`); }
+  }
 }
 
 /**
@@ -338,6 +476,6 @@ function main(argv) {
   return results.every(r => CRITERIA.every(c => !r.fails[c]?.length)) ? 0 : 1;
 }
 
-export { checkPackage, CRITERIA };
+export { checkPackage, expectedDenoManifest, CRITERIA };
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) process.exitCode = main(process.argv.slice(2));

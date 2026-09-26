@@ -13,10 +13,10 @@ import { WebGPU, AutoCanvas } from '@use-gpu/webgpu';
 import { OrbitCamera, Pass, AmbientLight, DirectionalLight, useDeviceContext } from '@use-gpu/workbench';
 import { attribute, categorical, colormap, curve } from '@molgpu/fields';
 import { createTimeline, createCurve } from '@molgpu/timeline';
-import { ColumnSource } from '../src/internal/column-source.mjs';
-import { WorldSpacePointLayer } from '../src/world-space-points.mjs';
-import { useField } from '../src/use-field.mjs';
-import { TimelineProvider, useTimelineSample } from '../src/timeline-context.mjs';
+import { ColumnSource } from '../src/internal/column-source.ts';
+import { WorldSpacePointLayer } from '../src/world-space-points.ts';
+import { useField } from '../src/use-field.ts';
+import { TimelineProvider, useTimelineSample } from '../src/timeline-context.ts';
 
 const probe = window.__probe = { storage: 0, storageBuffers: [], storageWrites: [], uniform: 0, errors: [], mounted: false };
 const make = GPUDevice.prototype.createBuffer;

@@ -6,16 +6,12 @@ import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
 import { createServer } from 'vite';
 import { chromium } from 'playwright';
+import { workspaceAliases } from '../../../scripts/workspace-aliases.mjs';
 
 const root = fileURLToPath(new URL('../../../', import.meta.url));
 const server = await createServer({
   root, configFile: false,
-  resolve: { alias: {
-    '@molgpu/io': `${root}packages/io/src/index.mjs`,
-    '@molgpu/table': `${root}packages/table/src/index.mjs`,
-    '@molgpu/select': `${root}packages/select/src/index.mjs`,
-    '@molgpu/fields': `${root}packages/fields/src/index.mjs`,
-  } },
+  resolve: { alias: workspaceAliases() },
   server: { host: '127.0.0.1', port: 5211, strictPort: true },
   optimizeDeps: {
     entries: ['packages/viewer/test/materials.html'],

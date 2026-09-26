@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createStructure } from '@molgpu/table';
-import { COLOR, joinAnnotation, residueIdentity, evaluate, compile, colormap, linear } from '../src/index.mjs';
+import { COLOR, joinAnnotation, residueIdentity, evaluate, compile, colormap, linear } from '../src/index.ts';
 import { fixture } from './fixture.mjs';
 
 // Base fixture: atoms residue [0,0,1,1]; residues authSeq ['1','2'] on chain 0

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { pointSizeForCameraRadius, pointSizeForRadius, pointSizesForRadii } from '../src/internal/point-size.mjs';
+import { pointSizeForCameraRadius, pointSizeForRadius, pointSizesForRadii } from '../src/internal/point-size.ts';
 
 const close = (actual, expected) => assert.ok(Math.abs(actual - expected) < 1e-5, `${actual} !== ${expected}`);
 

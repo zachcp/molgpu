@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createStructure, withPositions } from '@molgpu/table';
 import { all, where, resolve } from '@molgpu/select';
-import { createStructureResource } from '../src/internal/structure-resource.mjs';
-import { focusSelection, createCameraCurve, sampleCamera } from '../src/camera-curve.mjs';
+import { createStructureResource } from '../src/internal/structure-resource.ts';
+import { focusSelection, createCameraCurve, sampleCamera } from '../src/camera-curve.ts';
 
 const identity = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
 const shifted = [...identity]; shifted[12] = 10;

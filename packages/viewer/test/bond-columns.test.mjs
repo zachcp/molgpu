@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createStructure } from '@molgpu/table';
 import { byElement, evaluate } from '@molgpu/fields';
-import { buildBondColumns, endpointAttributes } from '../src/internal/bond-columns.mjs';
+import { buildBondColumns, endpointAttributes } from '../src/internal/bond-columns.ts';
 
 const data = createStructure({
   positions: Float32Array.from([-4, 0, 0, -2, 0, 0, 1, -1, 0, 3, 3, 2]),

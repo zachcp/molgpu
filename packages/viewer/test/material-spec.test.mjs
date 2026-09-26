@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { resolveMaterial, materialTypes } from '../src/internal/material-spec.mjs';
+import { resolveMaterial, materialTypes } from '../src/internal/material-spec.ts';
 
 // The material components themselves reach @use-gpu/workbench, which Node cannot
 // import; the pure spec resolution lives here so withMaterial's decision logic

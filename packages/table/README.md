@@ -14,8 +14,8 @@ Mol* code; importers (`@molgpu/io`) lower into it and the viewer reads from it.
 npm install @molgpu/table
 ```
 
-No runtime dependencies and no peer dependencies. Plain ESM (`"type": "module"`)
-with hand-written TypeScript declarations in `src/index.d.ts`.
+No runtime dependencies and no peer dependencies. Written in TypeScript
+(`src/*.ts`) with explicit types on every export, published as ES modules.
 
 ## Example
 

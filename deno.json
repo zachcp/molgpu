@@ -1,0 +1,12 @@
+{
+  "workspace": [
+    "./packages/table",
+    "./packages/geo",
+    "./packages/timeline",
+    "./packages/select",
+    "./packages/fields",
+    "./packages/io",
+    "./packages/viewer"
+  ],
+  "nodeModulesDir": "manual"
+}

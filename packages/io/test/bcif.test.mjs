@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { BcifParseError, structureFromBcif } from '../src/index.mjs';
+import { BcifParseError, structureFromBcif } from '../src/index.ts';
 test('lowers public 1TQN BinaryCIF into owned table domains', async () => {
   const data = await structureFromBcif(new Uint8Array(await readFile(new URL('./fixtures/1tqn.bcif', import.meta.url))));
   assert.equal(data.topology.atoms.count, 3999);

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { lineRadiusForWidth, lineWidthForRadius } from '../src/internal/line-size.mjs';
+import { lineRadiusForWidth, lineWidthForRadius } from '../src/internal/line-size.ts';
 
 test('shaded LineLayer depth:-1 makes width an absolute world-space diameter', () => {
   assert.equal(lineRadiusForWidth(0.5, -1, { pixelRatio: 2, viewScale: .01, worldScale: .2, clipW: 30 }), .25);

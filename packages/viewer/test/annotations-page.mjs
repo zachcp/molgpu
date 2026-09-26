@@ -7,7 +7,7 @@ import { WebGPU, AutoCanvas } from '@use-gpu/webgpu';
 import { OrbitCamera, Pass, FontLoader, SDFFontProvider, useDeviceContext } from '@use-gpu/workbench';
 import { createStructure } from '@molgpu/table';
 import { where, resolve } from '@molgpu/select';
-import { Structure, Spacefill, Label, Distance, AmbientLight, DirectionalLight, centroid } from '../src/index.mjs';
+import { Structure, Spacefill, Label, Distance, AmbientLight, DirectionalLight, centroid } from '../src/index.ts';
 
 const probe = window.__probe = { storage: 0, textures: 0, pipelines: 0, errors: [], mounted: false, centroidA: null, distance: null };
 const makeBuffer = GPUDevice.prototype.createBuffer;
