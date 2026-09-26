@@ -24,6 +24,47 @@ export type VolumeErrorCode =
   /** The optional Mol* reader is absent or failed to load. */
   | "PARSER_UNAVAILABLE";
 
+/** Why a trajectory import or frame read failed, stable enough to branch on. */
+export type TrajectoryErrorCode =
+  /** The input was not bytes, a Blob, a ByteSource or a URL, or an option was invalid. */
+  | "INVALID_INPUT"
+  /** A header or frame is malformed, or frames disagree on the atom count. */
+  | "INVALID_TRAJECTORY"
+  /** A valid file uses a feature the reader does not support (DCD fixed atoms, ...). */
+  | "UNSUPPORTED_TRAJECTORY"
+  /** The file ends inside its header or holds no complete frame. */
+  | "TRUNCATED_TRAJECTORY"
+  /** The server ignores Range requests and the whole file is over `maxDownload`. */
+  | "TRAJECTORY_TOO_LARGE"
+  /** A network request failed or returned an error status. */
+  | "FETCH_FAILED"
+  /** The optional Mol* decoder is absent or failed to load. */
+  | "PARSER_UNAVAILABLE";
+
+/** Trajectory container formats the readers understand. */
+export type TrajectoryFormat = "dcd" | "xtc" | "trr";
+
+/**
+ * Random access to the bytes of a file without holding it: a `Uint8Array`, a
+ * `Blob`/`File`, or an HTTP resource read with Range requests.
+ */
+export interface ByteSource {
+  readonly size: number;
+  /** `length` bytes from `offset`, clipped to `size`. The result may be a view. */
+  read(
+    offset: number,
+    length: number,
+    signal?: AbortSignal,
+  ): Promise<Uint8Array>;
+}
+
+export interface TrajectoryReadOptions {
+  /** Decode velocities where the format stores them (TRR). Default false. */
+  readonly velocities?: boolean;
+  /** Cancels opening (the header scan); frame reads take their own signal. */
+  readonly signal?: AbortSignal;
+}
+
 /** Why a molecular surface field computation failed, stable enough to branch on. */
 export type SurfaceFieldErrorCode =
   /** `count` is not a nonnegative safe integer, or a column is not a `Float32Array` of length `count`. */
