@@ -470,6 +470,22 @@ P2), because MolScript's `sel.atom.res`/`sel.atom.chains` and VMD's
 - **Coil carries no secondary-structure bits**, as in Mol*. The comparison test
   caught this.
 
+### 4.10 Table data and deliberate differences (2026-09-26)
+
+- **`not X` when X is empty is the whole current input.** Mol* returns nothing
+  there, so PyMOL `polymer and not hydro` selected nothing on structures without
+  hydrogens. This is a deliberate difference, recorded in the comparison test.
+- **`core.vdw`, `core.mass` and `:atom-radius`** needed no table change, because
+  `select` carries Mol*'s element tables. Carbon's mass is corrected to 12.011
+  (Mol* lists boron's 10.81), which is also recorded as deliberate.
+- **`io` mapped only 8 element symbols.** Every other element read as Z=0. It
+  now uses Mol*'s full table (`922.19`).
+- **New optional table columns:** `atoms.formalCharge`, `residues.het`,
+  `chains.entityId` and `chains.entityType`. `io` fills each only when the file
+  has the source field. Selecting on a missing column is an error.
+- **The comparison test now covers 5 structures and 387 pairs.** Everything
+  outside the recorded differences matches.
+
 ## 5. Proposed phases
 
 **Phase 0: decisions (you).**
