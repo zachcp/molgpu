@@ -9,12 +9,15 @@ import {
   useWheelState,
 } from "@use-gpu/workbench";
 import type { StructureData } from "@molgpu/table";
-import { Structure, TimelineProvider } from "@molgpu/viewer";
+import { all } from "@molgpu/select";
+import { Structure, TimelineProvider, useCoordinateFocus } from "@molgpu/viewer";
+import { IdentityCoordinates, WobbleCoordinates } from "@molgpu/viewer/advanced";
 
 export type Scene = (data: StructureData) => unknown;
 
 const clamp = (value: number, lower: number, upper: number) =>
   Math.max(lower, Math.min(upper, value));
+const ALL_ATOMS = all("atom");
 
 /** Controlled camera state driven by AutoCanvas's mouse, wheel, and touch events. */
 const OrbitControls = (
@@ -67,6 +70,23 @@ const OrbitControls = (
   });
 };
 
+const StreamOrbitControls = (
+  props: Parameters<typeof OrbitControls>[0],
+) => {
+  const focus = useCoordinateFocus(ALL_ATOMS);
+  useResource(() => {
+    const host = document.querySelector<HTMLElement>(props.host);
+    if (host && focus) {
+      host.dataset.focusX = String(focus.target[0]);
+      host.dataset.focusY = String(focus.target[1]);
+    }
+  }, [focus]);
+  return use(OrbitControls, {
+    ...props,
+    target: focus?.target as [number, number, number] ?? props.target,
+  });
+};
+
 export const mountViewer = (
   host: string,
   data: StructureData,
@@ -77,6 +97,7 @@ export const mountViewer = (
     oit?: boolean;
     time?: number;
     postprocess?: boolean;
+    coordinates?: boolean;
   } = {},
 ) => {
   render(use(WebGPU, {
@@ -93,12 +114,8 @@ export const mountViewer = (
       selector: host,
       samples: 4,
       backgroundColor: [0.035, 0.055, 0.09, 1],
-      children: use(OrbitControls, {
-        host,
-        ...camera,
-        bearing: 0.6,
-        pitch: 0.28,
-        children: use(Pass, {
+      children: (() => {
+        const pass = (insideStructure: boolean) => use(Pass, {
           lights: true,
           oit: options.oit,
           ...(options.postprocess
@@ -119,14 +136,34 @@ export const mountViewer = (
             }),
             use(TimelineProvider, {
               time: options.time ?? 0,
-              children: use(Structure, {
+              children: insideStructure ? scene(data) as never : use(Structure, {
                 data,
                 children: scene(data) as never,
               }),
             }),
           ],
-        }),
-      }),
+        });
+        const controls = {
+          host,
+          ...camera,
+          bearing: 0.6,
+          pitch: 0.28,
+        };
+        return options.coordinates
+          ? use(Structure, {
+            data,
+            children: use(WobbleCoordinates, {
+              phase: options.time ?? 0,
+              children: use(IdentityCoordinates, {
+                children: use(StreamOrbitControls, {
+                  ...controls,
+                  children: pass(true),
+                }),
+              }),
+            }),
+          })
+          : use(OrbitControls, { ...controls, children: pass(false) });
+      })(),
     }),
   }));
 };

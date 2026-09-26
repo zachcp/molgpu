@@ -24,6 +24,7 @@ export const DemosPage = () => {
     addEventListener("hashchange", update);
     return () => removeEventListener("hashchange", update);
   }, []);
+  useEffect(() => setTime(0), [id]);
   useEffect(() => {
     let cancelled = false;
     void (async () => {
@@ -46,7 +47,8 @@ export const DemosPage = () => {
           data,
           scene,
           demoCamera(data, demo.id),
-          demo.id === "timeline" ? { ...demo.options, time } : demo.options,
+          demo.id === "timeline" || demo.id === "coordinates"
+            ? { ...demo.options, time } : demo.options,
         );
       } catch (error) {
         if (status) {
@@ -69,7 +71,7 @@ export const DemosPage = () => {
         <p className="demo-assertion" data-demo-assertion={demo.id}>
           Behavior: {demo.assertion}.
         </p>
-        {demo.id === "timeline" && (
+        {(demo.id === "timeline" || demo.id === "coordinates") && (
           <label className="timeline-control">
             Scrub{" "}
             <input

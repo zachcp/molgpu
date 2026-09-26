@@ -62,6 +62,12 @@ export const renderDemoScene = (
       ];
     case "bonds":
       return <Bonds width={0.32} />;
+    case "coordinates":
+      return [
+        <Spacefill scale={0.36} color={[0.42, 0.72, 0.95, 1]} />,
+        <Bonds width={0.18} color={[0.82, 0.85, 0.92, 1]} />,
+        <Ribbon color={[0.95, 0.5, 0.28, 1]} opacity={0.65} />,
+      ];
     case "tube":
       return <Tube radius={0.5} color={[0.55, 0.85, 0.6, 1]} />;
     case "ribbon":
