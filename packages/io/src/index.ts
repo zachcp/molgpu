@@ -597,6 +597,57 @@ function readLinks(
   };
 }
 
+/**
+ * Entity subtypes the way Mol* assigns them (mol-model-formats/structure/basic/
+ * entities.js): entity_poly.type, then pdbx_entity_branch.type, then Mol*'s
+ * getEntitySubtype of the entity's first atom's component and its chem_comp
+ * type; "other" when nothing applies.
+ */
+async function readEntitySubtypes(
+  categories: Categories,
+  atom: CifCategory,
+): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  for (
+    const [name, idField] of [["entity_poly", "entity_id"], [
+      "pdbx_entity_branch",
+      "entity_id",
+    ]] as const
+  ) {
+    const cat = categories[name];
+    for (let i = 0; cat && i < cat.rowCount; i++) {
+      const type = str(cat, "type", i);
+      if (type) out.set(str(cat, idField, i), type);
+    }
+  }
+  const compType = new Map<string, string>();
+  const chemComp = categories.chem_comp;
+  for (let i = 0; chemComp && i < chemComp.rowCount; i++) {
+    compType.set(str(chemComp, "id", i), str(chemComp, "type", i));
+  }
+  const firstComp = new Map<string, string>();
+  for (let i = 0; i < atom.rowCount; i++) {
+    const id = str(atom, "label_entity_id", i);
+    if (!out.has(id) && !firstComp.has(id)) {
+      firstComp.set(id, str(atom, "label_comp_id", i));
+    }
+  }
+  if (firstComp.size) {
+    const { getEntitySubtype } = await import(
+      "molstar/lib/mol-model/structure/model/types.js"
+    );
+    for (const [id, comp] of firstComp) {
+      // Mol*'s component type sets are lower case ("l-peptide linking").
+      const type = (compType.get(comp) || "other").toLowerCase();
+      out.set(
+        id,
+        getEntitySubtype(comp, type as Parameters<typeof getEntitySubtype>[1]),
+      );
+    }
+  }
+  return out;
+}
+
 function readSecondaryStructure(
   categories: Categories,
   residues: readonly ResidueRow[],
@@ -740,6 +791,9 @@ export async function structureFromBcif(
   for (let i = 0; entity && i < entity.rowCount; i++) {
     entityTypes.set(str(entity, "id", i), str(entity, "type", i).toLowerCase());
   }
+  const entitySubtypes = hasEntity
+    ? await readEntitySubtypes(categories, atom)
+    : new Map<string, string>();
   const secondaryStructure = readSecondaryStructure(
     categories,
     residues,
@@ -781,6 +835,9 @@ export async function structureFromBcif(
           ? {
             entityId: chains.map((c) => c.entityId),
             entityType: chains.map((c) => entityTypes.get(c.entityId) ?? ""),
+            entitySubtype: chains.map((c) =>
+              entitySubtypes.get(c.entityId) ?? "other"
+            ),
           }
           : {}),
       },

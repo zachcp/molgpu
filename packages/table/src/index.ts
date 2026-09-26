@@ -194,6 +194,12 @@ export function validateStructure<T extends StructureInput>(data: T): T {
     }
     strings(c.entityType, c.count, "chains.entityType");
   }
+  if (c.entitySubtype !== undefined) {
+    if (c.entityId === undefined) {
+      fail("chains.entitySubtype", "requires chains.entityId");
+    }
+    strings(c.entitySubtype, c.count, "chains.entitySubtype");
+  }
   const chainKeys = new Set<string>();
   for (let i = 0; i < c.count; i++) {
     const key = JSON.stringify([c.model[i], c.labelId[i]]);

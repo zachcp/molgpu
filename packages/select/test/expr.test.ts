@@ -724,3 +724,28 @@ Deno.test("bond flags from links: metal, hydrogen, disulfide, aromatic", () => {
     [0, 1],
   );
 });
+
+Deno.test("surrounding-ligands joins nearby non-polymer residues and needs entity types", () => {
+  const ligands = sq("modifier.surrounding-ligands", { 0: atom0, radius: 2 });
+  assertThrows(() => rows(ligands), TypeError, "needs chains.entityType");
+  // As a polymer chain, nothing joins but the query itself.
+  const polymer = fixture();
+  polymer.topology.chains.entityId = ["1"];
+  polymer.topology.chains.entityType = ["polymer"];
+  polymer.topology.chains.entitySubtype = ["polypeptide(L)"];
+  assertEquals(rows(ligands, createStructure(polymer)), [0]);
+  assertEquals(
+    rows(
+      atoms(eq(prop("macromolecular.entity-subtype"), "polypeptide(L)")),
+      createStructure(polymer),
+    )
+      .length,
+    6,
+  );
+  // As a non-polymer chain, residues within 2 A of atom 0 (residues 0 and 1)
+  // join whole; residue 2 (x >= 10) does not.
+  const ligand = fixture();
+  ligand.topology.chains.entityId = ["2"];
+  ligand.topology.chains.entityType = ["non-polymer"];
+  assertEquals(rows(ligands, createStructure(ligand)), [0, 1, 2, 3]);
+});

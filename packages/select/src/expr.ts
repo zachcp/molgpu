@@ -523,6 +523,13 @@ const SPECS: Readonly<Record<string, Spec>> = {
       chainOf(ctx, i)
     ]
   ),
+  [`${AP}macromolecular.entity-subtype`]: atomProp((ctx, i) =>
+    need(
+      ctx.data.topology.chains.entitySubtype,
+      "chains.entitySubtype",
+      "entity-subtype",
+    )[chainOf(ctx, i)]
+  ),
   [`${AP}macromolecular.entity-key`]: atomProp((ctx, i) =>
     need(ctx.topo.chainEntity ?? undefined, "chains.entityId", "entity-key")[
       chainOf(ctx, i)
@@ -695,6 +702,12 @@ const SPECS: Readonly<Record<string, Spec>> = {
         return perSet(ctx, q(ctx), (s) => whole ? whole(around(s)) : around(s));
       };
     },
+  },
+  [`${SQ}modifier.surrounding-ligands`]: {
+    returns: "query",
+    reads: "positions",
+    args: { 0: Q, radius: V, "include-water": Vopt },
+    impl: surroundingLigands,
   },
   // Bonds come from bondTopology(): explicit when the structure has them,
   // otherwise inferred from positions, so this reads positions too.
@@ -972,8 +985,17 @@ const dist2 = (P: Float32Array, i: number, j: number): number => {
 
 /** Input atoms within `r` of any atom of a set (Mol*'s getIncludeSurroundings). */
 function surroundings(ctx: Ctx, r: number): (set: Uint32Array) => Uint32Array {
+  return surroundingsOf(ctx, ctx.input, r);
+}
+
+/** `candidates` within `r` of any atom of a set. */
+function surroundingsOf(
+  ctx: Ctx,
+  candidates: Uint32Array,
+  r: number,
+): (set: Uint32Array) => Uint32Array {
   const P = ctx.data.positions, n = ctx.data.topology.atoms.count;
-  const grid = spatialGrid(P, ctx.input, Math.max(r, MIN_CELL));
+  const grid = spatialGrid(P, candidates, Math.max(r, MIN_CELL));
   const r2 = r * r;
   return (set) => {
     const out: number[] = [];
@@ -1023,6 +1045,81 @@ function surroundingsWithRadius(
       });
     }
     return sortedRows(out, n);
+  };
+}
+
+/**
+ * Mol* modifiers.surroundingLigands: whole residues within `radius` of the
+ * query; every non-polymer, non-water residue among them joins with the
+ * residues it reaches through covale/metalc struct_conn links; then the query
+ * itself; then, with :include-water (false when absent, as in Mol*'s runtime),
+ * water atoms within `radius`. Mol*'s PRD-molecule (pdbx_molecule) handling is
+ * not ported: those chains are treated like any other.
+ */
+function surroundingLigands(a: Args): Fn {
+  const q = query(a, "0"), radius = arg(a, "radius");
+  const includeWater = optArg(a, "include-water");
+  return (ctx) => {
+    const { atoms, residues, chains, links } = ctx.data.topology;
+    const entityType = need(
+      chains.entityType,
+      "chains.entityType",
+      "surrounding-ligands",
+    );
+    const n = atoms.count, r = radius(ctx) as number;
+    const inner = flatten(q(ctx), n);
+    const shell = wholeResidues(ctx)(surroundings(ctx, r)(inner));
+    const typeOf = (residue: number) => entityType[residues.chain[residue]];
+
+    // Residue graph over covale (covalent only) and metalc struct_conn links.
+    const graph = new Map<number, number[]>();
+    for (let k = 0; links && k < links.count; k++) {
+      const f = links.flags[k];
+      if (
+        links.source[k] !== "struct_conn" ||
+        (f !== BOND_FLAGS.covalent && f !== BOND_FLAGS.metallic)
+      ) continue;
+      const x = atoms.residue[links.a[k]], y = atoms.residue[links.b[k]];
+      (graph.get(x) ?? graph.set(x, []).get(x)!).push(y);
+      (graph.get(y) ?? graph.set(y, []).get(y)!).push(x);
+    }
+    const component = new Uint8Array(residues.count);
+    const reach = (start: number) => {
+      const stack = [start];
+      component[start] = 1;
+      while (stack.length) {
+        for (const next of graph.get(stack.pop()!) ?? []) {
+          if (!component[next]) {
+            component[next] = 1;
+            stack.push(next);
+          }
+        }
+      }
+    };
+    for (const i of shell) {
+      const res = atoms.residue[i], type = typeOf(res);
+      if (type !== "water" && type !== "polymer" && !component[res]) {
+        reach(res);
+      }
+    }
+
+    const members: number[] = [...inner];
+    for (const i of ctx.input) {
+      const res = atoms.residue[i];
+      if (component[res] && typeOf(res) !== "water") members.push(i);
+    }
+    let rows = sortedRows(members, n);
+    if (includeWater?.(ctx)) {
+      const waters = ctx.input.filter((i) =>
+        typeOf(atoms.residue[i]) === "water"
+      );
+      const near = waters.length
+        ? surroundingsOf(ctx, Uint32Array.from(waters), r)(rows)
+        : new Uint32Array(0);
+      rows = sortedRows([...rows, ...near], n);
+    }
+    // Mol* returns one set, never singletons.
+    return { kind: "sequence", sets: [rows] };
   };
 }
 

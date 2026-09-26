@@ -11,7 +11,7 @@ BondPolicy
 Bonds
   export interface Bonds { readonly count: number; readonly a: Uint32Array; readonly b: Uint32Array; /** 0 unknown, 1/2/3 multiplicity, 4 aromatic. */ readonly order: Uint8Array; readonly source: readonly ("explicit" | "inferred")[]; /** Bond type bits (see `BOND_FLAGS`); 0 is unknown. Inferred bonds are covalent | computed. */ readonly flags?: Uint8Array }
 Chains
-  export interface Chains { readonly count: number; readonly model: Int32Array; readonly labelId: readonly string[]; readonly authId: readonly string[]; /** mmCIF label_entity_id. Absent when the source has none. */ readonly entityId?: readonly string[]; /** mmCIF _entity.type of the chain's entity, lower-cased ("polymer", "non-polymer", "water", "branched", ...); "" when unlisted. Absent with entityId. */ readonly entityType?: readonly string[] }
+  export interface Chains { readonly count: number; readonly model: Int32Array; readonly labelId: readonly string[]; readonly authId: readonly string[]; /** mmCIF label_entity_id. Absent when the source has none. */ readonly entityId?: readonly string[]; /** mmCIF _entity.type of the chain's entity, lower-cased ("polymer", "non-polymer", "water", "branched", ...); "" when unlisted. Absent with entityId. */ readonly entityType?: readonly string[]; /** Entity subtype as Mol* assigns it (entity_poly / pdbx_entity_branch type, else derived from the component: "polypeptide(L)", "oligosaccharide", "other", ...). Absent with entityId. */ readonly entitySubtype?: readonly string[] }
 Instances
   export interface Instances { readonly count: number; readonly chain: Uint32Array; readonly operatorId: readonly string[]; readonly transform: Float64Array }
 Links

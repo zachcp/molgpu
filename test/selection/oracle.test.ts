@@ -89,6 +89,26 @@ const CURATED: readonly Case[] = [
   ],
   ["pymol", "bound_to elem Fe"],
   ["pymol", "resn PHE extend 3"],
+  [
+    "mol-script",
+    "(sel.atom.surrounding-ligands (sel.atom.res (= atom.auth_seq_id 442)) :radius 5)",
+  ],
+  [
+    "mol-script",
+    "(sel.atom.surrounding-ligands (sel.atom.res (= atom.auth_seq_id 442)) :radius 5 :include-water true)",
+  ],
+  [
+    "mol-script",
+    "(sel.atom.surrounding-ligands (sel.atom.res (= atom.label_comp_id PHE)) :radius 4 :include-water true)",
+  ],
+  [
+    "mol-script",
+    "(sel.atom.atom-groups :entity-test (= atom.entity-subtype other))",
+  ],
+  [
+    "mol-script",
+    "(sel.atom.atom-groups :entity-test (= atom.entity-subtype polydeoxyribonucleotide))",
+  ],
   ["pymol", "hetatm"],
   ["pymol", "hetatm and not solvent"],
   ["jmol", "hetero"],

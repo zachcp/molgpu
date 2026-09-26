@@ -39,6 +39,8 @@ export interface Chains {
   readonly entityId?: readonly string[];
   /** mmCIF _entity.type of the chain's entity, lower-cased ("polymer", "non-polymer", "water", "branched", ...); "" when unlisted. Absent with entityId. */
   readonly entityType?: readonly string[];
+  /** Entity subtype as Mol* assigns it (entity_poly / pdbx_entity_branch type, else derived from the component: "polypeptide(L)", "oligosaccharide", "other", ...). Absent with entityId. */
+  readonly entitySubtype?: readonly string[];
 }
 export interface Bonds {
   readonly count: number;

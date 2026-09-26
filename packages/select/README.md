@@ -183,6 +183,15 @@ Mol*'s quirks are kept, so results match Mol* exactly
   selected atom's VDW radius.
 - A residue or chain test reads the first atom of the residue or chain.
 
+Bond tests use a typed bond graph. Without declared bonds it ports Mol*'s bond
+computation (component templates, element pair thresholds, metal coordination)
+over the table's `links`; with declared bonds it is those bonds plus `links`,
+and bonds without flags are of unknown type, so the default covalent-only test
+skips them. `type.bond-flags` accepts both Mol*'s names (`metal-coordination`,
+`hydrogen-bond`) and MolQL's (`metallic`, `hydrogen`). `surrounding-ligands`
+needs `chains.entityType` and does not treat PRD molecules (`pdbx_molecule`)
+specially.
+
 Two deliberate differences:
 
 - `not X` (`query-in-selection :in-complement`) is the whole current input when
