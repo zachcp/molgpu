@@ -6,6 +6,12 @@ All notable changes to `@molgpu/table` are recorded here. The format follows
 
 ## [Unreleased]
 
+- Trajectories (Phase 12). New experimental `createTrajectory`,
+  `validateTrajectory`, `validateTrajectoryFrame`, `frameAtTime` and
+  `trajectoryFromModels`, with the `TrajectoryData`, `TrajectoryInput`,
+  `TrajectoryFrame`, `FrameSource` and `TrajectoryTimeUnit` types. A
+  `FrameSource` decodes frames on demand; `trajectoryFromModels` plays a
+  multi-model structure as frames over its first model through `atomMap`.
 - `VolumeData`: an immutable grid with an index-to-world affine that may rotate
   and shear. New experimental `createVolume`, `validateVolume`,
   `MAX_VOLUME_SAMPLES`, `sampleVolume`, `volumeIndexToWorld`,

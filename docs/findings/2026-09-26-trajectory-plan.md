@@ -357,3 +357,78 @@ amended where accepted.
     a few lines.
 15. **`CoordinateKernel` has no `sources` prop, and an unmemoized array re-links
     every render.** _Accepted:_ memoized `sources` prop (5td.5).
+
+## Gate 12 (5td.14)
+
+Audit on 2026-09-26 against the amended beads. Suites run: `deno task test` (303
+passing), `deno task typecheck`, `deno task typecheck:components`,
+`deno task test:components` (viewer, volume and trajectory in Chrome WebGPU),
+`deno task test:site`, `deno task fmt` and `deno task check:hardening`.
+
+### Acceptance by bead
+
+| Bead                   | Evidence                                                                                                                                                                                            |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 5td.3 table            | `table/test/trajectory.test.ts`: validation messages, atomMap bounds and duplicates, in-memory source and abort, `frameAtTime`, models-as-frames and mismatched models.                             |
+| 5td.4 DCD              | `io/test/trajectory.test.ts`: CHARMM and X-PLOR, both endiannesses, degree/cosine/triclinic cells, stale NSET, AKMA times, truncation, NAMNF, corrupt records; positions equal the writer and Mol*. |
+| 5td.5 `<Trajectory>`   | `viewer/test/run-trajectory.mjs`: output equals frames, the lerp at 2.25 and nearest; subset rows; minimum image; upstream before the first frame; teardown to zero `coords:*` bytes.               |
+| 5td.6 timeline         | `timeline/test/frames.test.ts` (arbitrary, reversed and looped samples; beats at frames) and the timeline section of `run-trajectory.mjs`.                                                          |
+| 5td.7 XTC              | Writer and Mol* oracles within 0.005 Å; decode 6.3 ms/frame at 100,942 atoms (4.07 B/atom), under the 8 ms worker threshold; a 10,000-frame header scan takes 3.9 ms and one 4 MiB read.            |
+| 5td.8 multi-model BCIF | 2k39 plays as 116 frames over model 1 (`trajectoryFromModels`, 17 ms); `atomMap` equals the default view's rows.                                                                                    |
+| 5td.9 cache            | `viewer/test/frame-window.test.ts`: a 20 ms source stepped at 30 fps never holds after two frames; a backwards seek falls back, then shows; memory stays under the cap; stale prefetches abort.     |
+| 5td.10 fixtures        | `io/test/trajectory-fixture.ts` (writers with provenance); documented in the io README.                                                                                                             |
+| 5td.11 TRR             | Single/double precision, opt-in velocities, velocity-only frames skipped, no box; Mol* oracle. NetCDF deferred as 5td.15.                                                                           |
+| 5td.12 `<UnitCell>`    | Interpolated box in `useTrajectoryFrame()`; the canvas box grows between frames in `run-trajectory.mjs`.                                                                                            |
+| 5td.13 site            | `#demos/trajectory` streams `site/assets/1crn-motion.xtc` (79 KB, `scripts/make-demo-trajectory.ts`); `test:site` scrubs to frames 30, 52.5 and 7.5.                                                |
+
+One criterion was amended while testing. "Re-displaying resident frames adds
+zero storage `writeBuffer` bytes on the device" could not hold: use.gpu writes a
+few hundred storage bytes of scene state on every redraw. The test observes
+`queue.writeBuffer` on the device and asserts zero bytes into the frame window;
+the other storage writes during five scrubs equal those of five idle redraws
+(3,940 bytes each).
+
+### Invariants
+
+- INVARIANT 1: Mol* is imported only by `@molgpu/io`, lazily (`xtc.ts`); tests
+  use it as an oracle. The viewer reaches io through a dynamic import.
+- INVARIANT 2: `check:hardening` H3 passes; table, io and timeline expose no
+  use.gpu types, and the viewer's "." entry exposes only owned types
+  (`TrajectoryContext` is advanced).
+- INVARIANT 4: `<UnitCell>` rebuilds its columns only when the box changes;
+  colour and width are props. The provider never touches representation
+  geometry.
+- INVARIANT 6: `<Trajectory>` writes all `count` rows (unmapped rows and every
+  row before the first frame copy upstream) and never re-provides topology.
+
+### Found and fixed during the gate
+
+A Phase 9 defect: when a new coordinate generation landed while a snapshot
+readback was in flight, the effect was disposed, the copy neither published nor
+rescheduled, and the new effect had already bailed out on `inFlight`. Snapshot
+consumers stayed empty until the next generation, forever if playback paused.
+The coordinate-stream demo had shown no ribbon since Phase 9. The copy now
+publishes if still current and hands off to the latest scheduler.
+`run-trajectory.mjs` reproduces it deterministically by holding `mapAsync` for
+100 ms, and fails on the old code.
+
+### Measurements
+
+- Ribbon rebuild per snapshot (`withPositions`, trace, secondary structure,
+  geometry): 1.6 ms on 1CRN, 8.8 ms on 2k39's first model. The snapshot lag in
+  section 7 stands; GPU ribbons (e99.9) stay deferred.
+- 922.9 re-measure on 2k39 (142,796 atoms): single clauses cost 3–21 ms, but
+  `chain A and resi 10-20 and name CA` costs 2,083 ms and `name CA around 6`
+  1,006 ms. The cause is `intersect-by`/`except-by` scanning the `by` rows once
+  per set (O(sets × rows)), not the triple scan 922.9 folds. Filed as u4t; 922.9
+  stays deferred behind it.
+
+### Follow-ups
+
+- molgpu-sept-u4t: select `intersect-by`/`except-by` are O(sets × by-rows).
+- molgpu-sept-jmf: the site remounts the whole viewer per scrub step, so
+  `<Trajectory src>` reopens its file.
+- molgpu-sept-5td.15: NetCDF reader, deferred.
+- Recorded on ahc.5, efv.8 and 9g3.8 by the counter-review: a GPU source seam
+  for recording, CPU frames for per-frame DSSP, and unwrap after the kernel's
+  minimum image.

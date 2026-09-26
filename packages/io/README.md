@@ -147,3 +147,10 @@ so only through dynamic `import()` inside its functions. It must not import
 `deno task test` from the repository root runs this package's suites, which
 compare against Mol* directly; `deno task test:corpus` runs the curated
 structure corpus.
+
+Trajectory readers have no committed binary fixtures.
+`test/trajectory-fixture.ts` writes DCD, XTC and TRR bytes from known
+coordinates (the 2k39 NMR models), so each reader is checked against those
+coordinates, within the format's precision, and against Mol*'s whole-file parse.
+The XTC writer implements the xdr3dfcoord bit packing with fixed-size
+small-difference runs.

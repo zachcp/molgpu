@@ -66,6 +66,13 @@ columns (charges, DSSP codes, kernel outputs) follow the same idea: they are
 added after import with provenance and bump `revision.attributes`. See the
 [dynamic-data plan](findings/2026-09-26-dynamic-data-epics.md) (Phases 9–10).
 
+**Trajectories are coordinates over a topology.** A `TrajectoryData` holds per
+frame times and a `FrameSource` that decodes one frame on demand, optionally
+through an `atomMap` onto a subset of rows; it never carries topology.
+`<Trajectory>` is a coordinate provider that streams frames into a small GPU
+window and interpolates the displayed pair, so a timeline curve scrubs it like
+any other value (Phase 12, [plan](findings/2026-09-26-trajectory-plan.md)).
+
 **Volumes are a second dataset.** A `VolumeData` grid (values, dims, a full
 index-to-world affine transform, stats) sits beside the atom table and is
 published by `<Volume>`. Imported maps and computed fields (`<EField>`) both

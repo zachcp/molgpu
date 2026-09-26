@@ -6,6 +6,9 @@ All notable changes to `@molgpu/timeline` are recorded here. The format follows
 
 ## [Unreleased]
 
+- New experimental `frameCurve` and `frameTime` with the `FramePlayback` type:
+  linear seconds-to-frames playback for `<Trajectory>`, and beat times at
+  frames.
 - Source is TypeScript (`src/*.ts`); the hand-written `index.d.ts` is gone. The
   public API is unchanged.
 
