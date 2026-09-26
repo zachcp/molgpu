@@ -115,13 +115,6 @@ const CASES: readonly Case[] = [
  * these starts matching (remove it) or a new difference appears.
  */
 const KNOWN_DIFFERENCES: Readonly<Record<string, string>> = {
-  // 1EJG has microheterogeneous residues (PRO/SER at one position). @molgpu/io
-  // splits them into one residue row per component; Mol* keeps one residue, so
-  // residue-level tests and grouping see different residues.
-  "pymol: name CA near_to 6 of resn PRO [1ejg]": "microheterogeneity",
-  "vmd: backbone [1ejg]": "microheterogeneity",
-  "vmd: not protein [1ejg]": "microheterogeneity",
-  "vmd: protein (backbone or name H) [1ejg]": "microheterogeneity",
   // Mol* follows the heme Fe-S(Cys) metal coordination from struct_conn; the
   // table's inferred bonds do not include it (molgpu-sept-922.14).
   "pymol: resn HEM extend 7 [1tqn]": "struct_conn bonds",

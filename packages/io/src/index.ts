@@ -506,7 +506,9 @@ export async function structureFromBcif(
     bfactor = new Float32Array(atom.rowCount),
     radius = new Float32Array(atom.rowCount),
     formalCharge = new Int8Array(atom.rowCount),
-    atomResidue = new Uint32Array(atom.rowCount);
+    atomResidue = new Uint32Array(atom.rowCount),
+    atomComp: string[] = [];
+  let microheterogeneous = false;
   // Optional columns are only emitted when the file carries their source field.
   const hasCharge = !!field(atom, "pdbx_formal_charge"),
     hasGroup = !!field(atom, "group_PDB"),
@@ -535,9 +537,12 @@ export async function structureFromBcif(
     // label_seq_id is intentionally absent for non-polymer entities. Include
     // author numbering so consecutive waters and ligands remain distinct rows.
     const authSeq = str(atom, "auth_seq_id", i, String(seq));
+    // Like Mol*, the component is not part of residue identity, so a
+    // microheterogeneous position (PRO/SER at one seq id) stays one residue;
+    // atoms keep their own component in atoms.comp.
     const residueKey = `${chain}:${seq}:${authSeq}:${
       str(atom, "pdbx_PDB_ins_code", i)
-    }:${comp}`;
+    }`;
     let residue = residueRows.get(residueKey);
     if (residue === undefined) {
       residue = residues.length;
@@ -553,6 +558,8 @@ export async function structureFromBcif(
       });
     }
     atomResidue[i] = residue;
+    atomComp.push(comp);
+    if (comp !== residues[residue].comp) microheterogeneous = true;
     ids.push(str(atom, "id", i, String(i + 1)));
     names.push(str(atom, "label_atom_id", i, ""));
     altloc.push(str(atom, "label_alt_id", i));
@@ -591,6 +598,7 @@ export async function structureFromBcif(
         bfactor,
         radius,
         ...(hasCharge ? { formalCharge } : {}),
+        ...(microheterogeneous ? { comp: atomComp } : {}),
       },
       residues: {
         count: residueCount,

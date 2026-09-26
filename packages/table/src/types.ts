@@ -11,6 +11,8 @@ export interface Atoms {
   readonly occupancy: Float32Array;
   readonly bfactor: Float32Array;
   readonly radius?: Float32Array;
+  /** Per-atom chemical component, present only when some residue mixes components (microheterogeneity); residues.comp is then the residue's first atom's. */
+  readonly comp?: readonly string[];
   /** mmCIF pdbx_formal_charge; a missing value reads 0. Absent when the source has no charges. */
   readonly formalCharge?: Int8Array;
 }

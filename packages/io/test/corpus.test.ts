@@ -17,9 +17,11 @@ function primaryOracle(atom: CifCategory): Uint32Array {
     const chain = str(atom, "label_asym_id", i);
     const seq = Math.trunc(num(atom, "label_seq_id", i, -1));
     const authSeq = str(atom, "auth_seq_id", i, String(seq));
+    // Residue identity as in Mol*: no component, so a microheterogeneous
+    // position (1EJG PRO/SER) is one residue with one altloc choice.
     const key = `${model}:${chain}:${seq}:${authSeq}:${
       str(atom, "pdbx_PDB_ins_code", i)
-    }:${str(atom, "label_comp_id", i, "UNK")}`;
+    }`;
     let residue = residueRows.get(key);
     if (residue === undefined) {
       residue = residueRows.size;

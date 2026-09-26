@@ -109,6 +109,7 @@ export function validateStructure<T extends StructureInput>(data: T): T {
       }
     });
   }
+  if (a.comp !== undefined) strings(a.comp, a.count, "atoms.comp");
   if (a.formalCharge !== undefined) {
     column(a.formalCharge, a.count, Int8Array, "atoms.formalCharge");
   }

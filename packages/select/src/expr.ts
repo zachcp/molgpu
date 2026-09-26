@@ -243,6 +243,9 @@ function need<T>(column: T | undefined, name: string, symbol: string): T {
   }
   return column!;
 }
+const atomComp = (ctx: Ctx, atom: number): string =>
+  ctx.data.topology.atoms.comp?.[atom] ??
+    ctx.data.topology.residues.comp[ctx.data.topology.atoms.residue[atom]];
 const residueOf = (ctx: Ctx, atom: number) =>
   ctx.data.topology.atoms.residue[atom];
 const chainOf = (ctx: Ctx, atom: number) => ctx.topo.atomChain[atom];
@@ -461,12 +464,9 @@ const SPECS: Readonly<Record<string, Spec>> = {
   [`${AP}macromolecular.label_alt_id`]: atomProp((ctx, i) =>
     ctx.data.topology.atoms.altloc[i]
   ),
-  [`${AP}macromolecular.label_comp_id`]: atomProp((ctx, i) =>
-    ctx.data.topology.residues.comp[residueOf(ctx, i)]
-  ),
-  [`${AP}macromolecular.auth_comp_id`]: atomProp((ctx, i) =>
-    ctx.data.topology.residues.comp[residueOf(ctx, i)]
-  ),
+  // Per atom, as in Mol*: microheterogeneous residues mix components.
+  [`${AP}macromolecular.label_comp_id`]: atomProp(atomComp),
+  [`${AP}macromolecular.auth_comp_id`]: atomProp(atomComp),
   // The table stores a missing label_seq_id (non-polymers) as -1; Mol* reads 0.
   [`${AP}macromolecular.label_seq_id`]: atomProp((ctx, i) =>
     Math.max(0, ctx.data.topology.residues.labelSeq[residueOf(ctx, i)])

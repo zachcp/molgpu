@@ -32,3 +32,34 @@ Deno.test("every element symbol maps to its atomic number, not only common ones"
   assertStrictEquals(element.filter((z) => z === 17).length, 5);
   assertStrictEquals(element.filter((z) => z === 0).length, 0);
 });
+
+Deno.test("a microheterogeneous position is one residue with per-atom components", async () => {
+  // 1EJG residue 22 is modelled as PRO (altloc A) and SER (altloc B).
+  const data = await structureFromBcif(
+    await readFile(new URL("./fixtures/1ejg.bcif", import.meta.url)),
+  );
+  const { atoms, residues } = data.topology;
+  assert(atoms.comp, "atoms.comp is emitted when a residue mixes components");
+  const mixed = new Map<number, Set<string>>();
+  for (let i = 0; i < atoms.count; i++) {
+    const set = mixed.get(atoms.residue[i]) ?? new Set();
+    set.add(atoms.comp[i]);
+    mixed.set(atoms.residue[i], set);
+  }
+  const shared = [...mixed].filter(([, comps]) => comps.size > 1);
+  assert(shared.length > 0);
+  for (const [r, comps] of shared) {
+    assert(comps.has(residues.comp[r]), "residues.comp is one of the atoms'");
+  }
+  assert(
+    shared.some(([, comps]) => comps.has("PRO") && comps.has("SER")),
+    "PRO/SER share a residue",
+  );
+});
+
+Deno.test("atoms.comp is omitted without microheterogeneity", async () => {
+  const data = await structureFromBcif(
+    await readFile(new URL("./fixtures/1crn.bcif", import.meta.url)),
+  );
+  assertStrictEquals(data.topology.atoms.comp, undefined);
+});
