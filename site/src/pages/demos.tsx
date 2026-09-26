@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import type { StructureData } from "@molgpu/table";
 import crambinUrl from "../../../packages/io/test/fixtures/1crn.bcif?url";
-import { loadCrambin } from "../demos/data.ts";
+import { densityMapFor, loadCrambin } from "../demos/data.ts";
 import { demoById, demoCamera, type DemoId, demos } from "../demos/registry.ts";
 import {
   type MaterialMode,
@@ -22,6 +22,9 @@ export const DemosPage = () => {
   const [time, setTime] = useState(0);
   const [surfaceMode, setSurfaceMode] = useState<SurfaceMode>("glass");
   const [materialMode, setMaterialMode] = useState<MaterialMode>("matte");
+  // Slice position as a fraction of the map's k extent, and isolevel in sigma.
+  const [sliceFraction, setSliceFraction] = useState(0.5);
+  const [isoSigma, setIsoSigma] = useState(2);
   const demo = demoById(id);
   useEffect(() => {
     const update = () => setId(demoFromHash());
@@ -44,9 +47,21 @@ export const DemosPage = () => {
           host.dataset.assertion = demo.assertion;
           host.dataset.orbit = "enabled";
         }
+        const sliceIndex = demo.id === "volume"
+          ? sliceFraction * (densityMapFor(data).dims[2] - 1)
+          : 0;
+        if (host && demo.id === "volume") {
+          host.dataset.sliceIndex = sliceIndex.toFixed(2);
+        }
         const scene = (current: StructureData) =>
-          renderDemoScene(demo.id, current, { surfaceMode, materialMode });
+          renderDemoScene(demo.id, current, {
+            surfaceMode,
+            materialMode,
+            sliceIndex,
+            isoSigma,
+          });
         mountViewer(
+          demo.id,
           "#molecule-canvas",
           data,
           scene,
@@ -64,7 +79,7 @@ export const DemosPage = () => {
     return () => {
       cancelled = true;
     };
-  }, [demo, time, surfaceMode, materialMode]);
+  }, [demo, time, surfaceMode, materialMode, sliceFraction, isoSigma]);
   return (
     <section className="demo-page" aria-labelledby="demo-title">
       <div className="demo-copy">
@@ -103,6 +118,40 @@ export const DemosPage = () => {
               <option value="pumice">Pumice</option>
             </select>
           </label>
+        )}
+        {demo.id === "volume" && (
+          <>
+            <label className="timeline-control">
+              Slice{" "}
+              <input
+                aria-label="Slice position"
+                type="range"
+                min="0"
+                max="1"
+                step="0.01"
+                value={sliceFraction}
+                onChange={(event) =>
+                  setSliceFraction(Number(event.currentTarget.value))}
+              />{" "}
+              <output data-output="slice">
+                {Math.round(sliceFraction * 100)}%
+              </output>
+            </label>
+            <label className="timeline-control">
+              Isolevel{" "}
+              <input
+                aria-label="Isosurface level in sigma"
+                type="range"
+                min="0.5"
+                max="4"
+                step="0.1"
+                value={isoSigma}
+                onChange={(event) =>
+                  setIsoSigma(Number(event.currentTarget.value))}
+              />{" "}
+              <output data-output="iso">{isoSigma.toFixed(1)} σ</output>
+            </label>
+          </>
         )}
         {demo.id === "materials" && (
           <label className="timeline-control">

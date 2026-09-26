@@ -13,7 +13,8 @@ export type DemoId =
   | "materials"
   | "figure"
   | "coordinates"
-  | "trajectory";
+  | "trajectory"
+  | "volume";
 export interface DemoDefinition {
   readonly id: DemoId;
   readonly title: string;
@@ -125,6 +126,16 @@ export const demos: readonly DemoDefinition[] = [
     fixture: "1crn",
     assertion:
       "the timeline seeks trajectory frames that stream into the coordinate stream",
+  },
+  {
+    id: "volume",
+    title: "Density volume",
+    summary:
+      "A Gaussian density map built from 1CRN is contoured as a glass isosurface, cut by a scrubbable slice, and sampled at every atom to colour packing.",
+    fixture: "1crn",
+    assertion:
+      "the isosurface, slice, and atom colours share one uploaded VolumeData",
+    options: { oit: true },
   },
   {
     id: "figure",

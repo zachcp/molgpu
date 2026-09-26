@@ -3,6 +3,41 @@ import { fileURLToPath } from "node:url";
 import { createServer } from "vite";
 import { chromium } from "playwright";
 
+const frames = (page) =>
+  page.evaluate(async () => {
+    for (let i = 0; i < 8; i++) await new Promise(requestAnimationFrame);
+  });
+
+/** A canvas frame equal to its successor, with something drawn on it. */
+const settledFrame = async (page) => {
+  const shot = () => page.locator("#molecule-canvas canvas").screenshot();
+  const lit = (png) =>
+    page.evaluate(async (base64) => {
+      const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+      const bmp = await createImageBitmap(
+        new Blob([bytes], { type: "image/png" }),
+      );
+      const canvas = new OffscreenCanvas(bmp.width, bmp.height);
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(bmp, 0, 0);
+      const { data } = ctx.getImageData(0, 0, bmp.width, bmp.height);
+      let count = 0;
+      for (let i = 0; i < data.length; i += 4) {
+        if (data[i] + data[i + 1] + data[i + 2] > 120) count++;
+      }
+      return count;
+    }, png.toString("base64"));
+  await frames(page);
+  let previous = await shot();
+  for (let attempt = 0; attempt < 30; attempt++) {
+    await frames(page);
+    const current = await shot();
+    if (current.equals(previous) && (await lit(current)) > 0) return current;
+    previous = current;
+  }
+  throw new Error("volume demo frame never settled");
+};
+
 Deno.test("site landing page and maintained gallery routes", async () => {
   const root = fileURLToPath(new URL("../", import.meta.url));
   const server = await createServer({
@@ -49,6 +84,7 @@ Deno.test("site landing page and maintained gallery routes", async () => {
         ["ribbon", "Secondary-structure ribbon", "1crn"],
         ["surface", "Solvent-excluded surface", "1crn"],
         ["materials", "Materials", "1crn"],
+        ["volume", "Density volume", "1crn"],
         ["figure", "Feature composition", "1crn"],
       ]
     ) {
@@ -142,6 +178,35 @@ Deno.test("site landing page and maintained gallery routes", async () => {
       }
       if (id === "materials") {
         await page.getByLabel("Material model").selectOption("normal");
+      }
+      assert.equal(
+        await page.locator("#molecule-canvas canvas").count(),
+        1,
+        "re-rendering reuses one canvas instead of stacking new ones",
+      );
+      if (id === "volume") {
+        const before = await settledFrame(page);
+        await page.getByLabel("Slice position").fill("0.8");
+        assert.match(
+          await page.locator('[data-output="slice"]').textContent(),
+          /80%/,
+        );
+        await page.waitForFunction(() =>
+          Number(
+            document.querySelector("#molecule-canvas")?.dataset.sliceIndex,
+          ) >
+            0
+        );
+        const after = await settledFrame(page);
+        assert.ok(
+          !before.equals(after),
+          "moving the slice plane changes the rendered WebGPU frame",
+        );
+        await page.getByLabel("Isosurface level in sigma").fill("1");
+        assert.match(
+          await page.locator('[data-output="iso"]').textContent(),
+          /1\.0 σ/,
+        );
       }
     }
     assert.deepEqual(errors, [], "page has no JavaScript errors");

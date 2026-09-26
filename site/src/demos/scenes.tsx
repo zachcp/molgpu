@@ -1,20 +1,24 @@
 /** @jsx LiveReact.createElement */
 import { React as LiveReact, useResource } from "@use-gpu/live";
 import type { StructureData } from "@molgpu/table";
-import { byElement, colormap, curve } from "@molgpu/fields";
+import { byElement, colormap, curve, volumeSample } from "@molgpu/fields";
 import { comp, element, resolve, toAtoms, within } from "@molgpu/select";
 import { frameCurve } from "@molgpu/timeline";
 import {
   BallAndStick,
   Bonds,
+  Isosurface,
   Ribbon,
   Spacefill,
   Surface,
   Trajectory,
   Tube,
   useTrajectoryFrame,
+  Volume,
+  VolumeSlice,
 } from "@molgpu/viewer";
 import motionUrl from "../../assets/1crn-motion.xtc?url";
+import { densityMapFor } from "./data.ts";
 import type { DemoId } from "./registry.ts";
 
 // 60 frames at 15 fps: the 0–4 s scrub range plays the loop once.
@@ -35,7 +39,19 @@ export type MaterialMode = "matte" | "metal" | "basic" | "normal";
 export interface SceneOptions {
   readonly surfaceMode: SurfaceMode;
   readonly materialMode: MaterialMode;
+  /** Fractional k (third-axis) grid index of the volume slice. */
+  readonly sliceIndex: number;
+  /** Isosurface level in sigma above the map mean. */
+  readonly isoSigma: number;
 }
+
+type Rgba = readonly [number, number, number, number];
+const DENSITY_STOPS: ReadonlyArray<readonly [number, Rgba]> = [
+  [0, [0.05, 0.08, 0.2, 0.9]],
+  [0.35, [0.18, 0.45, 0.78, 1]],
+  [0.7, [0.95, 0.72, 0.3, 1]],
+  [1, [1, 0.96, 0.85, 1]],
+];
 
 const timelineColor = colormap(curve([[0, 0], [2, 1], [4, 1]]), [[0, [
   0.21,
@@ -134,6 +150,31 @@ export const renderDemoScene = (
           material={material}
         />
       );
+    }
+    case "volume": {
+      const map = densityMapFor(data);
+      const { max } = map.stats;
+      return [
+        <Volume data={map}>
+          <Isosurface
+            level={{ sigma: options.isoSigma }}
+            color={[0.55, 0.72, 0.98, 1]}
+            opacity={0.25}
+          />
+          <VolumeSlice
+            plane={{ axis: 2, index: options.sliceIndex }}
+            range={[0, max]}
+            stops={DENSITY_STOPS}
+          />
+        </Volume>,
+        <Spacefill
+          scale={0.3}
+          color={colormap(volumeSample(map), [
+            [1.5, [0.25, 0.55, 0.95, 1]],
+            [max * 0.6, [0.98, 0.45, 0.25, 1]],
+          ])}
+        />,
+      ];
     }
     case "figure":
       return [
