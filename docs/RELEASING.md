@@ -26,8 +26,7 @@ and a minor bump while we are on 0.x.
 2. Before the first release, configure the repository secret
    `RELEASE_PLEASE_TOKEN` with a token that can write contents and pull
    requests. A token is used instead of the default `GITHUB_TOKEN` so the tag
-   created by release-please can trigger the tag-based JSR publication
-   workflow.
+   created by release-please can trigger the tag-based JSR publication workflow.
 3. During the release PR, review the lockstep version changes in every
    `packages/*/deno.json`; after merging, run
    `deno cache --reload --lock=deno.lock --lock-write deno.json` if the lockfile
@@ -50,8 +49,8 @@ and a minor bump while we are on 0.x.
    `Publish` GitHub Actions workflow runs the same quality gates and then
    publishes the root Deno workspace to JSR with `deno publish`. Deno resolves
    workspace package dependencies and publishes the seven packages in the
-   required order. The generated `vX.Y.Z` tag is the explicit action that
-   starts publishing.
+   required order. The generated `vX.Y.Z` tag is the explicit action that starts
+   publishing.
 
 The GitHub repository must be linked to every `@molgpu/*` package in JSR
 settings before the first workflow publish. GitHub Actions uses the JSR OIDC
