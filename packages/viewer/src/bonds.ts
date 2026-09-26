@@ -113,12 +113,16 @@ const FieldBonds: LC<
   const attrs = useMemo(
     () =>
       Object.fromEntries(
-        attrNames.map((name, k) => [
-          `attr:${name}`,
-          indexed(columns[k]!, map.rows, "f32"),
-        ]),
+        [
+          ...attrNames.map((name, k) => [
+            `attr:${name}`,
+            indexed(columns[k]!, map.rows, "f32"),
+          ]),
+          // A volume-sampled colour reads each vertex's own position.
+          ["positions", positions],
+        ],
       ),
-    [map.rows, attrNames.join(), ...columns],
+    [map.rows, positions, attrNames.join(), ...columns],
   );
   const colors = useOpacityColors(
     useField(field, attrs, { domain: "atom" }),

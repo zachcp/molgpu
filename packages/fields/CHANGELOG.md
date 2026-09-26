@@ -6,6 +6,11 @@ All notable changes to `@molgpu/fields` are recorded here. The format follows
 
 ## [Unreleased]
 
+- `volumeSample(volume)`: the scalar value of a `VolumeData` at each atom's
+  position. It evaluates on the CPU and compiles to WGSL that agrees within 1e-5
+  (relative) at interior, face and outside points. `sampleVolumeWgsl` exposes
+  the shared WGSL sampler, and `Binding.volume` names the volume behind a
+  `volume:<n>` input.
 - Source is TypeScript (`src/*.ts`); the hand-written `index.d.ts` is gone. The
   public API is unchanged, and `Field` stays opaque.
 

@@ -54,8 +54,9 @@ const FieldPoints: LC<
     scale: number;
   } & LayerProps
 > = ({ positions, attrs, radii, count, field, opacity, scale, ...props }) => {
+  const inputs = useMemo(() => ({ ...attrs, positions }), [attrs, positions]);
   const colors = useOpacityColors(
-    useField(field, attrs, { domain: "atom" }),
+    useField(field, inputs, { domain: "atom" }),
     opacity,
   );
   return use(WorldSpacePointLayer, {

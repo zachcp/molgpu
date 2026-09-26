@@ -3,7 +3,7 @@
 ## .
 
 Binding
-  export interface Binding { readonly id: string; readonly binding: number; readonly kind: "buffer" | "uniform"; readonly wgslType: string; /** Name of the WGSL accessor for this input (`@link fn` in the link target). */ readonly accessor: string; /** buffer: fill(data) -> Float32Array; uniform: fill({ t }) -> Float32Array. */ readonly fill: (source: StructureData | { t?: number }) => Float32Array }
+  export interface Binding { readonly id: string; readonly binding: number; readonly kind: "buffer" | "uniform"; readonly wgslType: string; /** Name of the WGSL accessor for this input (`@link fn` in the link target). */ readonly accessor: string; /** buffer: fill(data) -> Float32Array; uniform: fill({ t }) -> Float32Array. */ readonly fill: (source: StructureData | { t?: number }) => Float32Array; /** For a `volume:<n>` buffer: the volume whose samples fill it. */ readonly volume?: VolumeData }
 COLOR
   export const COLOR: ValueType;
 ChainIdentity
@@ -70,3 +70,7 @@ linear
   export function linear(input: Field, options: { domain: readonly [number, number]; range?: readonly [number, number]; overflow?: Overflow }): Field;
 residueIdentity
   export function residueIdentity(data: StructureData, row: number): ResidueIdentity;
+sampleVolumeWgsl
+  export function sampleVolumeWgsl(volume: VolumeData, name?: string, read?: string): string;
+volumeSample
+  export function volumeSample(volume: VolumeData): Field;

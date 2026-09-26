@@ -6,6 +6,15 @@ All notable changes to `@molgpu/viewer` are recorded here. The format follows
 
 ## [Unreleased]
 
+- Volumes (Phase 11). New experimental `<Volume data|src>`, `<Isosurface level>`
+  and `<VolumeSlice plane>`, with the `VolumeProps`, `VolumeLoader`,
+  `SlicePlane` and `SliceStops` types; new advanced `VolumeContext` and
+  `useVolume`. A volume uploads once per `VolumeData` identity to a refcounted
+  GPU buffer shared by every consumer. Isosurfaces remesh only on a new volume
+  or level, and slices move by uniforms.
+- `useField` binds `volumeSample` inputs: `volume:<n>` to the shared volume
+  buffer, and `positions` to the drawn rows' positions (`<Spacefill>` and
+  `<Bonds>` supply them).
 - `<Surface>` extracts its mesh through the field's full affine transform.
 - Coordinate stream (Phase 9). Positions are a GPU stream that child providers
   re-provide without changing topology. New experimental

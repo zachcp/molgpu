@@ -13,7 +13,12 @@
 // schema that the viewer lowers to GPU sources. Numeric/vector fields lower;
 // string fields are CPU-only. There is no arbitrary JS->WGSL and no user parser.
 
-import type { StructureData } from "@molgpu/table";
+import {
+  sampleVolume,
+  type StructureData,
+  type VolumeData,
+} from "@molgpu/table";
+import { sampleVolumeWgsl } from "./volume.ts";
 import type {
   Binding,
   Color,
@@ -71,6 +76,7 @@ type FieldNode =
     readonly policy: "fallback" | "fail";
     readonly fallback: number | Color | null;
   })
+  | (Field & { readonly kind: "volumeSample"; readonly volume: VolumeData })
   | (Field & {
     readonly kind: "curve";
     readonly table: readonly (readonly [number, number])[];
@@ -403,6 +409,37 @@ export function curve(
   return field({ kind: "curve", type: SCALAR, domain: "any", table, overflow });
 }
 
+const volumeIds = new WeakMap<VolumeData, number>();
+let nextVolumeId = 0;
+const volumeId = (volume: VolumeData): number => {
+  let id = volumeIds.get(volume);
+  if (id === undefined) volumeIds.set(volume, id = nextVolumeId++);
+  return id;
+};
+
+/**
+ * Scalar value of a volume at each atom's position: trilinear inside the grid,
+ * 0 outside (see `@molgpu/table`'s `sampleVolume`). Compiles to two GPU buffer
+ * inputs: `positions` (vec3 per atom; filled 4-strided for the raw target) and `volume:<n>` (the
+ * samples; its binding carries the `volume`), so the viewer can bind existing
+ * sources instead of uploading a per-row colour.
+ */
+export function volumeSample(volume: VolumeData): Field {
+  if (
+    !volume || !(volume.values instanceof Float32Array) ||
+    !Array.isArray(volume.dims) || !volume.transform
+  ) {
+    fail("volumeSample.volume", "expected a VolumeData (see createVolume)");
+  }
+  if (volume.components !== 1) {
+    fail(
+      "volumeSample.volume",
+      "expected a scalar volume; extract one with volumeComponent",
+    );
+  }
+  return field({ kind: "volumeSample", type: SCALAR, domain: "atom", volume });
+}
+
 // ---- value helpers ---------------------------------------------------------
 
 function valueType(v: unknown, where: string): ValueType {
@@ -493,6 +530,15 @@ function rowValue(
     }
     case "curve":
       return sampleScalar(node.table, t ?? 0, node.overflow);
+    case "volumeSample": {
+      const p = data.positions;
+      return sampleVolume(
+        node.volume,
+        p[row * 3],
+        p[row * 3 + 1],
+        p[row * 3 + 2],
+      );
+    }
     default:
       return fail("field", `unknown field kind ${(node as Field).kind}`);
   }
@@ -639,6 +685,7 @@ const publicBinding = (b: PendingBinding): Binding =>
     wgslType: b.wgslType,
     accessor: b.name,
     fill: b.fill,
+    ...(b.volume ? { volume: b.volume } : {}),
   });
 
 /** WGSL for one input accessor, in the chosen target's binding convention. */
@@ -651,6 +698,8 @@ function accessorDecl(b: PendingBinding, target: Target): string {
   if (target === "link") return `@link fn ${b.name}(i: u32) -> ${b.wgslType};`;
   const read = b.wgslType === "vec4<f32>"
     ? `vec4<f32>(_buf${b.binding}[i*4u], _buf${b.binding}[i*4u+1u], _buf${b.binding}[i*4u+2u], _buf${b.binding}[i*4u+3u])`
+    : b.wgslType === "vec3<f32>"
+    ? `vec3<f32>(_buf${b.binding}[i*4u], _buf${b.binding}[i*4u+1u], _buf${b.binding}[i*4u+2u])`
     : `_buf${b.binding}[i]`;
   return `@group(0) @binding(${b.binding}) var<storage, read> _buf${b.binding}: array<f32>;\nfn ${b.name}(i: u32) -> ${b.wgslType} { return ${read}; }`;
 }
@@ -800,6 +849,31 @@ function emit(
       ctx.helpers.push(`fn ${name}(x: f32) -> f32 {\n${body}\n}`);
       return { expr: `${name}(${u})`, type: SCALAR };
     }
+    case "volumeSample": {
+      // vec3 per atom; the raw target reads it from a vec4-strided buffer.
+      const position = bufferBinding(ctx, "positions", "vec3<f32>", (data) => {
+        const n = data.topology.atoms.count, out = new Float32Array(n * 4);
+        for (let i = 0; i < n; i++) {
+          out.set(data.positions.subarray(i * 3, i * 3 + 3), i * 4);
+        }
+        return out;
+      });
+      const binding = ctx.bindings.length;
+      const read = `field_get${binding}`;
+      const { volume } = node;
+      ctx.bindings.push({
+        id: `volume:${volumeId(volume)}`,
+        binding,
+        kind: "buffer",
+        wgslType: "f32",
+        fill: (() => volume.values) as Binding["fill"],
+        name: read,
+        volume,
+      });
+      const name = `h_volume${ctx.nextHelper++}`;
+      ctx.helpers.push(sampleVolumeWgsl(volume, name, read));
+      return { expr: `${name}(${position})`, type: SCALAR };
+    }
     default:
       return fail("compile", `unknown field kind ${(node as Field).kind}`);
   }
@@ -829,6 +903,8 @@ function bakeAnnotation(
   }
   return out;
 }
+
+export { sampleVolumeWgsl } from "./volume.ts";
 
 // Built-in colour presets composed from the primitives above.
 export { byBfactor, byChain, byElement, bySeq } from "./builtins.ts";

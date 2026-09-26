@@ -15,7 +15,9 @@ import {
   curve,
   evaluate,
   linear,
+  volumeSample,
 } from "../src/index.ts";
+import { createVolume, sampleVolume, volumeIndexToWorld } from "@molgpu/table";
 import { structure } from "./fixture.ts";
 
 Deno.test("fields GPU parity", async () => {
@@ -98,6 +100,96 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
     const cpu = [...evaluate(field, data, { domain, t })];
     return { name, wgsl, inputs, outBinding: K, rows, components, cpu };
   });
+
+  // volumeSample: a sheared, rotated grid; positions are fed directly so the
+  // case covers interior, face, corner and outside points, not just 4 atoms.
+  {
+    const transform = [
+      0.9,
+      0.2,
+      0,
+      0,
+      0.3,
+      1.1,
+      0.1,
+      0,
+      0,
+      -0.2,
+      0.7,
+      0,
+      -14,
+      22,
+      5,
+      1,
+    ];
+    const dims = [9, 7, 6];
+    const values = new Float32Array(dims[0] * dims[1] * dims[2]);
+    for (let i = 0; i < values.length; i++) {
+      values[i] = Math.sin(i * 0.37) * 20 + (i % 7) - 3;
+    }
+    const volume = createVolume({ values, dims, transform });
+    const points = [];
+    let seed = 7;
+    const rand = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    for (let n = 0; n < 200; n++) {
+      points.push([rand() * 8, rand() * 6, rand() * 5]); // interior
+    }
+    for (const i of [0, 8]) {
+      for (const j of [0, 6]) {
+        for (const k of [0, 5]) points.push([i, j, k]); // corners
+      }
+    }
+    for (let n = 0; n < 40; n++) {
+      const face = n % 6, p = [rand() * 8, rand() * 6, rand() * 5];
+      p[face >> 1] = face & 1 ? dims[face >> 1] - 1 : 0; // on a face
+      points.push(p);
+    }
+    for (let n = 0; n < 40; n++) {
+      const p = [rand() * 8, rand() * 6, rand() * 5], axis = n % 3;
+      p[axis] = n % 2 ? -0.5 - rand() * 3 : dims[axis] - 0.5 + rand() * 3;
+      points.push(p); // outside
+    }
+    const world = points.map(([i, j, k]) =>
+      volumeIndexToWorld(volume, i, j, k)
+    );
+    const field = volumeSample(volume);
+    const compiled = compile(field, { domain: "atom" });
+    const K = compiled.bindings.length;
+    const rows = world.length;
+    const input = (id) => compiled.bindings.find((b) => b.id.startsWith(id));
+    jobs.push({
+      name: "volumeSample",
+      wgsl: `${compiled.wgsl}
+@group(0) @binding(${K}) var<storage, read_write> outp: array<f32>;
+@compute @workgroup_size(64)
+fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
+  let row = gid.x;
+  if (row >= ${rows}u) { return; }
+  outp[row] = evalField(row);
+}`,
+      inputs: [
+        {
+          binding: input("positions").binding,
+          kind: "buffer",
+          data: world.flatMap((w) => [...w.map(Math.fround), 0]),
+        },
+        {
+          binding: input("volume:").binding,
+          kind: "buffer",
+          data: [...input("volume:").fill(data)],
+        },
+      ],
+      outBinding: K,
+      rows,
+      components: 1,
+      // CPU reference at the same f32 positions the GPU reads.
+      cpu: world.map((w) => {
+        const [x, y, z] = w.map(Math.fround);
+        return sampleVolume(volume, x, y, z);
+      }),
+      relative: 1e-5,
+    });
+  }
 
   // WebGPU needs a secure context; http://127.0.0.1 counts as one, about:blank does not.
   const server = createServer((_, res) => {
@@ -204,9 +296,28 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
       assert.equal(out.result.length, job.cpu.length, `${job.name} length`);
       let maxErr = 0;
       for (let i = 0; i < job.cpu.length; i++) {
-        maxErr = Math.max(maxErr, Math.abs(out.result[i] - job.cpu[i]));
+        const err = Math.abs(out.result[i] - job.cpu[i]);
+        // Absolute 1e-5, or relative to the larger magnitude when a case sets it.
+        const scale = job.relative
+          ? Math.max(1, Math.abs(out.result[i]), Math.abs(job.cpu[i]))
+          : 1;
+        maxErr = Math.max(maxErr, err / scale);
+        if (job.relative) {
+          assert.ok(
+            err <= 1e-5 * scale,
+            `${job.name} row ${i}: GPU ${out.result[i]} vs CPU ${job.cpu[i]}`,
+          );
+        }
       }
       assert.ok(maxErr <= 1e-5, `${job.name} CPU/GPU disagree by ${maxErr}`);
+      if (job.name === "volumeSample") {
+        assert.ok(job.cpu.some((v) => v === 0), "outside points return 0");
+        assert.ok(
+          out.result.filter((v) => v === 0).length ===
+            job.cpu.filter((v) => v === 0).length,
+          "GPU and CPU agree on which points are outside",
+        );
+      }
       results[job.name] = {
         rows: job.rows,
         components: job.components,

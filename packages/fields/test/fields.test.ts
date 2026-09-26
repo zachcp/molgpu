@@ -19,8 +19,10 @@ import {
   linear,
   SCALAR,
   STRING,
+  volumeSample,
 } from "../src/index.ts";
 import type { Color } from "../src/index.ts";
+import { createVolume } from "@molgpu/table";
 import { structure } from "./fixture.ts";
 
 const RED: Color = [1, 0, 0, 1],
@@ -226,4 +228,47 @@ Deno.test("compile emits self-contained WGSL and a plain binding schema (no Shad
   const cc = compile(curve([[0, 0], [1, 1]]));
   assertStrictEquals(cc.bindings[0].kind, "uniform");
   assertEquals([...cc.bindings[0].fill({ t: 0.25 })], [0.25]);
+});
+
+Deno.test("volumeSample evaluates the volume at each atom and compiles to two buffer inputs", () => {
+  const data = structure();
+  // Atoms sit at x = 0..3 on the x axis; the grid spans x in [-1, 2].
+  const volume = createVolume({
+    values: Float32Array.from([0, 10, 20, 30, 0, 10, 20, 30]),
+    dims: [4, 2, 1],
+    transform: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, -1, 0, 0, 1],
+  });
+  const field = volumeSample(volume);
+  assertEquals(field.domain, "atom");
+  assertEquals(Array.from(numeric(evaluate(field, data))), [10, 20, 30, 0]);
+  const compiled = compile(field, { target: "link", domain: "atom" });
+  assertEquals(compiled.bindings.map((b) => [b.id.split(":")[0], b.wgslType]), [
+    ["positions", "vec3<f32>"],
+    ["volume", "f32"],
+  ]);
+  assertStrictEquals(compiled.bindings[1].volume, volume);
+  assertStrictEquals(compiled.bindings[1].fill(data), volume.values);
+  assertEquals(
+    Array.from(compiled.bindings[0].fill(data)).slice(0, 8),
+    [0, 0, 0, 0, 1, 0, 0, 0],
+  );
+  // Same volume, same binding id; a colormap over it still compiles.
+  assertStrictEquals(
+    compile(volumeSample(volume)).bindings[1].id,
+    compiled.bindings[1].id,
+  );
+  compile(
+    colormap(volumeSample(volume), [[0, [0, 0, 1, 1]], [30, [1, 0, 0, 1]]]),
+  );
+});
+
+Deno.test("volumeSample rejects non-volumes and multi-component volumes", () => {
+  assertThrows(() => volumeSample({} as never), TypeError, "VolumeData");
+  const vector = createVolume({
+    values: new Float32Array(6),
+    dims: [2, 1, 1],
+    transform: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
+    components: 3,
+  });
+  assertThrows(() => volumeSample(vector), TypeError, "volumeComponent");
 });
