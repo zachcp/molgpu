@@ -178,7 +178,7 @@ export function instrumentDevice(gpuDevice: GPUDevice): GPUDevice {
     liveDevice.set(ref, originOf(descriptor));
     refs.set(buffer, ref);
     const destroy = buffer.destroy;
-    buffer.destroy = function (this: GPUBuffer): undefined {
+    buffer.destroy = function (this: GPUBuffer): void {
       if (!destroyed.has(this)) {
         destroyed.add(this);
         device.destroyed += 1;
@@ -197,7 +197,7 @@ export function instrumentDevice(gpuDevice: GPUDevice): GPUDevice {
     data: BufferSource,
     dataOffset = 0,
     size?: number,
-  ): undefined {
+  ): void {
     if (enabled) {
       const perElement =
         (data as ArrayBufferView & { BYTES_PER_ELEMENT?: number })

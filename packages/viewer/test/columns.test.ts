@@ -39,8 +39,8 @@ Deno.test("used formats, empty rows and validation", () => {
     Error,
     "finite",
   );
-  // @ts-expect-error: not a format
   assertThrows(
+    // @ts-expect-error: not a format
     () => prepareColumn(new Float32Array(), "unknown"),
     Error,
     "Unsupported",

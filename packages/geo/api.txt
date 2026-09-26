@@ -17,7 +17,7 @@ createCurveSegmentState
 interpolateCurveSegment
   export function interpolateCurveSegment(state: CurveSegmentState, controls: CurveSegmentControls, tension: number, shift: number): void;
 interpolateNormals
-  export function interpolateNormals(state: CurveSegmentState, controls: Pick<CurveSegmentControls, 'd12' | 'd23'>): void;
+  export function interpolateNormals(state: CurveSegmentState, controls: Pick<CurveSegmentControls, "d12" | "d23">): void;
 interpolatePointsAndTangents
   export function interpolatePointsAndTangents(state: CurveSegmentState, controls: CurveSegmentControls, tension: number, shift: number): void;
 interpolateSizes

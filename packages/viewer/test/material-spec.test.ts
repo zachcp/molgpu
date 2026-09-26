@@ -53,21 +53,21 @@ Deno.test("every advertised material type resolves", () => {
 });
 
 Deno.test("an unknown type throws, naming the valid set", () => {
-  // @ts-expect-error: not a material type
   assertMatch(
+    // @ts-expect-error: not a material type
     (assertThrows(() => resolveMaterial({ type: "glass" }), Error)).message,
     /Unknown material type 'glass'.*pbr/,
   );
 });
 
 Deno.test("a non-spec, non-function value throws", () => {
-  // @ts-expect-error: an array is not a spec
   assertMatch(
+    // @ts-expect-error: an array is not a spec
     (assertThrows(() => resolveMaterial([1, 2, 3]), Error)).message,
     /spec object, a wrapper function, or null/,
   );
-  // @ts-expect-error: a number is not a spec
   assertMatch(
+    // @ts-expect-error: a number is not a spec
     (assertThrows(() => resolveMaterial(42), Error)).message,
     /spec object, a wrapper function, or null/,
   );

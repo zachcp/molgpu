@@ -1,6 +1,0 @@
-{
-  // Type-checks every package's source and declarations. Deno runs the same
-  // check (plus JSR's slow-types check) in `npm run jsr:check`.
-  "extends": "./tsconfig.base.json",
-  "include": ["packages/*/src/**/*.ts"]
-}

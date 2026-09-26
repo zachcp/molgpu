@@ -172,8 +172,8 @@ function assertUnit(direction: Float32Array, k: number) {
 Deno.test("rejects a non-Uint32Array selection", () => {
   const data = createStructure(fixture());
   const trace = traceTable(data, all(data));
-  // @ts-expect-error: a plain array, not a Uint32Array
   assertThrows(
+    // @ts-expect-error: a plain array, not a Uint32Array
     () => secondaryStructureTrace(data, [0], trace),
     Error,
     "Uint32Array",

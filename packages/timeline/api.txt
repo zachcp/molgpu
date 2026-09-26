@@ -5,15 +5,15 @@
 Beat
   export interface Beat { readonly name: string; readonly time: number }
 Curve
-  export interface Curve<T extends CurveValue> { readonly unit: 'seconds'; readonly type: 'number' | 'angle'; readonly extrapolate: 'clamp' | 'loop' }
+  export interface Curve<T extends CurveValue> { readonly unit: "seconds"; readonly type: "number" | "angle"; readonly extrapolate: "clamp" | "loop" }
 CurveOptions
-  export interface CurveOptions { /** `'angle'` interpolates along the short arc. Default `'number'`. */ readonly type?: 'number' | 'angle'; /** Derive smooth knots and easing; frames must not set `ease` or `knots`. */ readonly automatic?: boolean; /** Out-of-range samples clamp (default) or wrap. */ readonly extrapolate?: 'clamp' | 'loop' }
+  export interface CurveOptions { /** `'angle'` interpolates along the short arc. Default `'number'`. */ readonly type?: "number" | "angle"; /** Derive smooth knots and easing; frames must not set `ease` or `knots`. */ readonly automatic?: boolean; /** Out-of-range samples clamp (default) or wrap. */ readonly extrapolate?: "clamp" | "loop" }
 CurveValue
   export type CurveValue = number | readonly number[];
 Keyframe
-  export interface Keyframe<T extends number | readonly number[] | Float32Array | Float64Array = CurveValue> { readonly time: number; readonly value: T; readonly ease?: 'linear' | 'cosine' | 'hold' | 'bezier'; readonly bezier?: readonly [number, number, number, number]; readonly knots?: readonly [T, T] }
+  export interface Keyframe<T extends number | readonly number[] | Float32Array | Float64Array = CurveValue> { readonly time: number; readonly value: T; readonly ease?: "linear" | "cosine" | "hold" | "bezier"; readonly bezier?: readonly [number, number, number, number]; readonly knots?: readonly [T, T] }
 Timeline
-  export interface Timeline { readonly unit: 'seconds'; readonly beats: readonly Beat[]; /** Seconds for a named beat; throws RangeError for an unknown name. */ time(name: string): number }
+  export interface Timeline { readonly unit: "seconds"; readonly beats: readonly Beat[]; /** Seconds for a named beat; throws RangeError for an unknown name. */ time(name: string): number }
 createCurve
   export function createCurve(frames: readonly Keyframe<number>[], options?: CurveOptions): Curve<number>;
   export function createCurve(frames: readonly Keyframe<readonly number[] | Float32Array | Float64Array>[], options?: CurveOptions): Curve<number[]>;

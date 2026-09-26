@@ -37,12 +37,15 @@ Deno.test("viewer components", async () => {
   };
   await writeFile(`${out}/components.json`, JSON.stringify(report));
 
-  const typecheck = spawnSync(`${root}node_modules/.bin/tsc`, [
-    "-p",
-    `${fixture}/tsconfig.json`,
-  ], { encoding: "utf8" });
+  const typecheck = spawnSync(Deno.execPath(), [
+    "check",
+    `${fixture}/consumer.tsx`,
+    `${fixture}/diagnostics.ts`,
+  ], { cwd: root, encoding: "utf8" });
   if (typecheck.status !== 0) {
-    throw new Error(`tsc failed:\n${typecheck.stdout}${typecheck.stderr}`);
+    throw new Error(
+      `Deno check failed:\n${typecheck.stdout}${typecheck.stderr}`,
+    );
   }
   report.typecheck = "passed";
   await build({ configFile: `${fixture}/vite.config.mjs`, logLevel: "warn" });

@@ -163,17 +163,16 @@ All seven packages are TypeScript source (they were hand-written `.mjs` plus
 `docs/findings/2026-09-26-jsr-spike.md`). Each `exports` entry points `types`
 and `import` at the same `src/*.ts` file.
 
-- **Toolchain minimums:** Node 26 (runs `.ts` directly through type stripping)
-  and Deno 2.9. The repo is an npm workspace and a Deno workspace at once.
+- **Toolchain minimum:** Deno 2.9. npm dependencies are resolved through Deno's
+  `npm:` compatibility layer; browser checks use Deno to launch their ESM
+  runners.
 - **Manifests:** each package's `deno.json` is the single source for name,
   version, license, exports and dependency ranges. Each package's `deno.json`
   (its JSR manifest) is checked directly by hardening H1 for match. Internal
   `@molgpu/*` imports resolve through the workspace, and JSR rewrites them to
   `jsr:` ranges on publish.
-- **TypeScript source** follows `tsconfig.base.json`: `isolatedDeclarations`
-  (explicit types on every export, which is JSR's "no slow types" rule),
-  `erasableSyntaxOnly` (so Node can strip types), `verbatimModuleSyntax`, and
-  relative imports ending in `.ts`.
+- **TypeScript source** is checked by Deno, and `deno publish --dry-run` applies
+  JSR's "no slow types" rule. Relative imports end in `.ts`.
 - **JSR has no peer dependencies.** use.gpu stays an exact `npm:` pin. Mol* is a
   regular dependency of `io`, imported lazily with literal specifiers, which
   keeps it out of every bundle's initial chunk. Internal ranges stay broad so a

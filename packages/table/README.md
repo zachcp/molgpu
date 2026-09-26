@@ -190,5 +190,6 @@ may), any `@use-gpu/*` package, or browser/WebGPU/DOM APIs.
 
 ## Tests
 
-Run `npm test` from the repository root. The fixtures are adversarial synthetic
-contract tests, not the still-pending curated scientific oracle corpus (jy6.4).
+Run `deno task test` from the repository root. The fixtures are adversarial
+synthetic contract tests, not the still-pending curated scientific oracle corpus
+(jy6.4).

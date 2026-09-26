@@ -190,4 +190,4 @@ It must not import `molstar` (only `@molgpu/io` may), any `@use-gpu/*` package
 `@molgpu/*` package besides `table`. Its public types must not mention GPU,
 use.gpu or Mol* concepts.
 
-Run `npm test` from the repository root.
+Run `deno task test` from the repository root.

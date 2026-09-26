@@ -7,15 +7,15 @@ Atoms
 BondPolicy
   export interface BondPolicy { readonly padding?: number; readonly interChain?: boolean }
 Bonds
-  export interface Bonds { readonly count: number; readonly a: Uint32Array; readonly b: Uint32Array; /** 0 unknown, 1/2/3 multiplicity, 4 aromatic. */ readonly order: Uint8Array; readonly source: readonly ('explicit' | 'inferred')[] }
+  export interface Bonds { readonly count: number; readonly a: Uint32Array; readonly b: Uint32Array; /** 0 unknown, 1/2/3 multiplicity, 4 aromatic. */ readonly order: Uint8Array; readonly source: readonly ("explicit" | "inferred")[] }
 Chains
   export interface Chains { readonly count: number; readonly model: Int32Array; readonly labelId: readonly string[]; readonly authId: readonly string[] }
 Instances
   export interface Instances { readonly count: number; readonly chain: Uint32Array; readonly operatorId: readonly string[]; readonly transform: Float64Array }
 Residues
-  export interface Residues { readonly count: number; readonly chain: Uint32Array; /** -1 denotes missing label_seq_id. */ readonly labelSeq: Int32Array; readonly authSeq: readonly string[]; readonly insertionCode: readonly string[]; readonly comp: readonly string[]; readonly polymer: readonly ('protein' | 'rna' | 'dna' | 'other')[]; /** Imported annotation (mmCIF struct_conf/struct_sheet_range) when the source provided one; absent otherwise. */ readonly secondaryStructure?: readonly ('helix' | 'sheet' | 'coil')[] }
+  export interface Residues { readonly count: number; readonly chain: Uint32Array; /** -1 denotes missing label_seq_id. */ readonly labelSeq: Int32Array; readonly authSeq: readonly string[]; readonly insertionCode: readonly string[]; readonly comp: readonly string[]; readonly polymer: readonly ("protein" | "rna" | "dna" | "other")[]; /** Imported annotation (mmCIF struct_conf/struct_sheet_range) when the source provided one; absent otherwise. */ readonly secondaryStructure?: readonly ("helix" | "sheet" | "coil")[] }
 SecondaryStructureTrace
-  export interface SecondaryStructureTrace { readonly count: number; readonly direction: Float32Array; readonly kind: readonly ('helix' | 'sheet' | 'coil')[]; /** 1 where a sample starts/ends a stable-frame block (run boundary or an SS-kind change), else 0. */ readonly first: Uint8Array; readonly last: Uint8Array }
+  export interface SecondaryStructureTrace { readonly count: number; readonly direction: Float32Array; readonly kind: readonly ("helix" | "sheet" | "coil")[]; /** 1 where a sample starts/ends a stable-frame block (run boundary or an SS-kind change), else 0. */ readonly first: Uint8Array; readonly last: Uint8Array }
 StructureData
   export interface StructureData extends StructureInput { readonly identity: { readonly [brand]: true }; readonly revision: { readonly topology: number; readonly positions: number; readonly attributes: number } }
 StructureInput
@@ -23,9 +23,9 @@ StructureInput
 Topology
   export interface Topology { readonly atoms: Atoms; readonly residues: Residues; readonly chains: Chains; readonly bonds: Bonds; readonly instances: Instances }
 Trace
-  export interface Trace { readonly count: number; readonly guide: Float32Array; readonly tangent: Float32Array; readonly normal: Float32Array; readonly binormal: Float32Array; /** Source residue row per sample (sample-to-residue mapping / retained residue IDs). */ readonly residue: Uint32Array; /** Run r spans [runs[r], runs[r + 1]); length is runCount + 1. */ readonly runs: Uint32Array; readonly runKind: readonly ('protein' | 'rna' | 'dna')[] }
+  export interface Trace { readonly count: number; readonly guide: Float32Array; readonly tangent: Float32Array; readonly normal: Float32Array; readonly binormal: Float32Array; /** Source residue row per sample (sample-to-residue mapping / retained residue IDs). */ readonly residue: Uint32Array; /** Run r spans [runs[r], runs[r + 1]); length is runCount + 1. */ readonly runs: Uint32Array; readonly runKind: readonly ("protein" | "rna" | "dna")[] }
 ViewPolicy
-  export interface ViewPolicy { readonly model?: 'first' | 'all' | number; readonly altloc?: 'primary' | 'all' }
+  export interface ViewPolicy { readonly model?: "first" | "all" | number; readonly altloc?: "primary" | "all" }
 activeAtoms
   export function activeAtoms(data: StructureData, policy?: ViewPolicy): Uint32Array;
 bondTopology
@@ -39,7 +39,7 @@ residueKey
 secondaryStructureTrace
   export function secondaryStructureTrace(data: StructureData, atomIndices: Uint32Array, trace: Trace): SecondaryStructureTrace;
 selectBonds
-  export function selectBonds(data: StructureData, atomIndices: Uint32Array, options?: { readonly mode?: 'both' | 'either'; readonly policy?: BondPolicy }): Uint32Array;
+  export function selectBonds(data: StructureData, atomIndices: Uint32Array, options?: { readonly mode?: "both" | "either"; readonly policy?: BondPolicy }): Uint32Array;
 traceTable
   export function traceTable(data: StructureData, atomIndices: Uint32Array): Trace;
 validateStructure

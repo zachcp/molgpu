@@ -5,7 +5,7 @@
 .beads-credential-key
 .beads/proxieddb/
 
-# Node
+# Deno's npm compatibility cache
 node_modules/
 dist/
 dist-demo/

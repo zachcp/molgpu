@@ -28,9 +28,9 @@ and a minor bump while we are on 0.x.
    changes, write "No changes; released in lockstep."
 4. Run the gates:
    ```bash
+   deno task fmt
    deno task test
    deno task typecheck
-   deno task test:hardening
    deno task check:hardening
    deno task jsr:check
    ```

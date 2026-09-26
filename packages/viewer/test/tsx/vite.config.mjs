@@ -1,4 +1,5 @@
 import { fileURLToPath } from "node:url";
+import { workspaceAliases } from "../../../../scripts/workspace-aliases.mjs";
 
 const here = (p) => fileURLToPath(new URL(p, import.meta.url));
 
@@ -21,7 +22,7 @@ export default {
     },
   },
   resolve: {
-    // @molgpu/* resolve through the workspace links, and so do @use-gpu/*.
+    alias: workspaceAliases(),
     // Without dedupe a second copy of Live would break context lookups.
     dedupe: [
       "@use-gpu/live",

@@ -25,7 +25,6 @@ site/
     font.ttf
   test/
     run-browser.mjs
-  tsconfig.json
   vite.config.mjs
   README.md
 ```
@@ -52,10 +51,10 @@ small browser document required by the bundler; it owns no page content.
    package-level GPU runners when they validate library invariants rather than a
    site page.
 2. **Create the site shell.** Add `site/` with a TSX entry, app layout, home
-   page, demo page, styles, TypeScript configuration, Vite configuration, and
-   Deno tasks (`dev:site`, `build:site`, `typecheck:site`, `test:site`). Vite
-   remains Deno-launched: Deno's static server cannot transform TSX, resolve
-   workspace aliases, or bundle use.gpu's browser dependencies.
+   page, demo page, styles, Vite configuration, and Deno tasks (`dev:site`,
+   `build:site`, `typecheck:site`, `test:site`). Vite remains Deno-launched:
+   Deno's static server cannot transform TSX, resolve workspace aliases, or
+   bundle use.gpu's browser dependencies.
 3. **Build the first maintained demo.** Recreate the composed crambin scene with
    public `@molgpu/*` components and JSX. Put fixture data and the
    WebGPU/camera/pass setup in typed `site/src/demos/` modules. Do not copy the

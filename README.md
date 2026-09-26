@@ -31,6 +31,7 @@ Each package has a `CHANGELOG.md` next to its README.
 ## Development
 
 ```bash
+deno task fmt                  # verify Deno formatting
 deno task test                 # type-checked unit tests
 deno task check:hardening      # per-package manifest/types/API checks
 deno task test:components      # typed consumer in Chrome WebGPU

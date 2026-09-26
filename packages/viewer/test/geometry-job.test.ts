@@ -128,8 +128,8 @@ Deno.test("assertGridBudget rejects an oversize grid before any allocation happe
       "GEOMETRY_BUDGET_EXCEEDED",
     );
   }
-  // @ts-expect-error: two dimensions
   assertThrows(
+    // @ts-expect-error: two dimensions
     () => assertGridBudget([1, 1]),
     Error,
     "three positive integers",

@@ -9,6 +9,9 @@
     "./packages/viewer"
   ],
   "nodeModulesDir": "auto",
+  "compilerOptions": {
+    "lib": ["ES2023", "DOM", "DOM.Iterable", "deno.ns"]
+  },
   "imports": {
     "@std/assert": "jsr:@std/assert@^1.0.19",
     "@std/path": "jsr:@std/path@^1.1.6",
@@ -36,13 +39,13 @@
     "vite": "npm:vite@8.3.0"
   },
   "tasks": {
+    "fmt": "deno fmt --check",
     "test": "deno test -A packages/*/test/*.test.ts",
-    "test:hardening": "deno task check:hardening",
     "check:hardening": "deno run -A scripts/check-hardening.mjs",
     "jsr:check": "deno publish --dry-run --allow-dirty",
     "typecheck": "deno check packages/*/src/index.ts packages/*/test/*.test.ts",
-    "typecheck:components": "tsc -p packages/viewer/test/tsx/tsconfig.json",
-    "typecheck:site": "deno run -A npm:typescript@5.9.3/bin/tsc -p site/tsconfig.json",
+    "typecheck:components": "deno check packages/viewer/test/tsx/consumer.tsx packages/viewer/test/tsx/diagnostics.ts",
+    "typecheck:site": "deno check site/src/main.tsx",
     "build:site": "deno run -A npm:vite@8.3.0 build --config site/vite.config.mjs",
     "dev:site": "deno run -A npm:vite@8.3.0 --config site/vite.config.mjs",
     "test:corpus": "deno test -A packages/io/test/corpus.test.ts",

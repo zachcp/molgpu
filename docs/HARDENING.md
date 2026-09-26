@@ -74,9 +74,9 @@ modules host both entries, its `.` is checked export by export: the types each
 
 **X1 — Shared check tooling.** `deno task check:hardening [pkg]` automates H1–H6
 (`--update` rewrites `api.txt`; `--json` for machine output). A per-package bead
-is verified by running this script. `deno task test:hardening` proves that each
-criterion fails on a deliberately broken copy of `test/hardening/fixture`. The
-repo has no CI or remote yet; wiring both scripts into CI is part of X3.
+is verified by running this script. The deliberately broken copy under
+`test/hardening/fixture` can be passed to the script when checking failure
+diagnostics.
 
 **X2 — Invalidation and resource audit.** The change→work table in
 `docs/findings/2026-09-17-architecture-review.md` is enforced by tests, not just
@@ -98,8 +98,8 @@ described:
 
 **X3 — Release.**
 
-- CI runs `deno task test`, `deno task test:hardening` and
-  `deno task check:hardening`.
+- CI runs `deno task fmt`, `deno task test`, `deno task typecheck`,
+  `deno task check:hardening` and `deno task jsr:check`.
 - Every package moves to `0.1.0` and gains a top-level `CHANGELOG.md`, managed
   by changesets or a documented manual procedure.
 - `repository` (with `directory`) is added once a remote exists.
@@ -113,5 +113,4 @@ Status (2026-09-25): all packages are at `0.1.0` with a `CHANGELOG.md` (manual
 procedure in [RELEASING.md](RELEASING.md)). `geo`, `io` and `table` carry the
 Mol* MIT notice in `LICENSE`. The root [README](../README.md) and the examples
 gallery link every package README. `.github/workflows/ci.yml` runs the Deno
-gates. Still open until a remote exists: a first green CI run. a first green CI
-run.
+gates. Still open until a remote exists: a first green CI run.

@@ -5,7 +5,7 @@
  *
  * `deno task typecheck:components` compiles it; `deno task test:components` builds it with
  * vite and drives every state below in Chrome. The `probe` wiring is the test
- * control surface, imported from ./diagnostics so this file keeps consumer
+ * control surface, imported from ./diagnostics.ts so this file keeps consumer
  * shape: state in, Live elements out.
  */
 import { React, render, useOne, useState } from "@use-gpu/live";
@@ -26,8 +26,8 @@ import {
   useStructureResource,
 } from "@molgpu/viewer";
 import type { StructureLoader, StructureProps } from "@molgpu/viewer";
-import { probe } from "./diagnostics";
-import type { Mode, Phase, State } from "./diagnostics";
+import { probe } from "./diagnostics.ts";
+import type { Mode, Phase, State } from "./diagnostics.ts";
 
 /** One synthetic chain of carbons centred on x, owned by @molgpu/table. */
 const cluster = (x: number, radius: number, count = 3): StructureData =>

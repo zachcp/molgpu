@@ -71,8 +71,8 @@ Deno.test("explicit model and residue-level altloc policies", () => {
     Error,
     "model not present",
   );
-  // @ts-expect-error: not a policy
   assertMatch(
+    // @ts-expect-error: not a policy
     (assertThrows(() => activeAtoms(data, { altloc: "random" }), Error))
       .message,
     /policy.altloc/,
