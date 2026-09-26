@@ -154,9 +154,10 @@ Two rules make the layout load-bearing rather than decorative:
 
 ## Source language and publishing
 
-The packages are moving from hand-written `.mjs` plus `.d.ts` to TypeScript
-source, published to [JSR](https://jsr.io) (epic `0lg`; findings in
-`docs/findings/2026-09-26-jsr-spike.md`). During the move both forms coexist:
+All seven packages are TypeScript source (they were hand-written `.mjs` plus
+`.d.ts` until epic `0lg`), targeting [JSR](https://jsr.io) (findings in
+`docs/findings/2026-09-26-jsr-spike.md`). Each `exports` entry points `types`
+and `import` at the same `src/*.ts` file.
 
 - **Toolchain minimums:** Node 26 (runs `.ts` directly through type stripping)
   and Deno 2.9. The repo is an npm workspace and a Deno workspace at once.
@@ -165,8 +166,6 @@ source, published to [JSR](https://jsr.io) (epic `0lg`; findings in
   is generated from it by `npm run sync:deno`, and hardening H1 checks they
   match. Internal `@molgpu/*` imports resolve through the workspace, and JSR
   rewrites them to `jsr:` ranges on publish.
-- **Unconverted packages** stay JSR-publishable: each `.mjs` entry names its
-  declarations with `// @ts-self-types="./index.d.ts"`.
 - **TypeScript source** follows `tsconfig.base.json`: `isolatedDeclarations`
   (explicit types on every export, which is JSR's "no slow types" rule),
   `erasableSyntaxOnly` (so Node can strip types), `verbatimModuleSyntax`, and

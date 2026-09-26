@@ -21,15 +21,17 @@ keeps a copy of the root MIT `LICENSE`). Every bare import in `src/` is declared
 matches `package.json` in name, version, license, exports and dependency
 ranges, as written by `npm run sync:deno`, and publishes `src`.
 
-**H2 — Types match the runtime.** `src/index.d.ts` exists, and the set of
-exported names is identical between `index.mjs` and `index.d.ts`, as checked by
-script. It has no `any` in public signatures, except where a comment explains
-why.
+**H2 — Types match the runtime.** Each `exports` entry's `types` and `import`
+files exist (for TypeScript source they are the same `src/*.ts` file), and the
+set of exported names is identical between them, as checked by script. It has
+no `any` in public signatures, except where a comment explains why.
 
 **H3 — No leaked dependency types.** For every package except `viewer`,
-`index.d.ts` (and anything it re-exports) mentions neither `@use-gpu/*` nor
+the public entry (and anything it re-exports) mentions neither `@use-gpu/*` nor
 `molstar`. `viewer` may expose use.gpu types only from a separately named
-advanced entry (`@molgpu/viewer/advanced`), never from `.`.
+advanced entry (`@molgpu/viewer/advanced`), never from `.`. Because the
+viewer's modules host both entries, its `.` is checked export by export: the
+types each `.` export reaches must not name use.gpu.
 
 **H4 — Import walls.**
 - The only package that imports `molstar` at runtime, or declares it as a
@@ -43,11 +45,11 @@ advanced entry (`@molgpu/viewer/advanced`), never from `.`.
 
 **H5 — Reviewed public API.**
 - Each export is classified in the README as *stable*, *experimental* or
-  *advanced*. Anything internal is removed from `index.mjs`. The checker reads
+  *advanced*. Anything internal is removed from the entry module. The checker reads
   this from a `## API` section containing a table whose rows start
   `` | `name` | stable | `` (further columns are free-form).
 - A committed snapshot, `packages/<pkg>/api.txt`, holds the sorted export names
-  and their d.ts signatures. The check fails when the snapshot and the source
+  and their declared signatures. The check fails when the snapshot and the source
   disagree, so an API change always shows up in the diff.
 - Public declarations name only types the package exports from some entry. A
   private alias would show up in the generated docs with nothing to link to.
