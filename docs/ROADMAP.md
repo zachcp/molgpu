@@ -199,6 +199,16 @@ isosurfaces, slices and static volume-sampled fields. Later readers, GPU
 marching cubes, raymarching and live-coordinate volume sampling remain tracked
 follow-ons.
 
+Gate 11 passed on 2026-09-26. `VolumeData` in `@molgpu/table` carries the full
+index-to-world affine; `volumeFromCcp4` reads triclinic, axis-permuted and
+MRC-origin maps; `<Volume>` keeps one refcounted GPU copy per volume that
+`<Isosurface>`, `<VolumeSlice>` and `volumeSample` share. A 256³ map is the
+default ceiling (`maxSamples` raises it; nothing downsamples silently). The
+[texture spike](findings/2026-09-26-volume-texture-spike.md) keeps the storage
+buffer as the sampling path. DX/Cube (u71.9), GPU marching cubes (u71.11),
+DensityServer (u71.12), raymarching (u71.13) and live-coordinate sampling
+(u71.15) stay deferred.
+
 ## Phase 12 — Trajectories
 
 `TrajectoryData` with a streaming `FrameSource`; DCD and XTC readers behind the

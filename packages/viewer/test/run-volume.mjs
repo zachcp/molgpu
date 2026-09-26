@@ -311,7 +311,20 @@ Deno.test("volume components", async () => {
     report.states.depth = depth;
     await update({ mode: "none" });
 
-    // 7. <Volume src> loads CCP4/MRC with loading → ready, and reports errors.
+    // 7. A 256³ map (the plan's default ceiling) holds exactly one 64 MiB
+    //    GPU copy and releases it.
+    await update({ mode: "big" });
+    await page.waitForFunction(
+      () => window.__volume.volume?.dims[0] === 256,
+      null,
+      { timeout: 30000 },
+    );
+    now = await counters();
+    assert.equal(now.ownedBuffers.bytes["volume:values"], 256 ** 3 * 4);
+    await update({ mode: "none" });
+    assert.equal((await counters()).ownedBuffers.bytes["volume:values"], 0);
+
+    // 8. <Volume src> loads CCP4/MRC with loading → ready, and reports errors.
     await update({ mode: "src", src: "/map.mrc" });
     await page.waitForFunction(() => window.__volume.phase === "ready", null, {
       timeout: 30000,

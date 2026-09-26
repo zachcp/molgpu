@@ -71,6 +71,31 @@ function makeBlob(): VolumeData {
   return createVolume({ values, dims: [n, n, n], transform: m });
 }
 const GRADIENT = makeVolume();
+// The plan's first-gate ceiling: 256³ scalar samples, built only when used.
+let big: VolumeData | null = null;
+const BIG = () =>
+  big ??= createVolume({
+    values: new Float32Array(256 ** 3),
+    dims: [256, 256, 256],
+    transform: [
+      0.1,
+      0,
+      0,
+      0,
+      0,
+      0.1,
+      0,
+      0,
+      0,
+      0,
+      0.1,
+      0,
+      -12.8,
+      -12.8,
+      -12.8,
+      1,
+    ],
+  });
 const BLOB = makeBlob();
 
 function atoms(xs: number[], z = 0): StructureData {
@@ -144,7 +169,8 @@ type Mode =
   | "iso"
   | "slice"
   | "depth"
-  | "src";
+  | "src"
+  | "big";
 interface State {
   mode: Mode;
   level: number | { sigma: number };
@@ -276,6 +302,12 @@ const Scene = ({ state }: { state: State }): LiveElement => {
           <Spacefill color={[1, 0, 0, 1]} />
         </Structure>,
       ];
+    case "big":
+      return (
+        <Volume data={BIG()}>
+          <VolumeProbe />
+        </Volume>
+      );
     case "src":
       return (
         <Volume
