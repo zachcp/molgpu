@@ -327,7 +327,81 @@ Deno.test("trajectory components", async () => {
     );
     await update({ mode: "none" });
 
-    // 9. src streams an XTC through HTTP Range requests.
+    // 9. Snapshot consumers converge after playback stops, even when new
+    // generations land while a readback is in flight (a Phase 9 regression:
+    // the in-flight copy used to drop the hand-off and never reschedule).
+    // Fresh mounts: the first readback (of the copied upstream) starts at
+    // once, and the first frame lands while it is in flight.
+    // Snapshot readbacks are held for 100 ms, and frames land 30 ms after
+    // mount, so the first frame always arrives during the first readback.
+    await page.evaluate(() => {
+      const map = GPUBuffer.prototype.mapAsync;
+      window.__mapAsync = map;
+      GPUBuffer.prototype.mapAsync = async function (...args) {
+        if (this.label === "molgpu:coords:snapshot") {
+          await new Promise((r) => setTimeout(r, 100));
+        }
+        return map.apply(this, args);
+      };
+    });
+    for (const [round, latency] of [30, 30, 60].entries()) {
+      await update({ mode: "none" });
+      await update({ mode: "snapshot", frame: 3, latency });
+      await page.waitForFunction(
+        () => {
+          const { snapshot, generation } = window.__trajectory;
+          return snapshot && generation !== null &&
+            snapshot.generation === generation;
+        },
+        null,
+        { timeout: 5000 },
+      ).catch((failure) => {
+        throw new Error(`mount ${round}: the snapshot never caught up`, {
+          cause: failure,
+        });
+      });
+      near(
+        await page.evaluate(() => window.__trajectory.snapshot.positions),
+        pageFrames[3],
+        `snapshot after mount ${round}`,
+      );
+    }
+    await page.evaluate(() => {
+      GPUBuffer.prototype.mapAsync = window.__mapAsync;
+    });
+    await update({ frame: 0 });
+    await displayed({ a: 0, b: 0, t: 0 });
+    for (let round = 0; round < 3; round++) {
+      await page.evaluate(async () => {
+        for (const frame of [0.5, 1, 1.5, 2, 2.5, 3]) {
+          window.__trajectory.update({ frame });
+          await new Promise(requestAnimationFrame);
+        }
+      });
+      await page.waitForFunction(
+        () => {
+          const { snapshot, generation } = window.__trajectory;
+          return snapshot && snapshot.generation === generation;
+        },
+        null,
+        { timeout: 5000 },
+      ).catch((failure) => {
+        throw new Error(
+          `round ${round}: the snapshot never reached the final generation`,
+          { cause: failure },
+        );
+      });
+      near(
+        await page.evaluate(() => window.__trajectory.snapshot.positions),
+        pageFrames[3],
+        `snapshot round ${round}`,
+      );
+      await update({ frame: 0 });
+      await displayed({ a: 0, b: 0, t: 0 });
+    }
+    await update({ mode: "none" });
+
+    // 10. src streams an XTC through HTTP Range requests.
     await update({ mode: "src", src: "/run.xtc", frame: 1 });
     await displayed({ a: 1, b: 1, t: 0 });
     await expectRead(pageFrames[1], "xtc frame 1", 0.0051);

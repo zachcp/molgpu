@@ -115,6 +115,18 @@ const SnapshotReadback: LC<{
       }
     });
   }, [staging]);
+  // A readback can outlive the effect that started it: a new generation
+  // disposes the effect while the copy is in flight. The copy then publishes
+  // if it is still current, and hands off to the latest effect's scheduler;
+  // otherwise nothing would ever schedule the new generation.
+  const mounted = useRef(true);
+  const kick = useRef<() => void>(noop);
+  useResource((dispose) => {
+    mounted.current = true;
+    dispose(() => {
+      mounted.current = false;
+    });
+  }, []);
   useResource((dispose) => {
     let alive = true;
     let timer: ReturnType<typeof setTimeout> | undefined;
@@ -150,22 +162,21 @@ const SnapshotReadback: LC<{
           await buffer.mapAsync(MAP_READ);
           const values = new Float32Array(buffer.getMappedRange().slice(0));
           buffer.unmap();
-          if (!alive) return;
+          if (!mounted.current) return;
           if (generation === latest.current.coordinates.generation) {
             published.current = generation;
             latest.current.publish(values, generation);
             count("gathers", "coords:snapshot:publish");
           } else count("gathers", "coords:snapshot:discard");
         } catch {
-          if (alive) count("gathers", "coords:snapshot:error");
+          if (mounted.current) count("gathers", "coords:snapshot:error");
         } finally {
           inFlight.current = false;
-          if (
-            alive && latest.current.coordinates.generation !== published.current
-          ) schedule();
+          if (mounted.current) kick.current();
         }
       }, Math.max(0, delay));
     };
+    kick.current = schedule;
     schedule();
     dispose(() => {
       alive = false;

@@ -28,6 +28,7 @@ import {
   Trajectory,
   type TrajectoryFrameState,
   UnitCell,
+  useCoordinateSnapshot,
   useTrajectoryFrame,
 } from "@molgpu/viewer";
 import { useCoordinates } from "@molgpu/viewer/advanced";
@@ -133,6 +134,12 @@ const slow = (delay: number): TrajectoryData =>
     },
   });
 const SLOW = slow(300);
+const byLatency = new Map<number, TrajectoryData>();
+const latency = (ms: number): TrajectoryData => {
+  let trajectory = byLatency.get(ms);
+  if (!trajectory) byLatency.set(ms, trajectory = slow(ms));
+  return trajectory;
+};
 
 type Mode =
   | "none"
@@ -142,6 +149,7 @@ type Mode =
   | "timeline"
   | "cell"
   | "slow"
+  | "snapshot"
   | "src";
 interface State {
   mode: Mode;
@@ -150,6 +158,7 @@ interface State {
   pbc: "none" | "minimum-image";
   time: number;
   src: string;
+  latency: number;
 }
 
 interface Probe {
@@ -157,6 +166,8 @@ interface Probe {
   device: GPUDevice | null;
   source: StorageSource | null;
   state: TrajectoryFrameState | null;
+  snapshot: { generation: number; positions: number[] } | null;
+  generation: number | null;
   errors: string[];
   frames: number[][];
   root: number[];
@@ -168,6 +179,8 @@ const probe: Probe = {
   device: null,
   source: null,
   state: null,
+  snapshot: null,
+  generation: null,
   errors: [],
   frames: FRAMES.map((f) => Array.from(f.positions)),
   root: Array.from(STRUCTURE.positions),
@@ -187,6 +200,19 @@ GPUAdapter.prototype.requestDevice = async function (
     probe.errors.push((event as GPUUncapturedErrorEvent).error.message);
   });
   return device;
+};
+
+/** A snapshot consumer, like <Ribbon>: records the latest CPU snapshot. */
+const SnapshotProbe = (): null => {
+  const snapshot = useCoordinateSnapshot();
+  probe.snapshot = snapshot
+    ? {
+      generation: snapshot.generation,
+      positions: Array.from(snapshot.data.positions),
+    }
+    : null;
+  probe.generation = useCoordinates()?.generation ?? null;
+  return null;
 };
 
 const Probe = (): null => {
@@ -226,6 +252,8 @@ const Scene = ({ state }: { state: State }): LiveElement => {
       return played(state, BOXED);
     case "slow":
       return played(state, SLOW);
+    case "snapshot":
+      return played(state, latency(state.latency), <SnapshotProbe />);
     case "timeline":
       return (
         <TimelineProvider time={state.time}>
@@ -267,6 +295,7 @@ const App = (): LiveElement => {
     pbc: "none",
     time: 0,
     src: "",
+    latency: 0,
   });
   probe.update = (patch) => setState((previous) => ({ ...previous, ...patch }));
   probe.mounted = true;
