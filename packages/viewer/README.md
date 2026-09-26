@@ -112,7 +112,7 @@ may change before 0.1.0; _advanced_ — only from `@molgpu/viewer/advanced`.
 | `LoadedStructureProps`       | stable       | `<Structure src>` props, with `loader`/`loading`/`error`.                                             |
 | `StructureLoader`            | stable       | Cancellable `(src, cancelled) => StructureData` loader.                                               |
 | `Spacefill`                  | stable       | Atoms as world-space shaded spheres.                                                                  |
-| `Bonds`                      | stable       | Bonds as world-space sticks.                                                                          |
+| `Bonds`                      | stable       | Bonds as world-space sticks; vertex positions follow the nearest coordinate provider.                 |
 | `BallAndStick`               | stable       | Spacefill balls plus Bonds sticks over one selection.                                                 |
 | `Tube`                       | stable       | Backbone as a GPU-extruded tube.                                                                      |
 | `Ribbon`                     | stable       | Backbone as an oriented ribbon mesh.                                                                  |

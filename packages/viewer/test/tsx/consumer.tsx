@@ -20,6 +20,7 @@ import {
 import { createStructure } from "@molgpu/table";
 import type { StructureData } from "@molgpu/table";
 import {
+  Bonds,
   Molecule,
   Spacefill,
   Structure,
@@ -28,11 +29,17 @@ import {
 import type { StructureLoader, StructureProps } from "@molgpu/viewer";
 import { IdentityCoordinates, useCoordinates } from "@molgpu/viewer/advanced";
 import { OffsetCoordinates } from "./offset-coordinates.ts";
+import { BondVertexProbe } from "./bond-vertex-probe.ts";
 import { probe } from "./diagnostics.ts";
 import type { Mode, Phase, State } from "./diagnostics.ts";
 
 /** One synthetic chain of carbons centred on x, owned by @molgpu/table. */
-const cluster = (x: number, radius: number, count = 3): StructureData =>
+const cluster = (
+  x: number,
+  radius: number,
+  count = 3,
+  bonded = false,
+): StructureData =>
   createStructure({
     positions: Float32Array.from(
       { length: count * 3 },
@@ -66,11 +73,15 @@ const cluster = (x: number, radius: number, count = 3): StructureData =>
         authId: ["A"],
       },
       bonds: {
-        count: 0,
-        a: new Uint32Array(),
-        b: new Uint32Array(),
-        order: new Uint8Array(),
-        source: [],
+        count: bonded ? count - 1 : 0,
+        a: bonded
+          ? Uint32Array.from({ length: count - 1 }, (_, i) => i)
+          : new Uint32Array(),
+        b: bonded
+          ? Uint32Array.from({ length: count - 1 }, (_, i) => i + 1)
+          : new Uint32Array(),
+        order: bonded ? new Uint8Array(count - 1).fill(1) : new Uint8Array(),
+        source: bonded ? new Array(count - 1).fill("explicit") : [],
       },
       instances: {
         count: 1,
@@ -140,6 +151,7 @@ const emptyStructure = (): StructureData =>
   });
 
 const left = cluster(-13, 1.8),
+  bonded = cluster(-13, 1.8, 3, true),
   right = cluster(7, 3.2),
   blank = emptyStructure();
 
@@ -225,6 +237,20 @@ const Scene = (
           <IdentityCoordinates>
             <OffsetCoordinates offset={[-2, 1, 0]}>
               <CoordinateProbe />
+            </OffsetCoordinates>
+          </IdentityCoordinates>
+        </OffsetCoordinates>
+      </Structure>
+    );
+  }
+  if (mode === "bonds") {
+    return (
+      <Structure data={bonded}>
+        <OffsetCoordinates offset={[offsetX, 0, 0]}>
+          <IdentityCoordinates>
+            <OffsetCoordinates offset={[-2, 1, 0]}>
+              <Bonds width={0.8} />
+              <BondVertexProbe data={bonded} />
             </OffsetCoordinates>
           </IdentityCoordinates>
         </OffsetCoordinates>

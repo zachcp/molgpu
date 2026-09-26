@@ -19,7 +19,8 @@ export type Mode =
   | "remote"
   | "missing"
   | "controlled"
-  | "offset";
+  | "offset"
+  | "bonds";
 export type Phase = "idle" | "loading" | "error" | "ready";
 export interface State {
   mode: Mode;
@@ -44,6 +45,7 @@ export interface Probe {
   atoms: number | null;
   missingCoordinatesError: string | null;
   coordinateSource: StorageSource | null;
+  bondSource: StorageSource | null;
   device: GPUDevice | null;
   submissions: number;
   computePipelines: number;
@@ -75,6 +77,7 @@ export const probe: Probe = {
   atoms: null,
   missingCoordinatesError: null,
   coordinateSource: null,
+  bondSource: null,
   device: null,
   submissions: 0,
   computePipelines: 0,

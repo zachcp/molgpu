@@ -3,13 +3,19 @@ import {
   type LiveElement,
   provide,
   use,
+  useContext,
   useMemo,
   useRef,
   useResource,
 } from "@use-gpu/live";
 import type { StorageSource, StorageTarget } from "@use-gpu/core";
 import type { ShaderModule } from "@use-gpu/shader";
-import { Compute, ComputeBuffer, Kernel } from "@use-gpu/workbench";
+import {
+  Compute,
+  ComputeBuffer,
+  Kernel,
+  LoopContext,
+} from "@use-gpu/workbench";
 import {
   type Coordinates,
   CoordinatesContext,
@@ -26,6 +32,7 @@ const Published: LC<{
   generation: number;
   children: LiveElement;
 }> = ({ upstream, source, generation, children }) => {
+  const requestRepaint = useContext(LoopContext);
   // ComputeBuffer's f32 target is packed; the vec3to4 accessor reconstructs
   // logical vec3 rows without imposing WGSL's 16-byte array<vec3> stride.
   const packed = useMemo<StorageSource>(() => ({
@@ -38,7 +45,13 @@ const Published: LC<{
   useResource((dispose) => {
     trackOwnedBuffer(source.buffer, "coords:provider");
     gauge("coords:provider:bytes", source.buffer.size);
+    // Pipeline creation is asynchronous. A bounded set of wakeups prevents a
+    // first draw from staying on the zero-filled buffer after the dispatch lands.
+    const wakeups = [16, 50, 100, 200, 400, 800].map((delay) =>
+      setTimeout(requestRepaint, delay)
+    );
     dispose(() => {
+      for (const wakeup of wakeups) clearTimeout(wakeup);
       releaseOwnedBuffer(source.buffer);
       source.buffer.destroy();
     });

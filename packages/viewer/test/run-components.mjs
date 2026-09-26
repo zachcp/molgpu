@@ -108,6 +108,7 @@ Deno.test("viewer components", async () => {
         for (let i = 0; i < 8; i++) await new Promise(requestAnimationFrame);
       });
     const snapshot = () => page.evaluate(() => window.__viewer.snapshot());
+    const shot = () => page.locator("canvas").screenshot();
     const readCoordinates = () =>
       page.evaluate(async () => {
         const { coordinateSource: source, device } = window.__viewer;
@@ -124,6 +125,26 @@ Deno.test("viewer components", async () => {
           0,
           source.length * 12,
         );
+        device.queue.submit([encoder.finish()]);
+        await staging.mapAsync(GPUMapMode.READ);
+        const values = Array.from(
+          new Float32Array(staging.getMappedRange().slice(0)),
+        );
+        staging.unmap();
+        staging.destroy();
+        return values;
+      });
+    const readBondVertices = () =>
+      page.evaluate(async () => {
+        const { bondSource: source, device } = window.__viewer;
+        if (!source || !device) throw new Error("missing bond vertex source");
+        const bytes = source.length * 4;
+        const staging = device.createBuffer({
+          size: bytes,
+          usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+        });
+        const encoder = device.createCommandEncoder();
+        encoder.copyBufferToBuffer(source.buffer, 0, staging, 0, bytes);
         device.queue.submit([encoder.finish()]);
         await staging.mapAsync(GPUMapMode.READ);
         const values = Array.from(
@@ -222,17 +243,35 @@ Deno.test("viewer components", async () => {
       window.__viewer.counters().ownedBuffers.live
     );
     await update({ mode: "offset" });
-    const offsetBlobs = await blobs("offset", "components-offset");
-    assert.equal(offsetBlobs.length, 1, "the provider chain draws Spacefill");
-    assert.ok(
-      offsetBlobs[0].x > preloaded[0].x,
-      "the chained offset moves the Spacefill draw",
-    );
-    const positions = await readCoordinates();
+    let positions = [];
+    const expectedCoordinates = [-13, 1, 0, -10, 1, 0, -7, 1, 0];
+    for (let attempt = 0; attempt < 12; attempt++) {
+      positions = await readCoordinates();
+      if (positions.every((value, i) => value === expectedCoordinates[i])) {
+        break;
+      }
+      await settle();
+    }
     assert.deepEqual(
       positions,
-      [-13, 1, 0, -10, 1, 0, -7, 1, 0],
+      expectedCoordinates,
       "the two offsets compose exactly in the GPU buffer",
+    );
+    let offsetBlobs = await blobs("offset", "components-offset");
+    for (let attempt = 0; attempt < 12; attempt++) {
+      if (
+        offsetBlobs.length === 1 &&
+        offsetBlobs[0].x > preloaded[0].x + 20 &&
+        offsetBlobs[0].x < preloaded[0].x + 45
+      ) break;
+      await settle();
+      offsetBlobs = await blobs("offset", "components-offset");
+    }
+    assert.equal(offsetBlobs.length, 1, "the provider chain draws Spacefill");
+    assert.ok(
+      offsetBlobs[0].x > preloaded[0].x + 20 &&
+        offsetBlobs[0].x < preloaded[0].x + 45,
+      "the chained offset moves the Spacefill draw",
     );
     const firstDispatches = await page.evaluate(() =>
       window.__viewer.dispatches
@@ -249,15 +288,22 @@ Deno.test("viewer components", async () => {
     );
     await page.evaluate(() => window.__viewer.update({ offsetX: 6 }));
     let visibilityFrame = null;
-    for (let frame = 1; frame <= 4; frame++) {
+    const observed = [];
+    for (let frame = 1; frame <= 10; frame++) {
       await page.evaluate(() => new Promise(requestAnimationFrame));
       const drawn = await analyze(await page.locator("canvas").screenshot());
+      observed.push(drawn);
       if (drawn.length === 1 && drawn[0].x > offsetBlobs[0].x + 5) {
         visibilityFrame = frame;
         break;
       }
     }
-    assert.ok(visibilityFrame !== null, "updated coordinates reach the draw");
+    assert.ok(
+      visibilityFrame !== null,
+      `updated coordinates reach the draw: before=${
+        JSON.stringify(offsetBlobs)
+      } observed=${JSON.stringify(observed)}`,
+    );
     await settle();
     assert.deepEqual(
       await readCoordinates(),
@@ -286,6 +332,80 @@ Deno.test("viewer components", async () => {
       dispatches: 4,
       firstObservedFrame: visibilityFrame,
     };
+
+    await update({ mode: "bonds", offsetX: 5 });
+    let bondVertices = [];
+    const expectedBondVertices = [
+      -13,
+      1,
+      0,
+      -11.5,
+      1,
+      0,
+      -11.5,
+      1,
+      0,
+      -10,
+      1,
+      0,
+      -10,
+      1,
+      0,
+      -8.5,
+      1,
+      0,
+      -8.5,
+      1,
+      0,
+      -7,
+      1,
+      0,
+    ];
+    for (let attempt = 0; attempt < 12; attempt++) {
+      bondVertices = await readBondVertices();
+      if (
+        bondVertices.length === expectedBondVertices.length &&
+        bondVertices.every((value, i) =>
+          Math.abs(value - expectedBondVertices[i]) <= 1e-5
+        )
+      ) break;
+      await settle();
+    }
+    const bondBefore = await shot();
+    assert.equal(bondVertices.length, expectedBondVertices.length);
+    for (let i = 0; i < bondVertices.length; i++) {
+      assert.ok(
+        Math.abs(bondVertices[i] - expectedBondVertices[i]) <= 1e-5,
+        `bond vertex ${i} matches the CPU midpoint oracle`,
+      );
+    }
+    const bondBuilds = await page.evaluate(() =>
+      window.__viewer.counters().detail["geometryBuilds:bonds:columns"] ?? 0
+    );
+    await update({ offsetX: 6 }, true);
+    const movedBondVertices = await readBondVertices();
+    for (let i = 0; i < bondVertices.length; i += 3) {
+      assert.ok(Math.abs(movedBondVertices[i] - bondVertices[i] - 1) <= 1e-5);
+      assert.ok(
+        Math.abs(movedBondVertices[i + 1] - bondVertices[i + 1]) <= 1e-5,
+      );
+      assert.ok(
+        Math.abs(movedBondVertices[i + 2] - bondVertices[i + 2]) <= 1e-5,
+      );
+    }
+    assert.equal(
+      await page.evaluate(() =>
+        window.__viewer.counters().detail["geometryBuilds:bonds:columns"] ?? 0
+      ),
+      bondBuilds,
+      "moving coordinates does not rebuild CPU bond columns",
+    );
+    assert.ok(
+      !(await shot()).equals(bondBefore),
+      "live bonds move in the draw",
+    );
+    report.states.bonds = { vertices: bondVertices, movedBy: 1 };
+    await update({ mode: "preloaded" });
 
     // 2. The runtime rejects the same prop combinations the types reject.
     const invalid = await page.evaluate(() => window.__viewer.invalid());

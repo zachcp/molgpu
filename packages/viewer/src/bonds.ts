@@ -22,6 +22,8 @@ import {
 } from "./internal/representation.ts";
 import { gatherAtomColumns } from "./internal/gather.ts";
 import { indexed } from "./internal/indexed.ts";
+import { useCoordinates } from "./coordinates-context.ts";
+import { useBondPositions } from "./internal/bond-positions.ts";
 
 /** LineLayer props Bonds forwards (draw mode and any upstream flags). */
 type LineProps = Record<string, unknown>;
@@ -33,7 +35,7 @@ import {
 } from "./internal/opacity.ts";
 import { useOpacityColors } from "./internal/use-opacity-colors.ts";
 import { withMaterial } from "./materials.ts";
-import { buildBondColumns } from "./internal/bond-columns.ts";
+import { buildBondRows } from "./internal/bond-columns.ts";
 import { useRepaint } from "./internal/use-repaint.ts";
 import { useBindingProbe } from "./internal/use-binding-probe.ts";
 
@@ -48,10 +50,8 @@ const sameRows = (a: Uint32Array, b: Uint32Array): boolean => {
   return true;
 };
 
-// A coordinate edit rebuilds bond geometry but usually keeps the same endpoint
-// rows. Keep the previous array when its contents match, so the uploaded row
-// column is reused. Inferred bonds can change with coordinates; then the rows
-// change and are uploaded again.
+// Keep the previous row array when a topology or selection update produces the
+// same rows, so the field-colour index column does not upload again.
 const useStableRows = (rows: Uint32Array): Uint32Array => {
   const previous = useRef<Uint32Array | null>(null);
   if (!previous.current || !sameRows(previous.current, rows)) {
@@ -63,6 +63,7 @@ const useStableRows = (rows: Uint32Array): Uint32Array => {
 const line = (
   positions: ShaderSource | null,
   segments: ShaderSource | null,
+  count: number,
   width: number,
   sides: number,
   shaded: boolean,
@@ -72,6 +73,7 @@ const line = (
   use(LineLayer, {
     positions,
     segments,
+    count,
     width,
     join: "round",
     ...(shaded ? { shaded: true, sides, depth: -1 } : {}),
@@ -84,6 +86,8 @@ const line = (
 const FieldBonds: LC<
   {
     map: ColumnMap;
+    positions: ShaderSource;
+    count: number;
     attrNames: readonly string[];
     field: Field;
     opacity: number;
@@ -91,7 +95,20 @@ const FieldBonds: LC<
     sides: number;
     shaded: boolean;
   } & LineProps
-> = ({ map, attrNames, field, opacity, width, sides, shaded, ...props }) => {
+> = (
+  {
+    map,
+    positions,
+    count,
+    attrNames,
+    field,
+    opacity,
+    width,
+    sides,
+    shaded,
+    ...props
+  },
+) => {
   const columns = attrNames.map((name) => map[`attr:${name}`]);
   const attrs = useMemo(
     () =>
@@ -108,14 +125,69 @@ const FieldBonds: LC<
     opacity,
   );
   return line(
-    map.positions,
+    positions,
     map.segments,
+    count,
     width,
     sides,
     shaded,
     { colors },
     props,
   );
+};
+
+const BondLines: LC<{
+  map: ColumnMap;
+  coordinates: ShaderSource;
+  count: number;
+  split: boolean;
+  field: Field | null;
+  attrNames: readonly string[];
+  opacity: number;
+  width: number;
+  sides: number;
+  shaded: boolean;
+  color: VectorLike | Field;
+}> = (
+  {
+    map,
+    coordinates,
+    count,
+    split,
+    field,
+    attrNames,
+    opacity,
+    width,
+    sides,
+    shaded,
+    color,
+    ...props
+  },
+) => {
+  const positions = useBondPositions(map.endpoints!, coordinates, split);
+  return field
+    ? use(FieldBonds, {
+      map,
+      positions,
+      count,
+      attrNames,
+      field,
+      opacity,
+      width,
+      sides,
+      shaded,
+      ...props,
+    })
+    : line(
+      positions,
+      map.segments,
+      count,
+      width,
+      sides,
+      shaded,
+      { color },
+      props,
+    );
 };
 
 /**
@@ -161,6 +233,7 @@ export const Bonds: ViewerComponent<
   useRepaint();
   useBindingProbe("bonds", color, opacity, width);
   const { resource } = useStructure();
+  const coordinates = useCoordinates();
   const { data } = resource;
 
   checkAtomSelection(select, resource, "Bonds");
@@ -185,21 +258,35 @@ export const Bonds: ViewerComponent<
   );
   const indices = select ? select.indices : null;
   const selectKey = select?.id ?? "all";
+  // Explicit topology is independent of root positions. Inferred connectivity
+  // may change when the root StructureData itself receives new positions.
+  const inferenceRevision = data.topology.bonds.count
+    ? 0
+    : resource.positionsRevision;
+  // Endpoint rows depend on topology/selection, never provider coordinates.
   const built = useMemo(
-    () => buildBondColumns(data, indices, endpoints, defaultColor),
-    [data, selectKey, endpoints, defaultColor],
+    () => buildBondRows(data, indices, endpoints, defaultColor),
+    [
+      resource.identity,
+      resource.topologyRevision,
+      inferenceRevision,
+      selectKey,
+      endpoints,
+      defaultColor,
+    ],
   );
   const rows = useStableRows(built.rows);
+  const endpointRows = useStableRows(built.endpoints);
   // Full attribute columns follow topology only; selections, coordinate edits
   // and re-inferred bonds change only the row column.
   const attrs = useMemo(
     () => gatherAtomColumns(data, null, attrNames, "bonds"),
     [resource.identity, resource.topologyRevision, attrNames.join()],
   );
-  if (!built.n) return null;
+  if (!coordinates || !built.n) return null;
 
   const specs: ColumnSpec[] = [
-    { key: "positions", data: built.positions, format: "vec3<f32>" },
+    { key: "endpoints", data: endpointRows, format: "vec2<u32>" },
     { key: "segments", data: built.segments, format: "i32" },
   ];
   if (field) {
@@ -213,22 +300,21 @@ export const Bonds: ViewerComponent<
     (map) =>
       withMaterial(
         material,
-        field
-          ? use(FieldBonds, {
-            map,
-            attrNames,
-            field,
-            opacity,
-            width,
-            sides,
-            shaded,
-            ...drawMode,
-            ...props,
-          })
-          : line(map.positions, map.segments, width, sides, shaded, {
-            color: flatColor,
-            ...drawMode,
-          }, props),
+        use(BondLines, {
+          map,
+          coordinates: coordinates.source,
+          count: built.n,
+          split: defaultColor,
+          field,
+          attrNames,
+          opacity,
+          width,
+          sides,
+          shaded,
+          color: flatColor as VectorLike | Field,
+          ...drawMode,
+          ...props,
+        }),
       ),
   );
 };

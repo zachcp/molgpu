@@ -78,8 +78,12 @@ Deno.test("viewer gate 2", async () => {
     const beforeShot = await shot();
     assert.ok(
       before.storageLabels.filter((label) => label === "molgpu:positions")
-        .length >= 2,
-      "probe must observe shared and selected position buffers",
+        .length >= 1,
+      "probe must observe the shared coordinate buffer",
+    );
+    assert.ok(
+      before.storageLabels.includes("molgpu:endpoints"),
+      "probe must observe bond endpoint rows",
     );
     assert.ok(
       before.storageLabels.includes("molgpu:segments"),
@@ -105,7 +109,8 @@ Deno.test("viewer gate 2", async () => {
       `recolour allocated storage buffers: ${newBuffers}`,
     );
     const geometryWrites = newWrites.filter(({ label }) =>
-      label === "molgpu:positions" || label === "molgpu:segments"
+      label === "molgpu:positions" || label === "molgpu:endpoints" ||
+      label === "molgpu:segments"
     );
     assert.deepEqual(
       geometryWrites,
