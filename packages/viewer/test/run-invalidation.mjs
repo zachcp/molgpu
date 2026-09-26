@@ -10,16 +10,15 @@
 // compare live GPU buffers with the baseline; churn selections and check that
 // owned GPU buffers stay bounded.
 //
-// This is an AUDIT: a contract violation is recorded as a node:test `todo`
+// This is an AUDIT: a contract violation is recorded as a Deno `todo`
 // naming the violation (so the suite stays green) rather than fixed here.
 // Rows that do not apply to a representation are `skip`ped with the reason.
 //
 // Why a browser, not node: every row below lives inside Live components
 // (useMemo keys, RawData/ColumnSource uploads, shader bindings); the pure
-// kernels those components call are covered by invalidation.test.mjs.
+// kernels those components call are covered by invalidation.test.ts.
 //
-// Run: npm run test:viewer:invalidation
-import test, { before, after } from 'node:test';
+// Run: deno task test:viewer:invalidation
 import assert from 'node:assert/strict';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
@@ -33,8 +32,17 @@ const PORT = 5231;
 const MOUNT_CYCLES = 5;
 let server, browser, page;
 const evidence = { date: new Date().toISOString(), rows: {} };
+const registrations = [];
 
-before(async () => {
+function test(name, options, fn) {
+  if (typeof options === 'function') {
+    fn = options;
+    options = {};
+  }
+  registrations.push({ name, options, fn });
+}
+
+async function setup() {
   server = await createServer({
     root, configFile: false, logLevel: 'warn',
     resolve: { alias: workspaceAliases() },
@@ -57,14 +65,14 @@ before(async () => {
   // vite may reload once after discovering a dependency; wait it out.
   await page.waitForTimeout(500);
   await page.waitForFunction(() => window.__inv?.mounted, null, { timeout: 60000 });
-});
+}
 
-after(async () => {
+async function teardown() {
   await mkdir(out, { recursive: true });
   await writeFile(`${out}/invalidation.json`, JSON.stringify(evidence, null, 2));
   await browser?.close();
   await server?.close();
-});
+}
 
 // ---- driving ---------------------------------------------------------------
 
@@ -417,3 +425,33 @@ test('selection churn: 64 distinct Spacefill selections keep owned live GPU buff
   const first = liveAfter[7], last = liveAfter.at(-1);
   assert.ok(last <= first, `owned live GPU buffers grow with selection churn: ${JSON.stringify(liveAfter)}`);
 });
+
+let setupPromise;
+let remaining = registrations.filter(({ options }) => !options.skip && !options.todo).length;
+let serial = Promise.resolve();
+for (const { name, options, fn } of registrations) {
+  Deno.test({
+    name,
+    ignore: Boolean(options.skip || options.todo),
+    permissions: { read: true, write: true, net: true, run: true, env: true },
+    sanitizeOps: false,
+    sanitizeResources: false,
+    async fn() {
+      let release;
+      const previous = serial;
+      serial = new Promise((resolve) => { release = resolve; });
+      await previous;
+      try {
+        setupPromise ??= setup();
+        await setupPromise;
+        await fn();
+      } finally {
+        try {
+          if (--remaining === 0) await teardown();
+        } finally {
+          release();
+        }
+      }
+    },
+  });
+}

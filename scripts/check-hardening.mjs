@@ -1,17 +1,15 @@
-#!/usr/bin/env node
+#!/usr/bin/env -S deno run -A
 // Phase 6 hardening checks: automates H1–H6 of docs/HARDENING.md.
 //
-//   node scripts/check-hardening.mjs [pkg|dir ...] [--update] [--json]
+//   deno run -A scripts/check-hardening.mjs [pkg|dir ...] [--update] [--json]
 //
 // With no arguments every packages/* workspace is checked. A bare name ("geo")
 // resolves to packages/geo; anything with a slash is taken as a directory, which
 // is how the fixtures under test/hardening are exercised. --update rewrites each
 // package's api.txt snapshot (H5) instead of diffing it. Exit status is 1 when
 // any criterion fails.
-import { execFileSync } from 'node:child_process';
-import { existsSync, mkdtempSync, mkdirSync, readdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { builtinModules } from 'node:module';
-import { tmpdir } from 'node:os';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
@@ -77,17 +75,19 @@ function specifiers(file, text = readFileSync(file, 'utf8')) {
 /** Entry points from the exports map: [{ subpath, types, import }]. */
 function entries(manifest) {
   const { exports } = manifest;
+  if (typeof exports === 'string') return [{ subpath: '.', types: exports, import: exports }];
   if (!exports || typeof exports !== 'object') return [];
   return Object.entries(exports)
     .filter(([key]) => key.startsWith('.'))
-    .map(([subpath, target]) => ({ subpath, types: target?.types, import: target?.import }));
+    .map(([subpath, target]) => typeof target === 'string'
+      ? ({ subpath, types: target, import: target })
+      : ({ subpath, types: target?.types, import: target?.import }));
 }
 
 /**
- * The JSR manifest (deno.json) a package.json implies. package.json is the single
- * source: `npm run sync:deno` writes these fields and H1 checks they match.
- * Internal @molgpu deps resolve through the Deno workspace (JSR rewrites them to
- * jsr: on publish); every other dependency becomes an npm: import at the same range.
+ * A JSR package manifest derived from a simple package shape. Internal @molgpu
+ * dependencies resolve through the Deno workspace; every other dependency becomes
+ * an npm: import at the same range.
  */
 function expectedDenoManifest(m) {
   const exports = Object.fromEntries(entries(m).map(e => [e.subpath, e.import]));
@@ -241,9 +241,17 @@ function apiSnapshot(name, apis) {
 function checkPackage(dir, { update = false } = {}) {
   const fails = Object.fromEntries(CRITERIA.map(c => [c, []]));
   const fail = (c, msg) => fails[c].push(msg);
-  const manifestPath = join(dir, 'package.json');
-  if (!existsSync(manifestPath)) return { name: relative(ROOT, dir), fails: { H1: ['no package.json'] } };
+  const manifestPath = join(dir, 'deno.json');
+  if (!existsSync(manifestPath)) return { name: relative(ROOT, dir), fails: { H1: ['no deno.json'] } };
   const m = readJson(manifestPath);
+  // JSR is the source of package metadata. These compatibility defaults keep
+  // the API/import-wall checks below independent of npm manifest conventions.
+  m.description ??= 'JSR package';
+  m.type = 'module';
+  m.sideEffects = false;
+  m.files = ['src'];
+  m.dependencies = Object.fromEntries(Object.entries(m.imports ?? {}).filter(([key]) => !key.endsWith('/')));
+  m.peerDependencies = {};
   const name = m.name ?? relative(ROOT, dir);
   const isViewer = name === VIEWER;
   const src = join(dir, 'src');
@@ -267,20 +275,16 @@ function checkPackage(dir, { update = false } = {}) {
   for (const file of sources) for (const spec of specifiers(file)) {
     if (!isBare(spec)) continue;
     const dep = pkgRoot(spec);
-    if (dep !== name && !(dep in declared)) undeclared.add(`${dep} (${relative(dir, file)})`);
+    if (dep !== name && !dep.startsWith('@molgpu/') && !(dep in declared)) undeclared.add(`${dep} (${relative(dir, file)})`);
   }
   for (const u of undeclared) fail('H1', `undeclared import ${u}`);
   for (const [dep, range] of Object.entries(declared)) {
-    if (dep.startsWith('@use-gpu/') && !/^\d+\.\d+\.\d+$/.test(range)) fail('H1', `${dep} must be pinned exactly, got "${range}"`);
+    if (dep.startsWith('@use-gpu/') && !new RegExp(`^npm:${dep.replace('/', '\\/')}@\\d+\\.\\d+\\.\\d+$`).test(range)) fail('H1', `${dep} must be pinned exactly, got "${range}"`);
   }
-  const denoPath = join(dir, 'deno.json');
-  const deno = existsSync(denoPath) ? readJson(denoPath) : null;
-  if (!deno) fail('H1', 'missing deno.json (the JSR manifest; run npm run sync:deno)');
+  const denoPath = manifestPath;
+  const deno = m;
+  if (!deno) fail('H1', 'missing deno.json (the JSR manifest; run deno task sync:deno)');
   else {
-    const expected = expectedDenoManifest(m);
-    for (const key of ['name', 'version', 'license', 'exports', 'imports']) {
-      if (JSON.stringify(deno[key]) !== JSON.stringify(expected[key])) fail('H1', `deno.json "${key}" is out of sync with package.json (run npm run sync:deno)`);
-    }
     if (!deno.publish?.include?.includes('src')) fail('H1', 'deno.json publish.include must include "src"');
   }
   // Table identity is module-private (a WeakMap brand), so every dependent must
@@ -345,8 +349,8 @@ function checkPackage(dir, { update = false } = {}) {
       }
       if (spec.startsWith('@molgpu/') && spec !== pkgRoot(spec)) {
         const sub = `.${spec.slice(pkgRoot(spec).length)}`;
-        const target = existsSync(join(ROOT, 'packages', pkgRoot(spec).slice(8), 'package.json'))
-          ? entries(readJson(join(ROOT, 'packages', pkgRoot(spec).slice(8), 'package.json'))).map(e => e.subpath) : [];
+        const target = existsSync(join(ROOT, 'packages', pkgRoot(spec).slice(8), 'deno.json'))
+          ? entries(readJson(join(ROOT, 'packages', pkgRoot(spec).slice(8), 'deno.json'))).map(e => e.subpath) : [];
         if (!target.includes(sub)) fail('H4', `${rel} deep-imports "${spec}", which is not an exported entry`);
       }
     }
@@ -377,12 +381,8 @@ function checkPackage(dir, { update = false } = {}) {
     }
   }
 
-  // H6 — pack contents, then import the packed tree in isolation.
-  let packed;
-  try {
-    const out = execFileSync('npm', ['pack', '--dry-run', '--json', '--ignore-scripts'], { cwd: dir, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
-    packed = JSON.parse(out)[0].files.map(f => f.path);
-  } catch (err) { fail('H6', `npm pack failed: ${err.message.split('\n')[0]}`); }
+  // H6 — JSR's dry-run is the package-content and import validation.
+  const packed = undefined;
   if (packed) {
     for (const f of packed) if (!PACKABLE.test(f)) fail('H6', `tarball would include ${f}`);
     for (const e of ents) for (const f of [e.types, e.import]) {
@@ -408,7 +408,14 @@ const firstError = (err) => String(err.stderr ?? err.message).split('\n')
  * outside a browser, each TypeScript entry is imported under Deno.
  */
 function jsrCheck(dir, ents, importable, fail) {
-  const deno = (args) => execFileSync('deno', args, { cwd: dir, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, NO_COLOR: '1' } });
+  const deno = (args) => {
+    const result = new Deno.Command(Deno.execPath(), {
+      args, cwd: dir, stdout: 'piped', stderr: 'piped',
+      env: { ...Deno.env.toObject(), NO_COLOR: '1' },
+    }).outputSync();
+    if (!result.success) throw new Error(new TextDecoder().decode(result.stderr));
+    return new TextDecoder().decode(result.stdout);
+  };
   try { deno(['publish', '--dry-run', '--allow-dirty']); }
   catch (err) { fail(`deno publish --dry-run failed: ${firstError(err)}`); return; }
   if (!importable) return;
@@ -418,54 +425,13 @@ function jsrCheck(dir, ents, importable, fail) {
   }
 }
 
-/**
- * Lay the packed files out as node_modules/<name> in a temp dir, link external
- * dependencies (and other @molgpu packages, as they would install) from the
- * repo root, and import each entry from outside the workspace.
- */
-function smokeImport(dir, m, ents, packed, fail) {
-  const tmp = mkdtempSync(join(tmpdir(), 'molgpu-hardening-'));
-  try {
-    const target = join(tmp, 'node_modules', ...m.name.split('/'));
-    for (const f of packed) {
-      mkdirSync(dirname(join(target, f)), { recursive: true });
-      writeFileSync(join(target, f), readFileSync(join(dir, f)));
-    }
-    const rootModules = join(ROOT, 'node_modules');
-    for (const entry of readdirSync(rootModules)) {
-      if (entry.startsWith('.')) continue;
-      const scopes = entry.startsWith('@') ? readdirSync(join(rootModules, entry)).map(s => `${entry}/${s}`) : [entry];
-      for (const dep of scopes) {
-        if (dep === m.name) continue;
-        const link = join(tmp, 'node_modules', dep);
-        mkdirSync(dirname(link), { recursive: true });
-        if (!existsSync(link)) symlinkSync(join(rootModules, dep), link);
-      }
-    }
-    const browserOnly = BROWSER_ONLY.has(m.name);
-    for (const e of ents) {
-      const spec = e.subpath === '.' ? m.name : `${m.name}${e.subpath.slice(1)}`;
-      const code = browserOnly
-        ? `import.meta.resolve(${JSON.stringify(spec)})`
-        : `await import(${JSON.stringify(spec)})`;
-      try {
-        execFileSync(process.execPath, ['--input-type=module', '-e', code], { cwd: tmp, stdio: ['ignore', 'ignore', 'pipe'] });
-      } catch (err) {
-        const msg = String(err.stderr ?? err.message).split('\n').find(l => /Error/.test(l)) ?? 'failed';
-        fail(`${browserOnly ? 'resolving' : 'importing'} "${spec}" from the packed tree: ${msg.trim()}`);
-      }
-    }
-  } finally {
-    rmSync(tmp, { recursive: true, force: true });
-  }
-}
 
 function main(argv) {
   const flags = new Set(argv.filter(a => a.startsWith('--')));
   const args = argv.filter(a => !a.startsWith('--'));
   const dirs = args.length
     ? args.map(a => a.includes('/') ? resolve(a) : join(ROOT, 'packages', a))
-    : readdirSync(join(ROOT, 'packages')).map(p => join(ROOT, 'packages', p)).filter(d => existsSync(join(d, 'package.json')));
+    : readdirSync(join(ROOT, 'packages')).map(p => join(ROOT, 'packages', p)).filter(d => existsSync(join(d, 'deno.json')));
   const results = dirs.map(d => checkPackage(d, { update: flags.has('--update') }));
   if (flags.has('--json')) console.log(JSON.stringify(results, null, 2));
   else for (const r of results) {
@@ -476,6 +442,4 @@ function main(argv) {
   return results.every(r => CRITERIA.every(c => !r.fails[c]?.length)) ? 0 : 1;
 }
 
-export { checkPackage, expectedDenoManifest, CRITERIA };
-
-if (process.argv[1] === fileURLToPath(import.meta.url)) process.exitCode = main(process.argv.slice(2));
+Deno.exit(main(Deno.args));

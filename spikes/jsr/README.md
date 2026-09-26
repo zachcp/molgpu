@@ -15,7 +15,7 @@ A Deno workspace:
 ```bash
 cd spikes/jsr
 deno publish --dry-run --allow-dirty          # type check + slow types, all members
-(cd table && node --test test/*.test.mjs && deno test -A test/)
-(cd render && deno bundle --platform browser -o page.js page.ts) && node render/run.mjs
+(cd table && deno test -A test/)
+(cd render && deno bundle --platform browser -o page.js page.ts) && deno run -A render/run.mjs
 (cd probes && deno run -A io.ts && deno run -A usegpu.ts)   # usegpu.ts shows the CJS named-export failure
 ```

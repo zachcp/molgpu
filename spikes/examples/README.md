@@ -31,10 +31,10 @@ Package docs: [table](../../packages/table/README.md) ·
 own `<Pass>` (postprocessing), a `<PickingProvider>` and the font stack, which
 the shared harness's fixed `Pass` + lights cannot host.
 
-`npm run test:examples` (from the repo root) drives the gallery in Chrome
+`deno task test:examples` (from the repo root) drives the gallery in Chrome
 WebGPU: the scene's reactive-render contract, the lighting orbit, the timeline
 scrub, and **every representation variant painting the molecule** (and
-differing from its siblings). `npm run test:examples:figure` smoke-tests the
+differing from its siblings). `deno task test:examples:figure` smoke-tests the
 figure. The focused regression harnesses in `packages/viewer/test`
 (`run-tube.mjs`, `run-ribbon.mjs`, `run-surface.mjs`, `run-gate2.mjs`, …) stay:
 they check invariants a picture cannot, such as a style edit uploading zero new

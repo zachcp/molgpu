@@ -14,7 +14,7 @@ plain objects, and failures are this package's own error classes with a
 ## Install
 
 ```sh
-npm install @molgpu/io @molgpu/table
+deno add jsr:@molgpu/io jsr:@molgpu/table
 ```
 
 ## Dependencies
@@ -88,5 +88,5 @@ import `@use-gpu/*`, `@molgpu/viewer`, or any other `@molgpu/*` package besides
 
 ## Tests
 
-`npm test` from the repository root runs this package's suites, which compare
-against Mol* directly; `npm run test:corpus` runs the curated structure corpus.
+`deno task test` from the repository root runs this package's suites, which compare
+against Mol* directly; `deno task test:corpus` runs the curated structure corpus.

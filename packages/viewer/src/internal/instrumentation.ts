@@ -21,7 +21,7 @@
 //   alpha, size, clock) to its layer bindings.
 // Each is also recorded per label as `detail["<counter>:<label>"]`.
 // This module has no Live/GPU imports so pure kernels can call it under plain
-// `node --test`; the Live hook lives in ./use-binding-probe.ts.
+// `deno test`; the Live hook lives in ./use-binding-probe.ts.
 
 const NAMES = ['topologyBuilds', 'geometryBuilds', 'gathers', 'allocations', 'uploadBytes', 'bindingUpdates'] as const;
 /** One of the work counters (see the vocabulary above). */

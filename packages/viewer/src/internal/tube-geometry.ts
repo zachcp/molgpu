@@ -9,7 +9,7 @@
 // spiky artifact this avoids. A run needs at least 2 guide points to have a
 // direction at all, so a single-residue run contributes no tube geometry.
 // A namespace import, not a named one: Vite resolves @use-gpu/core's real ESM
-// build (named export works directly), but plain `node --test` resolves its
+// build (named export works directly), but plain `deno test` resolves its
 // CJS build, whose named exports Node's static CJS/ESM interop cannot always
 // see — falling back to the namespace's `default` (the full module.exports)
 // covers that case too.
@@ -68,7 +68,7 @@ function subdivideRun(guide: Float32Array, residue: Uint32Array, start: number, 
  * extrude). Returns `{ count, positions, segments, residue }`; `count === 0`
  * when nothing in the trace can form a tube.
  */
-export function buildTubeGeometry(trace: Trace, perSegment = 6): TubeGeometry {
+export function buildTubeGeometry(trace: Pick<Trace, 'guide' | 'residue' | 'runs'>, perSegment = 6): TubeGeometry {
   if (!Number.isInteger(perSegment) || perSegment < 1) fail('perSegment must be a positive integer');
   countWork('geometryBuilds', 'tube:spline');
   const runs: { positions: Float32Array; residue: Uint32Array }[] = [];

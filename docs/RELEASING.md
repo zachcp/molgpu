@@ -20,32 +20,25 @@ changelog and a minor bump while we are on 0.x.
 
 1. Pick the version. On 0.x, breaking changes bump the minor version and
    everything else bumps the patch.
-2. Set `"version"` in every `packages/*/package.json`, plus every internal
-   `@molgpu/*` dependency and the `@molgpu/table` peer range, to the new version.
-   Run `npm install` to refresh the lockfile.
+2. Set `"version"` in every `packages/*/deno.json` to the new version and run
+   `deno cache --reload --lock=deno.lock --lock-write deno.json` to refresh the lockfile.
 3. In each `CHANGELOG.md`, rename `## [Unreleased]` to `## [x.y.z] - YYYY-MM-DD`
    and add a fresh empty `## [Unreleased]` above it. If a package has no changes,
    write "No changes; released in lockstep."
 4. Run the gates:
    ```bash
-   npm test
-   npm run test:hardening
-   npm run check:hardening
-   npm run release:dry-run
+   deno task test
+   deno task typecheck
+   deno task test:hardening
+   deno task check:hardening
+   deno task jsr:check
    ```
-   `release:dry-run` falls back to `npm pack --dry-run` for any version that is
-   already on the registry, so CI stays green between releases.
-   Run the browser suites too (`npm run test:components`, `npm run test:examples`
-   and the `test:viewer:*` scripts). They need Chrome with WebGPU, so CI does not
+   Run the browser suites too (`deno task test:components`, `deno task test:examples`
+   and the `deno task test:viewer:*` tasks). They need Chrome with WebGPU, so CI does not
    run them.
 5. Commit, then tag `vX.Y.Z`.
-6. Publishing to npm is a separate, human decision. When it is made, publish
-   in the order `scripts/publish-dry-run.mjs` uses (`table`, `geo`, `timeline`,
-   `select`, `fields`, `io`, `viewer`), so each package's dependencies are
-   already on the registry:
-   ```bash
-   npm publish --access public --workspace packages/<name>
-   ```
+6. Publish to JSR with `deno publish` from each package directory, in dependency
+   order (`table`, `geo`, `timeline`, `select`, `fields`, `io`, `viewer`).
 
 ## Not yet done
 

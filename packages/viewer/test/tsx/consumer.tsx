@@ -3,7 +3,7 @@
  * <Molecule>/<Structure>/<Spacefill> inside one caller-owned use.gpu scene,
  * with no canvas or device of its own beyond the <AutoCanvas> it mounts.
  *
- * `npm run typecheck` compiles it; `npm run test:components` builds it with
+ * `deno task typecheck:components` compiles it; `deno task test:components` builds it with
  * vite and drives every state below in Chrome. The `probe` wiring is the test
  * control surface, imported from ./diagnostics so this file keeps consumer
  * shape: state in, Live elements out.

@@ -17,10 +17,8 @@ jobs:
         with:
           deno-version: v2.x
       - run: npm ci
-      - run: npm test
-      - run: npm run test:deno
-      - run: npm run typecheck:src
-      - run: npm run test:hardening
-      - run: npm run check:hardening
-      - run: npm run jsr:check
-      - run: npm run release:dry-run
+      - run: deno task test
+      - run: deno task typecheck
+      - run: deno task test:hardening
+      - run: deno task check:hardening
+      - run: deno task jsr:check

@@ -13,6 +13,10 @@ import { createCurveSegmentState, interpolateCurveSegment, interpolateSizes } fr
 import type { SecondaryStructureTrace, Trace } from '@molgpu/table';
 import { count as countWork } from './instrumentation.ts';
 
+/** The trace columns the kernel reads. */
+type TraceRuns = Pick<Trace, 'guide' | 'residue' | 'runs'>;
+type TraceFrames = Pick<SecondaryStructureTrace, 'direction' | 'kind' | 'first' | 'last'>;
+
 type Vec3 = [number, number, number];
 
 /** An indexed ribbon mesh, with each vertex's source residue row. */
@@ -34,7 +38,7 @@ const vec3At = (arr: ArrayLike<number>, i: number): Vec3 => [arr[i * 3], arr[i *
 const unit3 = ([x, y, z]: Vec3): Vec3 => { const l = Math.hypot(x, y, z); return l > 1e-9 ? [x / l, y / l, z / l] : [0, 0, 1]; };
 
 /** One run's ribbon mesh, or null if the run has fewer than 2 guide points (no direction to extrude). */
-function buildRun(trace: Trace, ss: SecondaryStructureTrace, start: number, count: number, linearSegments: number): { positions: number[]; normals: number[]; indices: number[]; residue: number[] } | null {
+function buildRun(trace: TraceRuns, ss: TraceFrames, start: number, count: number, linearSegments: number): { positions: number[]; normals: number[]; indices: number[]; residue: number[] } | null {
   if (count < 2) return null;
   const positions: number[] = [], normals: number[] = [], indices: number[] = [], residueOut: number[] = [];
   let prevRing: number[] | null = null;
@@ -88,7 +92,7 @@ function buildRun(trace: Trace, ss: SecondaryStructureTrace, start: number, coun
  * state). Returns `{ count, positions, normals, indices, residue }`;
  * `count === 0` when nothing in the trace can form a ribbon.
  */
-export function buildRibbonGeometry(trace: Trace, ss: SecondaryStructureTrace, linearSegments = 8): RibbonGeometry {
+export function buildRibbonGeometry(trace: TraceRuns, ss: TraceFrames, linearSegments = 8): RibbonGeometry {
   if (!Number.isInteger(linearSegments) || linearSegments < 1) throw new TypeError('Ribbon geometry: linearSegments must be a positive integer');
   countWork('geometryBuilds', 'ribbon:mesh');
   const positions: number[] = [], normals: number[] = [], indices: number[] = [], residue: number[] = [];

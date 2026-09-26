@@ -128,7 +128,7 @@ actually a bottleneck.
 
 ```bash
 cd spikes/s3-molecular-surface && npm i
-node run-node.mjs                      # Part 1: lift + timings, no browser
+deno run -A run-node.mjs               # Part 1: lift + timings, no browser
 npx vite .                             # then open:
 #   /min.html?layer=point              # control: renders correctly
 #   /min.html                          # defects 1 and 2

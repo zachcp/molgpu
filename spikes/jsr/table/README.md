@@ -126,7 +126,7 @@ and ribbon geometry.
 The column schema interfaces are experimental because columns may still be
 added; `StructureData` as the nominal value passed between packages is stable.
 `api.txt` holds the exact signatures and must be updated
-(`node scripts/check-hardening.mjs table --update`) with any API change.
+(`deno task check:hardening table --update`) with any API change.
 
 ## Place in the dependency graph
 

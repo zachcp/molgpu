@@ -3,14 +3,14 @@
 The acceptance bar for epic `molgpu-sept-x24`. Every `@molgpu/*` package meets
 **H1–H7**. The cross-cutting items **X1–X3** are met once, for the whole workspace.
 A per-package bead is done when each H-item below is checked for that package
-and the shared checks (`npm run check:hardening`) pass for it.
+and the shared checks (`deno task check:hardening`) pass for it.
 
 Tests are not introduced here. The golden-file harness and the existing suites
 already exist; hardening only requires that they keep passing.
 
 ## Per-package criteria
 
-**H1 — Manifest.** `package.json` has: `name`, a semver `version` (the `0.1.0` bump itself happens in X3), `license` (`MIT`),
+**H1 — Manifest.** `deno.json` has: `name`, a semver `version`, and `license` (`MIT`),
 `description`, `"type": "module"`,
 `"sideEffects": false` (or an explicit list), and an `exports` map of the form
 `{ ".": { "types", "import" } }`. It has no `private: true`, and `files` is set
@@ -18,8 +18,7 @@ to `src` (npm adds README and LICENSE itself; each package
 keeps a copy of the root MIT `LICENSE`). Every bare import in `src/` is declared in
 `dependencies` or `peerDependencies`. `@use-gpu/*` versions are pinned exactly
 (risk R3). A `deno.json` (the JSR manifest)
-matches `package.json` in name, version, license, exports and dependency
-ranges, as written by `npm run sync:deno`, and publishes `src`.
+declares exports and publishes `src`.
 
 **H2 — Types match the runtime.** Each `exports` entry's `types` and `import`
 files exist (for TypeScript source they are the same `src/*.ts` file), and the
@@ -55,13 +54,6 @@ types each `.` export reaches must not name use.gpu.
   private alias would show up in the generated docs with nothing to link to.
 
 **H6 — Packs and imports cleanly.**
-- `npm pack --dry-run` lists only the intended files.
-- In a clean temp directory, laying out the packed files as
-  `node_modules/@molgpu/<pkg>` and running `import('@molgpu/<pkg>')` succeeds in
-  Node. Other dependencies are linked from the workspace root, so this proves
-  the tarball and its exports map, not a registry install. `viewer` is
-  browser-only, so the checker only resolves its entries. It also needs a
-  documented browser smoke page, which is checked by hand.
 - `deno publish --dry-run` succeeds for the package: it type-checks, passes
   JSR's no-slow-types rule, and resolves every import as JSR will. Packages
   whose entries are TypeScript are imported under Deno instead of from the
@@ -77,9 +69,9 @@ types each `.` export reaches must not name use.gpu.
 
 ## Cross-cutting criteria
 
-**X1 — Shared check tooling.** `npm run check:hardening [pkg]` automates H1–H6
+**X1 — Shared check tooling.** `deno task check:hardening [pkg]` automates H1–H6
 (`--update` rewrites `api.txt`; `--json` for machine output). A per-package bead
-is verified by running this script. `npm run test:hardening` proves that each
+is verified by running this script. `deno task test:hardening` proves that each
 criterion fails on a deliberately broken copy of `test/hardening/fixture`. The
 repo has no CI or remote yet; wiring both scripts into CI is part of X3.
 
@@ -101,7 +93,7 @@ described:
   the audit.
 
 **X3 — Release.**
-- CI runs `npm test`, `npm run test:hardening` and `npm run check:hardening`.
+- CI runs `deno task test`, `deno task test:hardening` and `deno task check:hardening`.
 - Every package moves to `0.1.0` and gains a top-level `CHANGELOG.md`, managed by
   changesets or a documented manual procedure.
 - `repository` (with `directory`) is added once a remote exists.
@@ -114,7 +106,6 @@ described:
 Status (2026-09-25): all packages are at `0.1.0` with a `CHANGELOG.md`
 (manual procedure in [RELEASING.md](RELEASING.md)). `geo`, `io` and `table`
 carry the Mol* MIT notice in `LICENSE`. The root [README](../README.md) and
-the examples gallery link every package README. `npm run release:dry-run`
-passes in dependency order. `.github/workflows/ci.yml` runs the three scripts
-plus the dry-run. Still open until a remote exists: the `repository` fields and
+the examples gallery link every package README. `.github/workflows/ci.yml` runs the
+Deno gates. Still open until a remote exists: a first green CI run.
 a first green CI run.

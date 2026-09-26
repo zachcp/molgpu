@@ -161,9 +161,9 @@ and `import` at the same `src/*.ts` file.
 
 - **Toolchain minimums:** Node 26 (runs `.ts` directly through type stripping)
   and Deno 2.9. The repo is an npm workspace and a Deno workspace at once.
-- **Manifests:** `package.json` is the single source for name, version, license,
+- **Manifests:** each package's `deno.json` is the single source for name, version, license,
   exports and dependency ranges. Each package's `deno.json` (its JSR manifest)
-  is generated from it by `npm run sync:deno`, and hardening H1 checks they
+  is checked directly by hardening H1 for
   match. Internal `@molgpu/*` imports resolve through the workspace, and JSR
   rewrites them to `jsr:` ranges on publish.
 - **TypeScript source** follows `tsconfig.base.json`: `isolatedDeclarations`

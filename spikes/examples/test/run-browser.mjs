@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { createServer } from 'vite';
 import { chromium } from 'playwright';
 
+Deno.test('examples browser', async () => {
 const root = fileURLToPath(new URL('../', import.meta.url));
 const server = await createServer({
   root,
@@ -342,3 +343,4 @@ try {
   await browser?.close();
   await server.close();
 }
+});

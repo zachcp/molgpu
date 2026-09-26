@@ -17,6 +17,7 @@ import { fileURLToPath } from 'node:url';
 import { build } from 'vite';
 import { chromium } from 'playwright';
 
+Deno.test('viewer components', async () => {
 const root = fileURLToPath(new URL('../../../', import.meta.url));
 const fixture = `${root}packages/viewer/test/tsx`;
 const out = `${root}packages/viewer/test/results`;
@@ -202,3 +203,4 @@ try {
   await browser?.close();
   await new Promise(resolve => server.close(resolve));
 }
+});

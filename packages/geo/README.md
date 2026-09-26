@@ -10,7 +10,7 @@ future headless backend.
 ## Install
 
 ```sh
-npm install @molgpu/geo
+deno add jsr:@molgpu/geo
 ```
 
 No runtime dependencies and no peer dependencies.

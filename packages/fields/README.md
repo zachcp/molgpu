@@ -10,7 +10,7 @@ say *what value* each gets. One concept replaces MolViewSpec's `color` /
 ## Install
 
 ```sh
-npm install @molgpu/fields @molgpu/table
+deno add jsr:@molgpu/fields jsr:@molgpu/table
 ```
 
 Peer dependency: `@molgpu/table` (one shared copy per app, since structure
@@ -93,8 +93,8 @@ representation rather than evaluating it yourself.
   them; `linear` `overflow: 'fail'` is CPU-only too.
 
 The CPU evaluator and the generated WGSL share numeric definitions and are proven
-equal within tolerance by `npm run test:fields:gpu` (a raw-WebGPU compute pass, no
-use.gpu). Node contract tests run under `npm test`.
+equal within tolerance by `deno task test:fields:gpu` (a raw-WebGPU compute pass, no
+use.gpu). Type-checked contract tests run under `deno task test`.
 
 ## Built-ins and annotation joins
 

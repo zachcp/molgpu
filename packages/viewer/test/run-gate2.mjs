@@ -5,6 +5,7 @@ import { createServer } from 'vite';
 import { chromium } from 'playwright';
 import { workspaceAliases } from '../../../scripts/workspace-aliases.mjs';
 
+Deno.test('viewer gate 2', async () => {
 const root = fileURLToPath(new URL('../../../', import.meta.url));
 const server = await createServer({
   root, configFile: false,
@@ -100,3 +101,4 @@ try {
   await browser?.close();
   await server.close();
 }
+});

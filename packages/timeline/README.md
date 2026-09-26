@@ -10,7 +10,7 @@ into numbers or fixed-width vectors.
 ## Install
 
 ```sh
-npm install @molgpu/timeline
+deno add jsr:@molgpu/timeline
 ```
 
 There are no peer dependencies. The only dependency is `@use-gpu/core`, pinned

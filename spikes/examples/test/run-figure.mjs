@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { createServer } from 'vite';
 import { chromium } from 'playwright';
 
+Deno.test('examples figure', async () => {
 const root = fileURLToPath(new URL('../', import.meta.url));
 const server = await createServer({
   root, configFile: `${root}vite.config.mjs`,
@@ -79,3 +80,4 @@ try {
   await browser?.close();
   await server.close();
 }
+});

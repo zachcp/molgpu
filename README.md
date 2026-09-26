@@ -28,11 +28,10 @@ Each package has a `CHANGELOG.md` next to its README.
 ## Development
 
 ```bash
-npm install
-npm test                 # unit tests, Node only
-npm run check:hardening  # per-package manifest/types/API checks
-npm run test:components  # typed consumer in Chrome WebGPU
-npm run test:examples    # render the examples gallery
+deno task test                 # type-checked unit tests
+deno task check:hardening      # per-package manifest/types/API checks
+deno task test:components      # typed consumer in Chrome WebGPU
+deno task test:examples        # render the examples gallery
 ```
 
 MIT licensed; see [LICENSE](LICENSE). `geo`, `io` and `table` contain code

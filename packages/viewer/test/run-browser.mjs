@@ -4,6 +4,8 @@ import { fileURLToPath } from 'node:url';
 import { createServer } from 'vite';
 import { chromium } from 'playwright';
 import { workspaceAliases } from '../../../scripts/workspace-aliases.mjs';
+
+Deno.test('viewer GPU smoke', async () => {
 const root = fileURLToPath(new URL('../../../', import.meta.url));
 const out = `${root}packages/viewer/test/results`;
 await mkdir(out, { recursive: true });
@@ -98,3 +100,4 @@ try {
   await writeFile(`${out}/report.json`, JSON.stringify(report,null,2)+'\n');
   await browser?.close(); await server.close();
 }
+});

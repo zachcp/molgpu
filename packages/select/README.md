@@ -12,7 +12,7 @@ WGSL. The viewer takes the resulting `Selection` and uploads its indices.
 ## Install
 
 ```sh
-npm install @molgpu/select @molgpu/table
+deno add jsr:@molgpu/select jsr:@molgpu/table
 ```
 
 **Peer dependencies:** `@molgpu/table` (it provides `StructureData`). It is a

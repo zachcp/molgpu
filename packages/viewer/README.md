@@ -13,7 +13,7 @@ a browser with WebGPU only.
 ## Install
 
 ```sh
-npm install @molgpu/viewer @molgpu/table @use-gpu/live@0.20.0 @use-gpu/workbench@0.20.0 @use-gpu/shader@0.20.0 @use-gpu/core@0.20.0
+deno add jsr:@molgpu/viewer jsr:@molgpu/table npm:@use-gpu/live@0.20.0 npm:@use-gpu/workbench@0.20.0 npm:@use-gpu/shader@0.20.0 npm:@use-gpu/core@0.20.0
 ```
 
 ### Peer dependencies
@@ -198,9 +198,9 @@ reach into `src/internal`.
 ## Browser smoke check
 
 The package cannot be imported in Node, so the hardening checker only resolves
-its entries. The browser proof is `npm run test:components`
+its entries. The browser proof is `deno task test:components`
 (`test/run-components.mjs`): it typechecks `test/tsx/consumer.tsx` against the
 published types, builds it with vite, and drives it in Chrome with WebGPU
 (preloaded, empty, sibling, loaded, missing and cancelled structures, with no
-uncaptured WebGPU errors). `npm run test:examples` additionally renders every
+uncaptured WebGPU errors). `deno task test:examples` additionally renders every
 gallery page in `spikes/examples`.
