@@ -4,6 +4,8 @@ export type ColumnFormat =
   | "u32"
   | "vec2<f32>"
   | "vec3<f32>"
+  | "vec3to4<f32>"
+  | "vec2<u32>"
   | "vec4<f32>";
 type Column = Float32Array | Int32Array | Uint32Array;
 
@@ -19,6 +21,8 @@ const FORMATS: Record<
   u32: [Uint32Array, 1],
   "vec2<f32>": [Float32Array, 2],
   "vec3<f32>": [Float32Array, 3],
+  "vec3to4<f32>": [Float32Array, 3],
+  "vec2<u32>": [Uint32Array, 2],
   "vec4<f32>": [Float32Array, 4],
 };
 

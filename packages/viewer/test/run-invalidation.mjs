@@ -339,11 +339,16 @@ function splitModeSwitch(s) {
 }
 splitModeSwitch.rebuilds = true;
 
-// Inferred bonds depend on coordinates. Endpoint colours read the full atom
-// attribute columns through a per-vertex row column, so attribute columns are
-// never re-derived here. When a coordinate edit keeps every bond, the row column
-// is reused too; when it changes the bonds, the rows are uploaded again and stay
-// aligned with the new geometry (one u32 row per vec3<f32> position).
+// Explicit bond endpoint rows stay fixed on a root coordinate edit; their
+// vertex positions are read from the GPU stream. Inferred connectivity can
+// change when root StructureData positions change, but provider offsets do not
+// rerun inference. Unchanged inferred pairs retain their uploaded row columns.
+const liveBondsCoordinates = Object.assign((s) => {
+  coordinatesOnly([])(s);
+  assert.equal(s.detail["geometryBuilds:bonds:columns"], undefined);
+  assert.equal(s.detail["uploadBytes:endpoints"], undefined);
+  assert.equal(s.detail["uploadBytes:segments"], undefined);
+}, { rebuilds: true });
 const inferredBondsKept = Object.assign((s) => {
   noErrors(s);
   assert.ok(
@@ -351,7 +356,7 @@ const inferredBondsKept = Object.assign((s) => {
     `bond geometry not rebuilt: ${brief(s)}`,
   );
   assert.deepEqual(
-    keysOf(s, /attr:|uploadBytes:rows/),
+    keysOf(s, /attr:|uploadBytes:(rows|endpoints)/),
     [],
     `attribute or row columns re-derived for unchanged bonds: ${brief(s)}`,
   );
@@ -364,9 +369,9 @@ const inferredBondsChanged = Object.assign((s) => {
     `attribute columns re-derived for a coordinate edit: ${brief(s)}`,
   );
   assert.equal(
-    s.detail["uploadBytes:rows"] * 3,
-    s.detail["uploadBytes:positions"],
-    `row and position columns disagree: ${brief(s)}`,
+    s.detail["uploadBytes:rows"],
+    s.detail["uploadBytes:endpoints"] * 2,
+    `row and endpoint columns disagree: ${brief(s)}`,
   );
 }, { rebuilds: true });
 
@@ -472,12 +477,12 @@ const MATRIX = {
     coordinates: {
       from: { props: { color: GREY } },
       to: { props: { color: GREY }, dataKey: "moved" },
-      expect: coordinatesOnly(["geometryBuilds:bonds:columns"]),
+      expect: liveBondsCoordinates,
     },
     "coordinates (default colour)": {
       from: { props: {} },
       to: { props: {}, dataKey: "moved" },
-      expect: coordinatesOnly(["geometryBuilds:bonds:columns"]),
+      expect: liveBondsCoordinates,
     },
     "coordinates (inferred, same bonds)": {
       from: { props: {}, dataKey: "inferred" },
@@ -534,7 +539,7 @@ const MATRIX = {
     coordinates: {
       from: { props: { color: GREY } },
       to: { props: { color: GREY }, dataKey: "moved" },
-      expect: coordinatesOnly(["geometryBuilds:bonds:columns"]),
+      expect: liveBondsCoordinates,
     },
     connectivity: {
       from: { props: { color: GREY } },

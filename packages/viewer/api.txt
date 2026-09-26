@@ -24,6 +24,10 @@ CameraPose
   export interface CameraPose { readonly target: readonly number[]; readonly radius: number; readonly bearing: number; readonly pitch: number }
 ColorLike
   export type ColorLike = number | VectorLike | { rgb: VectorLike } | { rgba: VectorLike } | string;
+CoordinateBounds
+  export interface CoordinateBounds { readonly min: readonly [number, number, number]; readonly max: readonly [number, number, number]; readonly centroid: readonly [number, number, number]; readonly count: number; readonly generation: number }
+CoordinateSnapshot
+  export interface CoordinateSnapshot { readonly data: StructureData; readonly generation: number; readonly resource: StructureResource }
 DirectionalLight
   export const DirectionalLight: ViewerComponent<DirectionalLightProps>;
 DirectionalLightProps
@@ -148,6 +152,14 @@ useAnnotation
   export function useAnnotation<R = unknown>(input: { records?: readonly R[]; src?: string; loader?: (src: string, cancelled: () => boolean) => unknown; domain?: "residue" | "chain"; fields: readonly string[]; value?: (record: R) => number | readonly number[]; type?: unknown; policy?: "fallback" | "fail"; fallback?: number | readonly number[]; duplicate?: "error" | "first" | "last"; lift?: boolean }): { field: Field | null; pending: boolean; error: unknown };
 useCameraCurve
   export function useCameraCurve(curve: CameraCurve, resource: StructureResource, options?: FocusOptions): CameraPose;
+useCoordinateBounds
+  export function useCoordinateBounds(selection?: Selection | null): CoordinateBounds | null;
+useCoordinateFocus
+  export function useCoordinateFocus(query: SelectionQuery, options?: FocusOptions): FocusResult | null;
+useCoordinateSelection
+  export function useCoordinateSelection(query: SelectionQuery): Selection | null;
+useCoordinateSnapshot
+  export function useCoordinateSnapshot(options?: { maxHz?: number; onPause?: boolean; enabled?: boolean }): CoordinateSnapshot | null;
 usePicking
   export function usePicking(options?: { onHover?: (hit: PickHit | null) => void; onPick?: (hit: PickHit | null) => void }): { hover: PickHit | null; pick: PickHit | null };
 useStructureResource
@@ -161,8 +173,14 @@ withMaterial
 
 ## ./advanced
 
+Coordinates
+  export interface Coordinates { readonly source: StorageSource; readonly count: number; readonly generation: number; readonly resource: StructureResource }
+CoordinatesContext
+  export const CoordinatesContext: LiveContext<Coordinates | null | undefined>;
 FlatMaterial
   export const FlatMaterial: LC<ShaderFlatMaterialProps>;
+IdentityCoordinates
+  export const IdentityCoordinates: LC<{ children?: LiveElement }>;
 LitMaterial
   export const LitMaterial: LC<ShaderLitMaterialProps>;
 StructureContext
@@ -170,11 +188,15 @@ StructureContext
 StructureContextValue
   export interface StructureContextValue { readonly resource: StructureResource; /** Null for an empty structure, which owns no GPU source. */ readonly sources: StructureSources | null }
 StructureSources
-  export interface StructureSources { readonly positions: ShaderSource; readonly radii: ShaderSource }
+  export interface StructureSources { /** @deprecated Read the nearest stream with useCoordinates().source. */ readonly positions: ShaderSource; readonly radii: ShaderSource }
 TimelineContext
   export const TimelineContext: LiveContext<number | null>;
+WobbleCoordinates
+  export const WobbleCoordinates: LC<{ phase: number; amplitude?: number; children?: LiveElement }>;
 WorldSpacePointLayer
   export const WorldSpacePointLayer: LC<{ positions: ShaderSource; colors?: ShaderSource; radii: ShaderSource; count: number; scale?: number } & Omit<PointLayerProps, "positions" | "colors" | "sizes" | "count" | "depth">>;
+useCoordinates
+  export function useCoordinates(): Coordinates | null;
 useField
   export function useField(field: Field, inputs?: Record<string, ShaderSource | number | { current: number }>, options?: { domain?: "atom" | "residue" }): ShaderSource;
 useStructure

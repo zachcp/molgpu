@@ -6,6 +6,21 @@ All notable changes to `@molgpu/viewer` are recorded here. The format follows
 
 ## [Unreleased]
 
+- Coordinate stream (Phase 9). Positions are a GPU stream that child providers
+  re-provide without changing topology. New experimental
+  `useCoordinateSnapshot`, `useCoordinateSelection`, `useCoordinateBounds` and
+  `useCoordinateFocus`; new advanced `CoordinatesContext`, `useCoordinates`,
+  `IdentityCoordinates` and `WobbleCoordinates`.
+- `<Bonds>` read endpoint positions from the nearest coordinate stream in the
+  vertex shader. Moving coordinates no longer rebuild CPU bond columns.
+- `<Ribbon>`, `<Tube>`, `<Surface>`, `<Label>` and `<Distance>` rebuild from a
+  shared, throttled snapshot (4 Hz by default, plus one after motion stops)
+  below a provider. Under a `<Structure>` alone they read root positions as
+  before.
+- Deprecated: `StructureSources.positions` (advanced). Read the nearest stream
+  with `useCoordinates().source`.
+- The root positions column is uploaded as `vec3to4<f32>`.
+
 - `WorldSpacePointLayer` now reads GPU radii sources and derives point sizes in
   the shader. Camera and scale changes no longer build or upload a size column.
   Its advanced `radii` prop is a `ShaderSource` and `count` is required.

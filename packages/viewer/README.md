@@ -112,7 +112,7 @@ may change before 0.1.0; _advanced_ — only from `@molgpu/viewer/advanced`.
 | `LoadedStructureProps`       | stable       | `<Structure src>` props, with `loader`/`loading`/`error`.                                             |
 | `StructureLoader`            | stable       | Cancellable `(src, cancelled) => StructureData` loader.                                               |
 | `Spacefill`                  | stable       | Atoms as world-space shaded spheres.                                                                  |
-| `Bonds`                      | stable       | Bonds as world-space sticks.                                                                          |
+| `Bonds`                      | stable       | Bonds as world-space sticks; vertex positions follow the nearest coordinate provider.                 |
 | `BallAndStick`               | stable       | Spacefill balls plus Bonds sticks over one selection.                                                 |
 | `Tube`                       | stable       | Backbone as a GPU-extruded tube.                                                                      |
 | `Ribbon`                     | stable       | Backbone as an oriented ribbon mesh.                                                                  |
@@ -131,6 +131,12 @@ may change before 0.1.0; _advanced_ — only from `@molgpu/viewer/advanced`.
 | `StructureBounds`            | experimental | Ångström extent of a structure or selection.                                                          |
 | `createStructureResource`    | experimental | Create a StructureResource outside a `<Structure>`.                                                   |
 | `useStructureResource`       | experimental | The nearest `<Structure>`'s `StructureResource`, for `focusSelection` and other resource-taking APIs. |
+| `useCoordinateSnapshot`      | experimental | Shared, throttled CPU positions below a GPU provider; `null` until first readback.                    |
+| `CoordinateSnapshot`         | experimental | Published structure data, revisioned resource and source generation.                                  |
+| `useCoordinateSelection`     | experimental | Re-resolve position-dependent queries against a published snapshot.                                   |
+| `useCoordinateBounds`        | experimental | Asynchronous GPU bounds and centroid of the nearest stream.                                           |
+| `CoordinateBounds`           | experimental | GPU-reduced min, max, centroid, count and generation.                                                 |
+| `useCoordinateFocus`         | experimental | Nonblocking selection focus from GPU bounds; starts with root framing.                                |
 | `MaterialType`               | experimental | Material `type` names for a `material` spec.                                                          |
 | `MaterialSpec`               | experimental | A representation's `material` prop.                                                                   |
 | `MaterialProps`              | experimental | Props shared by the material wrappers.                                                                |
@@ -187,11 +193,36 @@ may change before 0.1.0; _advanced_ — only from `@molgpu/viewer/advanced`.
 | `StructureContextValue`      | advanced     | `{ resource, sources }` from the structure context.                                                   |
 | `StructureSources`           | advanced     | Shared positions/radii shader sources.                                                                |
 | `useStructure`               | advanced     | Read the nearest `<Structure>`'s resource and sources.                                                |
+| `CoordinatesContext`         | advanced     | Live context carrying the nearest GPU coordinate stream.                                              |
+| `Coordinates`                | advanced     | GPU positions source, atom count, content generation and owning resource.                             |
+| `useCoordinates`             | advanced     | Read the nearest coordinate stream; an empty structure returns null.                                  |
+| `IdentityCoordinates`        | advanced     | Forward the nearest coordinates without allocating a GPU buffer.                                      |
+| `WobbleCoordinates`          | advanced     | Example GPU coordinate transform driven by a phase and amplitude.                                     |
 | `TimelineContext`            | advanced     | Live context carrying timeline time.                                                                  |
 | `FlatMaterial`               | advanced     | Custom unlit fragment-shader material.                                                                |
 | `LitMaterial`                | advanced     | Custom lit shader material.                                                                           |
 | `WorldSpacePointLayer`       | advanced     | PointLayer with GPU radii source and Ångström size conversion in a shader.                            |
 | `useField`                   | advanced     | Lower a field to a use.gpu shader source.                                                             |
+
+## Coordinate consumers
+
+`<Spacefill>` and `<Bonds>` read the nearest GPU coordinate source each draw.
+`<Ribbon>`, `<Tube>`, `<Surface>`, `<Label>`, and `<Distance>` rebuild from the
+latest `useCoordinateSnapshot()` result. Snapshots are shared below each
+provider, default to 4 Hz during motion, and publish once more after a pause.
+They are asynchronous; CPU geometry is absent until the first snapshot arrives.
+`useCoordinateSelection()` resolves `within` and other position-dependent
+queries against that snapshot. Topology-only queries resolve directly against
+the root data. Picking keeps atom-row IDs, so its result follows live geometry.
+`useCoordinateBounds()` reduces min/max/centroid on the GPU and reads back only
+the partials; `useCoordinateFocus()` applies radius and assembly padding for
+camera targets. The explicit `focusSelection()` and `useCameraCurve()` APIs
+remain CPU resource operations; pass a snapshot resource when using them under a
+coordinate provider.
+
+The [coordinate-stream gallery page](../../site/README.md) scrubs a
+`WobbleCoordinates > IdentityCoordinates` chain with live atoms and bonds,
+snapshot ribbon, and GPU focus.
 
 ## Place in the dependency graph
 

@@ -11,7 +11,8 @@ export type DemoId =
   | "ribbon"
   | "surface"
   | "materials"
-  | "figure";
+  | "figure"
+  | "coordinates";
 export interface DemoDefinition {
   readonly id: DemoId;
   readonly title: string;
@@ -23,6 +24,7 @@ export interface DemoDefinition {
     oit?: boolean;
     time?: number;
     postprocess?: boolean;
+    coordinates?: boolean;
   };
 }
 
@@ -103,6 +105,16 @@ export const demos: readonly DemoDefinition[] = [
     assertion:
       "the public material specification reaches the shaded representation",
     options: { oit: true },
+  },
+  {
+    id: "coordinates",
+    title: "Coordinate stream",
+    summary:
+      "Scrub a GPU wobble through two coordinate providers. Atoms and bonds move live; the ribbon follows a throttled snapshot and focus follows GPU bounds.",
+    fixture: "1crn",
+    assertion:
+      "the provider chain updates live geometry, snapshot geometry, and camera focus",
+    options: { coordinates: true },
   },
   {
     id: "figure",

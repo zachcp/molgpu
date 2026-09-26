@@ -114,13 +114,17 @@ integer owned by each provider:
   `<Superpose>`), never which rows exist (INVARIANT 6). A Phase 12 trajectory
   with an `atomMap` subset writes mapped rows and copies the rest from upstream.
 
-**Memory budget.** Per coordinate buffer: 1.6 MB at 100k atoms, 16 MB at 1M. A
-chain of k active providers holds k + 1 buffers. Snapshot staging (6) adds 2
-more full-size buffers while any snapshot consumer is mounted, plus a 12 B/atom
-CPU `Float32Array`. The worst case for Phase 9 (root, two providers, snapshots
-on) at 1M atoms is 5 × 16 MB + 12 MB = 92 MB. Trajectory frame windows are Phase
-12's budget, not this one. Providers report bytes under a `coords:*`
-instrumentation counter so the gate can assert the budget.
+**Memory budget.** The root upload is a `vec4<f32>` column (16 B/atom); each
+provider output and each snapshot staging buffer is packed `vec3<f32>` (12
+B/atom). A chain of k active providers holds k + 1 buffers. Snapshot staging (6)
+adds 2 more full-size buffers per boundary with a mounted snapshot consumer,
+plus a 12 B/atom CPU `Float32Array`. The worst case for Phase 9 (root, two
+providers, snapshots on) at 1M atoms is 16 + 2 × 12 + 2 × 12 + 12 = 76 MB,
+inside the 92 MB ceiling this plan set assuming 16 B/atom everywhere. GPU bounds
+(e99.6) add a fixed 36 KB per hook plus 4 B per selected row, outside that
+figure. Trajectory frame windows are Phase 12's budget, not this one. Owned
+buffers report live bytes per `coords:*` label (`ownedBuffers.bytes`), and
+`test:components` asserts the projection.
 
 ## 5. Consumer policy
 
@@ -130,7 +134,7 @@ instrumentation counter so the gate can assert the budget.
 | Bonds                         | **live (new bead e99.11)**      | Upload a per-bond endpoint-row column once per topology/selection; a vertex shader reads both endpoints from the GPU source and computes the midpoint. Until e99.11 lands, bonds are a snapshot consumer. |
 | Ribbon, Tube, Surface         | snapshot                        | `geometryDeps()` keys on the snapshot resource's `positionsRevision`.                                                                                                                                     |
 | Camera focus and curves       | live, via GPU reduction (e99.6) | See "Focus without per-frame sync" below.                                                                                                                                                                 |
-| Annotation anchors            | live, via the same reduction    | The centroid is `sum / n` from the same kernel.                                                                                                                                                           |
+| Annotation anchors            | snapshot                        | `<Label>` and `<Distance>` use the shared CPU snapshot, including selection centroids.                                                                                                                    |
 | `within`, distance predicates | snapshot                        | Queries whose `deps` include `"positions"` re-resolve on a new snapshot; others never do.                                                                                                                 |
 | Bond topology (inferred)      | fixed at the root               | Snapshots reuse the root's bonds. Inference runs once on the root positions, never per snapshot (INVARIANT 6: providers never change topology).                                                           |
 | Picking, tooltips             | unaffected                      | Pick ids are atom rows.                                                                                                                                                                                   |
@@ -144,17 +148,13 @@ non-root `Coordinates` throws.
 - `useCoordinateSnapshot({ maxHz = 4 })` returns the latest
   `{ resource, generation } | null`, where `resource` is a `StructureResource`
   built with `withPositions(root.data, array)` plus the root's bonds.
-- Demand-driven: the nearest provider mounts its `<Readback buffers={2}>` only
-  while at least one snapshot consumer is mounted, so all-live scenes pay no
-  staging memory.
-- `shouldDispatch()` returns the current generation when no readback is in
-  flight and either `1 / maxHz` has elapsed or the generation has been stable
-  for one frame (the pause refresh). Returning the same number twice is a no-op
-  in `<Readback>`, which gives "at most once per generation" for free.
-- The generation is captured in `onDispatch`. On resolve, a result whose
-  generation is older than the last published one is dropped, so rapid seeks
-  cannot publish a stale snapshot. Unmount cancels through `<Readback>`'s own
-  flag.
+- Demand-driven: the nearest provider mounts two staging buffers only while at
+  least one snapshot consumer is mounted, so all-live scenes pay no staging
+  memory.
+- A single asynchronous copy is in flight at a time. During motion, dispatches
+  respect `maxHz`; after a pause, a short timer requests the final generation.
+- The copy captures its generation. A result from an older generation is
+  discarded, and unmount cancels publication and destroys staging buffers.
 - Snapshot latency is `mapAsync` time (typically 1–3 frames) plus the throttle.
 
 ### Focus without per-frame sync

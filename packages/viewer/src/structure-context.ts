@@ -15,9 +15,15 @@ import { atomRadii, type StructureData } from "@molgpu/table";
 import type { StructureResource } from "./types.ts";
 import { createStructureResource } from "./internal/structure-resource.ts";
 import { ColumnSource } from "./internal/column-source.ts";
+import { CoordinatesContext } from "./coordinates-context.ts";
+import {
+  CoordinateSnapshotContext,
+  rootSnapshot,
+} from "./coordinate-snapshot.ts";
 
 /** GPU columns allocated once per structure and shared by representations. */
 export interface StructureSources {
+  /** @deprecated Read the nearest stream with useCoordinates().source. */
   readonly positions: ShaderSource;
   readonly radii: ShaderSource;
 }
@@ -37,7 +43,22 @@ const provideSources = (
   sources: StructureSources | null,
   children: LiveElement,
 ): LiveElement =>
-  provide(StructureContext, Object.freeze({ resource, sources }), children);
+  provide(
+    StructureContext,
+    Object.freeze({ resource, sources }),
+    provide(
+      CoordinatesContext,
+      sources
+        ? Object.freeze({
+          source: sources.positions as StorageSource,
+          count: resource.data.topology.atoms.count,
+          generation: resource.positionsRevision,
+          resource,
+        })
+        : null,
+      provide(CoordinateSnapshotContext, rootSnapshot(resource), children),
+    ),
+  );
 
 const AtomSources: LC<{ resource: StructureResource; children: LiveElement }> =
   ({ resource, children }) => {
@@ -48,7 +69,7 @@ const AtomSources: LC<{ resource: StructureResource; children: LiveElement }> =
     // Radii always exist: the dataset's column, else element defaults.
     return use(ColumnSource, {
       data: data.positions,
-      format: "vec3<f32>",
+      format: "vec3to4<f32>",
       label: "positions",
       counter: "structure:positions",
       render: (positions: StorageSource | null) =>

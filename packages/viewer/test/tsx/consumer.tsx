@@ -18,19 +18,32 @@ import {
   Pass,
 } from "@use-gpu/workbench";
 import { createStructure } from "@molgpu/table";
+import { all, resolve, where } from "@molgpu/select";
 import type { StructureData } from "@molgpu/table";
 import {
+  Bonds,
   Molecule,
   Spacefill,
   Structure,
+  useCoordinateBounds,
+  useCoordinateFocus,
+  useCoordinateSnapshot,
   useStructureResource,
 } from "@molgpu/viewer";
 import type { StructureLoader, StructureProps } from "@molgpu/viewer";
+import { IdentityCoordinates, useCoordinates } from "@molgpu/viewer/advanced";
+import { OffsetCoordinates } from "./offset-coordinates.ts";
+import { BondVertexProbe } from "./bond-vertex-probe.ts";
 import { probe } from "./diagnostics.ts";
 import type { Mode, Phase, State } from "./diagnostics.ts";
 
 /** One synthetic chain of carbons centred on x, owned by @molgpu/table. */
-const cluster = (x: number, radius: number, count = 3): StructureData =>
+const cluster = (
+  x: number,
+  radius: number,
+  count = 3,
+  bonded = false,
+): StructureData =>
   createStructure({
     positions: Float32Array.from(
       { length: count * 3 },
@@ -64,11 +77,15 @@ const cluster = (x: number, radius: number, count = 3): StructureData =>
         authId: ["A"],
       },
       bonds: {
-        count: 0,
-        a: new Uint32Array(),
-        b: new Uint32Array(),
-        order: new Uint8Array(),
-        source: [],
+        count: bonded ? count - 1 : 0,
+        a: bonded
+          ? Uint32Array.from({ length: count - 1 }, (_, i) => i)
+          : new Uint32Array(),
+        b: bonded
+          ? Uint32Array.from({ length: count - 1 }, (_, i) => i + 1)
+          : new Uint32Array(),
+        order: bonded ? new Uint8Array(count - 1).fill(1) : new Uint8Array(),
+        source: bonded ? new Array(count - 1).fill("explicit") : [],
       },
       instances: {
         count: 1,
@@ -138,6 +155,7 @@ const emptyStructure = (): StructureData =>
   });
 
 const left = cluster(-13, 1.8),
+  bonded = cluster(-13, 1.8, 3, true),
   right = cluster(7, 3.2),
   blank = emptyStructure();
 
@@ -194,7 +212,39 @@ const Ready = (): LiveElement => {
   return [report("ready"), <Spacefill />];
 };
 
-const Scene = ({ mode, src }: { mode: Mode; src: string }): LiveElement => {
+const CoordinateProbe = (): LiveElement => {
+  probe.coordinateSource = useCoordinates()?.source ?? null;
+  return <Spacefill />;
+};
+
+const SnapshotProbe = (): LiveElement => {
+  const snapshot = useCoordinateSnapshot({ maxHz: 4 });
+  probe.coordinateBounds = useCoordinateBounds();
+  probe.selectedBounds = useCoordinateBounds(FIRST_TWO);
+  probe.emptyBounds = useCoordinateBounds(NO_ATOMS);
+  const focus = useCoordinateFocus(ALL_ATOMS);
+  probe.coordinateFocus = focus &&
+    { target: focus.target, radius: focus.radius };
+  probe.coordinateSnapshot = snapshot
+    ? {
+      generation: snapshot.generation,
+      revision: snapshot.data.revision.positions,
+      positions: Array.from(snapshot.data.positions),
+    }
+    : null;
+  return null;
+};
+
+const ALL_ATOMS = all("atom");
+const FIRST_TWO = resolve(
+  where("atom", "first-two", (_, row) => row < 2),
+  bonded,
+);
+const NO_ATOMS = resolve(where("atom", "none", () => false), bonded);
+
+const Scene = (
+  { mode, src, offsetX }: { mode: Mode; src: string; offsetX: number },
+): LiveElement => {
   if (mode === "preloaded") {
     return (
       <Structure data={left}>
@@ -206,6 +256,46 @@ const Scene = ({ mode, src }: { mode: Mode; src: string }): LiveElement => {
     return (
       <Structure data={blank}>
         <Spacefill />
+      </Structure>
+    );
+  }
+  if (mode === "offset") {
+    return (
+      <Structure data={left}>
+        <OffsetCoordinates offset={[offsetX, 0, 0]}>
+          <IdentityCoordinates>
+            <OffsetCoordinates offset={[-2, 1, 0]}>
+              <CoordinateProbe />
+            </OffsetCoordinates>
+          </IdentityCoordinates>
+        </OffsetCoordinates>
+      </Structure>
+    );
+  }
+  if (mode === "bonds") {
+    return (
+      <Structure data={bonded}>
+        <OffsetCoordinates offset={[offsetX, 0, 0]}>
+          <IdentityCoordinates>
+            <OffsetCoordinates offset={[-2, 1, 0]}>
+              <Bonds width={0.8} />
+              <BondVertexProbe data={bonded} />
+            </OffsetCoordinates>
+          </IdentityCoordinates>
+        </OffsetCoordinates>
+      </Structure>
+    );
+  }
+  if (mode === "snapshot") {
+    return (
+      <Structure data={bonded}>
+        <OffsetCoordinates offset={[offsetX, 0, 0]}>
+          <IdentityCoordinates>
+            <OffsetCoordinates offset={[-2, 1, 0]}>
+              <SnapshotProbe />
+            </OffsetCoordinates>
+          </IdentityCoordinates>
+        </OffsetCoordinates>
       </Structure>
     );
   }
@@ -248,7 +338,14 @@ const App = (): LiveElement => {
     mode: "preloaded",
     src: "",
     mounted: true,
+    offsetX: 5,
   });
+  try {
+    useCoordinates();
+    probe.missingCoordinatesError = null;
+  } catch (failure) {
+    probe.missingCoordinatesError = String(failure);
+  }
   probe.update = (patch) => setState((previous) => ({ ...previous, ...patch }));
   probe.mounted = true;
   // 1CRN's own centre, so the loaded protein is framed rather than clipped.
@@ -274,7 +371,11 @@ const App = (): LiveElement => {
         {state.mounted
           ? (
             <Molecule>
-              <Scene mode={state.mode} src={state.src} />
+              <Scene
+                mode={state.mode}
+                src={state.src}
+                offsetX={state.offsetX}
+              />
             </Molecule>
           )
           : null}

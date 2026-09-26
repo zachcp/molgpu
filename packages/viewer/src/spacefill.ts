@@ -12,6 +12,7 @@ import type { ShaderSource } from "@use-gpu/shader";
 import type { StructureData } from "@molgpu/table";
 import { WorldSpacePointLayer } from "./world-space-points.ts";
 import { type StructureSources, useStructure } from "./structure-context.ts";
+import { useCoordinates } from "./coordinates-context.ts";
 import { useField } from "./use-field.ts";
 import { indexed } from "./internal/indexed.ts";
 import {
@@ -77,6 +78,7 @@ const IndexedPoints: LC<
     map: ColumnMap;
     attrNames: readonly string[];
     shared: StructureSources;
+    positions: ShaderSource;
     count: number;
     field: Field | null;
     opacity: number;
@@ -84,12 +86,23 @@ const IndexedPoints: LC<
     scale: number;
   } & LayerProps
 > = (
-  { map, attrNames, shared, count, field, opacity, color, scale, ...props },
+  {
+    map,
+    attrNames,
+    shared,
+    positions,
+    count,
+    field,
+    opacity,
+    color,
+    scale,
+    ...props
+  },
 ) => {
   const index = map.index ?? null;
   const columns = attrNames.map((name) => map[`attr:${name}`]);
   const sources = useMemo(() => ({
-    positions: indexed(shared.positions, index, "vec3<f32>"),
+    positions: indexed(positions, index, "vec3<f32>"),
     radii: indexed(shared.radii, index, "f32"),
     attrs: Object.fromEntries(
       attrNames.map((name, k) => [
@@ -97,7 +110,7 @@ const IndexedPoints: LC<
         indexed(columns[k]!, index, "f32"),
       ]),
     ),
-  }), [shared, index, attrNames.join(), ...columns]);
+  }), [shared, positions, index, attrNames.join(), ...columns]);
   return field
     ? use(FieldPoints, {
       positions: sources.positions,
@@ -134,6 +147,7 @@ const SelectedSpacefill: LC<
     field: Field | null;
     opacity: number;
     shared: StructureSources;
+    positions: ShaderSource;
     color: unknown;
     scale: number;
   } & LayerProps
@@ -207,6 +221,7 @@ export const Spacefill: ViewerComponent<
   useRepaint();
   useBindingProbe("spacefill", color, opacity, scale);
   const { resource, sources } = useStructure();
+  const coordinates = useCoordinates();
   const { data } = resource;
 
   checkAtomSelection(select, resource, "Spacefill");
@@ -222,7 +237,7 @@ export const Spacefill: ViewerComponent<
 
   const indices = select ? select.indices : null;
   const n = indices ? indices.length : data.topology.atoms.count;
-  if (!sources || n === 0) return null;
+  if (!sources || !coordinates || n === 0) return null;
 
   // Build the shaded layer, given the picking id to draw under (undefined when
   // not pickable → PointLayer emits no picking id). The whole-structure flat
@@ -232,7 +247,7 @@ export const Spacefill: ViewerComponent<
       material,
       (!indices && !field)
         ? use(WorldSpacePointLayer, {
-          positions: sources.positions,
+          positions: coordinates.source,
           radii: sources.radii,
           count: n,
           scale,
@@ -252,6 +267,7 @@ export const Spacefill: ViewerComponent<
           field,
           opacity,
           shared: sources,
+          positions: coordinates.source,
           color: flatColor,
           scale,
           id,

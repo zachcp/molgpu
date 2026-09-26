@@ -107,7 +107,7 @@ const structure = ({ bonds = false } = {}) =>
   });
 
 // Ownership tracking only uses buffers as identity keys.
-const fakeBuffer = () => ({}) as GPUBuffer;
+const fakeBuffer = (size = 0) => ({ size }) as GPUBuffer;
 
 // Every test starts from zeroed, enabled counters.
 const test = (name: string, fn: () => void) =>
@@ -144,7 +144,7 @@ test("counters are inert while disabled and attribute work per label when enable
 });
 
 test("owned buffers count one allocation and one release each", () => {
-  const a = fakeBuffer(), b = fakeBuffer();
+  const a = fakeBuffer(12), b = fakeBuffer(4);
   trackOwnedBuffer(a, "positions");
   trackOwnedBuffer(a, "positions");
   trackOwnedBuffer(b, "radii");
@@ -152,7 +152,12 @@ test("owned buffers count one allocation and one release each", () => {
   releaseOwnedBuffer(a);
   const s = snapshotCounters();
   assertStrictEquals(s.allocations, 2);
-  assertEquals(s.ownedBuffers, { created: 2, destroyed: 1, live: 1 });
+  assertEquals(s.ownedBuffers, {
+    created: 2,
+    destroyed: 1,
+    live: 1,
+    bytes: { positions: 0, radii: 4 },
+  });
 });
 
 test("instrumentDevice counts every buffer created/destroyed and bytes written by usage", () => {

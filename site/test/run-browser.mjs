@@ -43,6 +43,7 @@ Deno.test("site landing page and maintained gallery routes", async () => {
         ["lighting", "World-fixed lighting", "1crn"],
         ["timeline", "Controlled timeline", "1crn"],
         ["bonds", "Bond topology", "1crn"],
+        ["coordinates", "Coordinate stream", "1crn"],
         ["tube", "Backbone tube", "1crn"],
         ["ribbon", "Secondary-structure ribbon", "1crn"],
         ["surface", "Solvent-excluded surface", "1crn"],
@@ -89,12 +90,32 @@ Deno.test("site landing page and maintained gallery routes", async () => {
         "zooming",
         "wheel input updates the shared orbit controller",
       );
-      if (id === "timeline") {
+      let focusY;
+      if (id === "coordinates") {
+        await page.getByLabel("Timeline time in seconds").fill("0");
+        await page.waitForFunction(() =>
+          document.querySelector("#molecule-canvas")?.dataset.focusY !==
+            undefined
+        );
+        await page.waitForTimeout(500);
+        focusY = Number(
+          await page.locator("#molecule-canvas").getAttribute("data-focus-y"),
+        );
+      }
+      if (id === "timeline" || id === "coordinates") {
         await page.getByLabel("Timeline time in seconds").fill("2");
         assert.match(
           await page.locator(".timeline-control output").textContent(),
           /2\.00 s/,
         );
+      }
+      if (id === "coordinates") {
+        await page.waitForFunction((previous) => {
+          const value = Number(
+            document.querySelector("#molecule-canvas")?.dataset.focusY,
+          );
+          return Number.isFinite(value) && Math.abs(value - previous) > 0.01;
+        }, focusY);
       }
       if (id === "surface") {
         await page.getByLabel("Surface material").selectOption("pumice");
