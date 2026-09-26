@@ -25,16 +25,6 @@ export interface MarchingCubesMesh {
   readonly triangleCount: number;
 }
 
-/** Extract an indexed isosurface mesh from a scalar grid. Throws TypeError/RangeError on malformed input. */
-export function marchingCubes(input: MarchingCubesInput): MarchingCubesMesh;
-
-/**
- * For each vertex in `positions` (packed vec3s), the index of the exactly
- * nearest atom in `atomPositions` (packed vec3s). `cellSize` is a performance
- * hint only (roughly the largest expected vertex-to-atom distance).
- */
-export function nearestAtomAttribution(positions: Float32Array, atomPositions: Float32Array, cellSize: number): Uint32Array;
-
 /** Scratch buffers for one interpolated curve segment of `linearSegments + 1` samples. Mutated in place. */
 export interface CurveSegmentState {
   readonly curvePoints: Float32Array;
@@ -58,11 +48,3 @@ export interface CurveSegmentControls {
   readonly secStrucFirst: boolean;
   readonly secStrucLast: boolean;
 }
-
-export function createCurveSegmentState(linearSegments: number): CurveSegmentState;
-/** Fill points, tangents, normals and binormals (interpolatePointsAndTangents then interpolateNormals). */
-export function interpolateCurveSegment(state: CurveSegmentState, controls: CurveSegmentControls, tension: number, shift: number): void;
-export function interpolatePointsAndTangents(state: CurveSegmentState, controls: CurveSegmentControls, tension: number, shift: number): void;
-export function interpolateNormals(state: CurveSegmentState, controls: Pick<CurveSegmentControls, 'd12' | 'd23'>): void;
-/** Fill `widthValues`/`heightValues` by interpolating w0→w1→w2 and h0→h1→h2 across the segment. */
-export function interpolateSizes(state: CurveSegmentState, w0: number, w1: number, w2: number, h0: number, h1: number, h2: number, shift: number): void;

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { marchingCubes } from '../src/index.mjs';
+import { marchingCubes } from '../src/index.ts';
 import { Tensor } from 'molstar/lib/mol-math/linear-algebra/tensor.js';
 import { computeMarchingCubesMesh } from 'molstar/lib/mol-geo/util/marching-cubes/algorithm.js';
 

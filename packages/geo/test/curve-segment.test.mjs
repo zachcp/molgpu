@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   createCurveSegmentState, interpolateCurveSegment, interpolateSizes,
-} from '../src/index.mjs';
+} from '../src/index.ts';
 import { Vec3 } from 'molstar/lib/mol-math/linear-algebra.js';
 import {
   createCurveSegmentState as oracleState,

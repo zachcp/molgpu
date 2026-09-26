@@ -4,9 +4,12 @@
  * @author David Sehnal <david.sehnal@gmail.com>
  * @author Fred Ludlow <fred.ludlow@gmail.com>
  */
-export function Index(i, j, k) { return { i, j, k }; }
-export function IndexPair(a, b) { return { a, b }; }
-export const EdgesXY = [
+export interface Index { readonly i: number; readonly j: number; readonly k: number }
+export interface IndexPair { readonly a: Index; readonly b: Index }
+
+export function Index(i: number, j: number, k: number): Index { return { i, j, k }; }
+export function IndexPair(a: Index, b: Index): IndexPair { return { a, b }; }
+export const EdgesXY: number[][] = [
     [],
     [0, 3],
     [0, 1],
@@ -24,7 +27,7 @@ export const EdgesXY = [
     [0, 3],
     []
 ];
-export const EdgesXZ = [
+export const EdgesXZ: number[][] = [
     [],
     [0, 8],
     [0, 9],
@@ -42,7 +45,7 @@ export const EdgesXZ = [
     [0, 8],
     []
 ];
-export const EdgesYZ = [
+export const EdgesYZ: number[][] = [
     [],
     [3, 8],
     [3, 11],
@@ -60,7 +63,7 @@ export const EdgesYZ = [
     [3, 8],
     []
 ];
-export const CubeVertices = [
+export const CubeVertices: Index[] = [
     Index(0, 0, 0), // a
     Index(1, 0, 0), // b
     Index(1, 1, 0), // c
@@ -70,7 +73,7 @@ export const CubeVertices = [
     Index(1, 1, 1), // g
     Index(0, 1, 1), // h
 ];
-export const CubeEdges = [
+export const CubeEdges: IndexPair[] = [
     IndexPair(CubeVertices[0], CubeVertices[1]),
     IndexPair(CubeVertices[1], CubeVertices[2]),
     IndexPair(CubeVertices[2], CubeVertices[3]),
@@ -84,7 +87,7 @@ export const CubeEdges = [
     IndexPair(CubeVertices[2], CubeVertices[6]),
     IndexPair(CubeVertices[3], CubeVertices[7]),
 ];
-export const EdgeIdInfo = [
+export const EdgeIdInfo: { i: number; j: number; k: number; e: number }[] = [
     { i: 0, j: 0, k: 0, e: 0 },
     { i: 1, j: 0, k: 0, e: 1 },
     { i: 0, j: 1, k: 0, e: 0 },
@@ -99,7 +102,7 @@ export const EdgeIdInfo = [
     { i: 0, j: 1, k: 0, e: 2 }
 ];
 // Tables EdgeTable and TriTable taken from http://paulbourke.net/geometry/polygonise/
-export const EdgeTable = [
+export const EdgeTable: number[] = [
     0x0, 0x109, 0x203, 0x30a, 0x406, 0x50f, 0x605, 0x70c,
     0x80c, 0x905, 0xa0f, 0xb06, 0xc0a, 0xd03, 0xe09, 0xf00,
     0x190, 0x99, 0x393, 0x29a, 0x596, 0x49f, 0x795, 0x69c,
@@ -133,7 +136,7 @@ export const EdgeTable = [
     0xf00, 0xe09, 0xd03, 0xc0a, 0xb06, 0xa0f, 0x905, 0x80c,
     0x70c, 0x605, 0x50f, 0x406, 0x30a, 0x203, 0x109, 0x0
 ];
-export const TriTable = [
+export const TriTable: number[][] = [
     [],
     [0, 8, 3],
     [0, 1, 9],
@@ -410,7 +413,7 @@ export const TriTable = [
  * are drawn as they're redundant
  * The line between edge 1 and 5 is always drawn as it's on the leading edge
  */
-export const AllowedContours = [
+export const AllowedContours: number[][] = [
     [0, 4, 4, 4, 2, 0, 0, 0, 2, 2, 0, 0], // 1 2 3 4 8 9
     [4, 0, 4, 4, 0, 8, 0, 0, 0, 8, 8, 0], // 0 2 3 5 9 10
     [4, 4, 0, 4, 0, 0, 8, 0, 0, 0, 8, 8], // 0 1 3 6 10 11

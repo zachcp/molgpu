@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { nearestAtomAttribution } from '../src/index.mjs';
+import { nearestAtomAttribution } from '../src/index.ts';
 
 test('assigns each vertex to its nearest atom within the local cell window', () => {
   const atoms = Float32Array.from([0, 0, 0, 10, 0, 0, 20, 0, 0]);

@@ -1,20 +1,22 @@
-// @ts-self-types="./index.d.ts"
 // Ported from the inner loop of Mol* 5.11.0's MIT-licensed
 // mol-geo/util/marching-cubes/{algorithm,tables}.js. Deliberately no Mol*
 // Task/Tensor/Mesh types: this consumes a packed scalar grid and returns owned
 // typed arrays suitable for any renderer.
-import { CubeEdges, EdgeTable, TriTable } from './marching-cubes-tables.mjs';
+import { CubeEdges, EdgeTable, TriTable } from './marching-cubes-tables.ts';
+import type { MarchingCubesInput, MarchingCubesMesh } from './types.ts';
+
+export type * from './types.ts';
 
 export {
   createCurveSegmentState, interpolateCurveSegment,
   interpolatePointsAndTangents, interpolateNormals, interpolateSizes,
-} from './curve-segment.mjs';
+} from './curve-segment.ts';
 
-export { nearestAtomAttribution } from './attribution.mjs';
+export { nearestAtomAttribution } from './attribution.ts';
 
-const offset = (x, y, z, nx, ny) => x + nx * (y + ny * z);
+const offset = (x: number, y: number, z: number, nx: number, ny: number): number => x + nx * (y + ny * z);
 
-function unit(x, y, z) {
+function unit(x: number, y: number, z: number): [number, number, number] {
   const length = Math.hypot(x, y, z) || 1;
   return [x / length, y / length, z / length];
 }
@@ -26,7 +28,8 @@ function unit(x, y, z) {
  * are intentionally not shared across cells in this first portable builder;
  * that keeps ownership simple and produces valid indexed triangle geometry.
  */
-export function marchingCubes({ values, dims, level = 0, origin = [0, 0, 0], spacing = [1, 1, 1] }) {
+export function marchingCubes(input: MarchingCubesInput): MarchingCubesMesh {
+  const { values, dims, level = 0, origin = [0, 0, 0], spacing = [1, 1, 1] } = input;
   if (!(values instanceof Float32Array)) throw new TypeError('values must be a Float32Array');
   if (!Array.isArray(dims) || dims.length !== 3 || dims.some(n => !Number.isInteger(n) || n < 2)) {
     throw new TypeError('dims must contain three integers of at least 2');
@@ -37,9 +40,9 @@ export function marchingCubes({ values, dims, level = 0, origin = [0, 0, 0], spa
     throw new TypeError('level, origin, and spacing must be finite');
   }
 
-  const positions = [], normals = [], indices = [];
-  const valueAt = (x, y, z) => values[offset(x, y, z, nx, ny)];
-  const gradient = (x, y, z) => [
+  const positions: number[] = [], normals: number[] = [], indices: number[] = [];
+  const valueAt = (x: number, y: number, z: number): number => values[offset(x, y, z, nx, ny)];
+  const gradient = (x: number, y: number, z: number): [number, number, number] => [
     valueAt(Math.max(0, x - 1), y, z) - valueAt(Math.min(nx - 1, x + 1), y, z),
     valueAt(x, Math.max(0, y - 1), z) - valueAt(x, Math.min(ny - 1, y + 1), z),
     valueAt(x, y, Math.max(0, z - 1)) - valueAt(x, y, Math.min(nz - 1, z + 1)),
@@ -52,7 +55,7 @@ export function marchingCubes({ values, dims, level = 0, origin = [0, 0, 0], spa
     for (let i = 0; i < 8; i++) if (corner[i] < level) mask |= 1 << i;
     if (mask === 0 || mask === 255) continue;
     const vertices = new Int32Array(12).fill(-1);
-    const addEdge = (edge) => {
+    const addEdge = (edge: number): number => {
       if (vertices[edge] >= 0) return vertices[edge];
       const { a, b } = CubeEdges[edge];
       const ax = x + a.i, ay = y + a.j, az = z + a.k;
