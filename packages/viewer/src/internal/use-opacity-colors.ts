@@ -1,6 +1,6 @@
-import { useShader, useShaderRef } from '@use-gpu/workbench';
-import type { ShaderSource } from '@use-gpu/shader';
-import { wgsl } from '@use-gpu/shader/wgsl';
+import { useShader, useShaderRef } from "@use-gpu/workbench";
+import type { ShaderSource } from "@use-gpu/shader";
+import { wgsl } from "@use-gpu/shader/wgsl";
 
 // Scale a per-row colour source's alpha by a uniform, composed shader-side like
 // world-space-points' SCALED_SIZE: changing opacity is a uniform write, never a
@@ -15,7 +15,10 @@ const OPACITY_COLORS = wgsl`
 `;
 
 /** A colour ShaderSource whose alpha is multiplied by `opacity` (a uniform). */
-export function useOpacityColors(colors: ShaderSource, opacity: number): ShaderSource {
+export function useOpacityColors(
+  colors: ShaderSource,
+  opacity: number,
+): ShaderSource {
   const opacityRef = useShaderRef(opacity);
   return useShader(OPACITY_COLORS, [colors, opacityRef]);
 }

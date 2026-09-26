@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react",
+    "jsxFactory": "React.createElement",
+    "jsxFragmentFactory": "React.Fragment",
+    "strict": true,
+    "esModuleInterop": true,
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "types": ["@webgpu/types"],
+    "baseUrl": "..",
+    "paths": {
+      "@molgpu/table": ["packages/table/src/index.ts"],
+      "@molgpu/select": ["packages/select/src/index.ts"],
+      "@molgpu/fields": ["packages/fields/src/index.ts"],
+      "@molgpu/io": ["packages/io/src/index.ts"],
+      "@molgpu/geo": ["packages/geo/src/index.ts"],
+      "@molgpu/timeline": ["packages/timeline/src/index.ts"],
+      "@molgpu/viewer": ["packages/viewer/src/index.ts"],
+      "@molgpu/viewer/advanced": ["packages/viewer/src/advanced.ts"]
+    }
+  },
+  "include": ["src"]
+}

@@ -1,6 +1,10 @@
 # molgpu — design
 
-> Architecture refinement (2026-09-17): read [the JSX/domain review](findings/2026-09-17-architecture-review.md) alongside this original plan. It updates domain identity, cache invalidation, package boundaries, renderer fallbacks and acceptance gates. These contracts are planned, not implemented.
+> Architecture refinement (2026-09-17): read
+> [the JSX/domain review](findings/2026-09-17-architecture-review.md) alongside
+> this original plan. It updates domain identity, cache invalidation, package
+> boundaries, renderer fallbacks and acceptance gates. These contracts are
+> planned, not implemented.
 
 A use.gpu-native molecular visualization library. GPU-first, declarative,
 timeline-native.
@@ -10,10 +14,10 @@ timeline-native.
 **Is:** a library, intended to be depended on and eventually published. API
 design, package boundaries and tests matter from early on.
 
-**Is not:** a MolViewSpec implementation. MVS is the *inspiration* — the scene
-grammar, the vocabulary, the idea that a molecular scene is a declarative
-value — but there is no `fromMVS()` and no `toMVS()`. We are not constrained
-by what a portable JSON format can express, and we do not owe any other viewer
+**Is not:** a MolViewSpec implementation. MVS is the _inspiration_ — the scene
+grammar, the vocabulary, the idea that a molecular scene is a declarative value
+— but there is no `fromMVS()` and no `toMVS()`. We are not constrained by what a
+portable JSON format can express, and we do not owe any other viewer
 compatibility.
 
 Dropping MVS interop buys design freedom and costs us two things that the plan
@@ -27,8 +31,8 @@ has to replace deliberately:
 
 ## Why not just use Mol*
 
-Mol* is excellent and we reuse its geometry kernels. But its appearance model
-is a state tree of modifier nodes, its color model is a closed set of enumerated
+Mol* is excellent and we reuse its geometry kernels. But its appearance model is
+a state tree of modifier nodes, its color model is a closed set of enumerated
 themes because the format it serves cannot ship code, and its time model is a
 list of static scenes with snapshot-local clocks. Those are all consequences of
 serving a portable archival format.
@@ -53,8 +57,8 @@ Everything else in the design is a function of this table.
 
 A selection compiles to a sorted index buffer. That makes union / intersect /
 difference cheap, and lets one selection be reused in five places. MVS leaks
-DAG-ness through `ref` and `structure_ref` precisely because it has to pretend
-a selection is tree-shaped; we do not pretend.
+DAG-ness through `ref` and `structure_ref` precisely because it has to pretend a
+selection is tree-shaped; we do not pretend.
 
 ### 3. Fields are the unifying abstraction
 
@@ -66,10 +70,10 @@ accepts one of:
 - a joined external annotation
 - a keyframe curve
 
-One concept replaces MVS's entire
-`color` / `color_from_uri` / `color_from_source` × categorical / discrete /
-continuous × domain / overflow / sort-order matrix. Fields compile to WGSL and
-bind as `ShaderSource`, which upstream supports directly (see findings).
+One concept replaces MVS's entire `color` / `color_from_uri` /
+`color_from_source` × categorical / discrete / continuous × domain / overflow /
+sort-order matrix. Fields compile to WGSL and bind as `ShaderSource`, which
+upstream supports directly (see findings).
 
 Annotations are **joins that produce fields**: `useAnnotation(uri, schema)`
 joins external per-residue or per-chain data onto the table and returns
@@ -83,14 +87,14 @@ containers that scope time.
 
 **Upstream constraint:** `Animate` is self-driving and cannot be sampled at an
 arbitrary `t`. The timeline is therefore ours, built on use.gpu's exported
-`EaseTypes` / `automaticKeyframes` interpolation machinery. This is a real
-piece of work, not a wrapper. See `@molgpu/timeline`.
+`EaseTypes` / `automaticKeyframes` interpolation machinery. This is a real piece
+of work, not a wrapper. See `@molgpu/timeline`.
 
 ### 5. Geometry memoizes on structure; style does not touch it
 
 Representations memoize geometry on `(selection, geometry params)` only. Style
-fields change uniforms and bound buffers. This is what makes animation cheap
-and is the main reason to be on use.gpu rather than porting naively.
+fields change uniforms and bound buffers. This is what makes animation cheap and
+is the main reason to be on use.gpu rather than porting naively.
 
 ### 6. Framing derives from selections
 
@@ -114,37 +118,37 @@ Illustrative, not settled:
 ```jsx
 <Molecule>
   <Structure id="cyp" src="1tqn.bcif">
-    <Cartoon      select="polymer" color={byPlddt} />
-    <BallAndStick select={site}    color={byElement} material={glossy} />
-    <Surface      select="polymer" opacity={fade} />
+    <Cartoon select="polymer" color={byPlddt} />
+    <BallAndStick select={site} color={byElement} material={glossy} />
+    <Surface select="polymer" opacity={fade} />
   </Structure>
   <Focus on={site} at={4000} />
-</Molecule>
+</Molecule>;
 ```
 
-Note what is *absent*: no modifier child nodes. `color`, `opacity` and `clip`
-are props, not children. MVS makes them children as a state-construction
-idiom; with real props and keys we keep diffing granularity and animation
-targeting without components that render nothing and reach upward.
+Note what is _absent_: no modifier child nodes. `color`, `opacity` and `clip`
+are props, not children. MVS makes them children as a state-construction idiom;
+with real props and keys we keep diffing granularity and animation targeting
+without components that render nothing and reach upward.
 
 ## Package layout
 
 A monorepo. The boundaries are chosen so that (a) all Mol* coupling sits behind
 exactly one wall, and (b) everything correctness-critical is a pure function.
 
-| Package | Depends on | Purpose |
-|---|---|---|
-| `@molgpu/table` | — | Columnar atom table, schema, typed attribute buffers. No GPU, no Mol*. |
-| `@molgpu/io` | `table`, `molstar` (loaded lazily) | Importers. Lowers a Mol* `Structure` into a table. **The only package that knows Mol* exists.** |
-| `@molgpu/select` | `table` | Selection language → sorted index buffers. |
-| `@molgpu/fields` | `table`, `@use-gpu/shader` | Field abstraction, expression sublanguage → WGSL. |
-| `@molgpu/geo` | — | Geometry kernels: ported ribbon/spline math, molecular surface, sphere/cylinder instancing. Typed arrays in, typed arrays out. No GPU, no Live. |
-| `@molgpu/timeline` | `@use-gpu/workbench` | Global scrubbable timeline, beats, curve sampling. |
-| `@molgpu/viewer` | all of the above | The Live components. **The only package that imports `@use-gpu/workbench` components.** |
+| Package            | Depends on                         | Purpose                                                                                                                                         |
+| ------------------ | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@molgpu/table`    | —                                  | Columnar atom table, schema, typed attribute buffers. No GPU, no Mol*.                                                                          |
+| `@molgpu/io`       | `table`, `molstar` (loaded lazily) | Importers. Lowers a Mol* `Structure` into a table. __The only package that knows Mol_ exists._*                                                 |
+| `@molgpu/select`   | `table`                            | Selection language → sorted index buffers.                                                                                                      |
+| `@molgpu/fields`   | `table`, `@use-gpu/shader`         | Field abstraction, expression sublanguage → WGSL.                                                                                               |
+| `@molgpu/geo`      | —                                  | Geometry kernels: ported ribbon/spline math, molecular surface, sphere/cylinder instancing. Typed arrays in, typed arrays out. No GPU, no Live. |
+| `@molgpu/timeline` | `@use-gpu/workbench`               | Global scrubbable timeline, beats, curve sampling.                                                                                              |
+| `@molgpu/viewer`   | all of the above                   | The Live components. **The only package that imports `@use-gpu/workbench` components.**                                                         |
 
 Two rules make the layout load-bearing rather than decorative:
 
-- **Mol* behind one wall.** `@molgpu/io` is the sole Mol* consumer, so the
+- __Mol_ behind one wall._* `@molgpu/io` is the sole Mol* consumer, so the
   dependency can later be made lazy, swapped for a native parser, or dropped
   without touching the rest.
 - **use.gpu types do not leak.** Lower packages never expose use.gpu types in
@@ -161,28 +165,29 @@ and `import` at the same `src/*.ts` file.
 
 - **Toolchain minimums:** Node 26 (runs `.ts` directly through type stripping)
   and Deno 2.9. The repo is an npm workspace and a Deno workspace at once.
-- **Manifests:** each package's `deno.json` is the single source for name, version, license,
-  exports and dependency ranges. Each package's `deno.json` (its JSR manifest)
-  is checked directly by hardening H1 for
-  match. Internal `@molgpu/*` imports resolve through the workspace, and JSR
-  rewrites them to `jsr:` ranges on publish.
+- **Manifests:** each package's `deno.json` is the single source for name,
+  version, license, exports and dependency ranges. Each package's `deno.json`
+  (its JSR manifest) is checked directly by hardening H1 for match. Internal
+  `@molgpu/*` imports resolve through the workspace, and JSR rewrites them to
+  `jsr:` ranges on publish.
 - **TypeScript source** follows `tsconfig.base.json`: `isolatedDeclarations`
   (explicit types on every export, which is JSR's "no slow types" rule),
   `erasableSyntaxOnly` (so Node can strip types), `verbatimModuleSyntax`, and
   relative imports ending in `.ts`.
-- **JSR has no peer dependencies.** use.gpu stays an exact `npm:` pin. Mol* is
-  a regular dependency of `io`, imported lazily with literal specifiers, which
-  keeps it out of every bundle's initial chunk. Internal ranges stay
-  broad so a single copy of `@molgpu/table` is shared.
+- **JSR has no peer dependencies.** use.gpu stays an exact `npm:` pin. Mol* is a
+  regular dependency of `io`, imported lazily with literal specifiers, which
+  keeps it out of every bundle's initial chunk. Internal ranges stay broad so a
+  single copy of `@molgpu/table` is shared.
 
 ## Testing strategy
 
 Because MVS interop is out, the oracle has to be manufactured.
 
-- **`@molgpu/geo` — golden typed-array tests against Mol*.** The kernels are
+- __`@molgpu/geo` — golden typed-array tests against Mol_._* The kernels are
   pure functions, so we can run Mol*'s equivalent headless in the test process
-  and diff vertex/normal/index output within tolerance. This is the highest-value
-  test surface in the project and should exist from Phase 1, not Phase 6.
+  and diff vertex/normal/index output within tolerance. This is the
+  highest-value test surface in the project and should exist from Phase 1, not
+  Phase 6.
 - **`table` / `select` / `fields` — ordinary unit tests.** No GPU needed.
 - **`viewer` — screenshot tests.** Needs real WebGPU; drive headless Chrome via
   Playwright rather than fighting Node WebGPU polyfills (see findings: upstream
@@ -203,32 +208,32 @@ being pretty. Each entry pins a PDB id and the case it covers:
 
 ## Risks
 
-**R1 — Polymer traversal reimplementation (highest).** Cartoon correctness
-lives in the half of Mol* we cannot port: trace iteration, secondary-structure
-assignment, helix orientation. *Mitigation:* port `curve-segment` math verbatim;
-write our own iterator over the table; gate it behind the golden-file harness
-on the gap/altloc/nucleic corpus entries. Budget this as the long pole, and
+**R1 — Polymer traversal reimplementation (highest).** Cartoon correctness lives
+in the half of Mol* we cannot port: trace iteration, secondary-structure
+assignment, helix orientation. _Mitigation:_ port `curve-segment` math verbatim;
+write our own iterator over the table; gate it behind the golden-file harness on
+the gap/altloc/nucleic corpus entries. Budget this as the long pole, and
 schedule it late (Phase 4) so the thesis is proven without it.
 
 **R2 — No oracle, no corpus.** Addressed by the Testing section above. The
 failure mode is doing it late; the harness is a Phase 1 deliverable.
 
-**R3 — use.gpu is pre-1.0 from a small maintainer.** *Mitigation:* pin exact
+**R3 — use.gpu is pre-1.0 from a small maintainer.** _Mitigation:_ pin exact
 versions; contain imports to `@molgpu/viewer`; do not leak its types; be
 prepared to vendor-patch.
 
-**R4 — Headless rendering.** Server-side figure generation from Python
-pipelines is not possible until Node WebGPU is dependable, and upstream
-dereferences WebGPU globals at import time. *Mitigation:* defer, but do not
-design it out — keep `@molgpu/geo` and `@molgpu/table` renderer-free so a
-future headless backend is additive.
+**R4 — Headless rendering.** Server-side figure generation from Python pipelines
+is not possible until Node WebGPU is dependable, and upstream dereferences
+WebGPU globals at import time. _Mitigation:_ defer, but do not design it out —
+keep `@molgpu/geo` and `@molgpu/table` renderer-free so a future headless
+backend is additive.
 
 **R5 — The field expression language is a compiler.** Classic scope-creep
-magnet. *Mitigation:* start with a small closed set of built-in fields; no
+magnet. _Mitigation:_ start with a small closed set of built-in fields; no
 user-facing parser until Phase 2 has proven the shape.
 
-**R6 — Selection language scope creep.** Same shape as R5; start with
-structural predicates only, resist a query language until asked for.
+**R6 — Selection language scope creep.** Same shape as R5; start with structural
+predicates only, resist a query language until asked for.
 
 **R7 — Rewriting what is not interesting.** Cartoon and molecular-surface
 generation is years of accumulated work in Mol*. The rule: port kernels, never

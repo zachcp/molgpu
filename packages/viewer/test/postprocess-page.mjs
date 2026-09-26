@@ -8,20 +8,33 @@
 // one and mounts the other with a fresh <Pass>. Postprocessing flags configure
 // a pass at construction; reconfiguring a live pass's flags is not a supported
 // path (the cached shaded pipeline would keep the old PASS bind-group layout).
-import { render, use, useState } from '@use-gpu/live';
-import { WebGPU, AutoCanvas } from '@use-gpu/webgpu';
-import { OrbitCamera, useDeviceContext } from '@use-gpu/workbench';
-import { coordinateBounds } from '@molgpu/table';
-import { structureFromBcif } from '@molgpu/io';
-import { Structure, Surface, Spacefill, Pass, AmbientLight, DirectionalLight } from '../src/index.ts';
+import { render, use, useState } from "@use-gpu/live";
+import { AutoCanvas, WebGPU } from "@use-gpu/webgpu";
+import { OrbitCamera, useDeviceContext } from "@use-gpu/workbench";
+import { coordinateBounds } from "@molgpu/table";
+import { structureFromBcif } from "@molgpu/io";
+import {
+  AmbientLight,
+  DirectionalLight,
+  Pass,
+  Spacefill,
+  Structure,
+  Surface,
+} from "../src/index.ts";
 
 const probe = window.__probe = {
-  storage: [], pipelines: 0, textures: 0, errors: [], mounted: false,
+  storage: [],
+  pipelines: 0,
+  textures: 0,
+  errors: [],
+  mounted: false,
 };
 const makeBuffer = GPUDevice.prototype.createBuffer;
 GPUDevice.prototype.createBuffer = function (desc) {
   const buffer = makeBuffer.call(this, desc);
-  if (desc.usage & GPUBufferUsage.STORAGE) probe.storage.push({ capacity: desc.size });
+  if (desc.usage & GPUBufferUsage.STORAGE) {
+    probe.storage.push({ capacity: desc.size });
+  }
   return buffer;
 };
 const makeTexture = GPUDevice.prototype.createTexture;
@@ -29,7 +42,7 @@ GPUDevice.prototype.createTexture = function (desc) {
   probe.textures += 1;
   return makeTexture.call(this, desc);
 };
-for (const name of ['createRenderPipeline', 'createRenderPipelineAsync']) {
+for (const name of ["createRenderPipeline", "createRenderPipelineAsync"]) {
   const original = GPUDevice.prototype[name];
   GPUDevice.prototype[name] = function (...args) {
     probe.pipelines += 1;
@@ -39,11 +52,16 @@ for (const name of ['createRenderPipeline', 'createRenderPipelineAsync']) {
 const request = GPUAdapter.prototype.requestDevice;
 GPUAdapter.prototype.requestDevice = async function (...args) {
   const device = await request.apply(this, args);
-  device.addEventListener('uncapturederror', (e) => probe.errors.push(e.error.message));
+  device.addEventListener(
+    "uncapturederror",
+    (e) => probe.errors.push(e.error.message),
+  );
   return device;
 };
 
-const bytes = new Uint8Array(await (await fetch('/packages/io/test/fixtures/1crn.bcif')).arrayBuffer());
+const bytes = new Uint8Array(
+  await (await fetch("/packages/io/test/fixtures/1crn.bcif")).arrayBuffer(),
+);
 const data = await structureFromBcif(bytes);
 const bounds = coordinateBounds(data);
 const extent = Math.max(...bounds.max.map((v, i) => v - bounds.min[i]));
@@ -52,26 +70,41 @@ const extent = Math.max(...bounds.max.map((v, i) => v - bounds.min[i]));
 const Body = () => [
   use(AmbientLight, {}),
   use(DirectionalLight, {}),
-  use(Structure, { data, children: [
-    use(Surface, { resolution: 1.2, color: [0.6, 0.7, 0.9, 0.5] }),
-    use(Spacefill, { scale: 0.3 }),
-  ] }),
+  use(Structure, {
+    data,
+    children: [
+      use(Surface, { resolution: 1.2, color: [0.6, 0.7, 0.9, 0.5] }),
+      use(Spacefill, { scale: 0.3 }),
+    ],
+  }),
 ];
 
 // Two distinct components so switching mode remounts a fresh <Pass>.
 const PlainScene = () => use(Pass, { children: use(Body, {}) });
-const PostScene = () => use(Pass, { ssao: true, outline: true, oit: true, children: use(Body, {}) });
+const PostScene = () =>
+  use(Pass, { ssao: true, outline: true, oit: true, children: use(Body, {}) });
 
 const App = () => {
   useDeviceContext();
-  const [mode, setMode] = useState('plain');
+  const [mode, setMode] = useState("plain");
   probe.setMode = setMode;
   probe.mounted = true;
-  return use(OrbitCamera, { radius: extent * 1.6, target: bounds.center,
-    children: mode === 'post' ? use(PostScene, {}) : use(PlainScene, {}) });
+  return use(OrbitCamera, {
+    radius: extent * 1.6,
+    target: bounds.center,
+    children: mode === "post" ? use(PostScene, {}) : use(PlainScene, {}),
+  });
 };
 
 render(use(WebGPU, {
-  fallback: (e) => { probe.errors.push(String(e)); return null; },
-  children: use(AutoCanvas, { selector: '#stage', samples: 1, backgroundColor: [0, 0, 0, 1], children: use(App, {}) }),
+  fallback: (e) => {
+    probe.errors.push(String(e));
+    return null;
+  },
+  children: use(AutoCanvas, {
+    selector: "#stage",
+    samples: 1,
+    backgroundColor: [0, 0, 0, 1],
+    children: use(App, {}),
+  }),
 }));

@@ -1,13 +1,15 @@
-import { assert, assertStrictEquals } from '@std/assert';
+import { assert, assertStrictEquals } from "@std/assert";
 import {
-  createCurveSegmentState, interpolateCurveSegment, interpolateSizes,
-} from '../src/index.ts';
-import { Vec3 } from 'molstar/lib/mol-math/linear-algebra.js';
+  createCurveSegmentState,
+  interpolateCurveSegment,
+  interpolateSizes,
+} from "../src/index.ts";
+import { Vec3 } from "molstar/lib/mol-math/linear-algebra.js";
 import {
   createCurveSegmentState as oracleState,
   interpolateCurveSegment as oracleInterpolate,
   interpolateSizes as oracleInterpolateSizes,
-} from 'molstar/lib/mol-repr/structure/visual/util/polymer/curve-segment.js';
+} from "molstar/lib/mol-repr/structure/visual/util/polymer/curve-segment.js";
 
 function controls(overrides = {}) {
   return {
@@ -24,15 +26,25 @@ function controls(overrides = {}) {
   };
 }
 
-function assertArraysClose(actual: ArrayLike<number>, expected: ArrayLike<number>, tolerance = 1e-6) {
+function assertArraysClose(
+  actual: ArrayLike<number>,
+  expected: ArrayLike<number>,
+  tolerance = 1e-6,
+) {
   assertStrictEquals(actual.length, expected.length);
   for (let i = 0; i < actual.length; i++) {
-    assert(Number.isFinite(actual[i]), `index ${i} is not finite: ${actual[i]}`);
-    assert(Math.abs(actual[i] - expected[i]) <= tolerance, `index ${i}: ${actual[i]} vs ${expected[i]}`);
+    assert(
+      Number.isFinite(actual[i]),
+      `index ${i} is not finite: ${actual[i]}`,
+    );
+    assert(
+      Math.abs(actual[i] - expected[i]) <= tolerance,
+      `index ${i}: ${actual[i]} vs ${expected[i]}`,
+    );
   }
 }
 
-Deno.test('matches the pinned Mol* oracle for points, tangents, normals, binormals', () => {
+Deno.test("matches the pinned Mol* oracle for points, tangents, normals, binormals", () => {
   const linearSegments = 8;
   const ours = createCurveSegmentState(linearSegments);
   const oracle = oracleState(linearSegments);
@@ -47,7 +59,7 @@ Deno.test('matches the pinned Mol* oracle for points, tangents, normals, binorma
   assertArraysClose(ours.binormalVectors, oracle.binormalVectors);
 });
 
-Deno.test('matches the oracle when secondary-structure ends pin tension to 0.5', () => {
+Deno.test("matches the oracle when secondary-structure ends pin tension to 0.5", () => {
   const linearSegments = 6;
   const ours = createCurveSegmentState(linearSegments);
   const oracle = oracleState(linearSegments);
@@ -62,16 +74,20 @@ Deno.test('matches the oracle when secondary-structure ends pin tension to 0.5',
   assertArraysClose(ours.binormalVectors, oracle.binormalVectors);
 });
 
-Deno.test('matches the oracle deterministic fallback when the frame direction is degenerate', () => {
+Deno.test("matches the oracle deterministic fallback when the frame direction is degenerate", () => {
   const linearSegments = 4;
   const ours = createCurveSegmentState(linearSegments);
   const oracle = oracleState(linearSegments);
   // p0..p4 collinear along x: tangent is along x, and d12/d23 are also along
   // x, forcing orthogonalize() through its parallel-vector fallback branches.
   const c = controls({
-    p0: Vec3.create(0, 0, 0), p1: Vec3.create(1, 0, 0), p2: Vec3.create(2, 0, 0),
-    p3: Vec3.create(3, 0, 0), p4: Vec3.create(4, 0, 0),
-    d12: Vec3.create(1, 0, 0), d23: Vec3.create(-1, 0, 0),
+    p0: Vec3.create(0, 0, 0),
+    p1: Vec3.create(1, 0, 0),
+    p2: Vec3.create(2, 0, 0),
+    p3: Vec3.create(3, 0, 0),
+    p4: Vec3.create(4, 0, 0),
+    d12: Vec3.create(1, 0, 0),
+    d23: Vec3.create(-1, 0, 0),
   });
 
   interpolateCurveSegment(ours, c, 0.5, 0);
@@ -82,7 +98,7 @@ Deno.test('matches the oracle deterministic fallback when the frame direction is
   for (const v of ours.normalVectors) assert(Number.isFinite(v));
 });
 
-Deno.test('matches the oracle for width/height taper', () => {
+Deno.test("matches the oracle for width/height taper", () => {
   const linearSegments = 5;
   const ours = createCurveSegmentState(linearSegments);
   const oracle = oracleState(linearSegments);
@@ -94,11 +110,18 @@ Deno.test('matches the oracle for width/height taper', () => {
   assertArraysClose(ours.heightValues, oracle.heightValues);
 });
 
-Deno.test('produces linearSegments + 1 samples with no NaNs', () => {
+Deno.test("produces linearSegments + 1 samples with no NaNs", () => {
   const state = createCurveSegmentState(10);
   interpolateCurveSegment(state, controls(), 0.5, 0);
   assertStrictEquals(state.curvePoints.length, 33);
-  for (const arr of [state.curvePoints, state.tangentVectors, state.normalVectors, state.binormalVectors]) {
+  for (
+    const arr of [
+      state.curvePoints,
+      state.tangentVectors,
+      state.normalVectors,
+      state.binormalVectors,
+    ]
+  ) {
     for (const v of arr) assert(Number.isFinite(v));
   }
 });

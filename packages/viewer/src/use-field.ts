@@ -1,10 +1,10 @@
-import { useContext, useMemo } from '@use-gpu/live';
-import { useShader } from '@use-gpu/workbench';
-import { loadModuleWithCache } from '@use-gpu/shader/wgsl';
-import { compile, type Field } from '@molgpu/fields';
-import type { ShaderSource } from '@use-gpu/shader';
-import { TimelineContext } from './timeline-context.ts';
-import { useBindingProbe } from './internal/use-binding-probe.ts';
+import { useContext, useMemo } from "@use-gpu/live";
+import { useShader } from "@use-gpu/workbench";
+import { loadModuleWithCache } from "@use-gpu/shader/wgsl";
+import { compile, type Field } from "@molgpu/fields";
+import type { ShaderSource } from "@use-gpu/shader";
+import { TimelineContext } from "./timeline-context.ts";
+import { useBindingProbe } from "./internal/use-binding-probe.ts";
 
 /**
  * Lower a numeric `@molgpu/fields` Field to a use.gpu shader source, composing
@@ -20,16 +20,25 @@ import { useBindingProbe } from './internal/use-binding-probe.ts';
 export function useField(
   field: Field,
   inputs?: Record<string, ShaderSource | number | { current: number }>,
-  options: { domain?: 'atom' | 'residue' } = {},
+  options: { domain?: "atom" | "residue" } = {},
 ): ShaderSource {
   const { domain } = options;
   const time = useContext(TimelineContext);
-  useBindingProbe('field', field, time);
-  const compiled = useMemo(() => compile(field, { target: 'link', domain }), [field, domain]);
-  const module = useMemo(() => loadModuleWithCache(compiled.wgsl, 'molgpu-field', 'auto'), [compiled.wgsl]);
+  useBindingProbe("field", field, time);
+  const compiled = useMemo(() => compile(field, { target: "link", domain }), [
+    field,
+    domain,
+  ]);
+  const module = useMemo(
+    () => loadModuleWithCache(compiled.wgsl, "molgpu-field", "auto"),
+    [compiled.wgsl],
+  );
   const values = compiled.bindings.map((b) => {
-    const value = inputs?.[b.id] ?? (b.id === 'curve:t' ? time ?? undefined : undefined);
-    if (value === undefined) throw new Error(`useField: no input provided for '${b.id}'`);
+    const value = inputs?.[b.id] ??
+      (b.id === "curve:t" ? time ?? undefined : undefined);
+    if (value === undefined) {
+      throw new Error(`useField: no input provided for '${b.id}'`);
+    }
     return value;
   });
   return useShader(module, values);

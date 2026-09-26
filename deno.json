@@ -30,6 +30,8 @@
     "molstar": "npm:molstar@5.11.0",
     "molstar/": "npm:/molstar@5.11.0/",
     "playwright": "npm:playwright@1.62.1",
+    "react": "npm:react@19.3.0",
+    "react-dom/client": "npm:react-dom@19.3.0/client",
     "typescript": "npm:typescript@5.9.3",
     "vite": "npm:vite@8.3.0"
   },
@@ -40,6 +42,9 @@
     "jsr:check": "deno publish --dry-run --allow-dirty",
     "typecheck": "deno check packages/*/src/index.ts packages/*/test/*.test.ts",
     "typecheck:components": "tsc -p packages/viewer/test/tsx/tsconfig.json",
+    "typecheck:site": "deno run -A npm:typescript@5.9.3/bin/tsc -p site/tsconfig.json",
+    "build:site": "deno run -A npm:vite@8.3.0 build --config site/vite.config.mjs",
+    "dev:site": "deno run -A npm:vite@8.3.0 --config site/vite.config.mjs",
     "test:corpus": "deno test -A packages/io/test/corpus.test.ts",
     "test:fields:gpu": "deno test -A packages/fields/test/run-browser.mjs",
     "test:gpu": "deno test -A packages/viewer/test/run-browser.mjs",
@@ -54,7 +59,6 @@
     "test:viewer:annotations": "deno test -A packages/viewer/test/run-annotations.mjs",
     "test:viewer:invalidation": "deno test -A packages/viewer/test/run-invalidation.mjs",
     "test:components": "deno test -A packages/viewer/test/run-components.mjs",
-    "test:examples": "deno test -A spikes/examples/test/run-browser.mjs",
-    "test:examples:figure": "deno test -A spikes/examples/test/run-figure.mjs"
+    "test:site": "deno test -A site/test/run-browser.mjs"
   }
 }

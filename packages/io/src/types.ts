@@ -2,22 +2,22 @@
 /** Why a BinaryCIF import failed, stable enough to branch on. */
 export type BcifErrorCode =
   /** `bytes` was not a `Uint8Array`. */
-  | 'INVALID_INPUT'
+  | "INVALID_INPUT"
   /** The Mol* parser rejected the bytes. */
-  | 'INVALID_BCIF'
+  | "INVALID_BCIF"
   /** The first data block has no `atom_site` category. */
-  | 'MISSING_ATOM_SITE'
+  | "MISSING_ATOM_SITE"
   /** The optional Mol* parser is absent or failed to load. */
-  | 'PARSER_UNAVAILABLE';
+  | "PARSER_UNAVAILABLE";
 
 /** Why a molecular surface field computation failed, stable enough to branch on. */
 export type SurfaceFieldErrorCode =
   /** `count` is not a nonnegative safe integer, or a column is not a `Float32Array` of length `count`. */
-  | 'INVALID_INPUT'
+  | "INVALID_INPUT"
   /** `count` is 0. */
-  | 'EMPTY_INPUT'
+  | "EMPTY_INPUT"
   /** The optional Mol* surface code is absent, failed to load, or threw while computing. */
-  | 'FIELD_UNAVAILABLE';
+  | "FIELD_UNAVAILABLE";
 
 /** Plain owned atom columns: Angstrom coordinates and van der Waals radii. */
 export interface SurfaceFieldAtoms {

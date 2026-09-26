@@ -19,14 +19,19 @@
 // fixture — reports every residue as 'coil'. This project does not (yet)
 // compute secondary structure from geometry alone (no DSSP); that is
 // tracked as separate follow-up work, not silently approximated here.
-import type { SecondaryStructureTrace, StructureData, Trace } from './types.ts';
+import type { SecondaryStructureTrace, StructureData, Trace } from "./types.ts";
 
-type SSKind = SecondaryStructureTrace['kind'][number];
+type SSKind = SecondaryStructureTrace["kind"][number];
 
-const DIRECTION_ATOMS: Partial<Record<string, { from: Set<string>; to: Set<string> }>> = {
-  protein: { from: new Set(['C']), to: new Set(['O', 'OC1', 'O1', 'OX1', 'OXT', 'OT1']) },
-  rna: { from: new Set(["C4'", 'C4*']), to: new Set(["C3'", 'C3*']) },
-  dna: { from: new Set(["C3'", 'C3*']), to: new Set(["C1'", 'C1*']) },
+const DIRECTION_ATOMS: Partial<
+  Record<string, { from: Set<string>; to: Set<string> }>
+> = {
+  protein: {
+    from: new Set(["C"]),
+    to: new Set(["O", "OC1", "O1", "OX1", "OXT", "OT1"]),
+  },
+  rna: { from: new Set(["C4'", "C4*"]), to: new Set(["C3'", "C3*"]) },
+  dna: { from: new Set(["C3'", "C3*"]), to: new Set(["C1'", "C1*"]) },
 };
 // Any fixed, finite, nonzero vector: orthogonalize() downstream (0sj.1's
 // ported Vec3.orthogonalize) already handles a direction parallel to the
@@ -39,8 +44,14 @@ const DEFAULT_DIRECTION: [number, number, number] = [0, 0, 1];
  * traceTable, so the direction atom (e.g. the carbonyl O) is looked up
  * within the caller's chosen model/altloc policy, not just anywhere.
  */
-export function secondaryStructureTrace(data: StructureData, atomIndices: Uint32Array, trace: Trace): SecondaryStructureTrace {
-  if (!(atomIndices instanceof Uint32Array)) throw new TypeError('atomIndices: expected Uint32Array');
+export function secondaryStructureTrace(
+  data: StructureData,
+  atomIndices: Uint32Array,
+  trace: Trace,
+): SecondaryStructureTrace {
+  if (!(atomIndices instanceof Uint32Array)) {
+    throw new TypeError("atomIndices: expected Uint32Array");
+  }
   const { atoms, residues } = data.topology;
 
   const fromAtom = new Int32Array(residues.count).fill(-1);
@@ -60,7 +71,7 @@ export function secondaryStructureTrace(data: StructureData, atomIndices: Uint32
   const kind = new Array<SSKind>(count);
   for (let k = 0; k < count; k++) {
     const r = trace.residue[k];
-    kind[k] = label ? label[r] : 'coil';
+    kind[k] = label ? label[r] : "coil";
     const from = fromAtom[r], to = toAtom[r];
     let dx: number, dy: number, dz: number;
     if (from >= 0 && to >= 0) {
@@ -68,12 +79,17 @@ export function secondaryStructureTrace(data: StructureData, atomIndices: Uint32
       dy = data.positions[to * 3 + 1] - data.positions[from * 3 + 1];
       dz = data.positions[to * 3 + 2] - data.positions[from * 3 + 2];
       const len = Math.hypot(dx, dy, dz);
-      if (len > 1e-6) { dx /= len; dy /= len; dz /= len; }
-      else [dx, dy, dz] = DEFAULT_DIRECTION;
+      if (len > 1e-6) {
+        dx /= len;
+        dy /= len;
+        dz /= len;
+      } else [dx, dy, dz] = DEFAULT_DIRECTION;
     } else {
       [dx, dy, dz] = DEFAULT_DIRECTION;
     }
-    direction[k * 3] = dx; direction[k * 3 + 1] = dy; direction[k * 3 + 2] = dz;
+    direction[k * 3] = dx;
+    direction[k * 3 + 1] = dy;
+    direction[k * 3 + 2] = dz;
   }
 
   // A sample starts/ends a stable-frame block at a run boundary or wherever

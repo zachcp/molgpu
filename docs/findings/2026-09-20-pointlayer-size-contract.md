@@ -17,8 +17,8 @@ size = r * height / (pixelRatio * tan(fov / 2) * focus)
 ```
 
 The camera radius cancels. Viewport height, DPR, FOV, and focus do not.
-Orthographic mode uses the same published scale product, so the viewer reads
-the live uniforms instead of branching on projection type.
+Orthographic mode uses the same published scale product, so the viewer reads the
+live uniforms instead of branching on projection type.
 
 `WorldSpacePointLayer` in `@molgpu/viewer` owns this derived size column. Its
 callers retain the position and colour GPU sources, avoiding a size constant in

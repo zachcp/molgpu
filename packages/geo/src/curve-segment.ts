@@ -3,15 +3,27 @@
 // consumes plain control-point arrays and Vec3 kernels local to this
 // package, no Mol* Task/Structure/Unit types.
 import {
-  zero as v3zero, fromArray as v3fromArray, toArray as v3toArray,
-  normalize as v3normalize, sub as v3sub, spline as v3spline, slerp as v3slerp,
-  copy as v3copy, cross as v3cross, orthogonalize as v3orthogonalize,
-  matchDirection as v3matchDirection, scale as v3scale, add as v3add, lerp,
+  add as v3add,
+  copy as v3copy,
+  cross as v3cross,
+  fromArray as v3fromArray,
+  lerp,
+  matchDirection as v3matchDirection,
+  normalize as v3normalize,
+  orthogonalize as v3orthogonalize,
+  scale as v3scale,
+  slerp as v3slerp,
   smoothstep,
-} from './vec3.ts';
-import type { CurveSegmentControls, CurveSegmentState } from './types.ts';
+  spline as v3spline,
+  sub as v3sub,
+  toArray as v3toArray,
+  zero as v3zero,
+} from "./vec3.ts";
+import type { CurveSegmentControls, CurveSegmentState } from "./types.ts";
 
-export function createCurveSegmentState(linearSegments: number): CurveSegmentState {
+export function createCurveSegmentState(
+  linearSegments: number,
+): CurveSegmentState {
   const n = linearSegments + 1;
   const pn = n * 3;
   return {
@@ -25,7 +37,12 @@ export function createCurveSegmentState(linearSegments: number): CurveSegmentSta
   };
 }
 
-export function interpolateCurveSegment(state: CurveSegmentState, controls: CurveSegmentControls, tension: number, shift: number): void {
+export function interpolateCurveSegment(
+  state: CurveSegmentState,
+  controls: CurveSegmentControls,
+  tension: number,
+  shift: number,
+): void {
   interpolatePointsAndTangents(state, controls, tension, shift);
   interpolateNormals(state, controls);
 }
@@ -35,7 +52,12 @@ const tanB = v3zero();
 const curvePoint = v3zero();
 const tangentVec = v3zero();
 
-export function interpolatePointsAndTangents(state: CurveSegmentState, controls: CurveSegmentControls, tension: number, shift: number): void {
+export function interpolatePointsAndTangents(
+  state: CurveSegmentState,
+  controls: CurveSegmentControls,
+  tension: number,
+  shift: number,
+): void {
   const { curvePoints, tangentVectors, linearSegments } = state;
   const { p0, p1, p2, p3, p4, secStrucFirst, secStrucLast } = controls;
   const shift1 = 1 - shift;
@@ -75,7 +97,10 @@ const lastNormalVec = v3zero();
  * Populate normalVectors by interpolating from firstDirection to lastDirection with
  * resulting vector perpendicular to tangentVectors and binormalVectors
  */
-export function interpolateNormals(state: CurveSegmentState, controls: Pick<CurveSegmentControls, 'd12' | 'd23'>): void {
+export function interpolateNormals(
+  state: CurveSegmentState,
+  controls: Pick<CurveSegmentControls, "d12" | "d23">,
+): void {
   const { curvePoints, tangentVectors, normalVectors, binormalVectors } = state;
   const { d12: firstDirection, d23: lastDirection } = controls;
   const n = curvePoints.length / 3;
@@ -94,7 +119,11 @@ export function interpolateNormals(state: CurveSegmentState, controls: Pick<Curv
     const t = i === 0 ? 0 : 1 / (n - j);
 
     v3fromArray(tangentVec, tangentVectors, i * 3);
-    v3orthogonalize(normalVec, tangentVec, v3slerp(tmpNormal, prevNormal, lastNormalVec, t));
+    v3orthogonalize(
+      normalVec,
+      tangentVec,
+      v3slerp(tmpNormal, prevNormal, lastNormalVec, t),
+    );
     v3toArray(normalVec, normalVectors, i * 3);
     v3copy(prevNormal, normalVec);
 
@@ -106,7 +135,11 @@ export function interpolateNormals(state: CurveSegmentState, controls: Pick<Curv
     v3fromArray(prevNormal, normalVectors, (i - 1) * 3);
     v3fromArray(normalVec, normalVectors, i * 3);
     v3fromArray(nextNormal, normalVectors, (i + 1) * 3);
-    v3scale(normalVec, v3add(normalVec, prevNormal, v3add(normalVec, nextNormal, normalVec)), 1 / 3);
+    v3scale(
+      normalVec,
+      v3add(normalVec, prevNormal, v3add(normalVec, nextNormal, normalVec)),
+      1 / 3,
+    );
     v3toArray(normalVec, normalVectors, i * 3);
 
     v3fromArray(tangentVec, tangentVectors, i * 3);
@@ -115,7 +148,16 @@ export function interpolateNormals(state: CurveSegmentState, controls: Pick<Curv
   }
 }
 
-export function interpolateSizes(state: CurveSegmentState, w0: number, w1: number, w2: number, h0: number, h1: number, h2: number, shift: number): void {
+export function interpolateSizes(
+  state: CurveSegmentState,
+  w0: number,
+  w1: number,
+  w2: number,
+  h0: number,
+  h1: number,
+  h2: number,
+  shift: number,
+): void {
   const { widthValues, heightValues, linearSegments } = state;
   const shift1 = 1 - shift;
 

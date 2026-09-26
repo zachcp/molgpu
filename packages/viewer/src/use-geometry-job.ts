@@ -1,6 +1,6 @@
-import { useAwait } from '@use-gpu/live';
-import type { StructureResource } from './types.ts';
-import { geometryDeps, runGeometryJob } from './internal/geometry-job.ts';
+import { useAwait } from "@use-gpu/live";
+import type { StructureResource } from "./types.ts";
+import { geometryDeps, runGeometryJob } from "./internal/geometry-job.ts";
 
 /**
  * Schedule an expensive, cancellable geometry build (a surface field/mesh, or
@@ -18,7 +18,13 @@ import { geometryDeps, runGeometryJob } from './internal/geometry-job.ts';
  * failure, or once superseded.
  */
 export function useGeometryJob<P extends Record<string, unknown>, T>(
-  resource: StructureResource, params: P, kernel: (resource: StructureResource, params: P) => T | Promise<T>,
+  resource: StructureResource,
+  params: P,
+  kernel: (resource: StructureResource, params: P) => T | Promise<T>,
 ): readonly [T | null | undefined, unknown, boolean] {
-  return useAwait((cancelled: () => boolean) => runGeometryJob(() => kernel(resource, params), cancelled), geometryDeps(resource, params ?? {}) as unknown[]);
+  return useAwait(
+    (cancelled: () => boolean) =>
+      runGeometryJob(() => kernel(resource, params), cancelled),
+    geometryDeps(resource, params ?? {}) as unknown[],
+  );
 }

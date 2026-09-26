@@ -1,6 +1,6 @@
-import type { PassProps, ViewerComponent } from './types.ts';
-import { use } from '@use-gpu/live';
-import { Pass as UpstreamPass } from '@use-gpu/workbench';
+import type { PassProps, ViewerComponent } from "./types.ts";
+import { use } from "@use-gpu/live";
+import { Pass as UpstreamPass } from "@use-gpu/workbench";
 
 /**
  * Thin @molgpu/viewer wrapper over @use-gpu/workbench's <Pass> — the scene-level
@@ -20,4 +20,5 @@ import { Pass as UpstreamPass } from '@use-gpu/workbench';
  * Depth of field is not offered: it does not exist upstream in this version
  * (tracked as molgpu-sept-hj0.5).
  */
-export const Pass: ViewerComponent<PassProps> = ({ lights = true, ...props }) => use(UpstreamPass, { lights, ...props });
+export const Pass: ViewerComponent<PassProps> = ({ lights = true, ...props }) =>
+  use(UpstreamPass, { lights, ...props });

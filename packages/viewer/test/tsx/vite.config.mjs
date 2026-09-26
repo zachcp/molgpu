@@ -1,13 +1,13 @@
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath } from "node:url";
 
-const here = p => fileURLToPath(new URL(p, import.meta.url));
+const here = (p) => fileURLToPath(new URL(p, import.meta.url));
 
 /** Builds the typed consumer the way an application would, so the browser
  * check runs against bundled output rather than a dev server's module graph. */
 export default {
-  root: here('.'),
+  root: here("."),
   build: {
-    outDir: here('dist'),
+    outDir: here("dist"),
     emptyOutDir: true,
     // The fixture reports uncaptured WebGPU errors; a minifier renaming the
     // messages would make those reports harder to read, not faster to run.
@@ -16,14 +16,20 @@ export default {
       output: {
         // Name the lazy parser chunk so the test can prove that a preloaded
         // structure never fetches Mol*, and that a BCIF source does.
-        manualChunks: id => id.includes('/molstar/') ? 'molstar' : undefined,
+        manualChunks: (id) => id.includes("/molstar/") ? "molstar" : undefined,
       },
     },
   },
   resolve: {
     // @molgpu/* resolve through the workspace links, and so do @use-gpu/*.
     // Without dedupe a second copy of Live would break context lookups.
-    dedupe: ['@use-gpu/live', '@use-gpu/workbench', '@use-gpu/webgpu',
-             '@use-gpu/core', '@use-gpu/shader', '@use-gpu/wgsl'],
+    dedupe: [
+      "@use-gpu/live",
+      "@use-gpu/workbench",
+      "@use-gpu/webgpu",
+      "@use-gpu/core",
+      "@use-gpu/shader",
+      "@use-gpu/wgsl",
+    ],
   },
 };

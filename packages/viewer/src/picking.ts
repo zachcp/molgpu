@@ -1,8 +1,27 @@
-import type { PickHit, StructureResource, ViewerComponent, ViewerElement } from './types.ts';
-import { makeContext, provide, useContext, useState, useMemo, useOne, useResource, type LC, type LiveElement } from '@use-gpu/live';
-import { usePickingId, usePickingContext, useMouseState } from '@use-gpu/workbench';
-import { resolvePick, type PickEntry } from './internal/pick-resolve.ts';
-import { live, viewer } from './internal/elements.ts';
+import type {
+  PickHit,
+  StructureResource,
+  ViewerComponent,
+  ViewerElement,
+} from "./types.ts";
+import {
+  type LC,
+  type LiveElement,
+  makeContext,
+  provide,
+  useContext,
+  useMemo,
+  useOne,
+  useResource,
+  useState,
+} from "@use-gpu/live";
+import {
+  useMouseState,
+  usePickingContext,
+  usePickingId,
+} from "@use-gpu/workbench";
+import { type PickEntry, resolvePick } from "./internal/pick-resolve.ts";
+import { live, viewer } from "./internal/elements.ts";
 
 /** id -> what a pickable representation drew under that picking id. */
 interface PickingRegistry {
@@ -10,7 +29,7 @@ interface PickingRegistry {
   remove(id: number): void;
   get(id: number): PickEntry | null;
 }
-import { tooltipFields } from './internal/tooltip.ts';
+import { tooltipFields } from "./internal/tooltip.ts";
 
 export { tooltipFields };
 
@@ -24,19 +43,28 @@ export { tooltipFields };
  * and everything picking-related must be inside a <PickingProvider>.
  */
 
-const PickingRegistryContext = makeContext<PickingRegistry | null>(null, 'MolPickingRegistry');
+const PickingRegistryContext = makeContext<PickingRegistry | null>(
+  null,
+  "MolPickingRegistry",
+);
 
 /**
  * Owns the id -> { resource, indices } registry that maps a picking hit back to
  * an atom. Wrap the scene (both the pickable representations and any usePicking()
  * caller) in one of these.
  */
-export const PickingProvider: ViewerComponent<{ children?: ViewerElement }> = ({ children }) => {
+export const PickingProvider: ViewerComponent<{ children?: ViewerElement }> = (
+  { children },
+) => {
   const registry = useMemo((): PickingRegistry => {
     const map = new Map<number, PickEntry>();
     return {
-      set: (id, entry) => { map.set(id, entry); },
-      remove: (id) => { map.delete(id); },
+      set: (id, entry) => {
+        map.set(id, entry);
+      },
+      remove: (id) => {
+        map.delete(id);
+      },
       get: (id) => map.get(id) ?? null,
     };
   }, []);
@@ -45,7 +73,9 @@ export const PickingProvider: ViewerComponent<{ children?: ViewerElement }> = ({
 
 const useRegistry = (): PickingRegistry => {
   const registry = useContext(PickingRegistryContext);
-  if (!registry) throw new Error('picking requires a <PickingProvider> ancestor');
+  if (!registry) {
+    throw new Error("picking requires a <PickingProvider> ancestor");
+  }
   return registry;
 };
 
@@ -58,7 +88,9 @@ const useRegistry = (): PickingRegistry => {
  * and the instance index already is the atom row.
  */
 export const Pickable: LC<{
-  resource: StructureResource; indices?: ArrayLike<number> | null; render: (id: number) => LiveElement | ViewerElement;
+  resource: StructureResource;
+  indices?: ArrayLike<number> | null;
+  render: (id: number) => LiveElement | ViewerElement;
 }> = ({ resource, indices = null, render }) => {
   const registry = useRegistry();
   const id = usePickingId();

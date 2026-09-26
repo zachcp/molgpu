@@ -1,17 +1,29 @@
-import type { LC } from '@use-gpu/live';
-import type { ShaderFlatMaterialProps, ShaderLitMaterialProps } from '@use-gpu/workbench';
-import type { BasicMaterialProps, FresnelMaterialEffectProps, MaterialSpec, MaterialType, NormalMaterialProps, PBRMaterialProps, ViewerComponent, ViewerElement } from './types.ts';
-import { use } from '@use-gpu/live';
+import type { LC } from "@use-gpu/live";
+import type {
+  ShaderFlatMaterialProps,
+  ShaderLitMaterialProps,
+} from "@use-gpu/workbench";
+import type {
+  BasicMaterialProps,
+  FresnelMaterialEffectProps,
+  MaterialSpec,
+  MaterialType,
+  NormalMaterialProps,
+  PBRMaterialProps,
+  ViewerComponent,
+  ViewerElement,
+} from "./types.ts";
+import { use } from "@use-gpu/live";
 import {
-  PBRMaterial as UpstreamPBRMaterial,
   BasicMaterial as UpstreamBasicMaterial,
+  FresnelMaterialEffect as UpstreamFresnelMaterialEffect,
   NormalMaterial as UpstreamNormalMaterial,
+  PBRMaterial as UpstreamPBRMaterial,
   ShaderFlatMaterial,
   ShaderLitMaterial,
-  FresnelMaterialEffect as UpstreamFresnelMaterialEffect,
-} from '@use-gpu/workbench';
-import { live, viewer } from './internal/elements.ts';
-import { resolveMaterial, materialTypes } from './internal/material-spec.ts';
+} from "@use-gpu/workbench";
+import { live, viewer } from "./internal/elements.ts";
+import { materialTypes, resolveMaterial } from "./internal/material-spec.ts";
 
 /**
  * Thin @molgpu/viewer wrappers over @use-gpu/workbench's material components.
@@ -27,23 +39,30 @@ import { resolveMaterial, materialTypes } from './internal/material-spec.ts';
  * than upstream's 0.5. Pass `albedo` for a flat base colour, or leave it and let
  * a representation's per-vertex colour drive the fragment.
  */
-export const PBRMaterial: ViewerComponent<PBRMaterialProps> = ({ metalness = 0, roughness = 0.6, ...props }) =>
-  use(UpstreamPBRMaterial, { metalness, roughness, ...props });
+export const PBRMaterial: ViewerComponent<PBRMaterialProps> = (
+  { metalness = 0, roughness = 0.6, ...props },
+) => use(UpstreamPBRMaterial, { metalness, roughness, ...props });
 
 /** Unlit flat colour (fastest; ignores lights). */
-export const BasicMaterial: ViewerComponent<BasicMaterialProps> = (props) => use(UpstreamBasicMaterial, props);
+export const BasicMaterial: ViewerComponent<BasicMaterialProps> = (props) =>
+  use(UpstreamBasicMaterial, props);
 
 /** Surface-normal debug material — colours by world/view normal. */
-export const NormalMaterial: ViewerComponent<NormalMaterialProps> = (props) => use(UpstreamNormalMaterial, props);
+export const NormalMaterial: ViewerComponent<NormalMaterialProps> = (props) =>
+  use(UpstreamNormalMaterial, props);
 
 /** Custom flat (unlit) fragment shader. */
-export const FlatMaterial: LC<ShaderFlatMaterialProps> = (props) => use(ShaderFlatMaterial, props);
+export const FlatMaterial: LC<ShaderFlatMaterialProps> = (props) =>
+  use(ShaderFlatMaterial, props);
 
 /** Custom lit fragment shader — the general escape hatch under PBRMaterial. */
-export const LitMaterial: LC<ShaderLitMaterialProps> = (props) => use(ShaderLitMaterial, props);
+export const LitMaterial: LC<ShaderLitMaterialProps> = (props) =>
+  use(ShaderLitMaterial, props);
 
 /** Fresnel rim effect, composed over another material's children. */
-export const FresnelMaterialEffect: ViewerComponent<FresnelMaterialEffectProps> = (props) => use(UpstreamFresnelMaterialEffect, props);
+export const FresnelMaterialEffect: ViewerComponent<
+  FresnelMaterialEffectProps
+> = (props) => use(UpstreamFresnelMaterialEffect, props);
 
 export { materialTypes };
 
@@ -63,9 +82,17 @@ const MATERIALS: Record<MaterialType, LC<any>> = {
  * a `(children) => element` function (escape hatch), or a spec object
  * `{ type?, ...props }` — see resolveMaterial for the exact contract.
  */
-export function withMaterial(material: MaterialSpec | null | undefined, element: ViewerElement): ViewerElement {
+export function withMaterial(
+  material: MaterialSpec | null | undefined,
+  element: ViewerElement,
+): ViewerElement {
   const resolved = resolveMaterial(material);
-  if (resolved.kind === 'none') return element;
-  if (resolved.kind === 'wrap') return resolved.wrap(element);
-  return viewer(use(MATERIALS[resolved.type], { ...resolved.props, children: live(element) }));
+  if (resolved.kind === "none") return element;
+  if (resolved.kind === "wrap") return resolved.wrap(element);
+  return viewer(
+    use(MATERIALS[resolved.type], {
+      ...resolved.props,
+      children: live(element),
+    }),
+  );
 }

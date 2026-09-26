@@ -1,41 +1,41 @@
 # Library hardening standard (Phase 6)
 
 The acceptance bar for epic `molgpu-sept-x24`. Every `@molgpu/*` package meets
-**H1–H7**. The cross-cutting items **X1–X3** are met once, for the whole workspace.
-A per-package bead is done when each H-item below is checked for that package
-and the shared checks (`deno task check:hardening`) pass for it.
+**H1–H7**. The cross-cutting items **X1–X3** are met once, for the whole
+workspace. A per-package bead is done when each H-item below is checked for that
+package and the shared checks (`deno task check:hardening`) pass for it.
 
 Tests are not introduced here. The golden-file harness and the existing suites
 already exist; hardening only requires that they keep passing.
 
 ## Per-package criteria
 
-**H1 — Manifest.** `deno.json` has: `name`, a semver `version`, and `license` (`MIT`),
-`description`, `"type": "module"`,
-`"sideEffects": false` (or an explicit list), and an `exports` map of the form
+**H1 — Manifest.** `deno.json` has: `name`, a semver `version`, and `license`
+(`MIT`), `description`, `"type": "module"`, `"sideEffects": false` (or an
+explicit list), and an `exports` map of the form
 `{ ".": { "types", "import" } }`. It has no `private: true`, and `files` is set
-to `src` (npm adds README and LICENSE itself; each package
-keeps a copy of the root MIT `LICENSE`). Every bare import in `src/` is declared in
-`dependencies` or `peerDependencies`. `@use-gpu/*` versions are pinned exactly
-(risk R3). A `deno.json` (the JSR manifest)
-declares exports and publishes `src`.
+to `src` (npm adds README and LICENSE itself; each package keeps a copy of the
+root MIT `LICENSE`). Every bare import in `src/` is declared in `dependencies`
+or `peerDependencies`. `@use-gpu/*` versions are pinned exactly (risk R3). A
+`deno.json` (the JSR manifest) declares exports and publishes `src`.
 
 **H2 — Types match the runtime.** Each `exports` entry's `types` and `import`
 files exist (for TypeScript source they are the same `src/*.ts` file), and the
-set of exported names is identical between them, as checked by script. It has
-no `any` in public signatures, except where a comment explains why.
+set of exported names is identical between them, as checked by script. It has no
+`any` in public signatures, except where a comment explains why.
 
-**H3 — No leaked dependency types.** For every package except `viewer`,
-the public entry (and anything it re-exports) mentions neither `@use-gpu/*` nor
+**H3 — No leaked dependency types.** For every package except `viewer`, the
+public entry (and anything it re-exports) mentions neither `@use-gpu/*` nor
 `molstar`. `viewer` may expose use.gpu types only from a separately named
-advanced entry (`@molgpu/viewer/advanced`), never from `.`. Because the
-viewer's modules host both entries, its `.` is checked export by export: the
-types each `.` export reaches must not name use.gpu.
+advanced entry (`@molgpu/viewer/advanced`), never from `.`. Because the viewer's
+modules host both entries, its `.` is checked export by export: the types each
+`.` export reaches must not name use.gpu.
 
 **H4 — Import walls.**
+
 - The only package that imports `molstar` at runtime, or declares it as a
-  dependency, is `io`. Other packages may
-  use Mol* only in test oracles, as dev dependencies.
+  dependency, is `io`. Other packages may use Mol* only in test oracles, as dev
+  dependencies.
 - The only package that imports `@use-gpu/live`, `@use-gpu/workbench` or
   `@use-gpu/shader` is `viewer`.
 - A lower package (`geo`, `timeline`) may import `@use-gpu/core` only from
@@ -43,24 +43,27 @@ types each `.` export reaches must not name use.gpu.
   the upstream binding straight through.
 
 **H5 — Reviewed public API.**
-- Each export is classified in the README as *stable*, *experimental* or
-  *advanced*. Anything internal is removed from the entry module. The checker reads
-  this from a `## API` section containing a table whose rows start
-  `` | `name` | stable | `` (further columns are free-form).
+
+- Each export is classified in the README as _stable_, _experimental_ or
+  _advanced_. Anything internal is removed from the entry module. The checker
+  reads this from a `## API` section containing a table whose rows start
+  ``| `name` | stable |`` (further columns are free-form).
 - A committed snapshot, `packages/<pkg>/api.txt`, holds the sorted export names
-  and their declared signatures. The check fails when the snapshot and the source
-  disagree, so an API change always shows up in the diff.
+  and their declared signatures. The check fails when the snapshot and the
+  source disagree, so an API change always shows up in the diff.
 - Public declarations name only types the package exports from some entry. A
   private alias would show up in the generated docs with nothing to link to.
 
 **H6 — Packs and imports cleanly.**
+
 - `deno publish --dry-run` succeeds for the package: it type-checks, passes
   JSR's no-slow-types rule, and resolves every import as JSR will. Packages
-  whose entries are TypeScript are imported under Deno instead of from the
-  npm tarball, because Node won't strip types under `node_modules`.
+  whose entries are TypeScript are imported under Deno instead of from the npm
+  tarball, because Node won't strip types under `node_modules`.
 - No import has to reach into `/src/internal`.
 
 **H7 — README.**
+
 - Covers purpose (one paragraph), install, peer dependencies, and a minimal
   runnable example.
 - Lists the API with its stability level.
@@ -78,24 +81,27 @@ repo has no CI or remote yet; wiring both scripts into CI is part of X3.
 **X2 — Invalidation and resource audit.** The change→work table in
 `docs/findings/2026-09-17-architecture-review.md` is enforced by tests, not just
 described:
+
 - The viewer exposes dev-only counters for topology builds, geometry builds,
   gathers, allocations, upload bytes and binding updates.
 - For each representation (Spacefill, Bonds, BallAndStick, Tube, Ribbon, Surface
-  and annotations), a test drives each table row and asserts which counters move.
-  A color or opacity edit moves no geometry or position counters.
+  and annotations), a test drives each table row and asserts which counters
+  move. A color or opacity edit moves no geometry or position counters.
 - Mounting and unmounting a `<Structure>` with every representation N times
-  returns the viewer-owned live GPU buffer count to its baseline. After a
-  forced GC, no device buffer created during the cycles is still referenced.
-  use.gpu 0.20.0 drops some small per-draw buffers without calling destroy();
-  the browser frees them on GC, so they don't count as a leak.
+  returns the viewer-owned live GPU buffer count to its baseline. After a forced
+  GC, no device buffer created during the cycles is still referenced. use.gpu
+  0.20.0 drops some small per-draw buffers without calling destroy(); the
+  browser frees them on GC, so they don't count as a leak.
 - The selection cache stays bounded under churn.
 - Any violation found becomes its own bug bead. It is not fixed silently inside
   the audit.
 
 **X3 — Release.**
-- CI runs `deno task test`, `deno task test:hardening` and `deno task check:hardening`.
-- Every package moves to `0.1.0` and gains a top-level `CHANGELOG.md`, managed by
-  changesets or a documented manual procedure.
+
+- CI runs `deno task test`, `deno task test:hardening` and
+  `deno task check:hardening`.
+- Every package moves to `0.1.0` and gains a top-level `CHANGELOG.md`, managed
+  by changesets or a documented manual procedure.
 - `repository` (with `directory`) is added once a remote exists.
 - `LICENSE` is present, and the upstream attribution for the Mol*-ported `geo`
   code is preserved.
@@ -103,9 +109,9 @@ described:
 - A dry-run publish of the whole workspace succeeds in dependency order.
   Actually publishing to npm is a separate human decision.
 
-Status (2026-09-25): all packages are at `0.1.0` with a `CHANGELOG.md`
-(manual procedure in [RELEASING.md](RELEASING.md)). `geo`, `io` and `table`
-carry the Mol* MIT notice in `LICENSE`. The root [README](../README.md) and
-the examples gallery link every package README. `.github/workflows/ci.yml` runs the
-Deno gates. Still open until a remote exists: a first green CI run.
-a first green CI run.
+Status (2026-09-25): all packages are at `0.1.0` with a `CHANGELOG.md` (manual
+procedure in [RELEASING.md](RELEASING.md)). `geo`, `io` and `table` carry the
+Mol* MIT notice in `LICENSE`. The root [README](../README.md) and the examples
+gallery link every package README. `.github/workflows/ci.yml` runs the Deno
+gates. Still open until a remote exists: a first green CI run. a first green CI
+run.

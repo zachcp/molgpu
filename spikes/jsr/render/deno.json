@@ -1,8 +1,0 @@
-{
-  "imports": {
-    "@use-gpu/live": "npm:@use-gpu/live@0.20.0",
-    "@use-gpu/webgpu": "npm:@use-gpu/webgpu@0.20.0",
-    "@use-gpu/workbench": "npm:@use-gpu/workbench@0.20.0"
-  },
-  "compilerOptions": { "lib": ["dom", "dom.iterable", "esnext"], "types": ["npm:@webgpu/types@0.1.69"] }
-}

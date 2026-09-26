@@ -1,5 +1,5 @@
-import { bondTopology, type StructureData } from '@molgpu/table';
-import { count, countOnce } from './instrumentation.ts';
+import { bondTopology, type StructureData } from "@molgpu/table";
+import { count, countOnce } from "./instrumentation.ts";
 
 /** LineLayer runs for a bond selection: positions, segment codes, and each vertex's atom row. */
 export interface BondColumns {
@@ -15,18 +15,36 @@ export interface BondColumns {
  * is [A,A,B,B], so both vertices of each half receive one element colour.
  * Other styles retain the original [A,B] run and geometry.
  */
-export function buildBondColumns(data: StructureData, indices: Uint32Array | null, endpoints: 'both' | 'either', splitAtMidpoint = false): BondColumns {
-  count('geometryBuilds', 'bonds:columns');
+export function buildBondColumns(
+  data: StructureData,
+  indices: Uint32Array | null,
+  endpoints: "both" | "either",
+  splitAtMidpoint = false,
+): BondColumns {
+  count("geometryBuilds", "bonds:columns");
   // Explicit connectivity is returned as-is; inference is cached by table per
   // (data, positions revision, policy), mirrored here so a hit is not counted.
-  if (!data.topology.bonds.count) countOnce(data, `${data.revision?.positions}`, 'topologyBuilds', 'bonds:infer');
+  if (!data.topology.bonds.count) {
+    countOnce(
+      data,
+      `${data.revision?.positions}`,
+      "topologyBuilds",
+      "bonds:infer",
+    );
+  }
   const bonds = bondTopology(data);
   const keep = indices ? new Set(indices) : null;
   const pairs = [];
   for (let b = 0; b < bonds.count; b++) {
     const a = bonds.a[b], z = bonds.b[b];
-    if (!keep || (endpoints === 'either' ? keep.has(a) || keep.has(z) : keep.has(a) && keep.has(z)))
+    if (
+      !keep ||
+      (endpoints === "either"
+        ? keep.has(a) || keep.has(z)
+        : keep.has(a) && keep.has(z))
+    ) {
       pairs.push([a, z]);
+    }
   }
 
   const perBond = splitAtMidpoint ? 4 : 2;
@@ -42,7 +60,8 @@ export function buildBondColumns(data: StructureData, indices: Uint32Array | nul
       rows.set([a, a, z, z], start);
       segments.set([1, 2, 1, 2], start);
       for (let axis = 0; axis < 3; axis++) {
-        const left = data.positions[a3 + axis], right = data.positions[z3 + axis];
+        const left = data.positions[a3 + axis],
+          right = data.positions[z3 + axis];
         const middle = (left + right) / 2;
         positions[(start + 0) * 3 + axis] = left;
         positions[(start + 1) * 3 + axis] = middle;
@@ -62,10 +81,17 @@ export function buildBondColumns(data: StructureData, indices: Uint32Array | nul
 }
 
 /** Atom attribute columns gathered per bond vertex (one value per `rows` entry). */
-export function endpointAttributes(data: StructureData, rows: Uint32Array, names: readonly string[]): Record<string, Float32Array> {
-  for (const name of names) count('gathers', `bonds:attr:${name}`);
+export function endpointAttributes(
+  data: StructureData,
+  rows: Uint32Array,
+  names: readonly string[],
+): Record<string, Float32Array> {
+  for (const name of names) count("gathers", `bonds:attr:${name}`);
   return Object.fromEntries(names.map((name) => {
-    const column = data.topology.atoms[name as keyof StructureData['topology']['atoms']] as ArrayLike<number>;
+    const column = data.topology
+      .atoms[name as keyof StructureData["topology"]["atoms"]] as ArrayLike<
+        number
+      >;
     return [name, Float32Array.from(rows, (i) => column[i])];
   }));
 }

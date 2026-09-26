@@ -1,15 +1,20 @@
 # Selections, and whether cartoon is a mesh monstrosity
 
-Spikes: `spikes/examples/lib/select.mjs`, `?ex=select`, `?ex=tube`. Both verified.
+The retired selection and tube experiments were both verified before their
+behavior moved into the package suite.
 
 ## Part 1 — what a selection IS
 
 Syntax is the last decision, not the first. The thing to pin down is the runtime
-value, and the `<Structure>` exercise already showed why: getting the *value*
+value, and the `<Structure>` exercise already showed why: getting the _value_
 shape right is what made the component simple.
 
 ```js
-Selection = { domain: 'atom'|'residue'|'bond', indices: Uint32Array, key: string }
+Selection = {
+  domain: "atom" | "residue" | "bond",
+  indices: Uint32Array,
+  key: string,
+};
 ```
 
 Three parts, each load-bearing:
@@ -78,7 +83,7 @@ Partly. It splits cleanly, and one half is much cheaper than expected.
 
 1. **Trace extraction** (per residue): walk the polymer, produce guide points
    plus orientation frames and a secondary-structure label. This is the half
-   that is *not* portable from Mol\* — `trace-iterator` is coupled to `Unit`,
+   that is _not_ portable from Mol\* — `trace-iterator` is coupled to `Unit`,
    `StructureElement`, `SecondaryStructureProvider`. Risk R1 lives here.
 2. **Extrusion** (geometry): sweep a cross-section along the spline.
 
@@ -102,16 +107,16 @@ tube can taper without regenerating anything.
 That means the whole **tube / worm / backbone-trace** family — which is a large
 share of real molecular figures — is nearly free and respects INVARIANT 4.
 
-Caveat found: the width/depth semantics are finicky. `depth: -1` (absolute
-world sizing) works with a small width; `width >= ~3` at `depth: -1` renders
+Caveat found: the width/depth semantics are finicky. `depth: -1` (absolute world
+sizing) works with a small width; `width >= ~3` at `depth: -1` renders
 **nothing, with no error**. Same silent-failure class as `FaceLayer`'s
 `side: 'front'` culling. Needs pinning down before it is relied on.
 
 ### The expensive half: flat ribbons and arrow sheets
 
 A proper cartoon — flat oriented ribbons, helix ribbons, beta arrows with
-shoulders — needs a cross-section that is *oriented* per point (the residue
-frame) and *varies* in profile and width. `LineLayer`'s tube extrusion gives a
+shoulders — needs a cross-section that is _oriented_ per point (the residue
+frame) and _varies_ in profile and width. `LineLayer`'s tube extrusion gives a
 circular cross-section around the path tangent; it has no place to accept a
 per-point normal/binormal frame.
 
@@ -126,8 +131,8 @@ structure lands around 360k vertices. Comfortable for the GPU; the cost is the
 - **Backbone / tube / worm:** not a monstrosity. `LineLayer` + `sides` + bound
   `widths`, no mesh.
 - **Flat ribbon + arrows:** yes, a real mesh build, and it is the long pole
-  (Phase 4, risk R1) — but the *geometry* half ports from Mol\* and only the
-  *traversal* half must be written.
+  (Phase 4, risk R1) — but the _geometry_ half ports from Mol\* and only the
+  _traversal_ half must be written.
 - **A third option worth considering later:** a custom WGSL vertex shader that
   extrudes an oriented cross-section on the GPU, i.e. what `tube.wgsl` does but
   taking a per-point frame. That would make ribbons as cheap as tubes and is a

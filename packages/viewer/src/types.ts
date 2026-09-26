@@ -1,8 +1,8 @@
 // The "." entry's types. It carries no use.gpu types: everything below is
 // owned by @molgpu/viewer. Exports that are inherently use.gpu-shaped (shader sources,
 // Live contexts, custom-shader materials) live in `@molgpu/viewer/advanced`.
-import type { StructureData } from '@molgpu/table';
-import type { SelectionQuery } from '@molgpu/select';
+import type { StructureData } from "@molgpu/table";
+import type { SelectionQuery } from "@molgpu/select";
 
 // --- Owned element, component and value types -------------------------------
 
@@ -18,25 +18,42 @@ export type ViewerElement = object | null | undefined | false;
 export type ViewerComponent<P = {}> = (props: P) => ViewerElement;
 
 export type TypedArray =
-  | Int8Array | Uint8Array | Uint8ClampedArray | Int16Array | Uint16Array
-  | Int32Array | Uint32Array | Float32Array | Float64Array;
+  | Int8Array
+  | Uint8Array
+  | Uint8ClampedArray
+  | Int16Array
+  | Uint16Array
+  | Int32Array
+  | Uint32Array
+  | Float32Array
+  | Float64Array;
 
 /** A numeric vector: a plain array or a typed array. */
 export type VectorLike = readonly number[] | TypedArray;
 
 /** A colour: packed number, [r, g, b(, a)] vector, `{ rgb }`/`{ rgba }`, or a CSS string. */
-export type ColorLike = number | VectorLike | { rgb: VectorLike } | { rgba: VectorLike } | string;
+export type ColorLike = number | VectorLike | { rgb: VectorLike } | {
+  rgba: VectorLike;
+} | string;
 
 /** Blend-mode names accepted by layer and outline options. */
-export type BlendMode = 'none' | 'alpha' | 'premultiply' | 'add' | 'subtract' | 'multiply';
+export type BlendMode =
+  | "none"
+  | "alpha"
+  | "premultiply"
+  | "add"
+  | "subtract"
+  | "multiply";
 
 /** Ångström-space axis-aligned extent, or null for an empty structure. */
 export interface StructureBounds {
-  readonly min: number[]; readonly max: number[]; readonly center: number[];
+  readonly min: number[];
+  readonly max: number[];
+  readonly center: number[];
 }
 
 /** Material `type` names accepted by a representation's `material` prop. */
-export type MaterialType = 'pbr' | 'basic' | 'normal' | 'flat' | 'lit';
+export type MaterialType = "pbr" | "basic" | "normal" | "flat" | "lit";
 
 /**
  * A representation's `material` prop. Either a spec object — `{ type?, ...props }`
@@ -49,10 +66,10 @@ export type MaterialSpec =
 
 /** A resolved atom set, valid only for the resource and revisions that made it. */
 export interface AtomSelection {
-  readonly structure: StructureData['identity'];
+  readonly structure: StructureData["identity"];
   readonly topologyRevision: number;
   readonly positionsRevision: number;
-  readonly domain: 'atom';
+  readonly domain: "atom";
   readonly indices: Uint32Array;
   readonly bounds: StructureBounds | null;
 }
@@ -60,7 +77,7 @@ export interface AtomSelection {
 /** CPU-side owner of the values shared by one <Structure> subtree. */
 export interface StructureResource {
   readonly data: StructureData;
-  readonly identity: StructureData['identity'];
+  readonly identity: StructureData["identity"];
   readonly topologyRevision: number;
   readonly positionsRevision: number;
   /** Lazily computed and cached; throws once the resource is disposed. */
@@ -80,7 +97,7 @@ export interface CameraPose {
 }
 export interface FocusOptions {
   /** Empty query falls back to the full structure by default. */
-  readonly empty?: 'structure' | 'null' | 'error';
+  readonly empty?: "structure" | "null" | "error";
   readonly fov?: number;
   readonly aspect?: number;
   readonly padding?: number;
@@ -94,10 +111,10 @@ export interface FocusResult {
 }
 export interface CameraFrame extends CameraPose {
   readonly time: number;
-  readonly ease?: 'linear' | 'cosine' | 'hold' | 'bezier';
+  readonly ease?: "linear" | "cosine" | "hold" | "bezier";
   readonly bezier?: readonly [number, number, number, number];
 }
-export type FocusCameraFrame = Omit<CameraFrame, 'target' | 'radius'> & {
+export type FocusCameraFrame = Omit<CameraFrame, "target" | "radius"> & {
   readonly focus: SelectionQuery;
   readonly target?: never;
   readonly radius?: never;
@@ -116,7 +133,10 @@ export interface PreloadedStructureProps {
   maxSelections?: number;
   children?: ViewerElement;
   data: StructureData;
-  src?: undefined; loader?: undefined; loading?: undefined; error?: undefined;
+  src?: undefined;
+  loader?: undefined;
+  loading?: undefined;
+  error?: undefined;
 }
 
 /** A source to load. Replacing or unmounting it rejects in-flight results. */
@@ -138,7 +158,7 @@ export type StructureProps = PreloadedStructureProps | LoadedStructureProps;
 
 /** How a representation's layer draws: opaque (writes depth, hides what is
  *  behind) or transparent (blended after opaques; exact under <Pass oit>). */
-export type DrawMode = 'opaque' | 'transparent';
+export type DrawMode = "opaque" | "transparent";
 
 /** Transparency props shared by every representation. */
 export interface Translucency {
@@ -153,7 +173,7 @@ export interface Translucency {
 
 /** Point-layer drawing flags that <Spacefill> forwards to its layer. */
 export interface PointLayerOptions {
-  shape?: 'circle' | 'diamond' | 'square' | 'up' | 'down' | 'left' | 'right';
+  shape?: "circle" | "diamond" | "square" | "up" | "down" | "left" | "right";
   hard?: boolean;
   hollow?: boolean;
   outline?: number;
@@ -245,19 +265,30 @@ export interface EnvironmentProps {
 }
 
 export interface SSAOOptions {
-  opacity: number; indirect: number; radius: number;
-  depthRamp: number; normalRamp: number; temporalBlend: number;
+  opacity: number;
+  indirect: number;
+  radius: number;
+  depthRamp: number;
+  normalRamp: number;
+  temporalBlend: number;
 }
 export interface OutlineOptions {
-  inner: number; outer: number; color: VectorLike; blend: BlendMode;
-  depthRamp: number; normalRamp: number;
+  inner: number;
+  outer: number;
+  color: VectorLike;
+  blend: BlendMode;
+  depthRamp: number;
+  normalRamp: number;
 }
-export interface OverscanOptions { range: number; all: boolean; }
+export interface OverscanOptions {
+  range: number;
+  all: boolean;
+}
 
 /** <Pass> props: render-pass flags plus the postprocessing options. */
 export interface PassProps {
   children?: ViewerElement;
-  mode?: 'forward' | 'deferred' | 'fullscreen';
+  mode?: "forward" | "deferred" | "fullscreen";
   /** Defaults to true (unlike upstream). */
   lights?: boolean;
   shadows?: boolean;

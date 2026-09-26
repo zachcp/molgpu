@@ -16,6 +16,8 @@
     "npm:molstar@5.11.0": "5.11.0_react@19.3.0_react-dom@19.3.0_@types+react@19.3.0_fp-ts@2.16.11",
     "npm:molstar@^5.11.0": "5.11.0_react@19.3.0_react-dom@19.3.0_@types+react@19.3.0_fp-ts@2.16.11",
     "npm:playwright@1.62.1": "1.62.1",
+    "npm:react-dom@19.3.0": "19.3.0_react@19.3.0",
+    "npm:react@19.3.0": "19.3.0",
     "npm:typescript@5.9.3": "5.9.3",
     "npm:vite@8.3.0": "8.3.0"
   },
@@ -1767,6 +1769,8 @@
       "npm:@webgpu/types@0.1.68",
       "npm:molstar@5.11.0",
       "npm:playwright@1.62.1",
+      "npm:react-dom@19.3.0",
+      "npm:react@19.3.0",
       "npm:typescript@5.9.3",
       "npm:vite@8.3.0"
     ],

@@ -1,7 +1,10 @@
-import type { PickHit, StructureResource } from '../types.ts';
+import type { PickHit, StructureResource } from "../types.ts";
 
 /** A registered pickable: its resource, and the atom row per drawn instance (null: identity). */
-export interface PickEntry { readonly resource: StructureResource; readonly indices: ArrayLike<number> | null }
+export interface PickEntry {
+  readonly resource: StructureResource;
+  readonly indices: ArrayLike<number> | null;
+}
 
 /**
  * Resolve a picking sample to an atom, without any GPU or live dependency — so
@@ -17,7 +20,10 @@ export interface PickEntry { readonly resource: StructureResource; readonly indi
  * over the background (object id 0) or over an object not in the registry, or a
  * stale instance index outside the current selection.
  */
-export const resolvePick = (sample: ArrayLike<number> | null | undefined, get: (id: number) => PickEntry | null | undefined): PickHit | null => {
+export const resolvePick = (
+  sample: ArrayLike<number> | null | undefined,
+  get: (id: number) => PickEntry | null | undefined,
+): PickHit | null => {
   if (!sample || sample.length < 2) return null;
   const id = sample[0];
   if (!id) return null; // 0 is the picking clear value: background.

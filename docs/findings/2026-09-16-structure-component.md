@@ -3,22 +3,41 @@
 > **CORRECTED 2026-09-17.** The claim below that `useRawSource` is "the
 > hook-level equivalent of the `RawData` component" is **wrong**. They are not
 > interchangeable: a source a layer interprets structurally (`segments`) behaves
-> differently through the hook, which silently drew bonds between unbonded atoms.
-> See `2026-09-17-rawdata-hook-vs-component.md`. The rest of this document stands.
+> differently through the hook, which silently drew bonds between unbonded
+> atoms. See `2026-09-17-rawdata-hook-vs-component.md`. The rest of this
+> document stands.
 
-Spike: `spikes/examples/lib/` + `?ex=structure`. Verified rendering.
-Question: what should `<Structure>` be, so representations never touch `RawData`?
+The retired structure experiment verified this rendering contract. Question:
+what should `<Structure>` be, so representations never touch `RawData`?
 
 ## Before and after
 
 Before — data plumbing dominates, and the nesting grows with every attribute:
 
 ```js
-use(RawData, { data: positions, format: 'vec3<f32>', render: (positions) =>
-use(RawData, { data: sizes,     format: 'f32',       render: (sizes) =>
-use(RawData, { data: colors,    format: 'vec4<f32>', render: (colors) =>
-  use(PointLayer, { positions, sizes, colors, count, shaded: true, depth: 1 })
-})})});
+use(RawData, {
+  data: positions,
+  format: "vec3<f32>",
+  render: (positions) =>
+    use(RawData, {
+      data: sizes,
+      format: "f32",
+      render: (sizes) =>
+        use(RawData, {
+          data: colors,
+          format: "vec4<f32>",
+          render: (colors) =>
+            use(PointLayer, {
+              positions,
+              sizes,
+              colors,
+              count,
+              shaded: true,
+              depth: 1,
+            }),
+        }),
+    }),
+});
 ```
 
 After — the table is captured once and representations pull from context:
@@ -27,7 +46,7 @@ After — the table is captured once and representations pull from context:
 <Structure table={table}>
   <Spacefill scale={0.4} />
   <Bonds width={3} />
-</Structure>
+</Structure>;
 ```
 
 `<Spacefill>` takes no data props at all. That is the intermediary earning its
@@ -49,10 +68,10 @@ With the hook, one component can create many sources in a flat sequence.
 
 ```js
 const COLUMNS = [
-  ['positions', 'vec3<f32>'],
-  ['radius',    'f32'],
-  ['colors',    'vec4<f32>'],
-  ['element',   'u32'],
+  ["positions", "vec3<f32>"],
+  ["radius", "f32"],
+  ["colors", "vec4<f32>"],
+  ["element", "u32"],
 ];
 ```
 
@@ -64,7 +83,7 @@ therefore not just tidiness; it is a requirement of the runtime.
 
 ## The cost this exposes, and why CONCEPT 3 exists
 
-`<Spacefill>` needs `sizes = radius * scale * k`. `radius` is *already* a GPU
+`<Spacefill>` needs `sizes = radius * scale * k`. `radius` is _already_ a GPU
 source, but scaling it requires **a second CPU array and a second upload**,
 because there is no shader-side expression layer yet:
 
@@ -77,7 +96,7 @@ Every derived style field costs an allocation plus an upload, and changing
 `scale` re-uploads. That is precisely the tax CONCEPT 3 (fields compiling to
 WGSL) removes — the next real step is a `useField` that composes a shader over
 an existing source instead of materialising a new array. Until then, INVARIANT 4
-("style changes never regenerate geometry") holds for *geometry* but not for
+("style changes never regenerate geometry") holds for _geometry_ but not for
 derived style buffers.
 
 ## Bounds belong to the structure
@@ -103,7 +122,7 @@ per bond), which have a different length than the per-atom columns. So:
 
 Trying to push bond arrays into `<Structure>`'s fixed schema would be wrong:
 they are not atom columns. This suggests a later `<Bonds>` should consume a
-*bond table* published by a topology provider, rather than recomputing
+_bond table_ published by a topology provider, rather than recomputing
 `inferBonds` per representation.
 
 ## API notes found while building

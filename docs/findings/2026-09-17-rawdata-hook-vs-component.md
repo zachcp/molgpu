@@ -15,20 +15,19 @@ uploads `array.buffer` verbatim, while the shader reads a 16-byte vec3 stride.
 After the first vertex, the shader therefore reads the wrong coordinates. That
 made the bonds appear to connect cross-pairs; their segment codes were correct.
 
-The isolated controls live in `spikes/examples/?ex=adapter` and
-`packages/viewer/test/`. `?rep=bonds` uses `ColumnSource`/`RawData` for positions
-and renders correct bonds; `?rep=bonds&src=hook` changes only the position source
-and fails. `hook-segments` remains a valid control.
+The isolated controls were incorporated into `packages/viewer/test/`. The
+`ColumnSource`/`RawData` path renders correct bond positions; changing only the
+position source to the hook path fails. The segments-only control remains valid.
 
-**Current rule:** never bind packed `vec3<f32>` data through `useRawSource`.
-Use `RawData` or the internal `ColumnSource` adapter, which delegates to it.
+**Current rule:** never bind packed `vec3<f32>` data through `useRawSource`. Use
+`RawData` or the internal `ColumnSource` adapter, which delegates to it.
 
 ## The earlier claim that was wrong
 
 The Structure writeup said:
 
-> `useRawSource(array, format) -> StorageSource` is the hook-level equivalent
-> of the `RawData` component.
+> `useRawSource(array, format) -> StorageSource` is the hook-level equivalent of
+> the `RawData` component.
 
 It is not equivalent. With identical geometry and layer props, a `LineLayer`
 with hook-uploaded packed positions draws cross-pair connectors; the same
@@ -37,9 +36,9 @@ positions supplied through `RawData` draw correct discrete strokes.
 ## How it presented
 
 Bonds looked wrong in the composed scene — long lines joining atoms that are not
-bonded. The user spotted it as “the bonds don't seem to be connecting the correct
-atoms”. On crambin, real bonds max at 1.82 Å while the false cross-pair connectors
-reach 8.68 Å.
+bonded. The user spotted it as “the bonds don't seem to be connecting the
+correct atoms”. On crambin, real bonds max at 1.82 Å while the false cross-pair
+connectors reach 8.68 Å.
 
 ## What was eliminated first
 
@@ -49,8 +48,8 @@ reach 8.68 Å.
 - shaded/sides/depth, width, source order, and stale modules.
 
 The component path fixed the result outright. Reading `raw-data.mjs` against
-`useRawSource.mjs` then identified the material difference: GPU-dimension packing
-for vec3 inputs.
+`useRawSource.mjs` then identified the material difference: GPU-dimension
+packing for vec3 inputs.
 
 ## Consequences
 
@@ -63,9 +62,9 @@ fixed schema must preserve logical row counts, typed-array views, versioning and
 resource cleanup, all now owned by `ColumnSource`.
 
 `<Structure>` must not directly upload packed vec3 columns through the hook.
-`ColumnSource` removes the component nesting pyramid without bypassing `RawData`.
-The hook is an opt-in, format-specific optimization only after its behavior is
-verified for the pinned upstream version.
+`ColumnSource` removes the component nesting pyramid without bypassing
+`RawData`. The hook is an opt-in, format-specific optimization only after its
+behavior is verified for the pinned upstream version.
 
 ## Remaining scope
 

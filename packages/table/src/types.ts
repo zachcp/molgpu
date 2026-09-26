@@ -20,9 +20,9 @@ export interface Residues {
   readonly authSeq: readonly string[];
   readonly insertionCode: readonly string[];
   readonly comp: readonly string[];
-  readonly polymer: readonly ('protein' | 'rna' | 'dna' | 'other')[];
+  readonly polymer: readonly ("protein" | "rna" | "dna" | "other")[];
   /** Imported annotation (mmCIF struct_conf/struct_sheet_range) when the source provided one; absent otherwise. */
-  readonly secondaryStructure?: readonly ('helix' | 'sheet' | 'coil')[];
+  readonly secondaryStructure?: readonly ("helix" | "sheet" | "coil")[];
 }
 export interface Chains {
   readonly count: number;
@@ -36,7 +36,7 @@ export interface Bonds {
   readonly b: Uint32Array;
   /** 0 unknown, 1/2/3 multiplicity, 4 aromatic. */
   readonly order: Uint8Array;
-  readonly source: readonly ('explicit' | 'inferred')[];
+  readonly source: readonly ("explicit" | "inferred")[];
 }
 /** A row expands one chain with one column-major affine assembly operator. */
 export interface Instances {
@@ -46,18 +46,34 @@ export interface Instances {
   readonly transform: Float64Array;
 }
 export interface Topology {
-  readonly atoms: Atoms; readonly residues: Residues; readonly chains: Chains;
-  readonly bonds: Bonds; readonly instances: Instances;
+  readonly atoms: Atoms;
+  readonly residues: Residues;
+  readonly chains: Chains;
+  readonly bonds: Bonds;
+  readonly instances: Instances;
 }
-export interface StructureInput { readonly topology: Topology; readonly positions: Float32Array; }
+export interface StructureInput {
+  readonly topology: Topology;
+  readonly positions: Float32Array;
+}
 /** Private nominal brand for dataset identity; deliberately not exported. */
 declare const brand: unique symbol;
 export interface StructureData extends StructureInput {
   readonly identity: { readonly [brand]: true };
-  readonly revision: { readonly topology: number; readonly positions: number; readonly attributes: number };
+  readonly revision: {
+    readonly topology: number;
+    readonly positions: number;
+    readonly attributes: number;
+  };
 }
-export interface ViewPolicy { readonly model?: 'first' | 'all' | number; readonly altloc?: 'primary' | 'all'; }
-export interface BondPolicy { readonly padding?: number; readonly interChain?: boolean; }
+export interface ViewPolicy {
+  readonly model?: "first" | "all" | number;
+  readonly altloc?: "primary" | "all";
+}
+export interface BondPolicy {
+  readonly padding?: number;
+  readonly interChain?: boolean;
+}
 /** Segmented polymer trace: guide points, per-sample frames, and CSR-style run offsets. */
 export interface Trace {
   readonly count: number;
@@ -69,13 +85,13 @@ export interface Trace {
   readonly residue: Uint32Array;
   /** Run r spans [runs[r], runs[r + 1]); length is runCount + 1. */
   readonly runs: Uint32Array;
-  readonly runKind: readonly ('protein' | 'rna' | 'dna')[];
+  readonly runKind: readonly ("protein" | "rna" | "dna")[];
 }
 /** Per-sample direction vectors + secondary-structure labels/block-boundary flags over an existing Trace. */
 export interface SecondaryStructureTrace {
   readonly count: number;
   readonly direction: Float32Array;
-  readonly kind: readonly ('helix' | 'sheet' | 'coil')[];
+  readonly kind: readonly ("helix" | "sheet" | "coil")[];
   /** 1 where a sample starts/ends a stable-frame block (run boundary or an SS-kind change), else 0. */
   readonly first: Uint8Array;
   readonly last: Uint8Array;

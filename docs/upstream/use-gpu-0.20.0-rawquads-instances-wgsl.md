@@ -19,19 +19,10 @@ row index, allowing a small selection buffer to drive the full bound columns.
 Pinned environment: `@use-gpu/{live,workbench,webgpu,core,shader,wgsl}` 0.20.0,
 Chrome 150 on macOS arm64 with WebGPU enabled.
 
-From this checkout:
-
-```sh
-cd spikes/examples
-npx vite .
-# Open http://localhost:5185/?ex=instances in a fresh tab.
-```
-
-The intentionally minimal repro is
-[`instances.mjs`](../../spikes/examples/ex/instances.mjs). It binds two
-`vec3<f32>` positions and a two-row `u32` `instances` source to `PointLayer`.
-Without `instances`, both points render. With it, Chrome reports the invalid
-`loadInstance` WGSL return type and neither point renders.
+The intentionally minimal reproduction was retired with the exploratory gallery.
+It bound two `vec3<f32>` positions and a two-row `u32` `instances` source to
+`PointLayer`. Without `instances`, both points render. With it, Chrome reports
+the invalid `loadInstance` WGSL return type and neither point renders.
 
 ## Expected / actual
 
@@ -44,6 +35,5 @@ Actual: generated shader validation fails because its instance loader returns
 
 This blocks zero-copy selection for all RawQuads-based layers. MolGPU currently
 uses a correctness fallback that gathers selected positions, colors, and radii
-into compact arrays before binding `PointLayer`; see
-[`spacefill.mjs`](../../spikes/examples/lib/spacefill.mjs). The fallback must
-remain until the generated source mapping and rendering match gather behavior.
+into compact arrays before binding `PointLayer`. The fallback must remain until
+the generated source mapping and rendering match gather behavior.

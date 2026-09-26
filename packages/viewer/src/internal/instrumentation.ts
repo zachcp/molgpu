@@ -23,40 +23,71 @@
 // This module has no Live/GPU imports so pure kernels can call it under plain
 // `deno test`; the Live hook lives in ./use-binding-probe.ts.
 
-const NAMES = ['topologyBuilds', 'geometryBuilds', 'gathers', 'allocations', 'uploadBytes', 'bindingUpdates'] as const;
+const NAMES = [
+  "topologyBuilds",
+  "geometryBuilds",
+  "gathers",
+  "allocations",
+  "uploadBytes",
+  "bindingUpdates",
+] as const;
 /** One of the work counters (see the vocabulary above). */
 export type CounterName = typeof NAMES[number];
-type WriteKind = 'storage' | 'uniform' | 'other';
+type WriteKind = "storage" | "uniform" | "other";
 
 /** A plain, JSON-serialisable copy of every counter. */
 export type CounterSnapshot = Record<CounterName, number> & {
   readonly detail: Record<string, number>;
   readonly gauges: Record<string, number>;
-  readonly ownedBuffers: { readonly created: number; readonly destroyed: number; readonly live: number };
-  readonly deviceBuffers: { readonly created: number; readonly destroyed: number; readonly live: number; readonly writeBytes: Record<WriteKind, number> };
+  readonly ownedBuffers: {
+    readonly created: number;
+    readonly destroyed: number;
+    readonly live: number;
+  };
+  readonly deviceBuffers: {
+    readonly created: number;
+    readonly destroyed: number;
+    readonly live: number;
+    readonly writeBytes: Record<WriteKind, number>;
+  };
 };
 
 let enabled = false;
-let totals: Record<CounterName, number>, detail: Record<string, number>, gauges: Record<string, number>;
+let totals: Record<CounterName, number>,
+  detail: Record<string, number>,
+  gauges: Record<string, number>;
 // Live buffer accounting is never reset: live = created - destroyed since the
 // counters were enabled, so a test can compare against its own baseline.
 const owned = { created: 0, destroyed: 0 };
-const device = { created: 0, destroyed: 0, writeBytes: { storage: 0, uniform: 0, other: 0 } as Record<WriteKind, number> };
+const device = {
+  created: 0,
+  destroyed: 0,
+  writeBytes: { storage: 0, uniform: 0, other: 0 } as Record<WriteKind, number>,
+};
 let seenOwned = new WeakSet<GPUBuffer>();
 let onceKeys = new WeakMap<object, Set<string>>();
 
 const clear = (): void => {
-  totals = Object.fromEntries(NAMES.map((name) => [name, 0])) as Record<CounterName, number>;
+  totals = Object.fromEntries(NAMES.map((name) => [name, 0])) as Record<
+    CounterName,
+    number
+  >;
   detail = {};
   gauges = {};
 };
 clear();
 
 export const isInstrumented = (): boolean => enabled;
-export const enableInstrumentation = (): void => { enabled = true; };
-export const disableInstrumentation = (): void => { enabled = false; };
+export const enableInstrumentation = (): void => {
+  enabled = true;
+};
+export const disableInstrumentation = (): void => {
+  enabled = false;
+};
 /** Zero the work counters and gauges (not the live-buffer accounting). */
-export const resetCounters = (): void => { clear(); };
+export const resetCounters = (): void => {
+  clear();
+};
 
 /** Add `n` to counter `name`, attributed to `label`. No-op while disabled. */
 export function count(name: CounterName, label: string, n = 1): void {
@@ -71,7 +102,12 @@ export function count(name: CounterName, label: string, n = 1): void {
  * directly (e.g. table's inferred-bond cache keyed on the StructureData and its
  * positions revision), so a cache hit is not reported as a build.
  */
-export function countOnce(object: object, key: string, name: CounterName, label: string): void {
+export function countOnce(
+  object: object,
+  key: string,
+  name: CounterName,
+  label: string,
+): void {
   if (!enabled) return;
   let keys = onceKeys.get(object);
   if (!keys) onceKeys.set(object, keys = new Set());
@@ -94,7 +130,7 @@ export function trackOwnedBuffer(buffer: GPUBuffer, label: string): void {
   if (!enabled || seenOwned.has(buffer)) return;
   seenOwned.add(buffer);
   owned.created += 1;
-  count('allocations', label);
+  count("allocations", label);
 }
 export function releaseOwnedBuffer(buffer: GPUBuffer): void {
   if (!enabled || !seenOwned.has(buffer)) return;
@@ -107,11 +143,16 @@ export function releaseOwnedBuffer(buffer: GPUBuffer): void {
 const liveDevice = new Map<WeakRef<GPUBuffer>, string>();
 let collectedDevice = 0;
 const refs = new WeakMap<GPUBuffer, WeakRef<GPUBuffer>>();
-const originOf = ({ label = '', size, usage }: GPUBufferDescriptor): string => {
-  const frames = (new Error().stack ?? '').split('\n').slice(1)
-    .filter((line) => !line.includes('instrumentation.'))
-    .slice(0, 4).map((line) => line.trim().replace(/^at /, '').replace(/\?[^:)]*/, '').replace(/^.*\/node_modules\//, ''));
-  return `${usage} ${size} ${label} @ ${frames.join(' < ')}`;
+const originOf = ({ label = "", size, usage }: GPUBufferDescriptor): string => {
+  const frames = (new Error().stack ?? "").split("\n").slice(1)
+    .filter((line) => !line.includes("instrumentation."))
+    .slice(0, 4).map((line) =>
+      line.trim().replace(/^at /, "").replace(/\?[^:)]*/, "").replace(
+        /^.*\/node_modules\//,
+        "",
+      )
+    );
+  return `${usage} ${size} ${label} @ ${frames.join(" < ")}`;
 };
 
 /**
@@ -120,10 +161,16 @@ const originOf = ({ label = '', size, usage }: GPUBufferDescriptor): string => {
  * internal buffers too, which the viewer-owned counters above cannot.
  */
 export function instrumentDevice(gpuDevice: GPUDevice): GPUDevice {
-  if ((gpuDevice as GPUDevice & { __molgpuInstrumented?: boolean }).__molgpuInstrumented) return gpuDevice;
+  if (
+    (gpuDevice as GPUDevice & { __molgpuInstrumented?: boolean })
+      .__molgpuInstrumented
+  ) return gpuDevice;
   const create = gpuDevice.createBuffer;
   const destroyed = new WeakSet<GPUBuffer>();
-  gpuDevice.createBuffer = function (this: GPUDevice, descriptor: GPUBufferDescriptor): GPUBuffer {
+  gpuDevice.createBuffer = function (
+    this: GPUDevice,
+    descriptor: GPUBufferDescriptor,
+  ): GPUBuffer {
     const buffer = create.call(this, descriptor);
     if (!enabled) return buffer;
     device.created += 1;
@@ -132,24 +179,46 @@ export function instrumentDevice(gpuDevice: GPUDevice): GPUDevice {
     refs.set(buffer, ref);
     const destroy = buffer.destroy;
     buffer.destroy = function (this: GPUBuffer): undefined {
-      if (!destroyed.has(this)) { destroyed.add(this); device.destroyed += 1; liveDevice.delete(refs.get(this)!); }
+      if (!destroyed.has(this)) {
+        destroyed.add(this);
+        device.destroyed += 1;
+        liveDevice.delete(refs.get(this)!);
+      }
       return destroy.call(this);
     };
     return buffer;
   };
   const queue = gpuDevice.queue;
   const write = queue.writeBuffer;
-  queue.writeBuffer = function (this: GPUQueue, buffer: GPUBuffer, _offset: number, data: BufferSource, dataOffset = 0, size?: number): undefined {
+  queue.writeBuffer = function (
+    this: GPUQueue,
+    buffer: GPUBuffer,
+    _offset: number,
+    data: BufferSource,
+    dataOffset = 0,
+    size?: number,
+  ): undefined {
     if (enabled) {
-      const perElement = (data as ArrayBufferView & { BYTES_PER_ELEMENT?: number }).BYTES_PER_ELEMENT ?? 1;
-      const bytes = size !== undefined ? size * perElement : (data.byteLength - dataOffset * perElement);
+      const perElement =
+        (data as ArrayBufferView & { BYTES_PER_ELEMENT?: number })
+          .BYTES_PER_ELEMENT ?? 1;
+      const bytes = size !== undefined
+        ? size * perElement
+        : (data.byteLength - dataOffset * perElement);
       const usage = buffer.usage ?? 0;
-      const kind = usage & 0x80 ? 'storage' : usage & 0x40 ? 'uniform' : 'other'; // GPUBufferUsage.STORAGE / UNIFORM
+      const kind = usage & 0x80
+        ? "storage"
+        : usage & 0x40
+        ? "uniform"
+        : "other"; // GPUBufferUsage.STORAGE / UNIFORM
       device.writeBytes[kind] += bytes;
     }
-    return write.apply(this, arguments as unknown as Parameters<GPUQueue['writeBuffer']>);
+    return write.apply(
+      this,
+      arguments as unknown as Parameters<GPUQueue["writeBuffer"]>,
+    );
   };
-  Object.defineProperty(gpuDevice, '__molgpuInstrumented', { value: true });
+  Object.defineProperty(gpuDevice, "__molgpuInstrumented", { value: true });
   return gpuDevice;
 }
 
@@ -157,11 +226,17 @@ export function instrumentDevice(gpuDevice: GPUDevice): GPUDevice {
  * where the frames are the first few non-instrumentation stack frames. Used to
  * attribute device-level leaks to the code that allocated them. `collected`
  * counts buffers the browser garbage-collected without a destroy() call. */
-export function deviceBufferOrigins(): { retained: Record<string, number>; collected: number } {
+export function deviceBufferOrigins(): {
+  retained: Record<string, number>;
+  collected: number;
+} {
   const retained: Record<string, number> = {};
   for (const [ref, origin] of liveDevice) {
     if (ref.deref()) retained[origin] = (retained[origin] ?? 0) + 1;
-    else { liveDevice.delete(ref); collectedDevice += 1; }
+    else {
+      liveDevice.delete(ref);
+      collectedDevice += 1;
+    }
   }
   return { retained, collected: collectedDevice };
 }
@@ -173,8 +248,12 @@ export function snapshotCounters(): CounterSnapshot {
     detail: { ...detail },
     gauges: { ...gauges },
     ownedBuffers: { ...owned, live: owned.created - owned.destroyed },
-    deviceBuffers: { created: device.created, destroyed: device.destroyed, live: device.created - device.destroyed,
-      writeBytes: { ...device.writeBytes } },
+    deviceBuffers: {
+      created: device.created,
+      destroyed: device.destroyed,
+      live: device.created - device.destroyed,
+      writeBytes: { ...device.writeBytes },
+    },
   };
 }
 

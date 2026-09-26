@@ -4,7 +4,7 @@ Fixture for `scripts/check-hardening.mjs`.
 
 ## API
 
-| Export | Stability |
-|---|---|
-| `midpoint` | stable |
-| `Options` | experimental |
+| Export     | Stability    |
+| ---------- | ------------ |
+| `midpoint` | stable       |
+| `Options`  | experimental |

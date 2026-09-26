@@ -7,15 +7,20 @@
 // this to @use-gpu/live's `useAwait`, whose per-dependency-change and
 // per-unmount `dispose()` already sets that flag — see its use in
 // structure.ts for the same guarantee this module extends to geometry jobs.
-import type { StructureResource } from '../types.ts';
+import type { StructureResource } from "../types.ts";
 
 const DEFAULT_MAX_BYTES = 256 * 1024 * 1024;
-const STYLE_KEYS = new Set(['color', 'opacity']);
+const STYLE_KEYS = new Set(["color", "opacity"]);
 
-function fail(message: string): never { throw new TypeError(`Geometry job: ${message}`); }
+function fail(message: string): never {
+  throw new TypeError(`Geometry job: ${message}`);
+}
 
 /** Grid byte budget options. */
-export interface GridBudget { readonly maxBytes?: number; readonly bytesPerCell?: number }
+export interface GridBudget {
+  readonly maxBytes?: number;
+  readonly bytesPerCell?: number;
+}
 
 /**
  * Dependency key for scheduling: structure identity/revisions plus explicit
@@ -24,25 +29,53 @@ export interface GridBudget { readonly maxBytes?: number; readonly bytesPerCell?
  * programming error, not a silently-ignored input: color/opacity edits must
  * update bindings only and launch zero jobs.
  */
-export function geometryDeps(resource: StructureResource, params: Readonly<Record<string, unknown>> = {}): readonly unknown[] {
-  if (!resource?.identity) fail('expected a structure resource with an identity');
+export function geometryDeps(
+  resource: StructureResource,
+  params: Readonly<Record<string, unknown>> = {},
+): readonly unknown[] {
+  if (!resource?.identity) {
+    fail("expected a structure resource with an identity");
+  }
   const keys = Object.keys(params).sort();
-  for (const key of keys) if (STYLE_KEYS.has(key)) fail(`'${key}' is a style parameter and must not gate geometry scheduling`);
-  return [resource.identity, resource.topologyRevision, resource.positionsRevision, ...keys.map(k => params[k])];
+  for (const key of keys) {
+    if (STYLE_KEYS.has(key)) {
+      fail(
+        `'${key}' is a style parameter and must not gate geometry scheduling`,
+      );
+    }
+  }
+  return [
+    resource.identity,
+    resource.topologyRevision,
+    resource.positionsRevision,
+    ...keys.map((k) => params[k]),
+  ];
 }
 
 /** Cell/byte budget for a scalar grid, checked before allocating it. */
-export function assertGridBudget(dims: readonly [number, number, number], budget: GridBudget = {}): number {
+export function assertGridBudget(
+  dims: readonly [number, number, number],
+  budget: GridBudget = {},
+): number {
   const { maxBytes = DEFAULT_MAX_BYTES, bytesPerCell = 4 } = budget;
-  if (!Array.isArray(dims) || dims.length !== 3 || dims.some(n => !Number.isInteger(n) || n < 1)) {
-    fail('dims must contain three positive integers');
+  if (
+    !Array.isArray(dims) || dims.length !== 3 ||
+    dims.some((n) => !Number.isInteger(n) || n < 1)
+  ) {
+    fail("dims must contain three positive integers");
   }
-  if (!Number.isSafeInteger(maxBytes) || maxBytes < 1) fail('maxBytes must be a positive safe integer');
+  if (!Number.isSafeInteger(maxBytes) || maxBytes < 1) {
+    fail("maxBytes must be a positive safe integer");
+  }
   const cells = dims[0] * dims[1] * dims[2];
   const bytes = cells * bytesPerCell;
   if (bytes > maxBytes) {
-    const error: RangeError & { code?: string } = new RangeError(`Geometry job: grid ${dims.join('x')} (${cells} cells, ${bytes} bytes) exceeds the ${maxBytes} byte limit`);
-    error.code = 'GEOMETRY_BUDGET_EXCEEDED';
+    const error: RangeError & { code?: string } = new RangeError(
+      `Geometry job: grid ${
+        dims.join("x")
+      } (${cells} cells, ${bytes} bytes) exceeds the ${maxBytes} byte limit`,
+    );
+    error.code = "GEOMETRY_BUDGET_EXCEEDED";
     throw error;
   }
   return bytes;
@@ -58,7 +91,10 @@ export function copyOwned<T extends { slice(): T }>(typedArray: T): T {
  * contract. The kernel stays a plain function of pure kernels; this only
  * decides whether its result still matters by the time it settles.
  */
-export async function runGeometryJob<T>(kernel: () => T | Promise<T>, cancelled: () => boolean): Promise<T | null> {
+export async function runGeometryJob<T>(
+  kernel: () => T | Promise<T>,
+  cancelled: () => boolean,
+): Promise<T | null> {
   const result = await kernel();
   return cancelled() ? null : result;
 }
