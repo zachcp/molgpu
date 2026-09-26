@@ -75,7 +75,13 @@ export function validateVolume<T extends VolumeInput>(
   ) {
     fail("volume.transform", "expected an affine matrix (last row 0 0 0 1)");
   }
-  if (Math.abs(determinant3(transform)) < 1e-12) {
+  // createVolume stores this matrix as f32. Check the stored precision so a
+  // finite input cannot turn into an infinite or singular volume afterward.
+  const storedTransform = Float32Array.from(transform);
+  if (!storedTransform.every(Number.isFinite)) {
+    fail("volume.transform", "expected values representable as Float32Array");
+  }
+  if (Math.abs(determinant3(storedTransform)) < 1e-12) {
     fail("volume.transform", "expected an invertible affine");
   }
   if (input.unit !== undefined && typeof input.unit !== "string") {

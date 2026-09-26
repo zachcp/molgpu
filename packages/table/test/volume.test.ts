@@ -135,6 +135,15 @@ Deno.test("validateVolume names the malformed field", () => {
         1,
       ]),
     }, /invertible/],
+    [{
+      ...base,
+      transform: [1e40, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
+    }, /representable as Float32Array/],
+    [{
+      ...base,
+      // The columns are distinct as doubles but identical after f32 storage.
+      transform: [1, 1, 0, 0, 1 + 1e-8, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
+    }, /invertible/],
     [{ ...base, unit: 3 }, /volume\.unit/],
   ];
   for (const [input, message] of bad) {
