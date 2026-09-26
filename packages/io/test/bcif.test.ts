@@ -22,3 +22,13 @@ Deno.test("reports malformed BCIF through a structured boundary error", async ()
   );
   assertStrictEquals(error.code, "INVALID_BCIF");
 });
+
+Deno.test("every element symbol maps to its atomic number, not only common ones", async () => {
+  // 4C7R carries five chloride ions; an 8-symbol table once read them as 0.
+  const data = await structureFromBcif(
+    await readFile(new URL("./fixtures/4c7r.bcif", import.meta.url)),
+  );
+  const { element } = data.topology.atoms;
+  assertStrictEquals(element.filter((z) => z === 17).length, 5);
+  assertStrictEquals(element.filter((z) => z === 0).length, 0);
+});

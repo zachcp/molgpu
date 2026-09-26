@@ -62,6 +62,9 @@ const CURATED: readonly Case[] = [
   ["vmd", "nucleic"],
   ["vmd", "resid 100 to 120 and name CA"],
   ["jmol", "[HEM]"],
+  ["pymol", "elem Cl"],
+  ["pymol", "byres (elem Cl around 5)"],
+  ["vmd", "element CL or mass > 30"],
   [
     "mol-script",
     "(sel.atom.atom-groups :residue-test (= atom.label_comp_id HEM))",
@@ -109,6 +112,7 @@ const KNOWN_DIFFERENCES: Readonly<Record<string, string>> = {
   "pymol: elem S or (polymer and not hydro) [1bna]": "complement of nothing",
   "pymol: elem S or (polymer and not hydro) [1crn]": "complement of nothing",
   "pymol: elem S or (polymer and not hydro) [1tqn]": "complement of nothing",
+  "pymol: elem S or (polymer and not hydro) [4c7r]": "complement of nothing",
   "pymol: not resn CYS [1bna]": "complement of nothing",
   "vmd: not protein [1bna]": "complement of nothing",
   // Deliberate: carbon weighs 12.011. Mol*'s table lists boron's 10.81.
@@ -116,10 +120,11 @@ const KNOWN_DIFFERENCES: Readonly<Record<string, string>> = {
   "vmd: mass 12 to 17.5 [1crn]": "carbon mass",
   "vmd: mass 12 to 17.5 [1ejg]": "carbon mass",
   "vmd: mass 12 to 17.5 [1tqn]": "carbon mass",
+  "vmd: mass 12 to 17.5 [4c7r]": "carbon mass",
 };
 
 // Single-model entries only: our rows then equal Mol*'s source indices.
-const STRUCTURES = ["1crn", "1tqn", "1bna", "1ejg"] as const;
+const STRUCTURES = ["1crn", "1tqn", "1bna", "1ejg", "4c7r"] as const;
 
 async function load(
   id: string,
