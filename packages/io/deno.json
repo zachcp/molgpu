@@ -1,0 +1,18 @@
+{
+  "name": "@molgpu/io",
+  "version": "0.1.0",
+  "license": "MIT",
+  "exports": "./src/index.mjs",
+  "publish": {
+    "include": [
+      "src",
+      "README.md",
+      "LICENSE",
+      "CHANGELOG.md"
+    ]
+  },
+  "imports": {
+    "molstar": "npm:molstar@^5.11.0",
+    "molstar/": "npm:/molstar@^5.11.0/"
+  }
+}

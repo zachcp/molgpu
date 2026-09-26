@@ -1,3 +1,4 @@
+// @ts-self-types="./index.d.ts"
 import { createStructure } from '@molgpu/table';
 
 const ELEMENT = { H: 1, C: 6, N: 7, O: 8, P: 15, S: 16, SE: 34, FE: 26 };

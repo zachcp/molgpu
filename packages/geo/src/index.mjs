@@ -1,3 +1,4 @@
+// @ts-self-types="./index.d.ts"
 // Ported from the inner loop of Mol* 5.11.0's MIT-licensed
 // mol-geo/util/marching-cubes/{algorithm,tables}.js. Deliberately no Mol*
 // Task/Tensor/Mesh types: this consumes a packed scalar grid and returns owned

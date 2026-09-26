@@ -152,6 +152,29 @@ Two rules make the layout load-bearing rather than decorative:
   is a real risk on a library we intend to publish, and this containment is the
   mitigation.
 
+## Source language and publishing
+
+The packages are moving from hand-written `.mjs` plus `.d.ts` to TypeScript
+source, published to [JSR](https://jsr.io) (epic `0lg`; findings in
+`docs/findings/2026-09-26-jsr-spike.md`). During the move both forms coexist:
+
+- **Toolchain minimums:** Node 26 (runs `.ts` directly through type stripping)
+  and Deno 2.9. The repo is an npm workspace and a Deno workspace at once.
+- **Manifests:** `package.json` is the single source for name, version, license,
+  exports and dependency ranges. Each package's `deno.json` (its JSR manifest)
+  is generated from it by `npm run sync:deno`, and hardening H1 checks they
+  match. Internal `@molgpu/*` imports resolve through the workspace, and JSR
+  rewrites them to `jsr:` ranges on publish.
+- **Unconverted packages** stay JSR-publishable: each `.mjs` entry names its
+  declarations with `// @ts-self-types="./index.d.ts"`.
+- **TypeScript source** follows `tsconfig.base.json`: `isolatedDeclarations`
+  (explicit types on every export, which is JSR's "no slow types" rule),
+  `erasableSyntaxOnly` (so Node can strip types), `verbatimModuleSyntax`, and
+  relative imports ending in `.ts`.
+- **JSR has no peer dependencies.** use.gpu stays an exact `npm:` pin, Mol*
+  must stay optional through a computed dynamic import, and internal ranges stay
+  broad so a single copy of `@molgpu/table` is shared.
+
 ## Testing strategy
 
 Because MVS interop is out, the oracle has to be manufactured.

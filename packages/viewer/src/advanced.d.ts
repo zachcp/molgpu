@@ -5,8 +5,8 @@ import type { LC, LiveContext } from '@use-gpu/live';
 import type { ShaderSource } from '@use-gpu/shader';
 import type { PointLayerProps, ShaderFlatMaterialProps, ShaderLitMaterialProps } from '@use-gpu/workbench';
 import type { Field } from '@molgpu/fields';
-// Type-only: resolves to ./index.d.ts (the runtime module is ./index.mjs).
-import type { StructureResource } from './index.js';
+// Type-only import of the sibling declarations (the runtime module is ./index.mjs).
+import type { StructureResource } from './index.d.ts';
 
 /** GPU columns allocated once per structure and shared by representations. */
 export interface StructureSources {

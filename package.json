@@ -27,7 +27,11 @@
     "test:examples": "node spikes/examples/test/run-browser.mjs",
     "test:examples:figure": "node spikes/examples/test/run-figure.mjs",
     "build:io:measure": "vite build --config packages/io/vite.config.mjs",
-    "release:dry-run": "node scripts/publish-dry-run.mjs"
+    "release:dry-run": "node scripts/publish-dry-run.mjs",
+    "sync:deno": "node scripts/sync-deno-json.mjs",
+    "test:deno": "deno test -A --no-check packages/*/test/*.test.mjs",
+    "typecheck:src": "tsc -p tsconfig.json",
+    "jsr:check": "deno publish --dry-run --allow-dirty"
   },
   "devDependencies": {
     "@use-gpu/core": "0.20.0",

@@ -1,3 +1,4 @@
+// @ts-self-types="./index.d.ts"
 export { createStructureResource } from './internal/structure-resource.mjs';
 export { useStructureResource } from './structure-context.mjs';
 export { Molecule } from './molecule.mjs';

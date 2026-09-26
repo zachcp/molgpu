@@ -1,0 +1,14 @@
+{
+  "name": "@molgpu/select",
+  "version": "0.1.0",
+  "license": "MIT",
+  "exports": "./src/index.mjs",
+  "publish": {
+    "include": [
+      "src",
+      "README.md",
+      "LICENSE",
+      "CHANGELOG.md"
+    ]
+  }
+}

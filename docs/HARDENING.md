@@ -17,7 +17,9 @@ already exist; hardening only requires that they keep passing.
 to `src` (npm adds README and LICENSE itself; each package
 keeps a copy of the root MIT `LICENSE`). Every bare import in `src/` is declared in
 `dependencies` or `peerDependencies`. `@use-gpu/*` versions are pinned exactly
-(risk R3), and `molstar` is a peer range.
+(risk R3), and `molstar` is a peer range. A `deno.json` (the JSR manifest)
+matches `package.json` in name, version, license, exports and dependency
+ranges, as written by `npm run sync:deno`, and publishes `src`.
 
 **H2 — Types match the runtime.** `src/index.d.ts` exists, and the set of
 exported names is identical between `index.mjs` and `index.d.ts`, as checked by
@@ -55,6 +57,10 @@ advanced entry (`@molgpu/viewer/advanced`), never from `.`.
   the tarball and its exports map, not a registry install. `viewer` is
   browser-only, so the checker only resolves its entries. It also needs a
   documented browser smoke page, which is checked by hand.
+- `deno publish --dry-run` succeeds for the package: it type-checks, passes
+  JSR's no-slow-types rule, and resolves every import as JSR will. Packages
+  whose entries are TypeScript are imported under Deno instead of from the
+  npm tarball, because Node won't strip types under `node_modules`.
 - No import has to reach into `/src/internal`.
 
 **H7 — README.**

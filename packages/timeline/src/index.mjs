@@ -1,3 +1,4 @@
+// @ts-self-types="./index.d.ts"
 import { easingType, automatic, bezier } from './internal/upstream-interpolation.mjs';
 
 const finite = (value, label) => {

@@ -69,6 +69,27 @@ function entries(manifest) {
     .map(([subpath, target]) => ({ subpath, types: target?.types, import: target?.import }));
 }
 
+/**
+ * The JSR manifest (deno.json) a package.json implies. package.json is the single
+ * source: `npm run sync:deno` writes these fields and H1 checks they match.
+ * Internal @molgpu deps resolve through the Deno workspace (JSR rewrites them to
+ * jsr: on publish); every other dependency becomes an npm: import at the same range.
+ */
+function expectedDenoManifest(m) {
+  const exports = Object.fromEntries(entries(m).map(e => [e.subpath, e.import]));
+  const imports = {};
+  for (const [dep, range] of Object.entries({ ...m.dependencies, ...m.peerDependencies }).sort(([a], [b]) => a.localeCompare(b))) {
+    if (dep.startsWith('@molgpu/')) continue;
+    imports[dep] = `npm:${dep}@${range}`;
+    imports[`${dep}/`] = `npm:/${dep}@${range}/`;
+  }
+  return {
+    name: m.name, version: m.version, license: m.license,
+    exports: Object.keys(exports).length === 1 && exports['.'] ? exports['.'] : exports,
+    ...(Object.keys(imports).length ? { imports } : {}),
+  };
+}
+
 /** Resolve a module's exports with the TS checker: names and printed declarations. */
 function moduleExports(file) {
   const program = ts.createProgram([file], {
@@ -188,6 +209,16 @@ function checkPackage(dir, { update = false } = {}) {
     if (dep.startsWith('@use-gpu/') && !/^\d+\.\d+\.\d+$/.test(range)) fail('H1', `${dep} must be pinned exactly, got "${range}"`);
   }
   if (m.dependencies?.molstar) fail('H1', 'molstar must be a peerDependency, not a dependency');
+  const denoPath = join(dir, 'deno.json');
+  const deno = existsSync(denoPath) ? readJson(denoPath) : null;
+  if (!deno) fail('H1', 'missing deno.json (the JSR manifest; run npm run sync:deno)');
+  else {
+    const expected = expectedDenoManifest(m);
+    for (const key of ['name', 'version', 'license', 'exports', 'imports']) {
+      if (JSON.stringify(deno[key]) !== JSON.stringify(expected[key])) fail('H1', `deno.json "${key}" is out of sync with package.json (run npm run sync:deno)`);
+    }
+    if (!deno.publish?.include?.includes('src')) fail('H1', 'deno.json publish.include must include "src"');
+  }
   // Table identity is module-private (a WeakMap brand), so every dependent must
   // share the app's one copy of @molgpu/table rather than install its own.
   if (m.dependencies?.['@molgpu/table']) fail('H1', '@molgpu/table must be a peerDependency, not a dependency');
@@ -275,9 +306,34 @@ function checkPackage(dir, { update = false } = {}) {
     for (const e of ents) for (const f of [e.types, e.import]) {
       if (f && !packed.includes(f.replace(/^\.\//, ''))) fail('H6', `tarball is missing entry file ${f}`);
     }
-    if (!fails.H6.length && ents.length) smokeImport(dir, m, ents, packed, msg => fail('H6', msg));
+    // Node won't strip types under node_modules, so only JS entries can be imported
+    // from the packed tree; TypeScript entries are imported through Deno below.
+    const jsEntries = ents.filter(e => !/\.ts$/.test(e.import));
+    if (!fails.H6.length && jsEntries.length) smokeImport(dir, m, jsEntries, packed, msg => fail('H6', msg));
   }
+  // H6 (JSR) — publishable to JSR. Runs last and only on an otherwise clean
+  // package, since a manifest or import fault above would fail here too.
+  if (deno && CRITERIA.every(c => !fails[c].length)) jsrCheck(dir, ents, !BROWSER_ONLY.has(m.name), msg => fail('H6', msg));
   return { name, dir: relative(ROOT, dir), fails };
+}
+
+const firstError = (err) => String(err.stderr ?? err.message).split('\n')
+  .find(l => /error|Error/.test(l))?.replace(/\x1b\[[0-9;]*m/g, '').trim() ?? 'failed';
+
+/**
+ * `deno publish --dry-run` type-checks the package, enforces JSR's no-slow-types
+ * rule and resolves every import as JSR will. Then, for packages that run
+ * outside a browser, each TypeScript entry is imported under Deno.
+ */
+function jsrCheck(dir, ents, importable, fail) {
+  const deno = (args) => execFileSync('deno', args, { cwd: dir, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, NO_COLOR: '1' } });
+  try { deno(['publish', '--dry-run', '--allow-dirty']); }
+  catch (err) { fail(`deno publish --dry-run failed: ${firstError(err)}`); return; }
+  if (!importable) return;
+  for (const e of ents.filter(e => /\.ts$/.test(e.import))) {
+    try { deno(['eval', `await import(${JSON.stringify(new URL(e.import, `file://${dir}/`).href)})`]); }
+    catch (err) { fail(`importing ${e.import} under Deno: ${firstError(err)}`); }
+  }
 }
 
 /**
@@ -338,6 +394,6 @@ function main(argv) {
   return results.every(r => CRITERIA.every(c => !r.fails[c]?.length)) ? 0 : 1;
 }
 
-export { checkPackage, CRITERIA };
+export { checkPackage, expectedDenoManifest, CRITERIA };
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) process.exitCode = main(process.argv.slice(2));

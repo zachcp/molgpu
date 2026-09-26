@@ -1,3 +1,4 @@
+// @ts-self-types="./index.d.ts"
 // @molgpu/fields — typed per-row value descriptions with one pure CPU evaluator
 // and a renderer-free WGSL code generator.
 //

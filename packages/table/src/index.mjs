@@ -1,3 +1,4 @@
+// @ts-self-types="./index.d.ts"
 // Pure molecular values. Arrays are packed CPU columns and immutable by contract.
 // No renderer, parser, or global platform API is required by this module.
 export { traceTable } from './trace.mjs';

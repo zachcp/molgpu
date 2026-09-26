@@ -1,3 +1,4 @@
+// @ts-self-types="./index.d.ts"
 // @molgpu/select — pure selection queries and dataset-bound resolved selections.
 //
 // Two concepts, kept deliberately apart (see the Phase 2 architecture review):
