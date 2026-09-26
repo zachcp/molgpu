@@ -1,0 +1,9 @@
+{
+  "workspace": [
+    "./table",
+    "./viewer",
+    "./render",
+    "./io-probe"
+  ],
+  "nodeModulesDir": "auto"
+}

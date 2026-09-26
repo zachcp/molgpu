@@ -1,0 +1,12 @@
+{
+  "imports": {
+    "@molgpu/table": "../table/src/index.ts",
+    "molstar/": "npm:/molstar@5.11.0/",
+    "@use-gpu/core/": "npm:/@use-gpu/core@0.20.0/",
+    "@use-gpu/live": "npm:@use-gpu/live@0.20.0",
+    "@use-gpu/workbench": "npm:@use-gpu/workbench@0.20.0",
+    "@use-gpu/shader": "npm:@use-gpu/shader@0.20.0",
+    "@use-gpu/shader/wgsl": "npm:@use-gpu/shader@0.20.0/wgsl"
+  },
+  "nodeModulesDir": "auto"
+}
