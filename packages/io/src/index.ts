@@ -1,8 +1,21 @@
-// @ts-self-types="./index.d.ts"
-import { createStructure } from '@molgpu/table';
+import { createStructure, type StructureData } from '@molgpu/table';
+import type { BcifErrorCode, SurfaceField, SurfaceFieldAtoms, SurfaceFieldErrorCode, SurfaceFieldOptions } from './types.ts';
 
-const ELEMENT = { H: 1, C: 6, N: 7, O: 8, P: 15, S: 16, SE: 34, FE: 26 };
-const RADIUS = { 1: 1.1, 6: 1.7, 7: 1.55, 8: 1.52, 15: 1.8, 16: 1.8, 26: 2.05, 34: 1.9 };
+export type * from './types.ts';
+
+/** The slice of a Mol* CIF category this module reads. */
+interface CifCategory {
+  readonly rowCount: number;
+  getField(name: string): { str(row: number): string; float(row: number): number } | undefined;
+}
+type Categories = Readonly<Record<string, CifCategory | undefined>>;
+type PolymerKind = 'protein' | 'rna' | 'dna' | 'other';
+type SecondaryStructure = 'helix' | 'sheet' | 'coil';
+interface ResidueRow { chain: number; seq: number; authSeq: string; insertion: string; comp: string }
+interface ChainRow { model: number; labelId: string; authId: string }
+
+const ELEMENT: Readonly<Record<string, number>> = { H: 1, C: 6, N: 7, O: 8, P: 15, S: 16, SE: 34, FE: 26 };
+const RADIUS: Readonly<Record<number, number>> = { 1: 1.1, 6: 1.7, 7: 1.55, 8: 1.52, 15: 1.8, 16: 1.8, 26: 2.05, 34: 1.9 };
 
 // Chemical-component name sets ported from Mol* 5.11.0's MIT-licensed
 // mol-model/structure/model/types.js (AminoAcidNamesL/D, RnaBaseNames,
@@ -19,28 +32,30 @@ const AMINO_ACID_NAMES = new Set([
 ]);
 const RNA_BASE_NAMES = new Set(['A', 'C', 'T', 'G', 'I', 'U', 'N']);
 const DNA_BASE_NAMES = new Set(['DA', 'DC', 'DT', 'DG', 'DI', 'DU', 'DN']);
-const polymerKind = comp => {
+const polymerKind = (comp: string): PolymerKind => {
   const name = comp.toUpperCase();
   if (AMINO_ACID_NAMES.has(name)) return 'protein';
   if (RNA_BASE_NAMES.has(name)) return 'rna';
   if (DNA_BASE_NAMES.has(name)) return 'dna';
   return 'other';
 };
-const clean = value => value === '.' || value === '?' ? '' : value;
-const field = (category, name) => category.getField(name);
-const str = (category, name, row, fallback = '') => clean(field(category, name)?.str(row) ?? fallback);
-const num = (category, name, row, fallback = 0) => field(category, name)?.float(row) ?? fallback;
+const clean = (value: string): string => value === '.' || value === '?' ? '' : value;
+const field = (category: CifCategory, name: string) => category.getField(name);
+const str = (category: CifCategory, name: string, row: number, fallback = ''): string => clean(field(category, name)?.str(row) ?? fallback);
+const num = (category: CifCategory, name: string, row: number, fallback = 0): number => field(category, name)?.float(row) ?? fallback;
 
 /** A machine-readable failure at the BCIF/Mol* import boundary. */
 export class BcifParseError extends Error {
-  constructor(message, code, cause) {
+  override readonly name: 'BcifParseError';
+  readonly code: BcifErrorCode;
+  constructor(message: string, code: BcifErrorCode, cause?: unknown) {
     super(message, cause === undefined ? undefined : { cause });
     this.name = 'BcifParseError';
     this.code = code;
   }
 }
 
-async function parseBcif(bytes) {
+async function parseBcif(bytes: Uint8Array): Promise<{ blocks: readonly { categories: Categories }[] }> {
   if (!(bytes instanceof Uint8Array)) {
     throw new BcifParseError('BCIF input must be a Uint8Array', 'INVALID_INPUT');
   }
@@ -50,7 +65,7 @@ async function parseBcif(bytes) {
     const { CIF } = await import('molstar/lib/mol-io/reader/cif.js');
     const parsed = await CIF.parseBinary(bytes).run();
     if (parsed.isError) throw new BcifParseError(parsed.message, 'INVALID_BCIF');
-    return parsed.result;
+    return parsed.result as unknown as { blocks: readonly { categories: Categories }[] };
   } catch (error) {
     if (error instanceof BcifParseError) throw error;
     throw new BcifParseError('Unable to load the optional Mol* BCIF parser', 'PARSER_UNAVAILABLE', error);
@@ -59,7 +74,9 @@ async function parseBcif(bytes) {
 
 /** A machine-readable failure computing a molecular surface scalar field. */
 export class SurfaceFieldError extends Error {
-  constructor(message, code, cause) {
+  override readonly name: 'SurfaceFieldError';
+  readonly code: SurfaceFieldErrorCode;
+  constructor(message: string, code: SurfaceFieldErrorCode, cause?: unknown) {
     super(message, cause === undefined ? undefined : { cause });
     this.name = 'SurfaceFieldError';
     this.code = code;
@@ -78,7 +95,8 @@ export class SurfaceFieldError extends Error {
  * `spacing` and its translation row as `origin` — and `level` is the isovalue
  * (the solvent-excluded-surface convention: the probe radius itself).
  */
-export async function molecularSurfaceField(atoms, { probeRadius = 1.4, resolution = 0.5, probePositions = 36 } = {}) {
+export async function molecularSurfaceField(atoms: SurfaceFieldAtoms, options: SurfaceFieldOptions = {}): Promise<SurfaceField> {
+  const { probeRadius = 1.4, resolution = 0.5, probePositions = 36 } = options;
   const { x, y, z, radius, count } = atoms;
   if (!Number.isSafeInteger(count) || count < 0) throw new SurfaceFieldError('atoms.count must be a nonnegative safe integer', 'INVALID_INPUT');
   if (![x, y, z, radius].every(a => a instanceof Float32Array && a.length === count)) {
@@ -111,12 +129,12 @@ export async function molecularSurfaceField(atoms, { probeRadius = 1.4, resoluti
     // calcMolecularSurface only ever touches ctx.shouldUpdate/ctx.update; a
     // stub stands in for mol-task's RuntimeContext (a type-only import, erased at runtime).
     const stubContext = { shouldUpdate: false, update: async () => {} };
-    const result = await calcMolecularSurface(stubContext, position, boundary, maxRadius, null, { probeRadius, resolution, probePositions });
+    const result = await calcMolecularSurface(stubContext as unknown as Parameters<typeof calcMolecularSurface>[0], position, boundary, maxRadius, null, { probeRadius, resolution, probePositions });
     // Mol*'s tensor stores the grid in its own axis order (z fastest). Lower
     // it to the x-fastest layout @molgpu/geo's marchingCubes reads, reading
     // through space.get so this stays correct whatever Mol*'s order is.
     const { space, data } = result.field;
-    const [nx, ny, nz] = space.dimensions;
+    const [nx, ny, nz] = space.dimensions as unknown as [number, number, number];
     const values = new Float32Array(nx * ny * nz);
     for (let k = 0; k < nz; k++) for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
       values[i + nx * (j + ny * k)] = space.get(data, i, j, k);
@@ -136,7 +154,7 @@ export async function molecularSurfaceField(atoms, { probeRadius = 1.4, resoluti
  * label_seq_id (the compact, gap-aware numbering already used for
  * residues.labelSeq — no auth/insertion-code ambiguity to resolve here).
  */
-function markSecondaryStructure(secondaryStructure, residues, chains, chainLabel, begSeq, endSeq, kind) {
+function markSecondaryStructure(secondaryStructure: SecondaryStructure[], residues: readonly ResidueRow[], chains: readonly ChainRow[], chainLabel: string, begSeq: number, endSeq: number, kind: SecondaryStructure): void {
   for (let r = 0; r < residues.length; r++) {
     if (chains[residues[r].chain].labelId !== chainLabel) continue;
     if (residues[r].seq < begSeq || residues[r].seq > endSeq) continue;
@@ -151,8 +169,8 @@ function markSecondaryStructure(secondaryStructure, residues, chains, chainLabel
  * secondary structure from geometry when a file carries no annotation —
  * see molgpu-sept-0sj.2's notes for that documented scope boundary.
  */
-function readSecondaryStructure(categories, residues, chains) {
-  const secondaryStructure = new Array(residues.length).fill('coil');
+function readSecondaryStructure(categories: Categories, residues: readonly ResidueRow[], chains: readonly ChainRow[]): SecondaryStructure[] {
+  const secondaryStructure = new Array<SecondaryStructure>(residues.length).fill('coil');
   const conf = categories.struct_conf;
   for (let i = 0; conf && i < conf.rowCount; i++) {
     if (!str(conf, 'conf_type_id', i).toUpperCase().startsWith('HELX')) continue;
@@ -170,14 +188,14 @@ function readSecondaryStructure(categories, residues, chains) {
 }
 
 /** Lower a BinaryCIF mmCIF block to renderer-independent owned table columns. */
-export async function structureFromBcif(bytes) {
+export async function structureFromBcif(bytes: Uint8Array): Promise<StructureData> {
   const parsed = await parseBcif(bytes);
   const categories = parsed.blocks[0]?.categories ?? {};
   const atom = categories.atom_site;
   if (!atom) throw new BcifParseError('BCIF has no atom_site category', 'MISSING_ATOM_SITE');
-  const positions = new Float32Array(atom.rowCount * 3), ids = [], names = [], altloc = [], element = new Uint8Array(atom.rowCount);
+  const positions = new Float32Array(atom.rowCount * 3), ids: string[] = [], names: string[] = [], altloc: string[] = [], element = new Uint8Array(atom.rowCount);
   const occupancy = new Float32Array(atom.rowCount), bfactor = new Float32Array(atom.rowCount), radius = new Float32Array(atom.rowCount), atomResidue = new Uint32Array(atom.rowCount);
-  const residueRows = new Map(), residues = [], chainRows = new Map(), chains = [];
+  const residueRows = new Map<string, number>(), residues: ResidueRow[] = [], chainRows = new Map<string, number>(), chains: ChainRow[] = [];
   for (let i = 0; i < atom.rowCount; i++) {
     const model = Math.trunc(num(atom, 'pdbx_PDB_model_num', i, 1));
     const chainId = str(atom, 'label_asym_id', i, '');

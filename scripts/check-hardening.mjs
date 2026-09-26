@@ -262,7 +262,6 @@ function checkPackage(dir, { update = false } = {}) {
   for (const [dep, range] of Object.entries(declared)) {
     if (dep.startsWith('@use-gpu/') && !/^\d+\.\d+\.\d+$/.test(range)) fail('H1', `${dep} must be pinned exactly, got "${range}"`);
   }
-  if (m.dependencies?.molstar) fail('H1', 'molstar must be a peerDependency, not a dependency');
   const denoPath = join(dir, 'deno.json');
   const deno = existsSync(denoPath) ? readJson(denoPath) : null;
   if (!deno) fail('H1', 'missing deno.json (the JSR manifest; run npm run sync:deno)');
@@ -311,7 +310,10 @@ function checkPackage(dir, { update = false } = {}) {
     }
   }
 
-  // H4 — import walls.
+  // H4 — import walls. Mol* is io's real dependency (imported lazily, so
+  // bundlers split it out); JSR has no optional peers, so no other package
+  // may even declare it.
+  if ('molstar' in declared && name !== '@molgpu/io') fail('H4', 'only @molgpu/io may depend on molstar');
   for (const file of sources) {
     const rel = relative(dir, file);
     const internal = rel.startsWith(join('src', 'internal'));

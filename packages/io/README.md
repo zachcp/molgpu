@@ -14,15 +14,19 @@ plain objects, and failures are this package's own error classes with a
 ## Install
 
 ```sh
-npm install @molgpu/io @molgpu/table molstar
+npm install @molgpu/io @molgpu/table
 ```
 
-## Peer dependencies
+## Dependencies
 
-| Package | Range | Notes |
-| --- | --- | --- |
-| `@molgpu/table` | `^0.1.0` | Required. Provides the `StructureData` output type; a peer so the app shares one copy (structure identity is module-private). |
-| `molstar` | `^5.11.0` | Optional peer. Only needed when you call `structureFromBcif` or `molecularSurfaceField`; without it they reject with code `PARSER_UNAVAILABLE` / `FIELD_UNAVAILABLE`. |
+| Package | Range | Kind | Notes |
+| --- | --- | --- | --- |
+| `@molgpu/table` | `^0.1.0` | peer | Provides the `StructureData` output type; a peer so the app shares one copy (structure identity is module-private). |
+| `molstar` | `^5.11.0` | dependency | Installed with `io`, but loaded only inside `structureFromBcif` and `molecularSurfaceField`, through dynamic `import()`. Bundlers put it in separate lazy chunks, so code that never calls them never downloads it. If it fails to load, those calls reject with `PARSER_UNAVAILABLE` / `FIELD_UNAVAILABLE`. |
+
+Mol* was an optional peer before the move to JSR, which has no optional
+dependencies. It is now a regular dependency, because the viewer needs it for
+both `<Structure src>` and `<Surface>` anyway. It is still loaded lazily, as before.
 
 ## Example
 
@@ -75,8 +79,8 @@ The surface exports are experimental while the result shape settles.
 
 ## Place in the dependency graph
 
-`io` sits directly above `table`: it depends on `@molgpu/table` and the optional
-peer `molstar`, and `@molgpu/viewer` loads it lazily through a dynamic import.
+`io` sits directly above `table`: it depends on `@molgpu/table` (a peer) and
+`molstar`, and `@molgpu/viewer` loads it lazily through a dynamic import.
 It is the **only** molgpu package allowed to import `molstar` at runtime, and it
 does so only through dynamic `import()` inside its two functions. It must not
 import `@use-gpu/*`, `@molgpu/viewer`, or any other `@molgpu/*` package besides

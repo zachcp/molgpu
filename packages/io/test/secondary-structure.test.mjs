@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { CIF } from 'molstar/lib/mol-io/reader/cif.js';
 import { activeAtoms, traceTable, secondaryStructureTrace } from '@molgpu/table';
-import { structureFromBcif } from '../src/index.mjs';
+import { structureFromBcif } from '../src/index.ts';
 import { corpus } from './corpus.mjs';
 
 const clean = value => value === '.' || value === '?' ? '' : value;

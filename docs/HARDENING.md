@@ -17,7 +17,7 @@ already exist; hardening only requires that they keep passing.
 to `src` (npm adds README and LICENSE itself; each package
 keeps a copy of the root MIT `LICENSE`). Every bare import in `src/` is declared in
 `dependencies` or `peerDependencies`. `@use-gpu/*` versions are pinned exactly
-(risk R3), and `molstar` is a peer range. A `deno.json` (the JSR manifest)
+(risk R3). A `deno.json` (the JSR manifest)
 matches `package.json` in name, version, license, exports and dependency
 ranges, as written by `npm run sync:deno`, and publishes `src`.
 
@@ -32,7 +32,8 @@ why.
 advanced entry (`@molgpu/viewer/advanced`), never from `.`.
 
 **H4 — Import walls.**
-- The only package that imports `molstar` at runtime is `io`. Other packages may
+- The only package that imports `molstar` at runtime, or declares it as a
+  dependency, is `io`. Other packages may
   use Mol* only in test oracles, as dev dependencies.
 - The only package that imports `@use-gpu/live`, `@use-gpu/workbench` or
   `@use-gpu/shader` is `viewer`.

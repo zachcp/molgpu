@@ -1,5 +1,4 @@
-import type { StructureData } from '@molgpu/table';
-
+// Public types for @molgpu/io.
 /** Why a BinaryCIF import failed, stable enough to branch on. */
 export type BcifErrorCode =
   /** `bytes` was not a `Uint8Array`. */
@@ -11,19 +10,6 @@ export type BcifErrorCode =
   /** The optional Mol* parser is absent or failed to load. */
   | 'PARSER_UNAVAILABLE';
 
-export class BcifParseError extends Error {
-  constructor(message: string, code: BcifErrorCode, cause?: unknown);
-  readonly name: 'BcifParseError';
-  readonly code: BcifErrorCode;
-}
-
-/**
- * Lower a BinaryCIF mmCIF block to renderer-independent owned table columns.
- * Mol* is imported lazily inside this call, so consumers that never pass BCIF
- * bytes never load the parser. Rejects with {@link BcifParseError}.
- */
-export function structureFromBcif(bytes: Uint8Array): Promise<StructureData>;
-
 /** Why a molecular surface field computation failed, stable enough to branch on. */
 export type SurfaceFieldErrorCode =
   /** `count` is not a nonnegative safe integer, or a column is not a `Float32Array` of length `count`. */
@@ -32,12 +18,6 @@ export type SurfaceFieldErrorCode =
   | 'EMPTY_INPUT'
   /** The optional Mol* surface code is absent, failed to load, or threw while computing. */
   | 'FIELD_UNAVAILABLE';
-
-export class SurfaceFieldError extends Error {
-  constructor(message: string, code: SurfaceFieldErrorCode, cause?: unknown);
-  readonly name: 'SurfaceFieldError';
-  readonly code: SurfaceFieldErrorCode;
-}
 
 /** Plain owned atom columns: Angstrom coordinates and van der Waals radii. */
 export interface SurfaceFieldAtoms {
@@ -84,10 +64,3 @@ export interface SurfaceField {
   /** Isovalue of the surface; always equals `probeRadius`. */
   level: number;
 }
-
-/**
- * Solvent-excluded-surface scalar field over plain atom columns, computed by
- * Mol*'s `calcMolecularSurface`. Mol* is imported lazily inside this call.
- * Rejects with {@link SurfaceFieldError}; input is validated before Mol* loads.
- */
-export function molecularSurfaceField(atoms: SurfaceFieldAtoms, options?: SurfaceFieldOptions): Promise<SurfaceField>;

@@ -10,7 +10,7 @@ A Deno workspace:
 - `render/`: a page using only the two packages above, bundled by
   `deno bundle` and checked in Chrome WebGPU.
 - `probes/`: Mol* (the real `@molgpu/io`) and use.gpu under Deno.
-- `io-probe/`: keeping Mol* optional with a computed dynamic import.
+- `io-probe/`: a computed dynamic import for Mol* (publishes and runs in Deno, but breaks bundlers; see the findings correction).
 
 ```bash
 cd spikes/jsr
