@@ -40,10 +40,10 @@
   },
   "tasks": {
     "fmt": "deno fmt --check",
-    "test": "deno test -A packages/*/test/*.test.ts",
+    "test": "deno test -A packages/*/test/*.test.ts test/selection/*.test.ts",
     "check:hardening": "deno run -A scripts/check-hardening.mjs",
     "jsr:check": "deno publish --dry-run --allow-dirty",
-    "typecheck": "deno check packages/*/src/index.ts packages/*/test/*.test.ts",
+    "typecheck": "deno check packages/*/src/index.ts packages/*/test/*.test.ts test/selection/*.test.ts",
     "typecheck:components": "deno check packages/viewer/test/tsx/consumer.tsx packages/viewer/test/tsx/diagnostics.ts",
     "typecheck:site": "deno check site/src/main.tsx",
     "build:site": "deno run -A npm:vite@8.3.0 build --config site/vite.config.mjs",

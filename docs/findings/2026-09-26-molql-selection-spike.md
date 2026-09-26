@@ -435,6 +435,41 @@ Jmol and MolScript strings on 1CRN and 1TQN. That included `byres … around`,
 two crashed Mol*'s own parser, one is the bare-word case above, and one is
 `sel.atom.res`. `922.7` turns this into a permanent test.
 
+### 4.9 Grouping, parsing and the permanent comparison test (2026-09-26)
+
+Grouping was moved ahead of the table-data work (`922.10`/`922.11` raised to
+P2), because MolScript's `sel.atom.res`/`sel.atom.chains` and VMD's
+`protein`/`nucleic` all need it.
+
+- **Grouped operators added:** `atom-groups :group-by`, `filter.pick`,
+  `filter.first`, `filter.intersected-by`, `filter.with-same-atom-properties`,
+  `filter.is-connected-to` (`:bond-test`, `:disjunct`), and
+  `atom-set.atom-count`/`property-set`.
+- **Still left out:** `query-each`, `union-by`, `cluster` and `atom-set.reduce`
+  have no Mol* runtime implementation.
+  - `atom-set.count-query` runs over the whole input rather than the current set
+    in Mol*.
+  - `is-connected-to :invert` keeps every set in Mol*.
+  - Copying those would copy bugs. A missing `:disjunct` reads as false, as in
+    Mol*'s runtime (not the symbol table's `true`).
+- **`io.parseSelection(language, text, { symbols })`** returns plain JSON.
+  - It turns bare properties into calls and bare words into strings.
+  - It never fills defaults.
+  - It rejects symbols outside `symbols`, naming the language.
+  - `io` declares its own copy of the tree type, because it may import no
+    `@molgpu` package besides `table`.
+- **`test/selection/oracle.test.ts`** runs in `deno task test`. It checks
+  curated strings plus Mol*'s PyMOL, VMD and Jmol `examples.js` on 1CRN, 1TQN,
+  1BNA and 1EJG, with model secondary structure attached on the Mol* side.
+  - **241 of 246 pairs are identical.** The 5 known differences are listed in
+    the test with causes: 4 are 1EJG microheterogeneity (io splits PRO/SER
+    residues, Mol* keeps one) and 1 is the heme Fe–S `struct_conn` bond the
+    inferred bonds lack.
+  - 8 strings fall outside the supported symbols: `gap`, `byring`, mass, charge,
+    bond counts, aromaticity.
+- **Coil carries no secondary-structure bits**, as in Mol*. The comparison test
+  caught this.
+
 ## 5. Proposed phases
 
 **Phase 0: decisions (you).**

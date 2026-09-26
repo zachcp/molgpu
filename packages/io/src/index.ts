@@ -12,6 +12,13 @@ import type {
 } from "./types.ts";
 
 export type * from "./types.ts";
+export {
+  parseSelection,
+  type ParseSelectionOptions,
+  type SelectionExpr,
+  type SelectionLanguage,
+  SelectionParseError,
+} from "./selection.ts";
 
 /** The slice of a Mol* CIF category this module reads. */
 interface CifCategory {

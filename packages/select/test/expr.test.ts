@@ -343,6 +343,84 @@ Deno.test("labels are canonical S-expressions, independent of key order", () => 
   );
 });
 
+const byResidue = (test?: SelectionExpr) =>
+  sq("generator.atom-groups", {
+    ...(test === undefined ? {} : { "residue-test": test }),
+    "group-by": prop("macromolecular.residue-key"),
+  });
+
+Deno.test("group-by makes one set per key, in first-seen order", () => {
+  const cysResidues = byResidue(eq(comp, "CYS"));
+  assertEquals(rows(cysResidues), [0, 1, 4, 5]);
+  assertEquals(rows(sq("filter.first", [cysResidues])), [0, 1]);
+  assertEquals(rows(sq("filter.first", [atoms(eq(symbol, "S"))])), [2]);
+  // A per-set within keeps the whole residue (compare the singleton test).
+  const near0 = { target: atom0, "min-radius": 0, "max-radius": 2.5 };
+  assertEquals(rows(sq("filter.within", { 0: byResidue(), ...near0 })), [
+    0,
+    1,
+    2,
+    3,
+  ]);
+});
+
+Deno.test("pick tests each set with atom-set reducers (VMD 'protein' shape)", () => {
+  const names = sq("atom-set.property-set", [atomName]);
+  const hasCbSg = call("core.set.is-subset", [
+    call("core.type.set", [
+      sq("type.atom-name", ["CB"]),
+      sq("type.atom-name", ["SG"]),
+    ]),
+    names,
+  ]);
+  assertEquals(rows(sq("filter.pick", { 0: byResidue(), test: hasCbSg })), [
+    2,
+    3,
+  ]);
+  assertEquals(
+    rows(sq("filter.pick", {
+      0: byResidue(),
+      test: eq(sq("atom-set.atom-count"), 2),
+    })),
+    [0, 1, 2, 3, 4, 5],
+  );
+  assertThrows(
+    () => rows(atoms(eq(sq("atom-set.atom-count"), 1))),
+    TypeError,
+    "outside a set test",
+  );
+});
+
+Deno.test("intersected-by, with-same-atom-properties, is-connected-to", () => {
+  assertEquals(
+    rows(sq("filter.intersected-by", { 0: byResidue(), by: atom0 })),
+    [0, 1],
+  );
+  // Residues whose elements all occur in residue 0 (N, C).
+  assertEquals(
+    rows(sq("filter.with-same-atom-properties", {
+      0: byResidue(),
+      source: byResidue(eq(prop("macromolecular.label_seq_id"), 1)),
+      property: symbol,
+    })),
+    [0, 1],
+  );
+  const cb1 = atoms(eq(prop("macromolecular.id"), 2)); // atom 1, bonded to atom 0
+  assertEquals(
+    rows(sq("filter.is-connected-to", { 0: byResidue(), target: cb1 })),
+    [0, 1],
+  );
+  // disjunct: the bond must leave the set; 0-1 stays inside residue 0.
+  assertEquals(
+    rows(sq("filter.is-connected-to", {
+      0: byResidue(),
+      target: cb1,
+      disjunct: true,
+    })),
+    [],
+  );
+});
+
 Deno.test("secondary-structure flags need the column", () => {
   const helix = residues(
     call("core.flags.has-any", [
@@ -364,10 +442,12 @@ Deno.test("anything outside the language is a compile-time error", () => {
     "symbol 'structure-query.generator.rings' is not supported",
   );
   bad(
-    sq("generator.atom-groups", {
-      "group-by": prop("macromolecular.residue-key"),
-    }),
-    "not supported yet: needs grouped evaluation",
+    sq("filter.pick", { 0: all, test: sq("atom-set.count-query", [all]) }),
+    "symbol 'structure-query.atom-set.count-query' is not supported",
+  );
+  bad(
+    sq("filter.is-connected-to", { 0: all, target: all, invert: true }),
+    "keeps every set when inverting",
   );
   bad(
     sq("filter.within", {

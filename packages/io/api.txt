@@ -6,6 +6,14 @@ BcifErrorCode
   export type BcifErrorCode = /** `bytes` was not a `Uint8Array`. */ "INVALID_INPUT" /** The Mol* parser rejected the bytes. */ | "INVALID_BCIF" /** The first data block has no `atom_site` category. */ | "MISSING_ATOM_SITE" /** The optional Mol* parser is absent or failed to load. */ | "PARSER_UNAVAILABLE";
 BcifParseError
   export class BcifParseError extends Error { readonly name: "BcifParseError"; readonly code: BcifErrorCode; constructor(message: string, code: BcifErrorCode, cause?: unknown) }
+ParseSelectionOptions
+  export interface ParseSelectionOptions { /** * Symbol names the caller can evaluate, for example `@molgpu/select`'s * `supportedSymbols`. When given, any other symbol is a SelectionParseError * that names the source language, rather than a later compile error. */ readonly symbols?: readonly string[] }
+SelectionExpr
+  export type SelectionExpr = string | number | boolean | { readonly name: string } | { readonly head: SelectionExpr; readonly args?: readonly SelectionExpr[] | { readonly [name: string]: SelectionExpr } };
+SelectionLanguage
+  export type SelectionLanguage = "mol-script" | "pymol" | "vmd" | "jmol";
+SelectionParseError
+  export class SelectionParseError extends Error { readonly language: SelectionLanguage; readonly text: string; constructor(language: SelectionLanguage, text: string, message: string) }
 SurfaceField
   export interface SurfaceField { /** * Grid samples, length `dims[0] * dims[1] * dims[2]`, laid out **x-fastest** * (the layout `@molgpu/geo`'s `marchingCubes` reads): the sample at grid * `(i, j, k)` is `values[i + dims[0] * (j + dims[1] * k)]`. Unvisited cells far from every * atom hold the sentinel -1001. */ values: Float32Array; /** Grid size along x, y, z. */ dims: [number, number, number]; /** * Column-major 4x4 scale + translate from grid index to Angstrom: spacing is * the diagonal (`[0]`, `[5]`, `[10]`), origin is `[12]`, `[13]`, `[14]`. */ transform: Float32Array; /** Grid spacing in Angstrom; equals the requested `resolution`. */ resolution: number; /** Largest input van der Waals radius. */ maxRadius: number; /** Isovalue of the surface; always equals `probeRadius`. */ level: number }
 SurfaceFieldAtoms
@@ -18,5 +26,7 @@ SurfaceFieldOptions
   export interface SurfaceFieldOptions { /** Solvent probe radius in Angstrom. Default 1.4. */ probeRadius?: number; /** Requested grid spacing in Angstrom. Default 0.5. */ resolution?: number; /** Probe positions sampled per atom. Default 36. */ probePositions?: number }
 molecularSurfaceField
   export function molecularSurfaceField(atoms: SurfaceFieldAtoms, options?: SurfaceFieldOptions): Promise<SurfaceField>;
+parseSelection
+  export function parseSelection(language: SelectionLanguage, text: string, options?: ParseSelectionOptions): Promise<SelectionExpr>;
 structureFromBcif
   export function structureFromBcif(bytes: Uint8Array): Promise<StructureData>;

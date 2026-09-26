@@ -80,6 +80,8 @@ interface Ctx {
   bond: number;
   /** The bonds `bond` indexes: bondTopology(data), set during a bond test. */
   bonds: Bonds | null;
+  /** Current atom set for atom-set symbols, set while a filter tests a set. */
+  current: Uint32Array | null;
 }
 
 type Fn = (ctx: Ctx) => unknown;
@@ -109,6 +111,7 @@ const childCtx = (ctx: Ctx, input: Uint32Array): Ctx => ({
   atom: -1,
   bond: -1,
   bonds: null,
+  current: null,
 });
 
 // ---- symbol table --------------------------------------------------------------
@@ -210,10 +213,12 @@ const ssFlag = (name: string): number => {
       return 0;
   }
 };
+// Residue annotation -> flags. Coil carries no bits, as in Mol*'s model
+// secondary structure (so has-any(flags, 0) is false for it).
 const RESIDUE_SS: Readonly<Record<string, number>> = {
   helix: SS.Helix,
   sheet: SS.Beta | SS.BetaSheet,
-  coil: SS.NA,
+  coil: 0,
 };
 
 const atomProp = (
@@ -502,6 +507,7 @@ const SPECS: Readonly<Record<string, Spec>> = {
       "chain-test": Vopt,
       "residue-test": Vopt,
       "atom-test": Vopt,
+      "group-by": Vopt,
     },
     impl: atomGroups,
   },
@@ -648,18 +654,120 @@ const SPECS: Readonly<Record<string, Spec>> = {
     },
     impl: within,
   },
+  [`${SQ}filter.pick`]: {
+    returns: "query",
+    args: { 0: Q, test: V },
+    impl: (a) => {
+      const q = query(a, "0"), test = arg(a, "test");
+      return (ctx) => {
+        const out = new SetBuilder(ctx.data.topology.atoms.count, false);
+        const outer = ctx.current;
+        forEachSet(q(ctx), (s) => {
+          ctx.current = s;
+          if (test(ctx)) out.add(s);
+        });
+        ctx.current = outer;
+        return out.selection();
+      };
+    },
+  },
+  [`${SQ}filter.first`]: {
+    returns: "query",
+    args: { 0: Q },
+    impl: (a) => {
+      const q = query(a, "0");
+      return (ctx) => {
+        const sel = q(ctx);
+        if (sel.kind === "singletons") {
+          return singletons(sel.atoms.slice(0, 1));
+        }
+        const out = new SetBuilder(ctx.data.topology.atoms.count, false);
+        if (sel.sets.length) out.add(sel.sets[0]);
+        return out.selection();
+      };
+    },
+  },
+  [`${SQ}filter.intersected-by`]: {
+    returns: "query",
+    args: { 0: Q, by: Q },
+    impl: (a) => {
+      const q = query(a, "0"), by = query(a, "by");
+      return (ctx) => {
+        const n = ctx.data.topology.atoms.count;
+        const mask = new Uint8Array(n);
+        for (const i of flatten(by(ctx), n)) mask[i] = 1;
+        const out = new SetBuilder(n, false);
+        forEachSet(q(ctx), (s) => {
+          if (s.some((i) => mask[i] === 1)) out.add(s);
+        });
+        return out.selection();
+      };
+    },
+  },
+  [`${SQ}filter.with-same-atom-properties`]: {
+    returns: "query",
+    args: { 0: Q, source: Q, property: V },
+    impl: (a) => {
+      const q = query(a, "0"), source = query(a, "source");
+      const property = arg(a, "property");
+      return (ctx) => {
+        const sel = q(ctx);
+        const allowed = new Set<unknown>();
+        forEachSet(source(ctx), (s) => {
+          for (const i of s) allowed.add(property(withAtom(ctx, i)));
+        });
+        const out = new SetBuilder(ctx.data.topology.atoms.count, false);
+        forEachSet(sel, (s) => {
+          if (s.every((i) => allowed.has(property(withAtom(ctx, i))))) {
+            out.add(s);
+          }
+        });
+        return out.selection();
+      };
+    },
+  },
+  [`${SQ}filter.is-connected-to`]: {
+    returns: "query",
+    reads: "positions",
+    args: { 0: Q, target: Q, "bond-test": Vopt, disjunct: Vopt },
+    impl: isConnectedTo,
+  },
+
+  // ---- structure-query: atom-set reducers (inside a filter test) ----
+  [`${SQ}atom-set.atom-count`]: {
+    returns: "value",
+    impl: () => (ctx) => currentSet(ctx).length,
+  },
+  [`${SQ}atom-set.property-set`]: {
+    returns: "value",
+    args: { 0: V },
+    impl: (a) => {
+      const property = arg(a, "0");
+      return (ctx) => {
+        const set = currentSet(ctx), atom = ctx.atom;
+        const values = new Set<unknown>();
+        for (const i of set) values.add(property(withAtom(ctx, i)));
+        ctx.atom = atom;
+        return values;
+      };
+    },
+  },
 };
+
+const currentSet = (ctx: Ctx): Uint32Array =>
+  ctx.current ?? fail("atom-set symbol used outside a set test (filter.pick)");
 
 /** Arguments that exist in MolQL but are outside the Phase 1 allowlist. */
 const NOT_YET: Readonly<Record<string, Readonly<Record<string, string>>>> = {
-  [`${SQ}generator.atom-groups`]: {
-    "group-by": "needs grouped evaluation (molgpu-sept-922.10)",
-  },
   [`${SQ}modifier.include-surroundings`]: {
     "atom-radius": "needs per-atom radii (molgpu-sept-922.15)",
   },
   [`${SQ}filter.within`]: {
     "atom-radius": "needs per-atom radii (molgpu-sept-922.15)",
+  },
+  [`${SQ}filter.is-connected-to`]: {
+    invert:
+      "Mol*'s runtime keeps every set when inverting, so there is no reference behaviour to match",
   },
 };
 
@@ -686,27 +794,43 @@ function perSet(
   return out.selection();
 }
 
-/** Mol* generators.atoms without group-by: tests at chain, residue and atom level. */
+/**
+ * Mol* generators.atoms: tests at entity/chain, residue and atom level, then
+ * optionally grouping the passing atoms into one set per `group-by` value.
+ */
 function atomGroups(a: Args): Fn {
   const entityTest = optArg(a, "entity-test"),
     chainTest = optArg(a, "chain-test"),
     residueTest = optArg(a, "residue-test"),
-    atomTest = optArg(a, "atom-test");
-  if (!entityTest && !chainTest && !residueTest && !atomTest) {
+    atomTest = optArg(a, "atom-test"),
+    groupBy = optArg(a, "group-by");
+  if (!entityTest && !chainTest && !residueTest && !atomTest && !groupBy) {
     return (ctx) => singletons(ctx.input);
   }
-  if (atomTest && !entityTest && !chainTest && !residueTest) {
+  if (atomTest && !entityTest && !chainTest && !residueTest && !groupBy) {
     return (ctx) => {
       const out: number[] = [];
       for (const i of ctx.input) if (atomTest(withAtom(ctx, i))) out.push(i);
       return singletons(Uint32Array.from(out));
     };
   }
-  const chainLevel = !residueTest && !atomTest, residueLevel = !atomTest;
+  const chainLevel = !residueTest && !atomTest && !groupBy,
+    residueLevel = !atomTest && !groupBy;
   return (ctx) => {
     const { input, topo } = ctx;
     const residue = ctx.data.topology.atoms.residue;
+    // Without group-by every passing atom is its own set; with it, atoms join
+    // the set of their key, in first-seen order (Mol*'s LinearGroupingBuilder).
     const out: number[] = [];
+    const groups = new Map<unknown, number[]>();
+    const emit = groupBy
+      ? (i: number) => {
+        const key = groupBy(withAtom(ctx, i));
+        const group = groups.get(key);
+        if (group) group.push(i);
+        else groups.set(key, [i]);
+      }
+      : (i: number) => out.push(i);
     // Segments are runs of consecutive input atoms sharing a chain (then a
     // residue); each test sees the segment's first atom, as in Mol*.
     for (let c = 0; c < input.length;) {
@@ -726,8 +850,10 @@ function atomGroups(a: Args): Fn {
             while (rEnd < cEnd && residue[input[rEnd]] === res) rEnd++;
             if (residueTest?.(withAtom(ctx, input[r])) ?? true) {
               for (let k = r; k < rEnd; k++) {
-                if (residueLevel || atomTest!(withAtom(ctx, input[k]))) {
-                  out.push(input[k]);
+                if (
+                  residueLevel || (atomTest?.(withAtom(ctx, input[k])) ?? true)
+                ) {
+                  emit(input[k]);
                 }
               }
             }
@@ -737,7 +863,10 @@ function atomGroups(a: Args): Fn {
       }
       c = cEnd;
     }
-    return singletons(Uint32Array.from(out));
+    if (!groupBy) return singletons(Uint32Array.from(out));
+    const sets = new SetBuilder(ctx.data.topology.atoms.count, false);
+    for (const group of groups.values()) sets.add(Uint32Array.from(group));
+    return sets.selection();
   };
 }
 
@@ -873,6 +1002,54 @@ function includeConnected(a: Args): Fn {
   };
 }
 
+/**
+ * Mol* filters.isConnectedTo: keep sets with a bond (passing bond-test) to a
+ * target atom, outside the set itself when `disjunct`. Like Mol*'s runtime, a
+ * missing :disjunct reads as false.
+ */
+function isConnectedTo(a: Args): Fn {
+  const q = query(a, "0"), target = query(a, "target");
+  const bondTest = optArg(a, "bond-test"), disjunctArg = optArg(a, "disjunct");
+  return (ctx) => {
+    const targetSel = target(ctx);
+    if (setCount(targetSel) === 0) return targetSel;
+    const sel = q(ctx);
+    if (setCount(sel) === 0) return sel;
+    const n = ctx.data.topology.atoms.count;
+    const disjunct = !!disjunctArg?.(ctx);
+    const inTarget = new Uint8Array(n);
+    for (const i of flatten(targetSel, n)) inTarget[i] = 1;
+    const bonds = bondTopology(ctx.data);
+    const { offsets, neighbour, bond } = bondAdjacency(bonds, n);
+    const inSet = new Uint8Array(n);
+    const out = new SetBuilder(n, false);
+    forEachSet(sel, (s) => {
+      for (const i of s) inSet[i] = 1;
+      let connected = false;
+      for (let k = 0; !connected && k < s.length; k++) {
+        const i = s[k];
+        for (let e = offsets[i]; e < offsets[i + 1]; e++) {
+          const j = neighbour[e];
+          if (!inTarget[j] || (disjunct && inSet[j])) continue;
+          if (bondTest) {
+            ctx.bond = bond[e];
+            ctx.bonds = bonds;
+            const ok = !!bondTest(ctx);
+            ctx.bond = -1;
+            ctx.bonds = null;
+            if (!ok) continue;
+          }
+          connected = true;
+          break;
+        }
+      }
+      for (const i of s) inSet[i] = 0;
+      if (connected) out.add(s);
+    });
+    return out.selection();
+  };
+}
+
 /** Mol* filters.within, without atom-radius. */
 function within(a: Args): Fn {
   const q = query(a, "0"), target = query(a, "target");
@@ -984,7 +1161,12 @@ const argEntries = (args: RawArgs | undefined): [string, SelectionExpr][] => {
 };
 
 // A context for folding pure symbols: they never read the dataset.
-const CONST_CTX = { atom: -1, bond: -1, bonds: null } as unknown as Ctx;
+const CONST_CTX = {
+  atom: -1,
+  bond: -1,
+  bonds: null,
+  current: null,
+} as unknown as Ctx;
 
 function compileNode(
   e: SelectionExpr,
@@ -1090,6 +1272,7 @@ export function compileExpr(expr: SelectionExpr): CompiledExpr {
         atom: -1,
         bond: -1,
         bonds: null,
+        current: null,
       };
       return flatten(run(ctx), data.topology.atoms.count);
     },

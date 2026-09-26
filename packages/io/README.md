@@ -82,26 +82,46 @@ isosurface.
 
 ## API
 
-| Export                  | Stability    | Description                                                                     |
-| ----------------------- | ------------ | ------------------------------------------------------------------------------- |
-| `structureFromBcif`     | stable       | Parse BinaryCIF bytes and lower them to a `@molgpu/table` `StructureData`.      |
-| `BcifParseError`        | stable       | Error thrown by `structureFromBcif`, with a `code: BcifErrorCode`.              |
-| `BcifErrorCode`         | stable       | Union of `structureFromBcif` failure codes.                                     |
-| `molecularSurfaceField` | experimental | Solvent-excluded-surface scalar grid over plain atom columns, via Mol*.         |
-| `SurfaceFieldError`     | experimental | Error thrown by `molecularSurfaceField`, with a `code: SurfaceFieldErrorCode`.  |
-| `SurfaceFieldErrorCode` | experimental | Union of `molecularSurfaceField` failure codes.                                 |
-| `SurfaceFieldAtoms`     | experimental | Input atom columns: `count` and `Float32Array` `x`/`y`/`z`/`radius`.            |
-| `SurfaceFieldOptions`   | experimental | `probeRadius`, `resolution` and `probePositions`.                               |
-| `SurfaceField`          | experimental | Result grid: `values`, `dims`, `transform`, `resolution`, `maxRadius`, `level`. |
+| Export                  | Stability    | Description                                                                                                  |
+| ----------------------- | ------------ | ------------------------------------------------------------------------------------------------------------ |
+| `structureFromBcif`     | stable       | Parse BinaryCIF bytes and lower them to a `@molgpu/table` `StructureData`.                                   |
+| `BcifParseError`        | stable       | Error thrown by `structureFromBcif`, with a `code: BcifErrorCode`.                                           |
+| `BcifErrorCode`         | stable       | Union of `structureFromBcif` failure codes.                                                                  |
+| `molecularSurfaceField` | experimental | Solvent-excluded-surface scalar grid over plain atom columns, via Mol*.                                      |
+| `SurfaceFieldError`     | experimental | Error thrown by `molecularSurfaceField`, with a `code: SurfaceFieldErrorCode`.                               |
+| `SurfaceFieldErrorCode` | experimental | Union of `molecularSurfaceField` failure codes.                                                              |
+| `SurfaceFieldAtoms`     | experimental | Input atom columns: `count` and `Float32Array` `x`/`y`/`z`/`radius`.                                         |
+| `SurfaceFieldOptions`   | experimental | `probeRadius`, `resolution` and `probePositions`.                                                            |
+| `SurfaceField`          | experimental | Result grid: `values`, `dims`, `transform`, `resolution`, `maxRadius`, `level`.                              |
+| `parseSelection`        | experimental | Parse MolScript, PyMOL, VMD or Jmol selection text into a plain MolQL tree for `@molgpu/select`'s `compile`. |
+| `SelectionParseError`   | experimental | Error thrown by `parseSelection`, with the `language` and `text` that failed.                                |
+| `SelectionExpr`         | experimental | Type: a MolQL expression as plain JSON; the same shape as `@molgpu/select`'s.                                |
+| `SelectionLanguage`     | experimental | Type: `"mol-script" \| "pymol" \| "vmd" \| "jmol"`.                                                          |
+| `ParseSelectionOptions` | experimental | `symbols`: reject any symbol outside this list at parse time, e.g. `supportedSymbols`.                       |
 
 The surface exports are experimental while the result shape settles.
+
+`parseSelection` uses only Mol*'s selection parsers (none of its structure
+model) and returns plain JSON. It does not fill argument defaults, because Mol*
+branches on whether some arguments are present. Evaluation happens in
+`@molgpu/select`:
+
+```js
+import { parseSelection } from "@molgpu/io";
+import { compile, resolve, supportedSymbols } from "@molgpu/select";
+
+const expr = await parseSelection("pymol", "byres resn HEM around 4", {
+  symbols: supportedSymbols,
+});
+const pocket = resolve(compile(expr), structure);
+```
 
 ## Place in the dependency graph
 
 `io` sits directly above `table`: it depends on `@molgpu/table` (a peer) and
 `molstar`, and `@molgpu/viewer` loads it lazily through a dynamic import. It is
 the **only** molgpu package allowed to import `molstar` at runtime, and it does
-so only through dynamic `import()` inside its two functions. It must not import
+so only through dynamic `import()` inside its functions. It must not import
 `@use-gpu/*`, `@molgpu/viewer`, or any other `@molgpu/*` package besides
 `table`, and its type declarations must not mention Mol* or use.gpu types.
 
