@@ -132,11 +132,11 @@ may change before 0.1.0; _advanced_ — only from `@molgpu/viewer/advanced`.
 | `createStructureResource`    | experimental | Create a StructureResource outside a `<Structure>`.                                                   |
 | `useStructureResource`       | experimental | The nearest `<Structure>`'s `StructureResource`, for `focusSelection` and other resource-taking APIs. |
 | `useCoordinateSnapshot`      | experimental | Shared, throttled CPU positions below a GPU provider; `null` until first readback.                    |
-| `CoordinateSnapshot`         | experimental | Published structure data, revisioned resource and source generation.                                 |
-| `useCoordinateSelection`     | experimental | Re-resolve position-dependent queries against a published snapshot.                                  |
-| `useCoordinateBounds`        | experimental | Asynchronous GPU bounds and centroid of the nearest stream.                                          |
+| `CoordinateSnapshot`         | experimental | Published structure data, revisioned resource and source generation.                                  |
+| `useCoordinateSelection`     | experimental | Re-resolve position-dependent queries against a published snapshot.                                   |
+| `useCoordinateBounds`        | experimental | Asynchronous GPU bounds and centroid of the nearest stream.                                           |
 | `CoordinateBounds`           | experimental | GPU-reduced min, max, centroid, count and generation.                                                 |
-| `useCoordinateFocus`         | experimental | Nonblocking selection focus from GPU bounds; starts with root framing.                               |
+| `useCoordinateFocus`         | experimental | Nonblocking selection focus from GPU bounds; starts with root framing.                                |
 | `MaterialType`               | experimental | Material `type` names for a `material` spec.                                                          |
 | `MaterialSpec`               | experimental | A representation's `material` prop.                                                                   |
 | `MaterialProps`              | experimental | Props shared by the material wrappers.                                                                |
@@ -197,7 +197,7 @@ may change before 0.1.0; _advanced_ — only from `@molgpu/viewer/advanced`.
 | `Coordinates`                | advanced     | GPU positions source, atom count, content generation and owning resource.                             |
 | `useCoordinates`             | advanced     | Read the nearest coordinate stream; an empty structure returns null.                                  |
 | `IdentityCoordinates`        | advanced     | Forward the nearest coordinates without allocating a GPU buffer.                                      |
-| `WobbleCoordinates`          | advanced     | Example GPU coordinate transform driven by a phase and amplitude.                                    |
+| `WobbleCoordinates`          | advanced     | Example GPU coordinate transform driven by a phase and amplitude.                                     |
 | `TimelineContext`            | advanced     | Live context carrying timeline time.                                                                  |
 | `FlatMaterial`               | advanced     | Custom unlit fragment-shader material.                                                                |
 | `LitMaterial`                | advanced     | Custom lit shader material.                                                                           |
@@ -217,15 +217,14 @@ the root data. Picking keeps atom-row IDs, so its result follows live geometry.
 `useCoordinateBounds()` reduces min/max/centroid on the GPU and reads back only
 the partials; `useCoordinateFocus()` applies radius and assembly padding for
 camera targets. The explicit `focusSelection()` and `useCameraCurve()` APIs
-remain CPU resource operations; pass a snapshot resource when using them under
-a coordinate provider.
+remain CPU resource operations; pass a snapshot resource when using them under a
+coordinate provider.
 
 The [coordinate-stream gallery page](../../site/README.md) scrubs a
 `WobbleCoordinates > IdentityCoordinates` chain with live atoms and bonds,
 snapshot ribbon, and GPU focus.
 
 ## Place in the dependency graph
-
 
 `viewer` is the top of the graph. It depends on `@molgpu/table`, `io`, `select`,
 `fields`, `geo` and `timeline`; nothing in the workspace depends on it. It is

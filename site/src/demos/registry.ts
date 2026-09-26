@@ -112,7 +112,8 @@ export const demos: readonly DemoDefinition[] = [
     summary:
       "Scrub a GPU wobble through two coordinate providers. Atoms and bonds move live; the ribbon follows a throttled snapshot and focus follows GPU bounds.",
     fixture: "1crn",
-    assertion: "the provider chain updates live geometry, snapshot geometry, and camera focus",
+    assertion:
+      "the provider chain updates live geometry, snapshot geometry, and camera focus",
     options: { coordinates: true },
   },
   {

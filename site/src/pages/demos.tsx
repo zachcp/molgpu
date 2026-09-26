@@ -48,7 +48,8 @@ export const DemosPage = () => {
           scene,
           demoCamera(data, demo.id),
           demo.id === "timeline" || demo.id === "coordinates"
-            ? { ...demo.options, time } : demo.options,
+            ? { ...demo.options, time }
+            : demo.options,
         );
       } catch (error) {
         if (status) {

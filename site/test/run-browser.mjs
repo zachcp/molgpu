@@ -94,10 +94,13 @@ Deno.test("site landing page and maintained gallery routes", async () => {
       if (id === "coordinates") {
         await page.getByLabel("Timeline time in seconds").fill("0");
         await page.waitForFunction(() =>
-          document.querySelector("#molecule-canvas")?.dataset.focusY !== undefined
+          document.querySelector("#molecule-canvas")?.dataset.focusY !==
+            undefined
         );
         await page.waitForTimeout(500);
-        focusY = Number(await page.locator("#molecule-canvas").getAttribute("data-focus-y"));
+        focusY = Number(
+          await page.locator("#molecule-canvas").getAttribute("data-focus-y"),
+        );
       }
       if (id === "timeline" || id === "coordinates") {
         await page.getByLabel("Timeline time in seconds").fill("2");
@@ -108,7 +111,9 @@ Deno.test("site landing page and maintained gallery routes", async () => {
       }
       if (id === "coordinates") {
         await page.waitForFunction((previous) => {
-          const value = Number(document.querySelector("#molecule-canvas")?.dataset.focusY);
+          const value = Number(
+            document.querySelector("#molecule-canvas")?.dataset.focusY,
+          );
           return Number.isFinite(value) && Math.abs(value - previous) > 0.01;
         }, focusY);
       }

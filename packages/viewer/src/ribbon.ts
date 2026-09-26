@@ -76,19 +76,28 @@ export const Ribbon: ViewerComponent<
 
   const indices = useActiveRows(resource, select, "Ribbon");
   const trace = useMemo(
-    () => data ? (count("geometryBuilds", "ribbon:trace"), traceTable(data, indices)) : null,
+    () =>
+      data
+        ? (count("geometryBuilds", "ribbon:trace"), traceTable(data, indices))
+        : null,
     [data, indices],
   );
   const ss = useMemo(
-    () => data && trace ? (count("geometryBuilds", "ribbon:ss"),
-      secondaryStructureTrace(data, indices, trace)) : null,
+    () =>
+      data && trace
+        ? (count("geometryBuilds", "ribbon:ss"),
+          secondaryStructureTrace(data, indices, trace))
+        : null,
     [data, indices, trace],
   );
-  const built = useMemo(() => trace && ss ? buildRibbonGeometry(trace, ss, smooth) : null, [
-    trace,
-    ss,
-    smooth,
-  ]);
+  const built = useMemo(
+    () => trace && ss ? buildRibbonGeometry(trace, ss, smooth) : null,
+    [
+      trace,
+      ss,
+      smooth,
+    ],
+  );
   if (!built?.vertexCount) return null;
 
   const specs: ColumnSpec[] = [

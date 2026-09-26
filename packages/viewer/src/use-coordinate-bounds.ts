@@ -2,7 +2,11 @@ import { useMemo, useRef, useResource, useState } from "@use-gpu/live";
 import { useDeviceContext } from "@use-gpu/workbench";
 import type { Selection } from "@molgpu/select";
 import { useCoordinates } from "./coordinates-context.ts";
-import { count, releaseOwnedBuffer, trackOwnedBuffer } from "./internal/instrumentation.ts";
+import {
+  count,
+  releaseOwnedBuffer,
+  trackOwnedBuffer,
+} from "./internal/instrumentation.ts";
 
 const COPY_SRC = 0x0004;
 const COPY_DST = 0x0008;
@@ -49,7 +53,10 @@ export interface CoordinateBounds {
   readonly generation: number;
 }
 
-function reduce(values: Float32Array, generation: number): CoordinateBounds | null {
+function reduce(
+  values: Float32Array,
+  generation: number,
+): CoordinateBounds | null {
   const min = [Infinity, Infinity, Infinity];
   const max = [-Infinity, -Infinity, -Infinity];
   const sum = [0, 0, 0];
@@ -68,23 +75,36 @@ function reduce(values: Float32Array, generation: number): CoordinateBounds | nu
   return Object.freeze({
     min: Object.freeze(min) as unknown as [number, number, number],
     max: Object.freeze(max) as unknown as [number, number, number],
-    centroid: Object.freeze(sum.map((v) => v / n)) as unknown as [number, number, number],
+    centroid: Object.freeze(sum.map((v) => v / n)) as unknown as [
+      number,
+      number,
+      number,
+    ],
     count: n,
     generation,
   });
 }
 
 /** Asynchronous GPU bounds and centroid for the nearest coordinate stream. */
-export function useCoordinateBounds(selection: Selection | null = null): CoordinateBounds | null {
+export function useCoordinateBounds(
+  selection: Selection | null = null,
+): CoordinateBounds | null {
   const coordinates = useCoordinates();
   const device = useDeviceContext();
-  if (selection && coordinates && selection.dataset !== coordinates.resource.identity) {
+  if (
+    selection && coordinates &&
+    selection.dataset !== coordinates.resource.identity
+  ) {
     throw new TypeError("useCoordinateBounds received a foreign selection");
   }
-  const pipeline = useMemo(() => device.createComputePipeline({
-    layout: "auto",
-    compute: { module: device.createShaderModule({ code: SHADER }), entryPoint: "main" },
-  }), [device]);
+  const pipeline = useMemo(() =>
+    device.createComputePipeline({
+      layout: "auto",
+      compute: {
+        module: device.createShaderModule({ code: SHADER }),
+        entryPoint: "main",
+      },
+    }), [device]);
   const rows = selection?.indices ?? null;
   const buffers = useMemo(() => {
     const rowBuffer = device.createBuffer({
@@ -103,15 +123,22 @@ export function useCoordinateBounds(selection: Selection | null = null): Coordin
       usage: STORAGE | COPY_SRC,
       label: "molgpu:coords:bounds:output",
     });
-    const staging = [0, 1].map(() => device.createBuffer({
-      size: THREADS * PARTIAL_BYTES,
-      usage: COPY_DST | MAP_READ,
-      label: "molgpu:coords:bounds:staging",
-    }));
+    const staging = [0, 1].map(() =>
+      device.createBuffer({
+        size: THREADS * PARTIAL_BYTES,
+        usage: COPY_DST | MAP_READ,
+        label: "molgpu:coords:bounds:staging",
+      })
+    );
     return { rowBuffer, params, output, staging };
   }, [device, rows]);
   useResource((dispose) => {
-    const all = [buffers.rowBuffer, buffers.params, buffers.output, ...buffers.staging];
+    const all = [
+      buffers.rowBuffer,
+      buffers.params,
+      buffers.output,
+      ...buffers.staging,
+    ];
     for (const buffer of all) trackOwnedBuffer(buffer, "coords:bounds");
     dispose(() => {
       for (const buffer of all) {
@@ -120,11 +147,13 @@ export function useCoordinateBounds(selection: Selection | null = null): Coordin
       }
     });
   }, [buffers]);
-  const [result, setResult] = useState<{
-    value: CoordinateBounds | null;
-    source: GPUBuffer;
-    rows: Uint32Array | null;
-  } | null>(null);
+  const [result, setResult] = useState<
+    {
+      value: CoordinateBounds | null;
+      source: GPUBuffer;
+      rows: Uint32Array | null;
+    } | null
+  >(null);
   const current = useRef(coordinates?.generation ?? -1);
   current.current = coordinates?.generation ?? -1;
   const next = useRef(0);
@@ -144,12 +173,16 @@ export function useCoordinateBounds(selection: Selection | null = null): Coordin
       inFlight.current = true;
       const staging = buffers.staging[next.current++ % 2];
       try {
-        device.queue.writeBuffer(buffers.params, 0, Uint32Array.of(
-          selected ? rows.length : coordinates.count,
-          selected ? 1 : 0,
+        device.queue.writeBuffer(
+          buffers.params,
           0,
-          0,
-        ));
+          Uint32Array.of(
+            selected ? rows.length : coordinates.count,
+            selected ? 1 : 0,
+            0,
+            0,
+          ),
+        );
         const bindGroup = device.createBindGroup({
           layout: pipeline.getBindGroupLayout(0),
           entries: [
@@ -165,7 +198,13 @@ export function useCoordinateBounds(selection: Selection | null = null): Coordin
         pass.setBindGroup(0, bindGroup);
         pass.dispatchWorkgroups(THREADS / 64);
         pass.end();
-        encoder.copyBufferToBuffer(buffers.output, 0, staging, 0, THREADS * PARTIAL_BYTES);
+        encoder.copyBufferToBuffer(
+          buffers.output,
+          0,
+          staging,
+          0,
+          THREADS * PARTIAL_BYTES,
+        );
         device.queue.submit([encoder.finish()]);
         count("gathers", "coords:bounds:dispatch");
         await staging.mapAsync(MAP_READ);
@@ -190,8 +229,15 @@ export function useCoordinateBounds(selection: Selection | null = null): Coordin
       alive = false;
       clearTimeout(work);
     });
-  }, [coordinates?.source.buffer, coordinates?.generation, rows, buffers, pipeline]);
-  return result && result.source === coordinates?.source.buffer && result.rows === rows
+  }, [
+    coordinates?.source.buffer,
+    coordinates?.generation,
+    rows,
+    buffers,
+    pipeline,
+  ]);
+  return result && result.source === coordinates?.source.buffer &&
+      result.rows === rows
     ? result.value
     : null;
 }

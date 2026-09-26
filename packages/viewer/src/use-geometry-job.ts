@@ -23,8 +23,10 @@ export function useGeometryJob<P extends Record<string, unknown>, T>(
   kernel: (resource: StructureResource, params: P) => T | Promise<T>,
 ): readonly [T | null | undefined, unknown, boolean] {
   return useAwait(
-    resource ? (cancelled: () => boolean) =>
-      runGeometryJob(() => kernel(resource, params), cancelled) : null,
+    resource
+      ? (cancelled: () => boolean) =>
+        runGeometryJob(() => kernel(resource, params), cancelled)
+      : null,
     resource ? geometryDeps(resource, params ?? {}) as unknown[] : [null],
   );
 }

@@ -16,7 +16,11 @@ import { bondTopology, type StructureData, withPositions } from "@molgpu/table";
 import type { Coordinates } from "./coordinates-context.ts";
 import type { StructureResource } from "./types.ts";
 import { createStructureResource } from "./internal/structure-resource.ts";
-import { count, releaseOwnedBuffer, trackOwnedBuffer } from "./internal/instrumentation.ts";
+import {
+  count,
+  releaseOwnedBuffer,
+  trackOwnedBuffer,
+} from "./internal/instrumentation.ts";
 
 export interface CoordinateSnapshot {
   readonly data: StructureData;
@@ -94,11 +98,14 @@ const SnapshotReadback: LC<{
   const published = useRef(-1);
   const lastDispatch = useRef(-Infinity);
   const nextBuffer = useRef(0);
-  const staging = useMemo(() => [0, 1].map(() => device.createBuffer({
-    size: Math.max(4, coordinates.count * 12),
-    usage: COPY_DST | MAP_READ,
-    label: "molgpu:coords:snapshot",
-  })), [device, coordinates.count, coordinates.source.buffer]);
+  const staging = useMemo(() =>
+    [0, 1].map(() =>
+      device.createBuffer({
+        size: Math.max(4, coordinates.count * 12),
+        usage: COPY_DST | MAP_READ,
+        label: "molgpu:coords:snapshot",
+      })
+    ), [device, coordinates.count, coordinates.source.buffer]);
   useResource((dispose) => {
     for (const buffer of staging) trackOwnedBuffer(buffer, "coords:snapshot");
     dispose(() => {
@@ -113,11 +120,15 @@ const SnapshotReadback: LC<{
     let timer: ReturnType<typeof setTimeout> | undefined;
     const schedule = () => {
       if (!alive || inFlight.current) return;
-      const { coordinates: current, maxHz: rate, onPause: pause } = latest.current;
+      const { coordinates: current, maxHz: rate, onPause: pause } =
+        latest.current;
       if (current.generation === published.current) return;
-      const remaining = 1000 / rate - (performance.now() - lastDispatch.current);
+      const remaining = 1000 / rate -
+        (performance.now() - lastDispatch.current);
       // The pause request supplies the last frame after motion stops.
-      const delay = pause ? Math.min(Math.max(0, remaining), 34) : Math.max(0, remaining);
+      const delay = pause
+        ? Math.min(Math.max(0, remaining), 34)
+        : Math.max(0, remaining);
       timer = setTimeout(async () => {
         if (!alive || inFlight.current) return;
         const { coordinates: target } = latest.current;
@@ -128,7 +139,13 @@ const SnapshotReadback: LC<{
         count("gathers", "coords:snapshot:dispatch");
         try {
           const encoder = device.createCommandEncoder();
-          encoder.copyBufferToBuffer(target.source.buffer, 0, buffer, 0, target.count * 12);
+          encoder.copyBufferToBuffer(
+            target.source.buffer,
+            0,
+            buffer,
+            0,
+            target.count * 12,
+          );
           device.queue.submit([encoder.finish()]);
           await buffer.mapAsync(MAP_READ);
           const values = new Float32Array(buffer.getMappedRange().slice(0));
@@ -143,7 +160,9 @@ const SnapshotReadback: LC<{
           if (alive) count("gathers", "coords:snapshot:error");
         } finally {
           inFlight.current = false;
-          if (alive && latest.current.coordinates.generation !== published.current) schedule();
+          if (
+            alive && latest.current.coordinates.generation !== published.current
+          ) schedule();
         }
       }, Math.max(0, delay));
     };
@@ -164,11 +183,13 @@ export const CoordinateSnapshotBoundary: LC<{
   const [requests, setRequests] = useState<Map<number, Request>>(new Map());
   const demand = [...requests.values()];
   const nextId = useRef(0);
-  const [published, setPublished] = useState<{
-    data: StructureData;
-    generation: number;
-    owner: StructureResource;
-  } | null>(null);
+  const [published, setPublished] = useState<
+    {
+      data: StructureData;
+      generation: number;
+      owner: StructureResource;
+    } | null
+  >(null);
   const latest = useRef(coordinates);
   latest.current = coordinates;
   const subscribe = useMemo(() => (maxHz: number, onPause: boolean) => {
@@ -182,14 +203,23 @@ export const CoordinateSnapshotBoundary: LC<{
       });
     };
   }, []);
-  const data = published?.owner === coordinates.resource ? published.data : null;
-  const snapshotResource = useMemo(() => data ? createStructureResource(data) : null, [data]);
+  const data = published?.owner === coordinates.resource
+    ? published.data
+    : null;
+  const snapshotResource = useMemo(
+    () => data ? createStructureResource(data) : null,
+    [data],
+  );
   useResource((dispose) => {
     if (snapshotResource) dispose(() => snapshotResource.dispose());
   }, [snapshotResource]);
   const context = useMemo<SnapshotContextValue>(() => ({
     snapshot: data && snapshotResource && published
-      ? Object.freeze({ data, generation: published.generation, resource: snapshotResource })
+      ? Object.freeze({
+        data,
+        generation: published.generation,
+        resource: snapshotResource,
+      })
       : null,
     subscribe,
   }), [data, snapshotResource, published, subscribe]);

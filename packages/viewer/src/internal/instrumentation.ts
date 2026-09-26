@@ -43,6 +43,8 @@ export type CounterSnapshot = Record<CounterName, number> & {
     readonly created: number;
     readonly destroyed: number;
     readonly live: number;
+    /** Live bytes per `trackOwnedBuffer` label. */
+    readonly bytes: Record<string, number>;
   };
   readonly deviceBuffers: {
     readonly created: number;
@@ -64,7 +66,8 @@ const device = {
   destroyed: 0,
   writeBytes: { storage: 0, uniform: 0, other: 0 } as Record<WriteKind, number>,
 };
-let seenOwned = new WeakSet<GPUBuffer>();
+let seenOwned = new WeakMap<GPUBuffer, string>();
+let ownedBytes: Record<string, number> = {};
 let onceKeys = new WeakMap<object, Set<string>>();
 
 const clear = (): void => {
@@ -128,14 +131,17 @@ export function gauge(name: string, value: number): void {
  */
 export function trackOwnedBuffer(buffer: GPUBuffer, label: string): void {
   if (!enabled || seenOwned.has(buffer)) return;
-  seenOwned.add(buffer);
+  seenOwned.set(buffer, label);
   owned.created += 1;
+  ownedBytes[label] = (ownedBytes[label] ?? 0) + buffer.size;
   count("allocations", label);
 }
 export function releaseOwnedBuffer(buffer: GPUBuffer): void {
-  if (!enabled || !seenOwned.has(buffer)) return;
+  const label = enabled ? seenOwned.get(buffer) : undefined;
+  if (label === undefined) return;
   seenOwned.delete(buffer);
   owned.destroyed += 1;
+  ownedBytes[label] -= buffer.size;
 }
 
 // Created-but-not-destroyed buffers, held weakly so a buffer the page dropped
@@ -247,7 +253,11 @@ export function snapshotCounters(): CounterSnapshot {
     ...totals,
     detail: { ...detail },
     gauges: { ...gauges },
-    ownedBuffers: { ...owned, live: owned.created - owned.destroyed },
+    ownedBuffers: {
+      ...owned,
+      live: owned.created - owned.destroyed,
+      bytes: { ...ownedBytes },
+    },
     deviceBuffers: {
       created: device.created,
       destroyed: device.destroyed,
@@ -265,6 +275,7 @@ export function resetAllInstrumentation(): void {
   liveDevice.clear();
   collectedDevice = 0;
   device.writeBytes = { storage: 0, uniform: 0, other: 0 };
-  seenOwned = new WeakSet();
+  seenOwned = new WeakMap();
+  ownedBytes = {};
   onceKeys = new WeakMap();
 }

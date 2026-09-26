@@ -178,6 +178,13 @@ Structure topology stays fixed while child providers re-provide positions. Gate
 CPU consumers, and bounded asynchronous readback. GPU-native ribbon/tube
 geometry follows only if snapshot playback proves inadequate.
 
+Gate 9 passed on 2026-09-26. Spacefill and bonds read the nearest GPU stream;
+ribbon, tube, surface, annotations and `within` rebuild from throttled
+snapshots; focus uses a GPU bounds reduction. The worst-case Phase 9 footprint
+(root, two providers, snapshots) is 76 MB at 1M atoms. GPU-native ribbon/tube
+(e99.9) stays deferred until snapshot playback misses a measured target. See the
+[coordinate-provider contract](findings/2026-09-26-coordinate-provider-contract.md).
+
 ## Phase 10 — Derived attribute channels
 
 `withAttributes(data, columns, provenance)` in `@molgpu/table` adds named,

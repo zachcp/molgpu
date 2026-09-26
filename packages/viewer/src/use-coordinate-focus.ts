@@ -1,6 +1,6 @@
 import { useMemo } from "@use-gpu/live";
 import { atomRadii } from "@molgpu/table";
-import { toAtoms, type SelectionQuery } from "@molgpu/select";
+import { type SelectionQuery, toAtoms } from "@molgpu/select";
 import { focusSelection } from "./camera-curve.ts";
 import { useStructureResource } from "./structure-context.ts";
 import { useCoordinateBounds } from "./use-coordinate-bounds.ts";
@@ -14,11 +14,18 @@ export function useCoordinateFocus(
 ): FocusResult | null {
   const resource = useStructureResource();
   const resolved = useCoordinateSelection(query);
-  const selection = useMemo(() => resolved
-    ? toAtoms(resolved, resource.data) : null, [resolved, resource]);
+  const selection = useMemo(
+    () => resolved ? toAtoms(resolved, resource.data) : null,
+    [resolved, resource],
+  );
   const bounds = useCoordinateBounds(selection);
-  const { empty = "structure", fov = Math.PI / 3, aspect = 1,
-    padding = 1.15, atomRadiusScale = 1 } = options;
+  const {
+    empty = "structure",
+    fov = Math.PI / 3,
+    aspect = 1,
+    padding = 1.15,
+    atomRadiusScale = 1,
+  } = options;
   return useMemo(() => {
     if (!bounds || !selection) return focusSelection(resource, query, options);
     if (!selection.indices.length) {
@@ -34,16 +41,24 @@ export function useCoordinateFocus(
     const lo = [Infinity, Infinity, Infinity];
     const hi = [-Infinity, -Infinity, -Infinity];
     for (let instance = 0; instance < instances.count; instance++) {
-      const matrix = instances.transform.subarray(instance * 16, instance * 16 + 16);
+      const matrix = instances.transform.subarray(
+        instance * 16,
+        instance * 16 + 16,
+      );
       for (let corner = 0; corner < 8; corner++) {
-        const x = bounds.min[0] + ((corner & 1) ? bounds.max[0] - bounds.min[0] : 0);
-        const y = bounds.min[1] + ((corner & 2) ? bounds.max[1] - bounds.min[1] : 0);
-        const z = bounds.min[2] + ((corner & 4) ? bounds.max[2] - bounds.min[2] : 0);
+        const x = bounds.min[0] +
+          ((corner & 1) ? bounds.max[0] - bounds.min[0] : 0);
+        const y = bounds.min[1] +
+          ((corner & 2) ? bounds.max[1] - bounds.min[1] : 0);
+        const z = bounds.min[2] +
+          ((corner & 4) ? bounds.max[2] - bounds.min[2] : 0);
         for (let axis = 0; axis < 3; axis++) {
           const center = matrix[axis] * x + matrix[axis + 4] * y +
             matrix[axis + 8] * z + matrix[axis + 12];
           const extent = maxRadius * Math.hypot(
-            matrix[axis], matrix[axis + 4], matrix[axis + 8],
+            matrix[axis],
+            matrix[axis + 4],
+            matrix[axis + 8],
           );
           lo[axis] = Math.min(lo[axis], center - extent);
           hi[axis] = Math.max(hi[axis], center + extent);
@@ -61,11 +76,26 @@ export function useCoordinateFocus(
     const halfFovX = Math.atan(Math.tan(fov / 2) * aspect);
     return Object.freeze({
       target: Object.freeze(center),
-      radius: Math.max(0.01, Math.hypot(...half) * padding /
-        Math.sin(Math.min(halfFovX, fov / 2))),
+      radius: Math.max(
+        0.01,
+        Math.hypot(...half) * padding /
+          Math.sin(Math.min(halfFovX, fov / 2)),
+      ),
       bounds: Object.freeze({
-        min: Object.freeze(lo), max: Object.freeze(hi), center: Object.freeze(center),
+        min: Object.freeze(lo),
+        max: Object.freeze(hi),
+        center: Object.freeze(center),
       }),
     }) as FocusResult;
-  }, [resource, query, bounds, selection, empty, fov, aspect, padding, atomRadiusScale]);
+  }, [
+    resource,
+    query,
+    bounds,
+    selection,
+    empty,
+    fov,
+    aspect,
+    padding,
+    atomRadiusScale,
+  ]);
 }

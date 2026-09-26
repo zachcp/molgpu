@@ -4,7 +4,9 @@ import { useCoordinateSnapshot } from "./coordinate-snapshot.ts";
 import { useStructureResource } from "./structure-context.ts";
 
 /** Resolve a reusable query against published positions when it reads them. */
-export function useCoordinateSelection(query: SelectionQuery): Selection | null {
+export function useCoordinateSelection(
+  query: SelectionQuery,
+): Selection | null {
   const root = useStructureResource();
   const readsPositions = query.deps.includes("positions");
   const snapshot = useCoordinateSnapshot({ enabled: readsPositions });

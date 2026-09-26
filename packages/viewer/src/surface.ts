@@ -96,7 +96,9 @@ export const Surface: ViewerComponent<
     buildSurfaceGeometry,
   );
 
-  if (!snapshot || pending) return typeof loading === "function" ? loading() : loading;
+  if (!snapshot || pending) {
+    return typeof loading === "function" ? loading() : loading;
+  }
   if (failure) return typeof error === "function" ? error(failure) : error;
   if (!mesh?.vertexCount) return null;
 

@@ -10,8 +10,15 @@ import {
 } from "@use-gpu/workbench";
 import type { StructureData } from "@molgpu/table";
 import { all } from "@molgpu/select";
-import { Structure, TimelineProvider, useCoordinateFocus } from "@molgpu/viewer";
-import { IdentityCoordinates, WobbleCoordinates } from "@molgpu/viewer/advanced";
+import {
+  Structure,
+  TimelineProvider,
+  useCoordinateFocus,
+} from "@molgpu/viewer";
+import {
+  IdentityCoordinates,
+  WobbleCoordinates,
+} from "@molgpu/viewer/advanced";
 
 export type Scene = (data: StructureData) => unknown;
 
@@ -115,34 +122,41 @@ export const mountViewer = (
       samples: 4,
       backgroundColor: [0.035, 0.055, 0.09, 1],
       children: (() => {
-        const pass = (insideStructure: boolean) => use(Pass, {
-          lights: true,
-          oit: options.oit,
-          ...(options.postprocess
-            ? {
-              ssao: 0.35,
-              outline: { outer: 1.5, inner: 0, color: [0.02, 0.03, 0.05, 0.6] },
-            }
-            : {}),
-          children: [
-            use(AmbientLight, {
-              color: [0.7, 0.8, 1],
-              intensity: options.worldLight ? 0.1 : 0.35,
-            }),
-            use(DirectionalLight, {
-              direction: [-1, -2, -1.5],
-              color: [1, 0.95, 0.88],
-              intensity: options.worldLight ? 1.8 : 1.25,
-            }),
-            use(TimelineProvider, {
-              time: options.time ?? 0,
-              children: insideStructure ? scene(data) as never : use(Structure, {
-                data,
-                children: scene(data) as never,
+        const pass = (insideStructure: boolean) =>
+          use(Pass, {
+            lights: true,
+            oit: options.oit,
+            ...(options.postprocess
+              ? {
+                ssao: 0.35,
+                outline: {
+                  outer: 1.5,
+                  inner: 0,
+                  color: [0.02, 0.03, 0.05, 0.6],
+                },
+              }
+              : {}),
+            children: [
+              use(AmbientLight, {
+                color: [0.7, 0.8, 1],
+                intensity: options.worldLight ? 0.1 : 0.35,
               }),
-            }),
-          ],
-        });
+              use(DirectionalLight, {
+                direction: [-1, -2, -1.5],
+                color: [1, 0.95, 0.88],
+                intensity: options.worldLight ? 1.8 : 1.25,
+              }),
+              use(TimelineProvider, {
+                time: options.time ?? 0,
+                children: insideStructure
+                  ? scene(data) as never
+                  : use(Structure, {
+                    data,
+                    children: scene(data) as never,
+                  }),
+              }),
+            ],
+          });
         const controls = {
           host,
           ...camera,

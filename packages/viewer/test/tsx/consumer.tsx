@@ -25,9 +25,9 @@ import {
   Molecule,
   Spacefill,
   Structure,
-  useCoordinateSnapshot,
   useCoordinateBounds,
   useCoordinateFocus,
+  useCoordinateSnapshot,
   useStructureResource,
 } from "@molgpu/viewer";
 import type { StructureLoader, StructureProps } from "@molgpu/viewer";
@@ -223,7 +223,8 @@ const SnapshotProbe = (): LiveElement => {
   probe.selectedBounds = useCoordinateBounds(FIRST_TWO);
   probe.emptyBounds = useCoordinateBounds(NO_ATOMS);
   const focus = useCoordinateFocus(ALL_ATOMS);
-  probe.coordinateFocus = focus && { target: focus.target, radius: focus.radius };
+  probe.coordinateFocus = focus &&
+    { target: focus.target, radius: focus.radius };
   probe.coordinateSnapshot = snapshot
     ? {
       generation: snapshot.generation,
@@ -235,7 +236,10 @@ const SnapshotProbe = (): LiveElement => {
 };
 
 const ALL_ATOMS = all("atom");
-const FIRST_TWO = resolve(where("atom", "first-two", (_, row) => row < 2), bonded);
+const FIRST_TWO = resolve(
+  where("atom", "first-two", (_, row) => row < 2),
+  bonded,
+);
 const NO_ATOMS = resolve(where("atom", "none", () => false), bonded);
 
 const Scene = (

@@ -81,12 +81,18 @@ export const Label: ViewerComponent<{
   const data = snapshot?.data;
   checkAtomSelection(select, resource, "Label");
   const selectKey = select?.id ?? "active";
-  const computed = useMemo(() => data ? anchorOf(data, select, "label:anchor") : null, [
-    data,
-    selectKey,
-    snapshot?.generation,
-  ]);
-  const position = useMemo(() => at || computed ? toPoint(at ?? computed!) : null, [at, computed]);
+  const computed = useMemo(
+    () => data ? anchorOf(data, select, "label:anchor") : null,
+    [
+      data,
+      selectKey,
+      snapshot?.generation,
+    ],
+  );
+  const position = useMemo(
+    () => at || computed ? toPoint(at ?? computed!) : null,
+    [at, computed],
+  );
   checkOpacity(opacity, "Label");
   const drawColor = useMemo(() => applyOpacity(color, opacity), [
     color,
@@ -163,7 +169,11 @@ export const Distance: ViewerComponent<{
   ]);
   const dist = ca && cb ? distanceBetween(ca, cb) : null;
   const mid = ca && cb ? midpoint(ca, cb) : null;
-  const text = dist == null ? "" : format ? format(dist) : `${dist.toFixed(2)} Å`;
+  const text = dist == null
+    ? ""
+    : format
+    ? format(dist)
+    : `${dist.toFixed(2)} Å`;
   checkOpacity(opacity, "Distance");
   const lineColor = useMemo(() => applyOpacity(color, opacity), [
     color,
@@ -180,14 +190,17 @@ export const Distance: ViewerComponent<{
   );
 
   // Built once per anchor pair, so style edits reuse the uploaded columns.
-  const specs = useMemo((): ColumnSpec[] | null => ca && cb ? [
-    {
-      key: "positions",
-      data: Float32Array.of(ca[0], ca[1], ca[2], cb[0], cb[1], cb[2]),
-      format: "vec3<f32>",
-    },
-    { key: "segments", data: SEGMENTS, format: "i32" },
-  ] : null, [ca, cb]);
+  const specs = useMemo((): ColumnSpec[] | null =>
+    ca && cb
+      ? [
+        {
+          key: "positions",
+          data: Float32Array.of(ca[0], ca[1], ca[2], cb[0], cb[1], cb[2]),
+          format: "vec3<f32>",
+        },
+        { key: "segments", data: SEGMENTS, format: "i32" },
+      ]
+      : null, [ca, cb]);
   if (!specs || !mid) return null;
   return withColumns(specs, (map) => [
     use(LineLayer, {

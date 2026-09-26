@@ -413,11 +413,16 @@ Deno.test("viewer components", async () => {
       null,
       { timeout: 10000 },
     ).catch(async (failure) => {
-      console.log("snapshot diagnostics", JSON.stringify(await page.evaluate(() => ({
-        snapshot: window.__viewer.coordinateSnapshot,
-        errors: window.__viewer.errors,
-        counters: window.__viewer.counters(),
-      }))));
+      console.log(
+        "snapshot diagnostics",
+        JSON.stringify(
+          await page.evaluate(() => ({
+            snapshot: window.__viewer.coordinateSnapshot,
+            errors: window.__viewer.errors,
+            counters: window.__viewer.counters(),
+          })),
+        ),
+      );
       throw failure;
     });
     const firstSnapshot = await page.evaluate(() =>
@@ -428,16 +433,45 @@ Deno.test("viewer components", async () => {
       null,
       { timeout: 10000 },
     );
-    const firstBounds = await page.evaluate(() => window.__viewer.coordinateBounds);
+    const firstBounds = await page.evaluate(() =>
+      window.__viewer.coordinateBounds
+    );
     assert.deepEqual(firstBounds.min, [-13, 1, 0]);
     assert.deepEqual(firstBounds.max, [-7, 1, 0]);
     assert.equal(firstBounds.count, 3);
+    // Memory budget (contract section 4): root, two providers and snapshot
+    // staging at 1M atoms, plus the 12 B/atom CPU copy, stay within 92 MB.
+    const ownedBytes = await page.evaluate(() =>
+      window.__viewer.counters().ownedBuffers.bytes
+    );
+    const atoms = 3;
+    assert.equal(
+      ownedBytes["coords:provider"],
+      2 * atoms * 12,
+      "two providers hold one packed vec3 buffer each",
+    );
+    assert.equal(
+      ownedBytes["coords:snapshot"],
+      2 * atoms * 12,
+      "snapshot readback holds two packed staging buffers",
+    );
+    assert.ok(ownedBytes["structure:positions"] > 0, "root positions tracked");
+    const perAtom = (ownedBytes["structure:positions"] +
+      ownedBytes["coords:provider"] + ownedBytes["coords:snapshot"]) / atoms;
+    const projected = (perAtom + 12) * 1e6;
+    assert.ok(
+      projected <= 92e6,
+      `coords budget at 1M atoms: ${projected / 1e6} MB <= 92 MB`,
+    );
+    report.states.budget = { ownedBytes, projectedMBAt1M: projected / 1e6 };
     await page.waitForFunction(
       () => window.__viewer.selectedBounds?.centroid[0] === -11.5,
       null,
       { timeout: 10000 },
     );
-    const selectedBounds = await page.evaluate(() => window.__viewer.selectedBounds);
+    const selectedBounds = await page.evaluate(() =>
+      window.__viewer.selectedBounds
+    );
     assert.deepEqual(selectedBounds.min, [-13, 1, 0]);
     assert.deepEqual(selectedBounds.max, [-10, 1, 0]);
     assert.equal(selectedBounds.count, 2);

@@ -82,7 +82,10 @@ export const Tube: ViewerComponent<
 
   const indices = useActiveRows(resource, select, "Tube");
   const trace = useMemo(
-    () => data ? (count("geometryBuilds", "tube:trace"), traceTable(data, indices)) : null,
+    () =>
+      data
+        ? (count("geometryBuilds", "tube:trace"), traceTable(data, indices))
+        : null,
     [data, indices],
   );
   const built = useMemo(() => trace ? buildTubeGeometry(trace, smooth) : null, [
