@@ -111,6 +111,11 @@ const KNOWN_DIFFERENCES: Readonly<Record<string, string>> = {
   "pymol: elem S or (polymer and not hydro) [1tqn]": "complement of nothing",
   "pymol: not resn CYS [1bna]": "complement of nothing",
   "vmd: not protein [1bna]": "complement of nothing",
+  // Deliberate: carbon weighs 12.011. Mol*'s table lists boron's 10.81.
+  "vmd: mass 12 to 17.5 [1bna]": "carbon mass",
+  "vmd: mass 12 to 17.5 [1crn]": "carbon mass",
+  "vmd: mass 12 to 17.5 [1ejg]": "carbon mass",
+  "vmd: mass 12 to 17.5 [1tqn]": "carbon mass",
 };
 
 // Single-model entries only: our rows then equal Mol*'s source indices.

@@ -31,7 +31,11 @@ import {
   sortedRows,
   subtractRows,
 } from "./atom-sets.ts";
-import { ELEMENT_SYMBOL, ELEMENT_VDW_RADIUS } from "./elements.ts";
+import {
+  ELEMENT_MASS,
+  ELEMENT_SYMBOL,
+  ELEMENT_VDW_RADIUS,
+} from "./elements.ts";
 import type { RevisionStream } from "./index.ts";
 import {
   bondAdjacency,
@@ -433,6 +437,10 @@ const SPECS: Readonly<Record<string, Spec>> = {
     (ctx, i) => ctx.data.positions[i * 3 + 2],
     "positions",
   ),
+  [`${AP}core.vdw`]: atomProp(vdw),
+  [`${AP}core.mass`]: atomProp((ctx, i) =>
+    ELEMENT_MASS[ctx.data.topology.atoms.element[i]]
+  ),
   [`${AP}core.atom-key`]: atomProp((_, i) => i),
   [`${AP}macromolecular.residue-key`]: atomProp(residueOf),
   [`${AP}macromolecular.chain-key`]: atomProp(chainOf),
@@ -620,13 +628,16 @@ const SPECS: Readonly<Record<string, Spec>> = {
   [`${SQ}modifier.include-surroundings`]: {
     returns: "query",
     reads: "positions",
-    args: { 0: Q, radius: V, "as-whole-residues": Vopt },
+    args: { 0: Q, radius: V, "atom-radius": Vopt, "as-whole-residues": Vopt },
     impl: (a) => {
       const q = query(a, "0"), radius = arg(a, "radius");
+      const atomRadius = optArg(a, "atom-radius");
       const asWhole = optArg(a, "as-whole-residues");
       return (ctx) => {
         const r = radius(ctx) as number;
-        const around = surroundings(ctx, r);
+        const around = atomRadius
+          ? surroundingsWithRadius(ctx, r, atomRadius)
+          : surroundings(ctx, r);
         const whole = asWhole?.(ctx) ? wholeResidues(ctx) : null;
         return perSet(ctx, q(ctx), (s) => whole ? whole(around(s)) : around(s));
       };
@@ -656,6 +667,7 @@ const SPECS: Readonly<Record<string, Spec>> = {
       target: Q,
       "min-radius": Vopt,
       "max-radius": V,
+      "atom-radius": Vopt,
       invert: Vopt,
     },
     impl: within,
@@ -765,12 +777,6 @@ const currentSet = (ctx: Ctx): Uint32Array =>
 
 /** Arguments that exist in MolQL but are outside the Phase 1 allowlist. */
 const NOT_YET: Readonly<Record<string, Readonly<Record<string, string>>>> = {
-  [`${SQ}modifier.include-surroundings`]: {
-    "atom-radius": "needs per-atom radii (molgpu-sept-922.15)",
-  },
-  [`${SQ}filter.within`]: {
-    "atom-radius": "needs per-atom radii (molgpu-sept-922.15)",
-  },
   [`${SQ}filter.is-connected-to`]: {
     invert:
       "Mol*'s runtime keeps every set when inverting, so there is no reference behaviour to match",
@@ -928,6 +934,45 @@ function surroundings(ctx: Ctx, r: number): (set: Uint32Array) => Uint32Array {
   };
 }
 
+/** Evaluate a per-atom radius expression over `rows` into a dense array. */
+function radii(
+  ctx: Ctx,
+  radius: Fn,
+  rows: Iterable<number>,
+): { readonly of: Float64Array; readonly widest: number } {
+  const of = new Float64Array(ctx.data.topology.atoms.count);
+  let widest = 0;
+  for (const i of rows) {
+    const r = radius(withAtom(ctx, i)) as number;
+    of[i] = r;
+    if (r > widest) widest = r;
+  }
+  return { of, widest };
+}
+
+/**
+ * Mol*'s getIncludeSurroundingsWithRadius: input atom j joins when
+ * dist(i, j) - r(i) - r(j) <= radius for some atom i of the set.
+ */
+function surroundingsWithRadius(
+  ctx: Ctx,
+  r: number,
+  atomRadius: Fn,
+): (set: Uint32Array) => Uint32Array {
+  const P = ctx.data.positions, n = ctx.data.topology.atoms.count;
+  const { of, widest } = radii(ctx, atomRadius, ctx.input);
+  const grid = spatialGrid(P, ctx.input, Math.max(r + 2 * widest, MIN_CELL));
+  return (set) => {
+    const out: number[] = [];
+    for (const i of set) {
+      grid.near(P[i * 3], P[i * 3 + 1], P[i * 3 + 2], (j) => {
+        if (Math.sqrt(dist2(P, i, j)) - of[i] - of[j] <= r) out.push(j);
+      });
+    }
+    return sortedRows(out, n);
+  };
+}
+
 /** Mol* modifiers.expandProperty: add every input atom sharing a property value. */
 function expandProperty(ctx: Ctx, sel: AtomSets, property: Fn): AtomSets {
   const n = ctx.data.topology.atoms.count;
@@ -1061,6 +1106,7 @@ function within(a: Args): Fn {
   const q = query(a, "0"), target = query(a, "target");
   const minArg = optArg(a, "min-radius"),
     maxArg = arg(a, "max-radius"),
+    atomRadius = optArg(a, "atom-radius"),
     invertArg = optArg(a, "invert");
   return (ctx) => {
     const sel = q(ctx), targetSel = target(ctx);
@@ -1074,7 +1120,8 @@ function within(a: Args): Fn {
 
     if (minR === 0 && minValue === undefined) {
       // withinMaxRadiusLookup: Mol* widens the radius by the selected atom's
-      // VDW radius (its conformation radius), so match that.
+      // VDW radius (its conformation radius), so match that. This path
+      // ignores :atom-radius in Mol*, and so here (PyMOL `gap` relies on it).
       if (T.length === 0) test = () => false;
       else {
         let widest = 0;
@@ -1100,17 +1147,30 @@ function within(a: Args): Fn {
         };
       }
     } else {
-      // checkStructureMaxRadiusDistance / checkStructureMinMaxDistance with no
-      // atom radius: an empty side passes; a pair closer than min rejects the set.
+      // checkStructureMaxRadiusDistance / checkStructureMinMaxDistance: the
+      // gap is max(0, dist - r(i) - r(j)) with :atom-radius (0 without); an
+      // empty side passes; a pair closer than min rejects the set.
+      const selRows: number[] = [];
+      forEachSet(sel, (s) => selRows.push(...s));
+      const r = atomRadius
+        ? radii(ctx, atomRadius, [...selRows, ...T])
+        : { of: new Float64Array(n), widest: 0 };
       const grid = T.length
-        ? spatialGrid(P, T, Math.max(maxR, minR, MIN_CELL))
+        ? spatialGrid(
+          P,
+          T,
+          Math.max(Math.max(maxR, minR) + 2 * r.widest, MIN_CELL),
+        )
         : null;
       test = (s) => {
         if (!grid) return true;
         let inRange = false;
         for (const i of s) {
           const below = grid.near(P[i * 3], P[i * 3 + 1], P[i * 3 + 2], (j) => {
-            const d = Math.sqrt(dist2(P, i, j));
+            const d = Math.max(
+              0,
+              Math.sqrt(dist2(P, i, j)) - r.of[i] - r.of[j],
+            );
             if (minR === 0) {
               if (d <= maxR) inRange = true;
               return inRange;

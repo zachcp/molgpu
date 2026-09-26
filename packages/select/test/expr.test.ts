@@ -292,6 +292,45 @@ Deno.test("within: Mol*'s three distance modes", () => {
   );
 });
 
+Deno.test("vdw, mass and :atom-radius", () => {
+  // Mol*'s VDW radii: N 1.55, C 1.7, S 1.8, O 1.52.
+  assertEquals(rows(atoms(eq(prop("core.vdw"), 1.8))), [2, 4]);
+  // Carbon is 12.011 (Mol*'s table has boron's 10.81; a deliberate fix).
+  assertEquals(rows(atoms(eq(prop("core.mass"), 12.011))), [1, 3]);
+  const vdwR = prop("core.vdw");
+  // With :min-radius the gap is dist - r(i) - r(j): atom 3 (C, x=3) to atom 0
+  // (N, x=0) is 3 - 1.7 - 1.55 < 0.5; atom 4 (x=10) is not.
+  assertEquals(
+    rows(sq("filter.within", {
+      0: all,
+      target: atom0,
+      "min-radius": 0,
+      "max-radius": 0.5,
+      "atom-radius": vdwR,
+    })),
+    [0, 1, 2, 3],
+  );
+  // Without :min-radius Mol* ignores :atom-radius (PyMOL 'gap' relies on it).
+  assertEquals(
+    rows(sq("filter.within", {
+      0: all,
+      target: atom0,
+      "max-radius": 0.5,
+      "atom-radius": 100,
+    })),
+    [0, 1, 2],
+  );
+  // include-surroundings: dist - r(i) - r(j) <= radius.
+  assertEquals(
+    rows(sq("modifier.include-surroundings", {
+      0: atom0,
+      radius: 0,
+      "atom-radius": vdwR,
+    })),
+    [0, 1, 2, 3],
+  );
+});
+
 Deno.test("within filters whole sets: union makes one set", () => {
   const gly = residues(eq(comp, "GLY")); // atoms 2 (x=2) and 3 (x=3)
   const range = { target: atom0, "min-radius": 0, "max-radius": 2.5 };
@@ -462,15 +501,6 @@ Deno.test("anything outside the language is a compile-time error", () => {
   bad(
     sq("filter.is-connected-to", { 0: all, target: all, invert: true }),
     "keeps every set when inverting",
-  );
-  bad(
-    sq("filter.within", {
-      0: all,
-      target: all,
-      "max-radius": 1,
-      "atom-radius": 1,
-    }),
-    "needs per-atom radii",
   );
   bad(
     sq("filter.within", { 0: all, target: all }),
