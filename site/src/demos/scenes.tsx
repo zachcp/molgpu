@@ -1,17 +1,34 @@
 /** @jsx LiveReact.createElement */
-import { React as LiveReact } from "@use-gpu/live";
+import { React as LiveReact, useResource } from "@use-gpu/live";
 import type { StructureData } from "@molgpu/table";
 import { byElement, colormap, curve } from "@molgpu/fields";
 import { comp, element, resolve, toAtoms, within } from "@molgpu/select";
+import { frameCurve } from "@molgpu/timeline";
 import {
   BallAndStick,
   Bonds,
   Ribbon,
   Spacefill,
   Surface,
+  Trajectory,
   Tube,
+  useTrajectoryFrame,
 } from "@molgpu/viewer";
+import motionUrl from "../../assets/1crn-motion.xtc?url";
 import type { DemoId } from "./registry.ts";
+
+// 60 frames at 15 fps: the 0–4 s scrub range plays the loop once.
+const motion = frameCurve({ frames: 60, fps: 15, loop: true });
+
+/** Mirrors the displayed frame onto the canvas host for the site test. */
+const FrameReadout = () => {
+  const frame = useTrajectoryFrame()?.frame ?? null;
+  useResource(() => {
+    const host = document.querySelector<HTMLElement>("#molecule-canvas");
+    if (host && frame !== null) host.dataset.frame = frame.toFixed(3);
+  }, [frame]);
+  return null;
+};
 
 export type SurfaceMode = "opaque" | "glass" | "pumice";
 export type MaterialMode = "matte" | "metal" | "basic" | "normal";
@@ -68,6 +85,14 @@ export const renderDemoScene = (
         <Bonds width={0.18} color={[0.82, 0.85, 0.92, 1]} />,
         <Ribbon color={[0.95, 0.5, 0.28, 1]} opacity={0.65} />,
       ];
+    case "trajectory":
+      return (
+        <Trajectory src={motionUrl} frame={motion}>
+          <Spacefill scale={0.3} color={[0.42, 0.72, 0.95, 1]} />
+          <Ribbon color={[0.95, 0.5, 0.28, 1]} />
+          <FrameReadout />
+        </Trajectory>
+      );
     case "tube":
       return <Tube radius={0.5} color={[0.55, 0.85, 0.6, 1]} />;
     case "ribbon":
