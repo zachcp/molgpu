@@ -27,6 +27,8 @@ import {
   trackOwnedBuffer,
 } from "./instrumentation.ts";
 
+const NONE: readonly StorageSource[] = [];
+
 const Published: LC<{
   upstream: Coordinates;
   source: StorageTarget;
@@ -78,9 +80,15 @@ export const CoordinateKernel: LC<{
   upstream: Coordinates;
   shader: ShaderModule;
   args?: unknown[];
+  /** Extra storage inputs, linked after `args` and before the upstream source.
+   * Memoized by element identity so the kernel does not re-link per render. */
+  sources?: readonly StorageSource[];
   parameterKey: string;
   children: LiveElement;
-}> = ({ upstream, shader, args = [], parameterKey, children }) => {
+}> = (
+  { upstream, shader, args = [], sources = NONE, parameterKey, children },
+) => {
+  const linked = useMemo(() => [...sources], [...sources]);
   const next = useRef(0);
   const generation = useMemo(() => ++next.current, [
     upstream.source,
@@ -93,6 +101,7 @@ export const CoordinateKernel: LC<{
       children: use(Kernel, {
         shader,
         source: upstream.source,
+        sources: linked,
         args,
         initial: true,
         version: generation,

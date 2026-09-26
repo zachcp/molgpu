@@ -197,6 +197,51 @@ export function createCurve(
   return curve;
 }
 
+/** Frame playback timing: `frames` frames at `fps`, the first at `start` seconds. */
+export interface FramePlayback {
+  readonly frames: number;
+  readonly fps: number;
+  /** Seconds at which frame 0 starts. Default 0. */
+  readonly start?: number;
+  /** Repeat after the last frame. Default false (hold the last frame). */
+  readonly loop?: boolean;
+}
+
+const checkPlayback = (p: { fps: number; start?: number }) => {
+  finite(p.fps, "fps");
+  if (p.fps <= 0) throw new RangeError("fps must be positive");
+  if (p.start !== undefined) finite(p.start, "start");
+};
+
+/**
+ * A linear curve from timeline seconds to a fractional frame index: frame
+ * `i` starts at `start + i / fps`. It maps `[start, start + frames / fps]` to
+ * `[0, frames]`; a trajectory clamps to its last frame, so every frame,
+ * including the last, is on screen for `1 / fps` (and a looped curve does not
+ * skip the last frame). Before `start` it holds frame 0.
+ */
+export function frameCurve(playback: FramePlayback): Curve<number> {
+  checkPlayback(playback);
+  const { frames, fps, start = 0, loop = false } = playback;
+  if (!Number.isSafeInteger(frames) || frames < 1) {
+    throw new TypeError("frames must be a positive integer");
+  }
+  return createCurve([
+    { time: start, value: 0 },
+    { time: start + frames / fps, value: frames },
+  ], { extrapolate: loop ? "loop" : "clamp" });
+}
+
+/** Seconds at which `frame` starts under `playback`, e.g. to place a beat. */
+export function frameTime(
+  playback: { readonly fps: number; readonly start?: number },
+  frame: number,
+): number {
+  checkPlayback(playback);
+  finite(frame, "frame");
+  return (playback.start ?? 0) + frame / playback.fps;
+}
+
 /** Pure arbitrary-time sample in seconds. Throws TypeError for non-finite time.
  * Repeated, reversed and out-of-range reads do not depend on wall time or
  * previous samples. Returned vectors are fresh arrays the caller owns. */

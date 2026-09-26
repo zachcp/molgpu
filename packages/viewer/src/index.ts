@@ -19,6 +19,8 @@ export { Surface } from "./surface.ts";
 export { Volume } from "./volume.ts";
 export { Isosurface } from "./isosurface.ts";
 export { VolumeSlice } from "./volume-slice.ts";
+export { Trajectory, useTrajectoryFrame } from "./trajectory.ts";
+export { UnitCell } from "./unit-cell.ts";
 export type { SlicePlane, SliceStops } from "./volume-slice.ts";
 export {
   BasicMaterial,

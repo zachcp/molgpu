@@ -44,7 +44,7 @@
     "check:hardening": "deno run -A scripts/check-hardening.mjs",
     "jsr:check": "deno publish --dry-run --allow-dirty",
     "typecheck": "deno check packages/*/src/index.ts packages/*/test/*.test.ts test/selection/*.test.ts",
-    "typecheck:components": "deno check packages/viewer/test/tsx/consumer.tsx packages/viewer/test/tsx/diagnostics.ts packages/viewer/test/tsx/coordinates-sketch.tsx packages/viewer/test/volume/volume.tsx",
+    "typecheck:components": "deno check packages/viewer/test/tsx/consumer.tsx packages/viewer/test/tsx/diagnostics.ts packages/viewer/test/tsx/coordinates-sketch.tsx packages/viewer/test/volume/volume.tsx packages/viewer/test/trajectory/trajectory.tsx",
     "typecheck:site": "deno check site/src/main.tsx",
     "build:site": "deno run -A npm:vite@8.3.0 build --config site/vite.config.mjs",
     "dev:site": "deno run -A npm:vite@8.3.0 --config site/vite.config.mjs",
@@ -61,7 +61,7 @@
     "test:viewer:picking": "deno test -A packages/viewer/test/run-picking.mjs",
     "test:viewer:annotations": "deno test -A packages/viewer/test/run-annotations.mjs",
     "test:viewer:invalidation": "deno test -A packages/viewer/test/run-invalidation.mjs",
-    "test:components": "deno test -A packages/viewer/test/run-components.mjs packages/viewer/test/run-volume.mjs",
+    "test:components": "deno test -A packages/viewer/test/run-components.mjs packages/viewer/test/run-volume.mjs packages/viewer/test/run-trajectory.mjs",
     "test:site": "deno test -A site/test/run-browser.mjs"
   }
 }

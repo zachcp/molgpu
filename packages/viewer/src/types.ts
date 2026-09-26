@@ -1,7 +1,8 @@
 // The "." entry's types. It carries no use.gpu types: everything below is
 // owned by @molgpu/viewer. Exports that are inherently use.gpu-shaped (shader sources,
 // Live contexts, custom-shader materials) live in `@molgpu/viewer/advanced`.
-import type { StructureData, VolumeData } from "@molgpu/table";
+import type { StructureData, TrajectoryData, VolumeData } from "@molgpu/table";
+import type { Curve } from "@molgpu/timeline";
 import type { SelectionQuery } from "@molgpu/select";
 
 // --- Owned element, component and value types -------------------------------
@@ -137,6 +138,65 @@ export interface LoadedStructureProps {
 
 /** `data` and `src` are mutually exclusive, and exactly one is required. */
 export type StructureProps = PreloadedStructureProps | LoadedStructureProps;
+
+/** Open one trajectory source; resolve null when `cancelled()` became true. */
+export type TrajectoryLoader = (
+  src: string,
+  cancelled: () => boolean,
+) => TrajectoryData | null | Promise<TrajectoryData | null>;
+
+/** Props shared by both `<Trajectory>` forms. */
+export interface TrajectoryPlayback {
+  children?: ViewerElement;
+  /**
+   * Fractional frame index, or a curve from timeline seconds to frames (see
+   * `frameCurve` in @molgpu/timeline). Clamped to `[0, frameCount - 1]`.
+   */
+  frame: number | Curve<number>;
+  /** `"linear"` (default) blends neighbouring frames; `"nearest"` rounds. */
+  interpolate?: "linear" | "nearest";
+  /**
+   * `"minimum-image"` interpolates each atom along the shortest periodic
+   * displacement when both frames carry a box, so atoms that wrap do not
+   * cross the box on screen. Default `"none"`.
+   */
+  pbc?: "none" | "minimum-image";
+}
+/** A trajectory already opened, e.g. with `openTrajectory` from @molgpu/io. */
+export interface PreloadedTrajectoryProps extends TrajectoryPlayback {
+  data: TrajectoryData;
+  src?: undefined;
+  loader?: undefined;
+}
+/** A DCD/XTC/TRR URL, opened for streaming through @molgpu/io. */
+export interface LoadedTrajectoryProps extends TrajectoryPlayback {
+  src: string;
+  data?: undefined;
+  /** Defaults to `openTrajectory(src)` (HTTP Range reads). Pass a stable function. */
+  loader?: TrajectoryLoader;
+}
+/** `data` and `src` are mutually exclusive, and exactly one is required. */
+export type TrajectoryProps = PreloadedTrajectoryProps | LoadedTrajectoryProps;
+
+/** What the nearest `<Trajectory>` shows, from `useTrajectoryFrame()`. */
+export interface TrajectoryFrameState {
+  readonly trajectory: TrajectoryData;
+  /** The clamped frame asked for (after sampling a curve). */
+  readonly requested: number;
+  /**
+   * Frames on screen, `a + t (b - a)`. It trails `requested` while frames
+   * load, and is null before the first frame lands (upstream coordinates show).
+   */
+  readonly displayed: {
+    readonly a: number;
+    readonly b: number;
+    readonly t: number;
+  } | null;
+  /** `a + t (b - a)` of `displayed`, or null. */
+  readonly frame: number | null;
+  /** Interpolated column-major box of the displayed frames, if both have one. */
+  readonly box: Float32Array | null;
+}
 
 /** Load one volume source; resolve null when `cancelled()` became true. */
 export type VolumeLoader = (
