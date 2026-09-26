@@ -20,6 +20,7 @@ import {
   type Coordinates,
   CoordinatesContext,
 } from "../coordinates-context.ts";
+import { CoordinateSnapshotBoundary } from "../coordinate-snapshot.ts";
 import {
   gauge,
   releaseOwnedBuffer,
@@ -56,15 +57,19 @@ const Published: LC<{
       source.buffer.destroy();
     });
   }, [source.buffer]);
+  const coordinates = Object.freeze({
+    source: packed,
+    count: upstream.count,
+    generation,
+    resource: upstream.resource,
+  });
   return provide(
     CoordinatesContext,
-    Object.freeze({
-      source: packed,
-      count: upstream.count,
-      generation,
-      resource: upstream.resource,
+    coordinates,
+    use(CoordinateSnapshotBoundary, {
+      coordinates,
+      children,
     }),
-    children,
   );
 };
 

@@ -9,6 +9,7 @@ import { use, useMemo } from "@use-gpu/live";
 import { LineLayer } from "@use-gpu/workbench";
 import { traceTable } from "@molgpu/table";
 import { useStructure } from "./structure-context.ts";
+import { useCoordinateSnapshot } from "./coordinate-snapshot.ts";
 import {
   type ColumnSpec,
   useActiveRows,
@@ -77,18 +78,18 @@ export const Tube: ViewerComponent<
   ]);
   const drawMode = modeProps(mode, flatAlpha(color, false) * opacity);
   const { resource } = useStructure();
-  const { data } = resource;
+  const data = useCoordinateSnapshot()?.data;
 
   const indices = useActiveRows(resource, select, "Tube");
   const trace = useMemo(
-    () => (count("geometryBuilds", "tube:trace"), traceTable(data, indices)),
+    () => data ? (count("geometryBuilds", "tube:trace"), traceTable(data, indices)) : null,
     [data, indices],
   );
-  const built = useMemo(() => buildTubeGeometry(trace, smooth), [
+  const built = useMemo(() => trace ? buildTubeGeometry(trace, smooth) : null, [
     trace,
     smooth,
   ]);
-  if (!built.count) return null;
+  if (!built?.count) return null;
 
   const width = lineWidthForRadius(radius, -1);
   const specs: ColumnSpec[] = [

@@ -20,7 +20,8 @@ export type Mode =
   | "missing"
   | "controlled"
   | "offset"
-  | "bonds";
+  | "bonds"
+  | "snapshot";
 export type Phase = "idle" | "loading" | "error" | "ready";
 export interface State {
   mode: Mode;
@@ -46,6 +47,21 @@ export interface Probe {
   missingCoordinatesError: string | null;
   coordinateSource: StorageSource | null;
   bondSource: StorageSource | null;
+  coordinateSnapshot: {
+    generation: number;
+    revision: number;
+    positions: number[];
+  } | null;
+  coordinateBounds: {
+    min: readonly number[];
+    max: readonly number[];
+    centroid: readonly number[];
+    count: number;
+    generation: number;
+  } | null;
+  selectedBounds: Probe["coordinateBounds"];
+  emptyBounds: Probe["coordinateBounds"];
+  coordinateFocus: { target: readonly number[]; radius: number } | null;
   device: GPUDevice | null;
   submissions: number;
   computePipelines: number;
@@ -78,6 +94,11 @@ export const probe: Probe = {
   missingCoordinatesError: null,
   coordinateSource: null,
   bondSource: null,
+  coordinateSnapshot: null,
+  coordinateBounds: null,
+  selectedBounds: null,
+  emptyBounds: null,
+  coordinateFocus: null,
   device: null,
   submissions: 0,
   computePipelines: 0,

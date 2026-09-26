@@ -16,6 +16,10 @@ import type { StructureResource } from "./types.ts";
 import { createStructureResource } from "./internal/structure-resource.ts";
 import { ColumnSource } from "./internal/column-source.ts";
 import { CoordinatesContext } from "./coordinates-context.ts";
+import {
+  CoordinateSnapshotContext,
+  rootSnapshot,
+} from "./coordinate-snapshot.ts";
 
 /** GPU columns allocated once per structure and shared by representations. */
 export interface StructureSources {
@@ -52,7 +56,7 @@ const provideSources = (
           resource,
         })
         : null,
-      children,
+      provide(CoordinateSnapshotContext, rootSnapshot(resource), children),
     ),
   );
 

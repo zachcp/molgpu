@@ -4,6 +4,7 @@ import type { VectorLike, ViewerComponent } from "./types.ts";
 import { use, useMemo } from "@use-gpu/live";
 import { LabelLayer, LineLayer } from "@use-gpu/workbench";
 import { useStructure } from "./structure-context.ts";
+import { useCoordinateSnapshot } from "./coordinate-snapshot.ts";
 import {
   checkAtomSelection,
   type ColumnSpec,
@@ -76,20 +77,22 @@ export const Label: ViewerComponent<{
   useRepaint();
   useBindingProbe("label", text, size, color, opacity);
   const { resource } = useStructure();
-  const { data } = resource;
+  const snapshot = useCoordinateSnapshot();
+  const data = snapshot?.data;
   checkAtomSelection(select, resource, "Label");
   const selectKey = select?.id ?? "active";
-  const computed = useMemo(() => anchorOf(data, select, "label:anchor"), [
+  const computed = useMemo(() => data ? anchorOf(data, select, "label:anchor") : null, [
     data,
     selectKey,
-    resource.positionsRevision,
+    snapshot?.generation,
   ]);
-  const position = useMemo(() => toPoint(at ?? computed), [at, computed]);
+  const position = useMemo(() => at || computed ? toPoint(at ?? computed!) : null, [at, computed]);
   checkOpacity(opacity, "Label");
   const drawColor = useMemo(() => applyOpacity(color, opacity), [
     color,
     opacity,
   ]);
+  if (!position) return null;
   return use(LabelLayer, {
     position,
     label: text ?? "",
@@ -139,27 +142,28 @@ export const Distance: ViewerComponent<{
   useRepaint();
   useBindingProbe("distance", color, opacity, width, size, labelColor);
   const { resource } = useStructure();
-  const { data } = resource;
+  const snapshot = useCoordinateSnapshot();
+  const data = snapshot?.data;
   checkAtomSelection(a, resource, "Distance");
   checkAtomSelection(b, resource, "Distance");
   if (a == null || b == null) {
     throw new TypeError("Distance requires two selections, a and b");
   }
 
-  const rev = resource.positionsRevision;
-  const ca = useMemo(() => anchorOf(data, a, "distance:anchor"), [
+  const rev = snapshot?.generation;
+  const ca = useMemo(() => data ? anchorOf(data, a, "distance:anchor") : null, [
     data,
     a?.id,
     rev,
   ]);
-  const cb = useMemo(() => anchorOf(data, b, "distance:anchor"), [
+  const cb = useMemo(() => data ? anchorOf(data, b, "distance:anchor") : null, [
     data,
     b?.id,
     rev,
   ]);
-  const dist = distanceBetween(ca, cb);
-  const mid = midpoint(ca, cb);
-  const text = format ? format(dist) : `${dist.toFixed(2)} Å`;
+  const dist = ca && cb ? distanceBetween(ca, cb) : null;
+  const mid = ca && cb ? midpoint(ca, cb) : null;
+  const text = dist == null ? "" : format ? format(dist) : `${dist.toFixed(2)} Å`;
   checkOpacity(opacity, "Distance");
   const lineColor = useMemo(() => applyOpacity(color, opacity), [
     color,
@@ -176,14 +180,15 @@ export const Distance: ViewerComponent<{
   );
 
   // Built once per anchor pair, so style edits reuse the uploaded columns.
-  const specs = useMemo((): ColumnSpec[] => [
+  const specs = useMemo((): ColumnSpec[] | null => ca && cb ? [
     {
       key: "positions",
       data: Float32Array.of(ca[0], ca[1], ca[2], cb[0], cb[1], cb[2]),
       format: "vec3<f32>",
     },
     { key: "segments", data: SEGMENTS, format: "i32" },
-  ], [ca, cb]);
+  ] : null, [ca, cb]);
+  if (!specs || !mid) return null;
   return withColumns(specs, (map) => [
     use(LineLayer, {
       positions: map.positions,

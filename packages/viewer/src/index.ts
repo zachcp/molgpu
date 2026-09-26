@@ -2,6 +2,12 @@
 export type * from "./types.ts";
 export { createStructureResource } from "./internal/structure-resource.ts";
 export { useStructureResource } from "./structure-context.ts";
+export { useCoordinateSnapshot } from "./coordinate-snapshot.ts";
+export { useCoordinateSelection } from "./use-coordinate-selection.ts";
+export { useCoordinateBounds } from "./use-coordinate-bounds.ts";
+export type { CoordinateBounds } from "./use-coordinate-bounds.ts";
+export { useCoordinateFocus } from "./use-coordinate-focus.ts";
+export type { CoordinateSnapshot } from "./coordinate-snapshot.ts";
 export { Molecule } from "./molecule.ts";
 export { Structure } from "./structure.ts";
 export { Spacefill } from "./spacefill.ts";

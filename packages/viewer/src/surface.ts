@@ -9,6 +9,7 @@ import type {
 import { use, useMemo } from "@use-gpu/live";
 import { FaceLayer } from "@use-gpu/workbench";
 import { useStructure } from "./structure-context.ts";
+import { useCoordinateSnapshot } from "./coordinate-snapshot.ts";
 import {
   type ColumnSpec,
   useActiveRows,
@@ -83,18 +84,19 @@ export const Surface: ViewerComponent<
   ]);
   const drawMode = modeProps(mode, flatAlpha(color, false) * opacity);
   const { resource } = useStructure();
+  const snapshot = useCoordinateSnapshot();
   const indices = useActiveRows(resource, select, "Surface");
   const params = useMemo(
     () => ({ indices, probeRadius, resolution, maxBytes }),
     [indices, probeRadius, resolution, maxBytes],
   );
   const [mesh, failure, pending] = useGeometryJob(
-    resource,
+    snapshot?.resource ?? null,
     params,
     buildSurfaceGeometry,
   );
 
-  if (pending) return typeof loading === "function" ? loading() : loading;
+  if (!snapshot || pending) return typeof loading === "function" ? loading() : loading;
   if (failure) return typeof error === "function" ? error(failure) : error;
   if (!mesh?.vertexCount) return null;
 

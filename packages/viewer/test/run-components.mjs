@@ -407,6 +407,70 @@ Deno.test("viewer components", async () => {
     report.states.bonds = { vertices: bondVertices, movedBy: 1 };
     await update({ mode: "preloaded" });
 
+    await update({ mode: "snapshot", offsetX: 5 });
+    await page.waitForFunction(
+      () => window.__viewer.coordinateSnapshot?.positions[0] === -13,
+      null,
+      { timeout: 10000 },
+    ).catch(async (failure) => {
+      console.log("snapshot diagnostics", JSON.stringify(await page.evaluate(() => ({
+        snapshot: window.__viewer.coordinateSnapshot,
+        errors: window.__viewer.errors,
+        counters: window.__viewer.counters(),
+      }))));
+      throw failure;
+    });
+    const firstSnapshot = await page.evaluate(() =>
+      window.__viewer.coordinateSnapshot
+    );
+    await page.waitForFunction(
+      () => window.__viewer.coordinateBounds?.centroid[0] === -10,
+      null,
+      { timeout: 10000 },
+    );
+    const firstBounds = await page.evaluate(() => window.__viewer.coordinateBounds);
+    assert.deepEqual(firstBounds.min, [-13, 1, 0]);
+    assert.deepEqual(firstBounds.max, [-7, 1, 0]);
+    assert.equal(firstBounds.count, 3);
+    await page.waitForFunction(
+      () => window.__viewer.selectedBounds?.centroid[0] === -11.5,
+      null,
+      { timeout: 10000 },
+    );
+    const selectedBounds = await page.evaluate(() => window.__viewer.selectedBounds);
+    assert.deepEqual(selectedBounds.min, [-13, 1, 0]);
+    assert.deepEqual(selectedBounds.max, [-10, 1, 0]);
+    assert.equal(selectedBounds.count, 2);
+    assert.equal(await page.evaluate(() => window.__viewer.emptyBounds), null);
+    await page.waitForFunction(
+      () => window.__viewer.coordinateFocus?.target[0] === -10,
+      null,
+      { timeout: 10000 },
+    );
+    assert.deepEqual(firstSnapshot.positions, [-13, 1, 0, -10, 1, 0, -7, 1, 0]);
+    await update({ offsetX: 6 }, true);
+    await page.waitForFunction(
+      () => window.__viewer.coordinateSnapshot?.positions[0] === -12,
+      null,
+      { timeout: 10000 },
+    );
+    const secondSnapshot = await page.evaluate(() =>
+      window.__viewer.coordinateSnapshot
+    );
+    await page.waitForFunction(
+      () => window.__viewer.coordinateBounds?.centroid[0] === -9,
+      null,
+      { timeout: 10000 },
+    );
+    await page.waitForFunction(
+      () => window.__viewer.coordinateFocus?.target[0] === -9,
+      null,
+      { timeout: 10000 },
+    );
+    assert.ok(secondSnapshot.revision > firstSnapshot.revision);
+    report.states.snapshot = { first: firstSnapshot, second: secondSnapshot };
+    await update({ mode: "preloaded" });
+
     // 2. The runtime rejects the same prop combinations the types reject.
     const invalid = await page.evaluate(() => window.__viewer.invalid());
     assert.match(invalid[0], /either data or src, not both/);

@@ -130,7 +130,7 @@ instrumentation counter so the gate can assert the budget.
 | Bonds                         | **live (new bead e99.11)**      | Upload a per-bond endpoint-row column once per topology/selection; a vertex shader reads both endpoints from the GPU source and computes the midpoint. Until e99.11 lands, bonds are a snapshot consumer. |
 | Ribbon, Tube, Surface         | snapshot                        | `geometryDeps()` keys on the snapshot resource's `positionsRevision`.                                                                                                                                     |
 | Camera focus and curves       | live, via GPU reduction (e99.6) | See "Focus without per-frame sync" below.                                                                                                                                                                 |
-| Annotation anchors            | live, via the same reduction    | The centroid is `sum / n` from the same kernel.                                                                                                                                                           |
+| Annotation anchors            | snapshot                        | `<Label>` and `<Distance>` use the shared CPU snapshot, including selection centroids.                                                                                                                    |
 | `within`, distance predicates | snapshot                        | Queries whose `deps` include `"positions"` re-resolve on a new snapshot; others never do.                                                                                                                 |
 | Bond topology (inferred)      | fixed at the root               | Snapshots reuse the root's bonds. Inference runs once on the root positions, never per snapshot (INVARIANT 6: providers never change topology).                                                           |
 | Picking, tooltips             | unaffected                      | Pick ids are atom rows.                                                                                                                                                                                   |
@@ -144,17 +144,13 @@ non-root `Coordinates` throws.
 - `useCoordinateSnapshot({ maxHz = 4 })` returns the latest
   `{ resource, generation } | null`, where `resource` is a `StructureResource`
   built with `withPositions(root.data, array)` plus the root's bonds.
-- Demand-driven: the nearest provider mounts its `<Readback buffers={2}>` only
+- Demand-driven: the nearest provider mounts two staging buffers only
   while at least one snapshot consumer is mounted, so all-live scenes pay no
   staging memory.
-- `shouldDispatch()` returns the current generation when no readback is in
-  flight and either `1 / maxHz` has elapsed or the generation has been stable
-  for one frame (the pause refresh). Returning the same number twice is a no-op
-  in `<Readback>`, which gives "at most once per generation" for free.
-- The generation is captured in `onDispatch`. On resolve, a result whose
-  generation is older than the last published one is dropped, so rapid seeks
-  cannot publish a stale snapshot. Unmount cancels through `<Readback>`'s own
-  flag.
+- A single asynchronous copy is in flight at a time. During motion, dispatches
+  respect `maxHz`; after a pause, a short timer requests the final generation.
+- The copy captures its generation. A result from an older generation is
+  discarded, and unmount cancels publication and destroys staging buffers.
 - Snapshot latency is `mapAsync` time (typically 1–3 frames) plus the throttle.
 
 ### Focus without per-frame sync

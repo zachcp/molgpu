@@ -18,12 +18,16 @@ import {
   Pass,
 } from "@use-gpu/workbench";
 import { createStructure } from "@molgpu/table";
+import { all, resolve, where } from "@molgpu/select";
 import type { StructureData } from "@molgpu/table";
 import {
   Bonds,
   Molecule,
   Spacefill,
   Structure,
+  useCoordinateSnapshot,
+  useCoordinateBounds,
+  useCoordinateFocus,
   useStructureResource,
 } from "@molgpu/viewer";
 import type { StructureLoader, StructureProps } from "@molgpu/viewer";
@@ -213,6 +217,27 @@ const CoordinateProbe = (): LiveElement => {
   return <Spacefill />;
 };
 
+const SnapshotProbe = (): LiveElement => {
+  const snapshot = useCoordinateSnapshot({ maxHz: 4 });
+  probe.coordinateBounds = useCoordinateBounds();
+  probe.selectedBounds = useCoordinateBounds(FIRST_TWO);
+  probe.emptyBounds = useCoordinateBounds(NO_ATOMS);
+  const focus = useCoordinateFocus(ALL_ATOMS);
+  probe.coordinateFocus = focus && { target: focus.target, radius: focus.radius };
+  probe.coordinateSnapshot = snapshot
+    ? {
+      generation: snapshot.generation,
+      revision: snapshot.data.revision.positions,
+      positions: Array.from(snapshot.data.positions),
+    }
+    : null;
+  return null;
+};
+
+const ALL_ATOMS = all("atom");
+const FIRST_TWO = resolve(where("atom", "first-two", (_, row) => row < 2), bonded);
+const NO_ATOMS = resolve(where("atom", "none", () => false), bonded);
+
 const Scene = (
   { mode, src, offsetX }: { mode: Mode; src: string; offsetX: number },
 ): LiveElement => {
@@ -251,6 +276,19 @@ const Scene = (
             <OffsetCoordinates offset={[-2, 1, 0]}>
               <Bonds width={0.8} />
               <BondVertexProbe data={bonded} />
+            </OffsetCoordinates>
+          </IdentityCoordinates>
+        </OffsetCoordinates>
+      </Structure>
+    );
+  }
+  if (mode === "snapshot") {
+    return (
+      <Structure data={bonded}>
+        <OffsetCoordinates offset={[offsetX, 0, 0]}>
+          <IdentityCoordinates>
+            <OffsetCoordinates offset={[-2, 1, 0]}>
+              <SnapshotProbe />
             </OffsetCoordinates>
           </IdentityCoordinates>
         </OffsetCoordinates>

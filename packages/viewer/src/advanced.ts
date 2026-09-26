@@ -6,6 +6,7 @@ export { StructureContext, useStructure } from "./structure-context.ts";
 export { CoordinatesContext, useCoordinates } from "./coordinates-context.ts";
 export type { Coordinates } from "./coordinates-context.ts";
 export { IdentityCoordinates } from "./identity-coordinates.ts";
+export { WobbleCoordinates } from "./wobble-coordinates.ts";
 export type {
   StructureContextValue,
   StructureSources,

@@ -18,13 +18,13 @@ import { geometryDeps, runGeometryJob } from "./internal/geometry-job.ts";
  * failure, or once superseded.
  */
 export function useGeometryJob<P extends Record<string, unknown>, T>(
-  resource: StructureResource,
+  resource: StructureResource | null,
   params: P,
   kernel: (resource: StructureResource, params: P) => T | Promise<T>,
 ): readonly [T | null | undefined, unknown, boolean] {
   return useAwait(
-    (cancelled: () => boolean) =>
-      runGeometryJob(() => kernel(resource, params), cancelled),
-    geometryDeps(resource, params ?? {}) as unknown[],
+    resource ? (cancelled: () => boolean) =>
+      runGeometryJob(() => kernel(resource, params), cancelled) : null,
+    resource ? geometryDeps(resource, params ?? {}) as unknown[] : [null],
   );
 }

@@ -9,6 +9,7 @@ import { use, useMemo } from "@use-gpu/live";
 import { FaceLayer } from "@use-gpu/workbench";
 import { secondaryStructureTrace, traceTable } from "@molgpu/table";
 import { useStructure } from "./structure-context.ts";
+import { useCoordinateSnapshot } from "./coordinate-snapshot.ts";
 import {
   type ColumnSpec,
   useActiveRows,
@@ -71,24 +72,24 @@ export const Ribbon: ViewerComponent<
   ]);
   const drawMode = modeProps(mode, flatAlpha(color, false) * opacity);
   const { resource } = useStructure();
-  const { data } = resource;
+  const data = useCoordinateSnapshot()?.data;
 
   const indices = useActiveRows(resource, select, "Ribbon");
   const trace = useMemo(
-    () => (count("geometryBuilds", "ribbon:trace"), traceTable(data, indices)),
+    () => data ? (count("geometryBuilds", "ribbon:trace"), traceTable(data, indices)) : null,
     [data, indices],
   );
   const ss = useMemo(
-    () => (count("geometryBuilds", "ribbon:ss"),
-      secondaryStructureTrace(data, indices, trace)),
+    () => data && trace ? (count("geometryBuilds", "ribbon:ss"),
+      secondaryStructureTrace(data, indices, trace)) : null,
     [data, indices, trace],
   );
-  const built = useMemo(() => buildRibbonGeometry(trace, ss, smooth), [
+  const built = useMemo(() => trace && ss ? buildRibbonGeometry(trace, ss, smooth) : null, [
     trace,
     ss,
     smooth,
   ]);
-  if (!built.vertexCount) return null;
+  if (!built?.vertexCount) return null;
 
   const specs: ColumnSpec[] = [
     { key: "positions", data: built.positions, format: "vec3<f32>" },
