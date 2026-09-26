@@ -11,7 +11,7 @@ import {
 } from "@use-gpu/live";
 import type { StorageSource } from "@use-gpu/core";
 import type { ShaderSource } from "@use-gpu/shader";
-import type { StructureData } from "@molgpu/table";
+import { atomRadii, type StructureData } from "@molgpu/table";
 import type { StructureResource } from "./types.ts";
 import { createStructureResource } from "./internal/structure-resource.ts";
 import { ColumnSource } from "./internal/column-source.ts";
@@ -42,28 +42,26 @@ const provideSources = (
 const AtomSources: LC<{ resource: StructureResource; children: LiveElement }> =
   ({ resource, children }) => {
     const { data } = resource;
-    const radii = data.topology.atoms.radius;
     // An empty structure still supplies its CPU resource, but has no GPU source.
     // Both columns are allocated exactly once here, so sibling representations
     // consume identical sources instead of uploading positions independently.
+    // Radii always exist: the dataset's column, else element defaults.
     return use(ColumnSource, {
       data: data.positions,
       format: "vec3<f32>",
-      revision: resource.positionsRevision,
       label: "positions",
       counter: "structure:positions",
       render: (positions: StorageSource | null) =>
-        positions && radii
+        positions
           ? use(ColumnSource, {
-            data: radii,
+            data: atomRadii(data),
             format: "f32",
-            revision: resource.topologyRevision,
             label: "radii",
             counter: "structure:radii",
-            render: (radius: StorageSource | null) =>
+            render: (radii: StorageSource | null) =>
               provideSources(
                 resource,
-                Object.freeze({ positions, radii: radius! }),
+                Object.freeze({ positions, radii: radii! }),
                 children,
               ),
           })
@@ -77,12 +75,9 @@ const AtomSources: LC<{ resource: StructureResource; children: LiveElement }> =
  * scene and does not create a second renderer or canvas.
  */
 export const StructureProvider: LC<
-  { data: StructureData; maxSelections?: number; children?: LiveElement }
-> = ({ data, maxSelections, children }) => {
-  const resource = useMemo(
-    () => createStructureResource(data, { maxSelections }),
-    [data, maxSelections],
-  );
+  { data: StructureData; children?: LiveElement }
+> = ({ data, children }) => {
+  const resource = useMemo(() => createStructureResource(data), [data]);
   useResource((dispose) => {
     dispose(() => resource.dispose());
   }, [resource]);

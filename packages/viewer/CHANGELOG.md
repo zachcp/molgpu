@@ -6,6 +6,25 @@ All notable changes to `@molgpu/viewer` are recorded here. The format follows
 
 ## [Unreleased]
 
+- `WorldSpacePointLayer` now reads GPU radii sources and derives point sizes in
+  the shader. Camera and scale changes no longer build or upload a size column.
+  Its advanced `radii` prop is a `ShaderSource` and `count` is required.
+- Breaking (experimental API): removed `AtomSelection`,
+  `StructureResource.selection()`/`accepts()`, the `maxSelections` prop on
+  `<Structure>` and the `maxSelections` option of `createStructureResource`.
+  Resolved atom sets are `@molgpu/select` `Selection`s; no representation read
+  the resource's parallel selection cache.
+- Fix: a structure without an `atoms.radius` column now draws with element
+  default radii (`@molgpu/table` `atomRadii`). Previously `<Spacefill>` drew
+  nothing, `<Surface>` failed, and camera framing ignored atom extents.
+- Selected `<Spacefill>` and field-coloured `<Bonds>` read the shared structure
+  positions and radii, and full per-atom attribute columns, through an uploaded
+  `u32` row column on the GPU. A selection change uploads only its rows; a
+  coordinate edit no longer regathers selected positions, and re-inferred bonds
+  no longer regather endpoint attributes.
+- Column uploads no longer copy each packed array before handing it to
+  `RawData`, which already copies into its own staging array. Columns are
+  immutable by contract; a changed column must be a new array.
 - Source is TypeScript (`src/**/*.ts`); the hand-written `index.d.ts` and
   `advanced.d.ts` are gone. The public API is unchanged.
 - Fix: `Pickable` now removes its picking-registry entry on unmount (the cleanup

@@ -6,6 +6,9 @@ All notable changes to `@molgpu/select` are recorded here. The format follows
 
 ## [Unreleased]
 
+- `within` looks up seed atoms through `@molgpu/table`'s `spatialGrid` instead
+  of comparing every atom with every seed. Results are unchanged (corpus and
+  randomized brute-force checks); 1a4y queries run in about half the time.
 - Source is TypeScript (`src/index.ts`); the hand-written `index.d.ts` is gone.
   The public API is unchanged, and `SelectionQuery` stays opaque.
 

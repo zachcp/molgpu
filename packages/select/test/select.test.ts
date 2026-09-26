@@ -191,3 +191,31 @@ Deno.test("rejects malformed queries, foreign selections, and bad domains", () =
     "dataset",
   );
 });
+
+Deno.test("within matches a brute-force scan, including exact-cutoff and zero-cutoff cases", () => {
+  const base = createStructure(fixture());
+  // Integer lattice coordinates make exact-cutoff distances common.
+  let seed = 7;
+  const rand = () => (seed = (seed * 1103515245 + 12345) % 2 ** 31) % 7 - 3;
+  for (let trial = 0; trial < 200; trial++) {
+    const data = withPositions(base, Float32Array.from({ length: 18 }, rand));
+    for (const cutoff of [0, 1, 1.5, 2, 3, 12]) {
+      const seeds = [2, 4]; // element(16)
+      const expected: number[] = [];
+      for (let i = 0; i < 6; i++) {
+        const hit = seeds.some((j) => {
+          const d = [0, 1, 2].map((k) =>
+            data.positions[i * 3 + k] - data.positions[j * 3 + k]
+          );
+          return d[0] * d[0] + d[1] * d[1] + d[2] * d[2] <= cutoff * cutoff;
+        });
+        if (hit) expected.push(i);
+      }
+      assertEquals(
+        [...resolve(within(cutoff, element(16)), data).indices],
+        expected,
+        `trial ${trial}, cutoff ${cutoff}`,
+      );
+    }
+  }
+});

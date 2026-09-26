@@ -22,7 +22,9 @@ const FORMATS: Record<
   "vec4<f32>": [Float32Array, 4],
 };
 
-/** Copy exactly the view, not its backing buffer. Input stays packed CPU data. */
+/** Validate a packed column and count its rows. The view is returned as-is:
+ * RawData copies it into its own staging array before upload, and columns are
+ * immutable by contract, so a defensive copy here would be a second full pass. */
 export function prepareColumn(
   data: Column,
   format: ColumnFormat,
@@ -36,5 +38,5 @@ export function prepareColumn(
   if (data instanceof Float32Array && data.some((x) => !Number.isFinite(x))) {
     throw new TypeError("Column values must be finite");
   }
-  return { data: data.slice(), count: data.length / width, format };
+  return { data, count: data.length / width, format };
 }

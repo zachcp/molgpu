@@ -11,6 +11,8 @@ import type {
 export type * from "./types.ts";
 export { traceTable } from "./trace.ts";
 export { secondaryStructureTrace } from "./secondary-structure.ts";
+export { type SpatialGrid, spatialGrid } from "./spatial-grid.ts";
+import { spatialGrid } from "./spatial-grid.ts";
 
 type TypedArrayConstructor =
   | Float32ArrayConstructor
@@ -22,6 +24,7 @@ type Domain = Record<string, unknown>;
 type Identity = StructureData["identity"];
 
 const revisions = new WeakMap<Identity, number>();
+const radiiCache = new WeakMap<Identity, Float32Array>();
 const inferredBondCache = new WeakMap<StructureData, Map<string, Bonds>>();
 const fail = (path: string, message: string): never => {
   throw new TypeError(`${path}: ${message}`);
@@ -115,9 +118,13 @@ export function validateStructure<T extends StructureInput>(data: T): T {
       fail(`atoms.occupancy[${i}]`, "expected occupancy in [0,1]");
     }
   });
+  // Length-prefixing the name keeps the key unambiguous for any strings,
+  // without the cost of JSON-encoding an array per atom.
   const sites = new Set<string>();
   for (let i = 0; i < a.count; i++) {
-    const key = JSON.stringify([a.residue[i], a.name[i], a.altloc[i]]);
+    const key = `${a.residue[i]}:${a.name[i].length}:${a.name[i]}${
+      a.altloc[i]
+    }`;
     if (sites.has(key)) {
       fail(`atoms[${i}]`, "duplicate residue/name/altloc site");
     }
@@ -163,7 +170,7 @@ export function validateStructure<T extends StructureInput>(data: T): T {
   }
   column(b.order, b.count, Uint8Array, "bonds.order");
   strings(b.source, b.count, "bonds.source");
-  const pairs = new Set<string>();
+  const pairs = new Set<number>();
   for (let i = 0; i < b.count; i++) {
     const x = b.a[i], y = b.b[i];
     if (x === y) fail(`bonds[${i}]`, "self bond");
@@ -180,7 +187,8 @@ export function validateStructure<T extends StructureInput>(data: T): T {
     if (!["explicit", "inferred"].includes(b.source[i])) {
       fail(`bonds.source[${i}]`, "expected explicit or inferred");
     }
-    const key = `${Math.min(x, y)}:${Math.max(x, y)}`;
+    // Unordered pair as one exact integer: a.count² stays far below 2^53.
+    const key = Math.min(x, y) * a.count + Math.max(x, y);
     if (pairs.has(key)) fail(`bonds[${i}]`, "duplicate bond");
     pairs.add(key);
   }
@@ -333,6 +341,41 @@ export function coordinateBounds(
   return { min, max, center: min.map((v, i) => (v + max[i]) / 2) };
 }
 
+// Van der Waals radii (Angstrom) for the common biomolecular elements.
+const VDW_RADIUS: Readonly<Record<number, number>> = {
+  1: 1.1,
+  6: 1.7,
+  7: 1.55,
+  8: 1.52,
+  15: 1.8,
+  16: 1.8,
+  26: 2.05,
+  34: 1.9,
+};
+const DEFAULT_VDW_RADIUS = 1.7;
+
+/** Van der Waals radius in Angstrom for an atomic number; 1.7 when unlisted. */
+export function elementRadius(atomicNumber: number): number {
+  return VDW_RADIUS[atomicNumber] ?? DEFAULT_VDW_RADIUS;
+}
+
+/** Per-atom display radii in Angstrom: the dataset's `atoms.radius` column when
+ * present, else element defaults. Topology-only, so the result is shared by
+ * every coordinate revision of one dataset. Read-only by contract. */
+export function atomRadii(data: StructureData): Float32Array {
+  if (!isIdentity(data.identity)) {
+    fail("identity", "expected a structure created by this module");
+  }
+  const { atoms } = data.topology;
+  if (atoms.radius) return atoms.radius;
+  let radii = radiiCache.get(data.identity);
+  if (!radii) {
+    radii = Float32Array.from(atoms.element, elementRadius);
+    radiiCache.set(data.identity, radii);
+  }
+  return radii;
+}
+
 const COVALENT_RADIUS: Readonly<Record<number, number>> = {
   1: .31,
   6: .76,
@@ -380,41 +423,39 @@ export function bondTopology(
   if (!byPolicy) inferredBondCache.set(data, byPolicy = new Map());
   const cached = byPolicy.get(key);
   if (cached) return cached;
-  const { atoms } = data.topology,
-    cellSize = 3,
-    cells = new Map<string, number[]>(),
-    a: number[] = [],
-    b: number[] = [];
-  const cellKey = (x: number, y: number, z: number): string => `${x},${y},${z}`;
+  const { atoms, residues, chains } = data.topology, P = data.positions;
+  const candidates: number[] = [];
+  let widest = 0;
   for (let i = 0; i < atoms.count; i++) {
     const radius = COVALENT_RADIUS[atoms.element[i]];
     if (!radius) continue;
-    const x = data.positions[i * 3],
-      y = data.positions[i * 3 + 1],
-      z = data.positions[i * 3 + 2];
-    const cx = Math.floor(x / cellSize),
-      cy = Math.floor(y / cellSize),
-      cz = Math.floor(z / cellSize);
-    for (let dx = -1; dx <= 1; dx++) {
-      for (let dy = -1; dy <= 1; dy++) {
-        for (let dz = -1; dz <= 1; dz++) {
-          for (const j of cells.get(cellKey(cx + dx, cy + dy, cz + dz)) ?? []) {
-            if (!compatibleBondRows(data, i, j, interChain)) continue;
-            const cutoff = radius + COVALENT_RADIUS[atoms.element[j]] + padding;
-            const px = x - data.positions[j * 3],
-              py = y - data.positions[j * 3 + 1],
-              pz = z - data.positions[j * 3 + 2];
-            if (px * px + py * py + pz * pz <= cutoff * cutoff) {
-              a.push(j);
-              b.push(i);
-            }
-          }
-        }
-      }
+    candidates.push(i);
+    widest = Math.max(widest, radius);
+  }
+  // Cells span the largest possible cutoff, and bonds never cross models, so
+  // superposed NMR models are partitioned apart instead of scanned.
+  const model = (i: number): number =>
+    chains.model[residues.chain[atoms.residue[i]]];
+  const grid = candidates.length
+    ? spatialGrid(P, candidates, 2 * widest + padding, model)
+    : null;
+  const a: number[] = [], b: number[] = [], near: number[] = [];
+  for (const i of candidates) {
+    const radius = COVALENT_RADIUS[atoms.element[i]];
+    const x = P[i * 3], y = P[i * 3 + 1], z = P[i * 3 + 2];
+    near.length = 0;
+    grid!.near(x, y, z, (j) => {
+      if (j >= i || !compatibleBondRows(data, i, j, interChain)) return;
+      const cutoff = radius + COVALENT_RADIUS[atoms.element[j]] + padding;
+      const px = x - P[j * 3], py = y - P[j * 3 + 1], pz = z - P[j * 3 + 2];
+      if (px * px + py * py + pz * pz <= cutoff * cutoff) near.push(j);
+    }, model(i));
+    // Canonical row order: by second endpoint, then first.
+    near.sort((u, v) => u - v);
+    for (const j of near) {
+      a.push(j);
+      b.push(i);
     }
-    const cell = cellKey(cx, cy, cz), rows = cells.get(cell) ?? [];
-    rows.push(i);
-    cells.set(cell, rows);
   }
   const result: Bonds = Object.freeze({
     count: a.length,

@@ -237,17 +237,18 @@ function selectionOnly(s) {
     `shared Structure columns re-uploaded on a selection edit: ${brief(s)}`,
   );
   assert.ok(
-    s.gathers + s.geometryBuilds > 0,
+    s.gathers + s.geometryBuilds + (s.detail["uploadBytes:index"] ?? 0) > 0,
     `a selection edit must re-derive the mapping: ${brief(s)}`,
   );
 }
 selectionOnly.rebuilds = true;
 
 // Coordinates: positions/bounds and coordinate-dependent derivations only.
-// Topology-only derived columns (attribute gathers, radius-derived point
-// sizes) must not be redone: their inputs did not change.
+// Topology-only derived columns (attribute columns and selection rows) must not
+// be redone: their inputs did not change. Spacefill reads positions through its
+// rows on the GPU, so it gathers nothing on a coordinate edit.
 const TOPOLOGY_ONLY =
-  /^(gathers:(spacefill|bonds):attr:|gathers:spacefill:radii|uploadBytes:attr:|geometryBuilds:points:base-sizes|uploadBytes:base-sizes)/;
+  /^(gathers:(spacefill|bonds:attr):|uploadBytes:(attr:|radii|index))/;
 const coordinatesOnly = (mustRebuild) =>
   Object.assign((s) => {
     noErrors(s);
@@ -338,10 +339,11 @@ function splitModeSwitch(s) {
 }
 splitModeSwitch.rebuilds = true;
 
-// Inferred bonds depend on coordinates. When a coordinate edit keeps every
-// bond, the endpoint attribute columns are reused. When it changes the bonds,
-// they are re-gathered and stay row-aligned with the new geometry (one f32 per
-// endpoint row, against one vec3<f32> of positions).
+// Inferred bonds depend on coordinates. Endpoint colours read the full atom
+// attribute columns through a per-vertex row column, so attribute columns are
+// never re-derived here. When a coordinate edit keeps every bond, the row column
+// is reused too; when it changes the bonds, the rows are uploaded again and stay
+// aligned with the new geometry (one u32 row per vec3<f32> position).
 const inferredBondsKept = Object.assign((s) => {
   noErrors(s);
   assert.ok(
@@ -349,21 +351,22 @@ const inferredBondsKept = Object.assign((s) => {
     `bond geometry not rebuilt: ${brief(s)}`,
   );
   assert.deepEqual(
-    keysOf(s, /attr:/),
+    keysOf(s, /attr:|uploadBytes:rows/),
     [],
-    `attribute columns re-derived for unchanged bonds: ${brief(s)}`,
+    `attribute or row columns re-derived for unchanged bonds: ${brief(s)}`,
   );
 }, { rebuilds: true });
 const inferredBondsChanged = Object.assign((s) => {
   noErrors(s);
-  assert.ok(
-    s.detail["gathers:bonds:attr:element"] > 0,
-    `stale attribute columns after bonds changed: ${brief(s)}`,
+  assert.deepEqual(
+    keysOf(s, /attr:/),
+    [],
+    `attribute columns re-derived for a coordinate edit: ${brief(s)}`,
   );
   assert.equal(
-    s.detail["uploadBytes:attr:element"] * 3,
+    s.detail["uploadBytes:rows"] * 3,
     s.detail["uploadBytes:positions"],
-    `attribute and position rows disagree: ${brief(s)}`,
+    `row and position columns disagree: ${brief(s)}`,
   );
 }, { rebuilds: true });
 
@@ -415,7 +418,7 @@ const MATRIX = {
     "coordinates (selection)": {
       from: { props: { color: GREY, select: "A" } },
       to: { props: { color: GREY, select: "A" }, dataKey: "moved" },
-      expect: coordinatesOnly(["gathers:spacefill:atoms"]),
+      expect: coordinatesOnly([]),
     },
     connectivity: {
       from: { props: { color: GREY } },
@@ -950,7 +953,14 @@ for (const { name, options, fn } of registrations) {
   Deno.test({
     name,
     ignore: Boolean(options.skip || options.todo),
-    permissions: { read: true, write: true, net: true, run: true, env: true },
+    permissions: {
+      read: true,
+      write: true,
+      net: true,
+      run: true,
+      env: true,
+      sys: true,
+    },
     sanitizeOps: false,
     sanitizeResources: false,
     async fn() {

@@ -55,21 +55,3 @@ export function pointSizeForCameraRadius(
   }
   return radius * height / (pixelRatio * Math.tan(fov / 2) * focus);
 }
-
-export function pointSizesForRadii(
-  radii: Float32Array,
-  view: ViewScale,
-  scale = 1,
-): Float32Array {
-  if (!(radii instanceof Float32Array)) {
-    throw new TypeError("radii must be a Float32Array");
-  }
-  if (!Number.isFinite(scale) || scale <= 0) {
-    throw new RangeError("scale must be a positive finite number");
-  }
-  const sizes = new Float32Array(radii.length);
-  for (let i = 0; i < radii.length; i++) {
-    sizes[i] = pointSizeForRadius(radii[i] * scale, view);
-  }
-  return sizes;
-}

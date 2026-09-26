@@ -7,9 +7,13 @@ import type {
 } from "./types.ts";
 import { use, useMemo } from "@use-gpu/live";
 import { LineLayer } from "@use-gpu/workbench";
-import { activeAtoms, traceTable } from "@molgpu/table";
+import { traceTable } from "@molgpu/table";
 import { useStructure } from "./structure-context.ts";
-import { type ColumnSpec, withColumns } from "./internal/representation.ts";
+import {
+  type ColumnSpec,
+  useActiveRows,
+  withColumns,
+} from "./internal/representation.ts";
 import {
   applyOpacity,
   checkOpacity,
@@ -75,21 +79,7 @@ export const Tube: ViewerComponent<
   const { resource } = useStructure();
   const { data } = resource;
 
-  if (
-    select !== undefined && select !== null &&
-    (select.dataset !== resource.identity || select.domain !== "atom")
-  ) {
-    throw new TypeError("Tube received a foreign or non-atom selection");
-  }
-  const selectKey = select?.id ?? "active";
-  // activeAtoms is a topology-only view policy: coordinate edits keep it.
-  const indices = useMemo(
-    () =>
-      select
-        ? select.indices
-        : (count("topologyBuilds", "tube:activeAtoms"), activeAtoms(data)),
-    [resource.identity, resource.topologyRevision, selectKey],
-  );
+  const indices = useActiveRows(resource, select, "Tube");
   const trace = useMemo(
     () => (count("geometryBuilds", "tube:trace"), traceTable(data, indices)),
     [data, indices],

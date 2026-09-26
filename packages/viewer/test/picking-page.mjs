@@ -7,6 +7,8 @@ import { render, use, useState } from "@use-gpu/live";
 import { AutoCanvas, WebGPU } from "@use-gpu/webgpu";
 import { OrbitCamera, useDeviceContext } from "@use-gpu/workbench";
 import { createStructure } from "@molgpu/table";
+import { resolve, where } from "@molgpu/select";
+import { byElement } from "@molgpu/fields";
 import { createTimeline } from "@molgpu/timeline";
 import {
   AmbientLight,
@@ -112,10 +114,22 @@ const Readout = () => {
       if (hit) probe.setTime(seek(hit.atom));
     },
   });
-  probe.hover = hover ? { id: hover.id, atom: hover.atom } : null;
+  probe.hover = hover
+    ? { id: hover.id, atom: hover.atom, instance: hover.instance }
+    : null;
   probe.pick = pick ? { id: pick.id, atom: pick.atom } : null;
   return null;
 };
+
+// `?select`: draw rows 1 and 2 only, coloured by a field. The middle atom is
+// then drawn instance 0, so picking must map it back through the selection
+// rows, and the GPU must read its position through the same rows.
+const selectedProps = new URLSearchParams(location.search).has("select")
+  ? {
+    select: resolve(where("atom", "not first", (_, i) => i > 0), data),
+    color: byElement(),
+  }
+  : {};
 
 const App = () => {
   useDeviceContext();
@@ -137,7 +151,11 @@ const App = () => {
           use(DirectionalLight, {}),
           use(Structure, {
             data,
-            children: use(Spacefill, { pickable: true, scale: 1 }),
+            children: use(Spacefill, {
+              pickable: true,
+              scale: 1,
+              ...selectedProps,
+            }),
           }),
           use(Readout, {}),
         ],

@@ -1,5 +1,5 @@
 // urn.5 acceptance probe: a style-only `scale` change writes a uniform and
-// re-uploads no per-atom size column. Warm up, snapshot STORAGE allocations,
+// re-uploads no per-atom column. Warm up, snapshot STORAGE allocations,
 // change scale, and assert zero new storage buffers while the image changes.
 import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
@@ -80,7 +80,7 @@ Deno.test("viewer size field", async () => {
     const geometryWrites = (after, before) =>
       after.storageWrites.slice(before.storageWrites.length)
         .filter((label) =>
-          ["molgpu:positions", "molgpu:elements", "molgpu:base-sizes"].includes(
+          ["molgpu:positions", "molgpu:elements", "molgpu:radii"].includes(
             label,
           )
         );
@@ -93,7 +93,7 @@ Deno.test("viewer size field", async () => {
       const label of [
         "molgpu:positions",
         "molgpu:elements",
-        "molgpu:base-sizes",
+        "molgpu:radii",
       ]
     ) {
       assert.ok(

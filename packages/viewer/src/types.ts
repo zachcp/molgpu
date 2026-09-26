@@ -64,16 +64,6 @@ export type MaterialSpec =
   | ({ type?: MaterialType } & Record<string, unknown>)
   | ((children: ViewerElement) => ViewerElement);
 
-/** A resolved atom set, valid only for the resource and revisions that made it. */
-export interface AtomSelection {
-  readonly structure: StructureData["identity"];
-  readonly topologyRevision: number;
-  readonly positionsRevision: number;
-  readonly domain: "atom";
-  readonly indices: Uint32Array;
-  readonly bounds: StructureBounds | null;
-}
-
 /** CPU-side owner of the values shared by one <Structure> subtree. */
 export interface StructureResource {
   readonly data: StructureData;
@@ -82,10 +72,6 @@ export interface StructureResource {
   readonly positionsRevision: number;
   /** Lazily computed and cached; throws once the resource is disposed. */
   readonly bounds: StructureBounds | null;
-  /** Indices must be sorted, unique and in range. Results are LRU-cached. */
-  selection(indices: Uint32Array): AtomSelection;
-  /** False for foreign, stale or post-dispose selection handles. */
-  accepts(value: unknown): boolean;
   dispose(): void;
 }
 
@@ -129,8 +115,6 @@ export type StructureLoader = (
 
 /** Preloaded values. This path never loads a parser. */
 export interface PreloadedStructureProps {
-  /** Per-structure selection cache bound; defaults to 64. */
-  maxSelections?: number;
   children?: ViewerElement;
   data: StructureData;
   src?: undefined;
@@ -141,8 +125,6 @@ export interface PreloadedStructureProps {
 
 /** A source to load. Replacing or unmounting it rejects in-flight results. */
 export interface LoadedStructureProps {
-  /** Per-structure selection cache bound; defaults to 64. */
-  maxSelections?: number;
   children?: ViewerElement;
   src: string;
   data?: undefined;

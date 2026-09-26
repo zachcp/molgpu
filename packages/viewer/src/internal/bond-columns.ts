@@ -79,19 +79,3 @@ export function buildBondColumns(
   }
   return { n, positions, segments, rows };
 }
-
-/** Atom attribute columns gathered per bond vertex (one value per `rows` entry). */
-export function endpointAttributes(
-  data: StructureData,
-  rows: Uint32Array,
-  names: readonly string[],
-): Record<string, Float32Array> {
-  for (const name of names) count("gathers", `bonds:attr:${name}`);
-  return Object.fromEntries(names.map((name) => {
-    const column = data.topology
-      .atoms[name as keyof StructureData["topology"]["atoms"]] as ArrayLike<
-        number
-      >;
-    return [name, Float32Array.from(rows, (i) => column[i])];
-  }));
-}

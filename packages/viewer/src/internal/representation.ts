@@ -1,9 +1,45 @@
-import { type LiveElement, use } from "@use-gpu/live";
+import { type LiveElement, use, useMemo } from "@use-gpu/live";
 import type { StorageSource } from "@use-gpu/core";
 import { compile, type Field } from "@molgpu/fields";
+import type { Selection } from "@molgpu/select";
+import { activeAtoms } from "@molgpu/table";
 import type { ColumnFormat } from "./columns.ts";
-import type { ViewerElement } from "../types.ts";
+import type { StructureResource, ViewerElement } from "../types.ts";
 import { ColumnSource } from "./column-source.ts";
+import { count } from "./instrumentation.ts";
+
+/** Reject a selection resolved against another structure or in another domain. */
+export function checkAtomSelection(
+  select: Selection | null | undefined,
+  resource: StructureResource,
+  who: string,
+): void {
+  if (
+    select != null &&
+    (select.dataset !== resource.identity || select.domain !== "atom")
+  ) {
+    throw new TypeError(`${who} received a foreign or non-atom selection`);
+  }
+}
+
+/** The atom rows a trace or surface draws: the selection's, else the active
+ * model/primary-altloc view. activeAtoms reads topology only, so coordinate
+ * edits keep the rows (and everything memoised on their identity). */
+export function useActiveRows(
+  resource: StructureResource,
+  select: Selection | null | undefined,
+  who: string,
+): Uint32Array {
+  checkAtomSelection(select, resource, who);
+  return useMemo(
+    () =>
+      select
+        ? select.indices
+        : (count("topologyBuilds", `${who.toLowerCase()}:activeAtoms`),
+          activeAtoms(resource.data)),
+    [resource.identity, resource.topologyRevision, select?.id ?? "active"],
+  );
+}
 
 /** A @molgpu/fields Field (vs a flat VectorLike colour). */
 export const isField = (v: unknown): v is Field =>

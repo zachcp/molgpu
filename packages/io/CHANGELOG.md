@@ -6,6 +6,8 @@ All notable changes to `@molgpu/io` are recorded here. The format follows
 
 ## [Unreleased]
 
+- Default atom radii come from `@molgpu/table`'s `elementRadius`; values are
+  unchanged.
 - Source is TypeScript (`src/index.ts`); the hand-written `index.d.ts` is gone.
   The public API is unchanged.
 - `molstar` is now a regular dependency instead of an optional peer (JSR has no

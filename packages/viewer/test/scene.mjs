@@ -170,8 +170,12 @@ const App = () => {
     trace: false,
   });
   probe.update = (patch) => setState((s) => ({ ...s, ...patch }));
+  // Columns are immutable by contract: an edit publishes a new array, whose
+  // identity is what makes ColumnSource upload again.
   probe.mutate = () => {
-    columns[0][1][0] += 10;
+    const [format, data] = columns[0], next = data.slice();
+    next[0] += 10;
+    columns[0] = [format, next];
     setState((s) => ({ ...s, revision: s.revision + 1 }));
   };
   probe.mounted = true;
@@ -180,7 +184,6 @@ const App = () => {
       state.mounted && use(ColumnSource, {
         data: state.empty ? data.subarray(0, 0) : data,
         format,
-        revision: state.revision,
         render: (source) => {
           record(format, source);
           return null;

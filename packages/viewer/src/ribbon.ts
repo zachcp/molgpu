@@ -7,13 +7,13 @@ import type {
 } from "./types.ts";
 import { use, useMemo } from "@use-gpu/live";
 import { FaceLayer } from "@use-gpu/workbench";
-import {
-  activeAtoms,
-  secondaryStructureTrace,
-  traceTable,
-} from "@molgpu/table";
+import { secondaryStructureTrace, traceTable } from "@molgpu/table";
 import { useStructure } from "./structure-context.ts";
-import { type ColumnSpec, withColumns } from "./internal/representation.ts";
+import {
+  type ColumnSpec,
+  useActiveRows,
+  withColumns,
+} from "./internal/representation.ts";
 import {
   applyOpacity,
   checkOpacity,
@@ -73,21 +73,7 @@ export const Ribbon: ViewerComponent<
   const { resource } = useStructure();
   const { data } = resource;
 
-  if (
-    select !== undefined && select !== null &&
-    (select.dataset !== resource.identity || select.domain !== "atom")
-  ) {
-    throw new TypeError("Ribbon received a foreign or non-atom selection");
-  }
-  const selectKey = select?.id ?? "active";
-  // activeAtoms is a topology-only view policy: coordinate edits keep it.
-  const indices = useMemo(
-    () =>
-      select
-        ? select.indices
-        : (count("topologyBuilds", "ribbon:activeAtoms"), activeAtoms(data)),
-    [resource.identity, resource.topologyRevision, selectKey],
-  );
+  const indices = useActiveRows(resource, select, "Ribbon");
   const trace = useMemo(
     () => (count("geometryBuilds", "ribbon:trace"), traceTable(data, indices)),
     [data, indices],

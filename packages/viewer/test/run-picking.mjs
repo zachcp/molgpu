@@ -130,6 +130,31 @@ Deno.test("viewer picking", async () => {
       `click-to-seek must move the timeline to beat time 5, got ${clicked.time}`,
     );
 
+    // A selection that drops row 0: the middle atom is drawn instance 0. Its
+    // position is read through the selection rows on the GPU, and the hit
+    // maps back through the same rows.
+    await page.goto(
+      "http://127.0.0.1:5213/packages/viewer/test/picking.html?select",
+    );
+    await page.waitForFunction(
+      () => window.__probe?.mounted && document.querySelector("canvas"),
+      null,
+      { timeout: 30000 },
+    );
+    await settle();
+    await settle();
+    await page.mouse.move(cx, cy);
+    await settle();
+    const selected = await snap();
+    assert.deepEqual(selected.errors, [], "selected picking WebGPU errors");
+    assert.deepEqual(
+      selected.hover && [selected.hover.atom, selected.hover.instance],
+      [1, 0],
+      `selected draw must resolve the middle atom as instance 0, got ${
+        JSON.stringify(selected.hover)
+      }`,
+    );
+
     assert.deepEqual(errors, [], "page errors");
     console.log(
       JSON.stringify({

@@ -2,7 +2,6 @@ import { assert, assertThrows } from "@std/assert";
 import {
   pointSizeForCameraRadius,
   pointSizeForRadius,
-  pointSizesForRadii,
 } from "../src/internal/point-size.ts";
 
 const close = (actual: number, expected: number) =>
@@ -33,9 +32,9 @@ Deno.test("PointLayer diameter conversion agrees with the pinned depth:1 shader 
   }
 });
 
-Deno.test("conversion preserves physical radius ratios and produces a derived size column", () => {
+Deno.test("conversion preserves physical radius ratios", () => {
   const view = { pixelRatio: 2, viewScale: 0.02, worldScale: 0.25 };
-  const sizes = pointSizesForRadii(Float32Array.of(1, 1.7, 2), view);
+  const sizes = [1, 1.7, 2].map((radius) => pointSizeForRadius(radius, view));
   close(sizes[1] / sizes[0], 1.7);
   close(sizes[2] / sizes[0], 2);
   assertThrows(
@@ -45,7 +44,7 @@ Deno.test("conversion preserves physical radius ratios and produces a derived si
   );
 });
 
-Deno.test("OrbitCamera radius changes keep the PointLayer size-column input stable", () => {
+Deno.test("OrbitCamera radius changes keep the PointLayer size factor stable", () => {
   const sizeAt = (radius: number) => {
     const viewScale = radius * 2 * Math.tan(Math.PI / 6) / 600;
     const worldScale = 5 / radius;

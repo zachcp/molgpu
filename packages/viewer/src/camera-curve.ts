@@ -1,6 +1,6 @@
 import { resolve, type SelectionQuery, toAtoms } from "@molgpu/select";
 import { createCurve, sample } from "@molgpu/timeline";
-import type { StructureData } from "@molgpu/table";
+import { atomRadii, type StructureData } from "@molgpu/table";
 import { gauge } from "./internal/instrumentation.ts";
 import type {
   CameraCurve,
@@ -34,7 +34,7 @@ const focusCache = new WeakMap<
 >();
 // Framings per (resource, query). The options key includes the continuous
 // `aspect`, so a resizing canvas would otherwise add an entry per size: keep
-// the most recently used ones, like StructureResource's selection cache.
+// the most recently used ones.
 const MAX_FRAMINGS = 64;
 const remember = <V extends FocusResult | null>(
   byOptions: Framings,
@@ -57,6 +57,7 @@ const displayBounds = (
   atomRadiusScale: number,
 ): StructureBounds | null => {
   const { atoms, residues, instances } = data.topology;
+  const radii = atomRadii(data);
   if (!indices.length) return null;
   const byChain = new Map<number, Float64Array[]>();
   for (let i = 0; i < instances.count; i++) {
@@ -90,7 +91,7 @@ const displayBounds = (
     const x = data.positions[i * 3],
       y = data.positions[i * 3 + 1],
       z = data.positions[i * 3 + 2];
-    const r = (atoms.radius?.[i] ?? 0) * atomRadiusScale;
+    const r = radii[i] * atomRadiusScale;
     for (const m of transforms) {
       for (let axis = 0; axis < 3; axis++) {
         const center = m[axis] * x + m[axis + 4] * y + m[axis + 8] * z +
@@ -119,7 +120,7 @@ export function focusSelection(
     padding = 1.15,
     atomRadiusScale = 1,
   } = options;
-  if (!resource?.data || !resource?.accepts) {
+  if (!resource?.data || typeof resource.dispose !== "function") {
     throw new TypeError("focusSelection requires a StructureResource");
   }
   if (!query || typeof query.type !== "string") {
@@ -168,7 +169,6 @@ export function focusSelection(
       (_, i) => i,
     );
   }
-  resource.selection(indices); // validates the explicit handle is still live
   const bounds = displayBounds(data, indices, atomRadiusScale);
   if (!bounds) {
     return remember(

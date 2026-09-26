@@ -1,14 +1,14 @@
 import type { Selection } from "@molgpu/select";
 import type { StructureData } from "@molgpu/table";
-import type {
-  StructureResource,
-  VectorLike,
-  ViewerComponent,
-} from "./types.ts";
+import type { VectorLike, ViewerComponent } from "./types.ts";
 import { use, useMemo } from "@use-gpu/live";
 import { LabelLayer, LineLayer } from "@use-gpu/workbench";
 import { useStructure } from "./structure-context.ts";
-import { type ColumnSpec, withColumns } from "./internal/representation.ts";
+import {
+  checkAtomSelection,
+  type ColumnSpec,
+  withColumns,
+} from "./internal/representation.ts";
 import { applyOpacity, checkOpacity, modeProps } from "./internal/opacity.ts";
 import {
   centroidOf,
@@ -19,18 +19,6 @@ import {
 import { useRepaint } from "./internal/use-repaint.ts";
 import { count } from "./internal/instrumentation.ts";
 import { useBindingProbe } from "./internal/use-binding-probe.ts";
-
-/** Guard a selection is this structure's atom domain (or null / a raw point). */
-const checkSelection = (
-  select: Selection | null | undefined,
-  resource: StructureResource,
-  who: string,
-): void => {
-  if (select == null) return;
-  if (select.dataset !== resource.identity || select.domain !== "atom") {
-    throw new TypeError(`${who} received a foreign or non-atom selection`);
-  }
-};
 
 /** A selection's centroid, or an explicit [x,y,z] point passed through. */
 const anchorOf = (
@@ -89,7 +77,7 @@ export const Label: ViewerComponent<{
   useBindingProbe("label", text, size, color, opacity);
   const { resource } = useStructure();
   const { data } = resource;
-  checkSelection(select, resource, "Label");
+  checkAtomSelection(select, resource, "Label");
   const selectKey = select?.id ?? "active";
   const computed = useMemo(() => anchorOf(data, select, "label:anchor"), [
     data,
@@ -152,8 +140,8 @@ export const Distance: ViewerComponent<{
   useBindingProbe("distance", color, opacity, width, size, labelColor);
   const { resource } = useStructure();
   const { data } = resource;
-  checkSelection(a, resource, "Distance");
-  checkSelection(b, resource, "Distance");
+  checkAtomSelection(a, resource, "Distance");
+  checkAtomSelection(b, resource, "Distance");
   if (a == null || b == null) {
     throw new TypeError("Distance requires two selections, a and b");
   }

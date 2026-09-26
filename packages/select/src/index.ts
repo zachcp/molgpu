@@ -15,7 +15,10 @@
 // datasets, domains, or inconsistent revisions. There is no string parser and no
 // arbitrary WGSL promise here — this package is pure CPU index math.
 
-import type { StructureData } from "@molgpu/table";
+import { spatialGrid, type StructureData } from "@molgpu/table";
+
+// Smallest grid cell for within(); a zero cutoff still needs a positive cell.
+const MIN_CELL = 1;
 
 export type Domain = "atom" | "residue" | "bond";
 export type RevisionStream = "topology" | "positions" | "attributes";
@@ -309,18 +312,19 @@ const evalQuery = (
     case "within": {
       const inner = evalQuery(node.of, data);
       const seeds = toAtomRows(inner.domain, inner.rows, data);
-      const c2 = node.cutoff * node.cutoff;
+      const P = data.positions, c2 = node.cutoff * node.cutoff;
       const rows: number[] = [];
-      for (let i = 0; i < data.topology.atoms.count; i++) {
-        for (const j of seeds) {
-          const dx = data.positions[i * 3] - data.positions[j * 3];
-          const dy = data.positions[i * 3 + 1] - data.positions[j * 3 + 1];
-          const dz = data.positions[i * 3 + 2] - data.positions[j * 3 + 2];
-          if (dx * dx + dy * dy + dz * dz <= c2) {
-            rows.push(i);
-            break;
-          }
-        }
+      // Cells at least one cutoff wide, so only neighbouring cells can match.
+      const grid = seeds.length
+        ? spatialGrid(P, seeds, Math.max(node.cutoff, MIN_CELL))
+        : null;
+      for (let i = 0; grid && i < data.topology.atoms.count; i++) {
+        const x = P[i * 3], y = P[i * 3 + 1], z = P[i * 3 + 2];
+        const hit = grid.near(x, y, z, (j) => {
+          const dx = x - P[j * 3], dy = y - P[j * 3 + 1], dz = z - P[j * 3 + 2];
+          return dx * dx + dy * dy + dz * dz <= c2;
+        });
+        if (hit) rows.push(i);
       }
       return { domain: "atom", rows, deps: mergeDeps(node.deps, inner.deps) };
     }

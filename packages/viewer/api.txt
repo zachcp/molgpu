@@ -6,8 +6,6 @@ AmbientLight
   export const AmbientLight: ViewerComponent<AmbientLightProps>;
 AmbientLightProps
   export interface AmbientLightProps { color?: ColorLike; intensity?: number }
-AtomSelection
-  export interface AtomSelection { readonly structure: StructureData["identity"]; readonly topologyRevision: number; readonly positionsRevision: number; readonly domain: "atom"; readonly indices: Uint32Array; readonly bounds: StructureBounds | null }
 BallAndStick
   export const BallAndStick: ViewerComponent<{ select?: Selection | null; /** A flat colour or a @molgpu/fields Field, applied to balls and sticks. */ color?: VectorLike | Field; /** Ball radius scale; defaults to 0.3. */ ball?: number; /** Stick width; defaults to 0.28. */ stick?: number; endpoints?: "both" | "either"; /** Forwarded to both balls and sticks, so they share one shading model. */ material?: MaterialSpec } & Translucency>;
 BasicMaterial
@@ -57,7 +55,7 @@ KEY_LIGHT_DIRECTION
 Label
   export const Label: ViewerComponent<{ select?: Selection | null; /** Explicit [x, y, z] anchor, overriding the selection centroid. */ at?: readonly number[]; text?: string; size?: number; color?: VectorLike; offset?: readonly number[]; family?: string; /** 0–1, multiplied into the text colour's alpha (text always blends). */ opacity?: number }>;
 LoadedStructureProps
-  export interface LoadedStructureProps { /** Per-structure selection cache bound; defaults to 64. */ maxSelections?: number; children?: ViewerElement; src: string; data?: undefined; /** Defaults to fetch + BCIF lowering through @molgpu/io. Its identity is a * reload dependency alongside `src`, so pass a stable or memoized function. */ loader?: StructureLoader; loading?: ViewerElement | (() => ViewerElement); error?: ViewerElement | ((failure: unknown) => ViewerElement) }
+  export interface LoadedStructureProps { children?: ViewerElement; src: string; data?: undefined; /** Defaults to fetch + BCIF lowering through @molgpu/io. Its identity is a * reload dependency alongside `src`, so pass a stable or memoized function. */ loader?: StructureLoader; loading?: ViewerElement | (() => ViewerElement); error?: ViewerElement | ((failure: unknown) => ViewerElement) }
 MaterialProps
   export interface MaterialProps { children?: ViewerElement }
 MaterialSpec
@@ -93,7 +91,7 @@ PointLight
 PointLightProps
   export interface PointLightProps { position?: VectorLike; color?: ColorLike; intensity?: number; cutoff?: number; shadowMap?: ShadowMapOptions; infinite?: boolean; debug?: boolean }
 PreloadedStructureProps
-  export interface PreloadedStructureProps { /** Per-structure selection cache bound; defaults to 64. */ maxSelections?: number; children?: ViewerElement; data: StructureData; src?: undefined; loader?: undefined; loading?: undefined; error?: undefined }
+  export interface PreloadedStructureProps { children?: ViewerElement; data: StructureData; src?: undefined; loader?: undefined; loading?: undefined; error?: undefined }
 Ribbon
   export const Ribbon: ViewerComponent<{ /** A @molgpu/select atom Selection; without one, active model/primary-altloc atoms are used. */ select?: Selection | null; /** Samples per guide segment; defaults to 8. */ smooth?: number; color?: VectorLike; /** Wraps the shaded ribbon layer; without one, the ambient scene material. */ material?: MaterialSpec } & Translucency>;
 SSAOOptions
@@ -115,7 +113,7 @@ StructureLoader
 StructureProps
   export type StructureProps = PreloadedStructureProps | LoadedStructureProps;
 StructureResource
-  export interface StructureResource { readonly data: StructureData; readonly identity: StructureData["identity"]; readonly topologyRevision: number; readonly positionsRevision: number; /** Lazily computed and cached; throws once the resource is disposed. */ readonly bounds: StructureBounds | null; /** Indices must be sorted, unique and in range. Results are LRU-cached. */ selection(indices: Uint32Array): AtomSelection; /** False for foreign, stale or post-dispose selection handles. */ accepts(value: unknown): boolean; dispose(): void }
+  export interface StructureResource { readonly data: StructureData; readonly identity: StructureData["identity"]; readonly topologyRevision: number; readonly positionsRevision: number; /** Lazily computed and cached; throws once the resource is disposed. */ readonly bounds: StructureBounds | null; dispose(): void }
 Surface
   export const Surface: ViewerComponent<{ /** A @molgpu/select atom Selection; without one, active model/primary-altloc atoms are used. */ select?: Selection | null; /** Ångström probe radius; defaults to 1.4 (water). */ probeRadius?: number; /** Grid spacing in Ångströms; defaults to 0.5. Smaller is finer and slower. */ resolution?: number; /** Grid byte budget override; defaults to 256 MiB. */ maxBytes?: number; color?: VectorLike; /** Wraps the shaded face layer; without one, the ambient scene material. */ material?: MaterialSpec; loading?: ViewerElement | (() => ViewerElement); error?: ViewerElement | ((failure: unknown) => ViewerElement) } & Translucency>;
 TimelineProvider
@@ -137,7 +135,7 @@ centroid
 createCameraCurve
   export function createCameraCurve(frames: CameraCurve): CameraCurve;
 createStructureResource
-  export function createStructureResource(data: StructureData, options?: { readonly maxSelections?: number }): StructureResource;
+  export function createStructureResource(data: StructureData): StructureResource;
 focusSelection
   export function focusSelection(resource: StructureResource, query: SelectionQuery, options?: FocusOptions): FocusResult | null;
 materialTypes
@@ -176,7 +174,7 @@ StructureSources
 TimelineContext
   export const TimelineContext: LiveContext<number | null>;
 WorldSpacePointLayer
-  export const WorldSpacePointLayer: LC<{ positions: ShaderSource; colors?: ShaderSource; radii: Float32Array; /** Defaults to `radii.length`. */ count?: number; scale?: number } & Omit<PointLayerProps, "positions" | "colors" | "sizes" | "count" | "depth">>;
+  export const WorldSpacePointLayer: LC<{ positions: ShaderSource; colors?: ShaderSource; radii: ShaderSource; count: number; scale?: number } & Omit<PointLayerProps, "positions" | "colors" | "sizes" | "count" | "depth">>;
 useField
   export function useField(field: Field, inputs?: Record<string, ShaderSource | number | { current: number }>, options?: { domain?: "atom" | "residue" }): ShaderSource;
 useStructure

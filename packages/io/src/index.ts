@@ -1,4 +1,8 @@
-import { createStructure, type StructureData } from "@molgpu/table";
+import {
+  createStructure,
+  elementRadius,
+  type StructureData,
+} from "@molgpu/table";
 import type {
   BcifErrorCode,
   SurfaceField,
@@ -41,16 +45,6 @@ const ELEMENT: Readonly<Record<string, number>> = {
   S: 16,
   SE: 34,
   FE: 26,
-};
-const RADIUS: Readonly<Record<number, number>> = {
-  1: 1.1,
-  6: 1.7,
-  7: 1.55,
-  8: 1.52,
-  15: 1.8,
-  16: 1.8,
-  26: 2.05,
-  34: 1.9,
 };
 
 // Chemical-component name sets ported from Mol* 5.11.0's MIT-licensed
@@ -441,7 +435,7 @@ export async function structureFromBcif(
     altloc.push(str(atom, "label_alt_id", i));
     const atomic = ELEMENT[str(atom, "type_symbol", i).toUpperCase()] ?? 0;
     element[i] = atomic;
-    radius[i] = RADIUS[atomic] ?? 1.7;
+    radius[i] = elementRadius(atomic);
     positions[i * 3] = num(atom, "Cartn_x", i);
     positions[i * 3 + 1] = num(atom, "Cartn_y", i);
     positions[i * 3 + 2] = num(atom, "Cartn_z", i);

@@ -1,7 +1,7 @@
 // Instrumented mount for the urn.5 derived-style-field invariant, for both a
 // scalar (size) field and a colour field.
 //
-//  - scale changes must not re-upload the per-atom size column (uniform write).
+//  - scale changes must not re-upload the shared radii column (uniform write).
 //  - colours come from a byElement field composed over the element column, so no
 //    per-atom colour array is uploaded at all; swapping the palette rebuilds the
 //    shader module but re-uploads no per-atom array.
@@ -115,7 +115,7 @@ const cameraBearing = createCurve([
   { time: beats.time("orbit"), value: 1.1 },
 ]);
 
-const Points = ({ positions, elementSource, scale, palette }) => {
+const Points = ({ positions, radiusSource, elementSource, scale, palette }) => {
   const colors = useField(
     PALETTES[palette],
     { "attr:element": elementSource },
@@ -124,7 +124,7 @@ const Points = ({ positions, elementSource, scale, palette }) => {
   return use(WorldSpacePointLayer, {
     positions,
     colors,
-    radii,
+    radii: radiusSource,
     count: N,
     scale,
     shape: "circle",
@@ -146,28 +146,35 @@ const Scene = ({ state }) => {
         format: "f32",
         label: "elements",
         render: (elem) =>
-          use(OrbitCamera, {
-            radius,
-            bearing,
-            pitch: 0.35,
-            target: [0, 0, 0],
-            children: use(Pass, {
-              lights: true,
-              children: [
-                use(AmbientLight, { color: [1, 1, 1], intensity: 0.3 }),
-                use(DirectionalLight, {
-                  position: [1, 2, 1.5],
-                  color: [1, 1, 1],
-                  intensity: 1,
+          use(ColumnSource, {
+            data: radii,
+            format: "f32",
+            label: "radii",
+            render: (radiusSource) =>
+              use(OrbitCamera, {
+                radius,
+                bearing,
+                pitch: 0.35,
+                target: [0, 0, 0],
+                children: use(Pass, {
+                  lights: true,
+                  children: [
+                    use(AmbientLight, { color: [1, 1, 1], intensity: 0.3 }),
+                    use(DirectionalLight, {
+                      position: [1, 2, 1.5],
+                      color: [1, 1, 1],
+                      intensity: 1,
+                    }),
+                    use(Points, {
+                      positions: pos,
+                      radiusSource,
+                      elementSource: elem,
+                      scale: state.scale,
+                      palette: state.palette,
+                    }),
+                  ],
                 }),
-                use(Points, {
-                  positions: pos,
-                  elementSource: elem,
-                  scale: state.scale,
-                  palette: state.palette,
-                }),
-              ],
-            }),
+              }),
           }),
       }),
   });

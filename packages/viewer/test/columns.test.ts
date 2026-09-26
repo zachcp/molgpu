@@ -1,14 +1,13 @@
 import { assertEquals, assertStrictEquals, assertThrows } from "@std/assert";
 import { type ColumnFormat, prepareColumn } from "../src/internal/columns.ts";
 
-Deno.test("offset vec3 view retains two logical rows, no prefix/suffix, independent storage", () => {
+Deno.test("offset vec3 view counts its own rows and is passed through uncopied", () => {
   const backing = Float32Array.from([99, 1, 2, 3, 4, 5, 6, 88]);
-  const column = prepareColumn(backing.subarray(1, 7), "vec3<f32>");
+  const view = backing.subarray(1, 7);
+  const column = prepareColumn(view, "vec3<f32>");
   assertStrictEquals(column.count, 2);
+  assertStrictEquals(column.data, view);
   assertEquals([...column.data], [1, 2, 3, 4, 5, 6]);
-  backing[1] = 999;
-  assertStrictEquals(column.data[0], 1);
-  assertStrictEquals(column.data.byteOffset, 0);
 });
 
 Deno.test("used formats, empty rows and validation", () => {

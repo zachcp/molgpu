@@ -2,7 +2,6 @@ import type { Field } from "@molgpu/fields";
 import type { Selection } from "@molgpu/select";
 import type {
   MaterialSpec,
-  StructureResource,
   Translucency,
   VectorLike,
   ViewerComponent,
@@ -14,21 +13,16 @@ import { byElement } from "@molgpu/fields";
 import { useStructure } from "./structure-context.ts";
 import { useField } from "./use-field.ts";
 import {
+  checkAtomSelection,
   type ColumnMap,
   type ColumnSpec,
   fieldAttrNames,
   isField,
   withColumns,
 } from "./internal/representation.ts";
+import { gatherAtomColumns } from "./internal/gather.ts";
+import { indexed } from "./internal/indexed.ts";
 
-/** The last endpoint-attribute gather, reused while its inputs are unchanged. */
-interface EndpointCache {
-  readonly identity: StructureResource["identity"];
-  readonly topologyRevision: number;
-  readonly names: string;
-  rows: Uint32Array;
-  readonly columns: Record<string, Float32Array>;
-}
 /** LineLayer props Bonds forwards (draw mode and any upstream flags). */
 type LineProps = Record<string, unknown>;
 import {
@@ -39,10 +33,7 @@ import {
 } from "./internal/opacity.ts";
 import { useOpacityColors } from "./internal/use-opacity-colors.ts";
 import { withMaterial } from "./materials.ts";
-import {
-  buildBondColumns,
-  endpointAttributes,
-} from "./internal/bond-columns.ts";
+import { buildBondColumns } from "./internal/bond-columns.ts";
 import { useRepaint } from "./internal/use-repaint.ts";
 import { useBindingProbe } from "./internal/use-binding-probe.ts";
 
@@ -57,36 +48,16 @@ const sameRows = (a: Uint32Array, b: Uint32Array): boolean => {
   return true;
 };
 
-// Endpoint attribute columns are a function of the topology columns, the
-// endpoint rows and the column names. The rows are compared by content rather
-// than by the geometry build: a coordinate edit rebuilds geometry but usually
-// keeps the same rows. Inferred bonds can change with coordinates, and then the
-// rows change too, so the columns are rebuilt.
-const useEndpointAttributes = (
-  resource: StructureResource,
-  rows: Uint32Array,
-  attrNames: readonly string[],
-): Record<string, Float32Array> => {
-  const cache = useRef<EndpointCache | null>(null);
-  const names = attrNames.join();
-  const hit = cache.current;
-  if (
-    hit && hit.identity === resource.identity &&
-    hit.topologyRevision === resource.topologyRevision &&
-    hit.names === names && sameRows(hit.rows, rows)
-  ) {
-    hit.rows = rows;
-    return hit.columns;
+// A coordinate edit rebuilds bond geometry but usually keeps the same endpoint
+// rows. Keep the previous array when its contents match, so the uploaded row
+// column is reused. Inferred bonds can change with coordinates; then the rows
+// change and are uploaded again.
+const useStableRows = (rows: Uint32Array): Uint32Array => {
+  const previous = useRef<Uint32Array | null>(null);
+  if (!previous.current || !sameRows(previous.current, rows)) {
+    previous.current = rows;
   }
-  const columns = endpointAttributes(resource.data, rows, attrNames);
-  cache.current = {
-    identity: resource.identity,
-    topologyRevision: resource.topologyRevision,
-    names,
-    rows,
-    columns,
-  };
-  return columns;
+  return previous.current;
 };
 
 const line = (
@@ -108,19 +79,32 @@ const line = (
     ...props,
   });
 
-// A colour field colours each endpoint by its atom, composed shader-side.
+// A colour field colours each endpoint by its atom, composed shader-side: the
+// full attribute columns are read through each vertex's atom row.
 const FieldBonds: LC<
   {
     map: ColumnMap;
+    attrNames: readonly string[];
     field: Field;
     opacity: number;
     width: number;
     sides: number;
     shaded: boolean;
   } & LineProps
-> = ({ map, field, opacity, width, sides, shaded, ...props }) => {
+> = ({ map, attrNames, field, opacity, width, sides, shaded, ...props }) => {
+  const columns = attrNames.map((name) => map[`attr:${name}`]);
+  const attrs = useMemo(
+    () =>
+      Object.fromEntries(
+        attrNames.map((name, k) => [
+          `attr:${name}`,
+          indexed(columns[k]!, map.rows, "f32"),
+        ]),
+      ),
+    [map.rows, attrNames.join(), ...columns],
+  );
   const colors = useOpacityColors(
-    useField(field, map as Record<string, ShaderSource>, { domain: "atom" }),
+    useField(field, attrs, { domain: "atom" }),
     opacity,
   );
   return line(
@@ -179,12 +163,7 @@ export const Bonds: ViewerComponent<
   const { resource } = useStructure();
   const { data } = resource;
 
-  if (
-    select !== undefined && select !== null &&
-    (select.dataset !== resource.identity || select.domain !== "atom")
-  ) {
-    throw new TypeError("Bonds received a foreign or non-atom selection");
-  }
+  checkAtomSelection(select, resource, "Bonds");
   if (!["both", "either"].includes(endpoints)) {
     throw new TypeError("Bonds endpoints must be 'both' or 'either'");
   }
@@ -210,18 +189,25 @@ export const Bonds: ViewerComponent<
     () => buildBondColumns(data, indices, endpoints, defaultColor),
     [data, selectKey, endpoints, defaultColor],
   );
-  const attrs = useEndpointAttributes(resource, built.rows, attrNames);
+  const rows = useStableRows(built.rows);
+  // Full attribute columns follow topology only; selections, coordinate edits
+  // and re-inferred bonds change only the row column.
+  const attrs = useMemo(
+    () => gatherAtomColumns(data, null, attrNames, "bonds"),
+    [resource.identity, resource.topologyRevision, attrNames.join()],
+  );
   if (!built.n) return null;
 
   const specs: ColumnSpec[] = [
     { key: "positions", data: built.positions, format: "vec3<f32>" },
     { key: "segments", data: built.segments, format: "i32" },
-    ...attrNames.map((name): ColumnSpec => ({
-      key: `attr:${name}`,
-      data: attrs[name],
-      format: "f32",
-    })),
   ];
+  if (field) {
+    specs.push({ key: "rows", data: rows, format: "u32" });
+    for (const name of attrNames) {
+      specs.push({ key: `attr:${name}`, data: attrs[name], format: "f32" });
+    }
+  }
   return withColumns(
     specs,
     (map) =>
@@ -230,6 +216,7 @@ export const Bonds: ViewerComponent<
         field
           ? use(FieldBonds, {
             map,
+            attrNames,
             field,
             opacity,
             width,

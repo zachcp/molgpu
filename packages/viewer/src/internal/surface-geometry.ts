@@ -10,7 +10,7 @@ import {
   type MarchingCubesMesh,
   nearestAtomAttribution,
 } from "@molgpu/geo";
-import type { StructureData } from "@molgpu/table";
+import { atomRadii, type StructureData } from "@molgpu/table";
 import type { SurfaceFieldAtoms } from "@molgpu/io";
 import type { StructureResource } from "../types.ts";
 import { assertGridBudget } from "./geometry-job.ts";
@@ -37,7 +37,7 @@ function gatherAtoms(data: StructureData, indices: Uint32Array): GatheredAtoms {
     z = new Float32Array(n),
     radius = new Float32Array(n);
   let maxRadius = 0;
-  const R = data.topology.atoms.radius!;
+  const R = atomRadii(data);
   for (let k = 0; k < n; k++) {
     const i = indices[k];
     x[k] = data.positions[i * 3];

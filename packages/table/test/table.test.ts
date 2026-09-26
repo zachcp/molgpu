@@ -7,9 +7,11 @@ import {
 } from "@std/assert";
 import {
   activeAtoms,
+  atomRadii,
   bondTopology,
   coordinateBounds,
   createStructure,
+  elementRadius,
   residueKey,
   selectBonds,
   validateStructure,
@@ -218,4 +220,31 @@ Deno.test("infers cached element-aware topology without cross-model or incompati
   assertEquals([...first.a], [0]);
   assertEquals([...first.b], [1]);
   assertEquals(first.source, ["inferred"]);
+});
+
+Deno.test("atom radii fall back to element defaults and follow topology identity", () => {
+  const data = createStructure(fixture());
+  assertStrictEquals(data.topology.atoms.radius, undefined);
+  const radii = atomRadii(data);
+  assertEquals([...radii], [1.55, 1.7, 1.7, 1.7, 1.7, 1.7].map(Math.fround));
+  assertStrictEquals(elementRadius(0), 1.7);
+  // Topology-only: a coordinate revision shares the derived column.
+  const moved = withPositions(data, data.positions.map((v) => v + 1));
+  assertStrictEquals(atomRadii(moved), radii);
+  const input = fixture();
+  const radius = Float32Array.from(
+    { length: input.topology.atoms.count },
+    () => 2,
+  );
+  const explicit = createStructure({
+    ...input,
+    topology: { ...input.topology, atoms: { ...input.topology.atoms, radius } },
+  });
+  assertStrictEquals(atomRadii(explicit), explicit.topology.atoms.radius);
+  assertThrows(
+    // @ts-expect-error: not a structure created by the module
+    () => atomRadii({ identity: {}, topology: input.topology }),
+    TypeError,
+    "identity",
+  );
 });

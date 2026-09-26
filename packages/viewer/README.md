@@ -129,7 +129,6 @@ may change before 0.1.0; _advanced_ — only from `@molgpu/viewer/advanced`.
 | `PointLayerOptions`          | experimental | Point-layer flags `<Spacefill>` forwards.                                                             |
 | `StructureResource`          | experimental | CPU-side owner of one structure's shared values.                                                      |
 | `StructureBounds`            | experimental | Ångström extent of a structure or selection.                                                          |
-| `AtomSelection`              | experimental | Resource-bound resolved atom set.                                                                     |
 | `createStructureResource`    | experimental | Create a StructureResource outside a `<Structure>`.                                                   |
 | `useStructureResource`       | experimental | The nearest `<Structure>`'s `StructureResource`, for `focusSelection` and other resource-taking APIs. |
 | `MaterialType`               | experimental | Material `type` names for a `material` spec.                                                          |
@@ -191,7 +190,7 @@ may change before 0.1.0; _advanced_ — only from `@molgpu/viewer/advanced`.
 | `TimelineContext`            | advanced     | Live context carrying timeline time.                                                                  |
 | `FlatMaterial`               | advanced     | Custom unlit fragment-shader material.                                                                |
 | `LitMaterial`                | advanced     | Custom lit shader material.                                                                           |
-| `WorldSpacePointLayer`       | advanced     | PointLayer with Ångström radii over shader sources.                                                   |
+| `WorldSpacePointLayer`       | advanced     | PointLayer with GPU radii source and Ångström size conversion in a shader.                            |
 | `useField`                   | advanced     | Lower a field to a use.gpu shader source.                                                             |
 
 ## Place in the dependency graph

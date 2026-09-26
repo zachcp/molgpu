@@ -33,7 +33,6 @@ export const Structure: ViewerComponent<StructureProps> = (
     loading = null,
     error = null,
     children,
-    maxSelections,
   },
 ) => {
   if (data !== undefined && src !== undefined) {
@@ -57,7 +56,7 @@ export const Structure: ViewerComponent<StructureProps> = (
   );
   if (data !== undefined) {
     return viewer(
-      use(StructureProvider, { data, maxSelections, children: live(children) }),
+      use(StructureProvider, { data, children: live(children) }),
     );
   }
   // Replacing src marks the request pending again, so the previously loaded
@@ -69,7 +68,6 @@ export const Structure: ViewerComponent<StructureProps> = (
     ? viewer(
       use(StructureProvider, {
         data: loaded,
-        maxSelections,
         children: live(children),
       }),
     )

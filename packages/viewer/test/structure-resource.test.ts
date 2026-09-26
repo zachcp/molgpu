@@ -70,32 +70,6 @@ const structure = () =>
     },
   });
 
-Deno.test("shares bounded atom mappings and stamps their structure identity", () => {
-  const data = structure(),
-    resource = createStructureResource(data, { maxSelections: 2 });
-  const one = resource.selection(new Uint32Array([0]));
-  assertStrictEquals(resource.selection(new Uint32Array([0])), one);
-  assertEquals(one.bounds, {
-    min: [0, 0, 0],
-    max: [0, 0, 0],
-    center: [0, 0, 0],
-  });
-  assertStrictEquals(resource.selection(new Uint32Array()).bounds, null);
-  resource.selection(new Uint32Array([1]));
-  resource.selection(new Uint32Array([0, 1]));
-  assertNotStrictEquals(resource.selection(new Uint32Array([0])), one);
-  assertThrows(
-    () => resource.selection(new Uint32Array([1, 0])),
-    Error,
-    "sorted and unique",
-  );
-  assertThrows(
-    () => resource.selection(new Uint32Array([2])),
-    Error,
-    "out of range",
-  );
-});
-
 Deno.test("coordinate versions receive fresh resources but preserve topology identity", () => {
   const original = structure();
   const moved = withPositions(original, new Float32Array([10, 0, 0, 12, 4, 6]));
@@ -103,19 +77,21 @@ Deno.test("coordinate versions receive fresh resources but preserve topology ide
     after = createStructureResource(moved);
   assertStrictEquals(before.identity, after.identity);
   assertNotStrictEquals(before.positionsRevision, after.positionsRevision);
-  assertStrictEquals(
-    after.accepts(before.selection(new Uint32Array([0]))),
-    false,
-  );
+  assertEquals(before.bounds?.center, [1, 2, 3]);
   assertEquals(after.bounds?.center, [11, 2, 3]);
 });
 
-Deno.test("foreign resources and disposed resources cannot be reused", () => {
-  const left = createStructureResource(structure()),
-    right = createStructureResource(structure());
-  const selection = left.selection(new Uint32Array([0]));
-  assertStrictEquals(right.accepts(selection), false);
-  left.dispose();
-  assertStrictEquals(left.accepts(selection), false);
-  assertThrows(() => left.selection(new Uint32Array([0])), Error, "disposed");
+Deno.test("a disposed resource rejects further use", () => {
+  const resource = createStructureResource(structure());
+  resource.dispose();
+  assertThrows(() => resource.bounds, Error, "disposed");
+});
+
+Deno.test("rejects values not created by @molgpu/table", () => {
+  assertThrows(
+    // @ts-expect-error: not StructureData
+    () => createStructureResource({ positions: [] }),
+    Error,
+    "expected StructureData",
+  );
 });

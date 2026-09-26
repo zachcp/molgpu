@@ -244,38 +244,6 @@ test("surface scheduling: probe/resolution edits change the geometry key, colour
   );
 });
 
-test("selection cache stays bounded under churn (5000 distinct selections)", () => {
-  const resource = createStructureResource(structure(), { maxSelections: 64 });
-  const first = resource.selection(Uint32Array.of(0));
-  for (let k = 0; k < 5000; k++) {
-    const lo = k % N, len = 1 + (Math.floor(k / N) % (N - lo));
-    resource.selection(Uint32Array.from({ length: len }, (_, i) => lo + i));
-  }
-  const s = snapshotCounters();
-  assert(
-    s.gauges.selectionCacheSize <= 64,
-    `selection cache exceeded its bound: ${s.gauges.selectionCacheSize}`,
-  );
-  assertStrictEquals(
-    s.gauges.selectionCacheSize,
-    64,
-    "the churn filled the cache to exactly its bound",
-  );
-  assertNotStrictEquals(
-    resource.selection(Uint32Array.of(0)),
-    first,
-    "the oldest mapping was evicted",
-  );
-});
-
-test("selection cache honours a custom bound and releases everything on dispose", () => {
-  const resource = createStructureResource(structure(), { maxSelections: 3 });
-  for (let k = 0; k < 100; k++) resource.selection(Uint32Array.of(k % N));
-  assertStrictEquals(snapshotCounters().gauges.selectionCacheSize, 3);
-  resource.dispose();
-  assertThrows(() => resource.selection(Uint32Array.of(0)), Error, "disposed");
-});
-
 // focusSelection caches one framing per (resource, query, options). The
 // options key includes the continuous `aspect`, so resizing a canvas while
 // focused on one query must not grow the cache without bound.

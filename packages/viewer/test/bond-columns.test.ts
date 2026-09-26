@@ -1,10 +1,8 @@
 import { assertEquals, assertNotEquals, assertStrictEquals } from "@std/assert";
 import { createStructure } from "@molgpu/table";
 import { byElement, evaluate } from "@molgpu/fields";
-import {
-  buildBondColumns,
-  endpointAttributes,
-} from "../src/internal/bond-columns.ts";
+import { buildBondColumns } from "../src/internal/bond-columns.ts";
+import { gatherAtomColumns } from "../src/internal/gather.ts";
 
 const data = createStructure({
   positions: Float32Array.from([-4, 0, 0, -2, 0, 0, 1, -1, 0, 3, 3, 2]),
@@ -98,7 +96,9 @@ Deno.test("default bonds split C-O and diagonal N-S at exact midpoints with matc
     3,
     2,
   ]);
-  assertEquals([...endpointAttributes(data, built.rows, ["element"]).element], [
+  assertEquals([
+    ...gatherAtomColumns(data, built.rows, ["element"], "bonds").element,
+  ], [
     6,
     6,
     8,

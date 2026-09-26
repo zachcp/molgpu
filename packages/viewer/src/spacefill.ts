@@ -8,31 +8,27 @@ import type {
   ViewerComponent,
 } from "./types.ts";
 import { type LC, use, useMemo } from "@use-gpu/live";
-import type { StorageSource } from "@use-gpu/core";
 import type { ShaderSource } from "@use-gpu/shader";
 import type { StructureData } from "@molgpu/table";
 import { WorldSpacePointLayer } from "./world-space-points.ts";
-import { useStructure } from "./structure-context.ts";
+import { type StructureSources, useStructure } from "./structure-context.ts";
 import { useField } from "./use-field.ts";
+import { indexed } from "./internal/indexed.ts";
 import {
+  checkAtomSelection,
   type ColumnMap,
   type ColumnSpec,
   fieldAttrNames,
   isField,
   withColumns,
 } from "./internal/representation.ts";
+import { gatherAtomColumns } from "./internal/gather.ts";
 
 /** Point-layer props Spacefill forwards to its layer (flags, draw mode, picking id). */
 type LayerProps = PointLayerOptions & {
   mode?: "opaque" | "transparent";
   id?: number;
 };
-/** An atom column readable by name (the attribute columns a field reads). */
-const atomColumn = (data: StructureData, name: string): ArrayLike<number> =>
-  data.topology
-    .atoms[name as keyof StructureData["topology"]["atoms"]] as ArrayLike<
-      number
-    >;
 import {
   applyOpacity,
   checkOpacity,
@@ -43,66 +39,22 @@ import { useOpacityColors } from "./internal/use-opacity-colors.ts";
 import { withMaterial } from "./materials.ts";
 import { Pickable } from "./picking.ts";
 import { useRepaint } from "./internal/use-repaint.ts";
-import { count } from "./internal/instrumentation.ts";
 import { useBindingProbe } from "./internal/use-binding-probe.ts";
-
-/** Selected positions: the only gathered column a coordinate edit changes. */
-const gatherPositions = (
-  data: StructureData,
-  indices: Uint32Array,
-): Float32Array => {
-  count("gathers", "spacefill:atoms");
-  const positions = new Float32Array(indices.length * 3);
-  for (let k = 0; k < indices.length; k++) {
-    const i = indices[k];
-    positions[k * 3] = data.positions[i * 3];
-    positions[k * 3 + 1] = data.positions[i * 3 + 1];
-    positions[k * 3 + 2] = data.positions[i * 3 + 2];
-  }
-  return positions;
-};
-
-/** Selected radii depend on topology and selection only, so they (and the
- * point sizes derived from them) survive coordinate edits. */
-const gatherRadii = (
-  data: StructureData,
-  indices: Uint32Array,
-): Float32Array => {
-  count("gathers", "spacefill:radii");
-  const R = data.topology.atoms.radius!;
-  return Float32Array.from(indices, (i) => R[i]);
-};
-
-const gatherAttributes = (
-  data: StructureData,
-  indices: Uint32Array | null,
-  names: readonly string[],
-): Record<string, Float32Array> =>
-  Object.fromEntries(names.map((name) => {
-    count("gathers", `spacefill:attr:${name}`);
-    const column = atomColumn(data, name);
-    const values = indices
-      ? Float32Array.from(indices, (i) => column[i])
-      : Float32Array.from(column);
-    return [name, values];
-  }));
 
 // A field always colours here, so useField is called unconditionally.
 const FieldPoints: LC<
   {
     positions: ShaderSource;
-    sources: ColumnMap;
-    radii: Float32Array;
+    attrs: Record<string, ShaderSource>;
+    radii: ShaderSource;
     count: number;
     field: Field;
     opacity: number;
     scale: number;
   } & LayerProps
-> = ({ positions, sources, radii, count, field, opacity, scale, ...props }) => {
+> = ({ positions, attrs, radii, count, field, opacity, scale, ...props }) => {
   const colors = useOpacityColors(
-    useField(field, sources as Record<string, ShaderSource>, {
-      domain: "atom",
-    }),
+    useField(field, attrs, { domain: "atom" }),
     opacity,
   );
   return use(WorldSpacePointLayer, {
@@ -117,19 +69,71 @@ const FieldPoints: LC<
   });
 };
 
-// Owns the gathers and column uploads. Positions follow the dataset; radii and
-// attribute columns follow topology, selection and the set of column names.
-const GatheredSpacefill: LC<
+// Reads the shared structure sources and full attribute columns through the
+// selection's rows. Instance k draws atom indices[k], which is also the
+// mapping Pickable registers.
+const IndexedPoints: LC<
+  {
+    map: ColumnMap;
+    attrNames: readonly string[];
+    shared: StructureSources;
+    count: number;
+    field: Field | null;
+    opacity: number;
+    color: unknown;
+    scale: number;
+  } & LayerProps
+> = (
+  { map, attrNames, shared, count, field, opacity, color, scale, ...props },
+) => {
+  const index = map.index ?? null;
+  const columns = attrNames.map((name) => map[`attr:${name}`]);
+  const sources = useMemo(() => ({
+    positions: indexed(shared.positions, index, "vec3<f32>"),
+    radii: indexed(shared.radii, index, "f32"),
+    attrs: Object.fromEntries(
+      attrNames.map((name, k) => [
+        `attr:${name}`,
+        indexed(columns[k]!, index, "f32"),
+      ]),
+    ),
+  }), [shared, index, attrNames.join(), ...columns]);
+  return field
+    ? use(FieldPoints, {
+      positions: sources.positions,
+      attrs: sources.attrs,
+      radii: sources.radii,
+      count,
+      field,
+      opacity,
+      scale,
+      ...props,
+    })
+    : use(WorldSpacePointLayer, {
+      positions: sources.positions,
+      radii: sources.radii,
+      count,
+      scale,
+      color,
+      shape: "circle",
+      shaded: true,
+      ...props,
+    });
+};
+
+// Uploads a selection's rows and, for a colour field, the full attribute
+// columns it reads. Attribute columns follow topology only, so neither a
+// selection change nor a coordinate edit regathers them.
+const SelectedSpacefill: LC<
   {
     data: StructureData;
     identity: StructureData["identity"];
     topologyRevision: number;
     indices: Uint32Array | null;
-    selectKey: string;
     attrNames: readonly string[];
     field: Field | null;
     opacity: number;
-    sharedPositions: StorageSource;
+    shared: StructureSources;
     color: unknown;
     scale: number;
   } & LayerProps
@@ -139,69 +143,30 @@ const GatheredSpacefill: LC<
     identity,
     topologyRevision,
     indices,
-    selectKey,
     attrNames,
-    field,
-    opacity,
-    sharedPositions,
-    color,
-    scale,
     ...props
   },
 ) => {
-  const n = indices ? indices.length : data.topology.atoms.count;
-  const positions = useMemo(
-    () => indices ? gatherPositions(data, indices) : null,
-    [data, selectKey],
+  const attrs = useMemo(
+    () => gatherAtomColumns(data, null, attrNames, "spacefill"),
+    [identity, topologyRevision, attrNames.join()],
   );
-  const radii = useMemo(
-    () => indices ? gatherRadii(data, indices) : data.topology.atoms.radius!,
-    [identity, topologyRevision, selectKey],
-  );
-  const attrs = useMemo(() => gatherAttributes(data, indices, attrNames), [
-    identity,
-    topologyRevision,
-    selectKey,
-    attrNames.join(),
-  ]);
   const specs: ColumnSpec[] = [];
-  if (indices) {
-    specs.push({ key: "positions", data: positions!, format: "vec3<f32>" });
-  }
+  if (indices) specs.push({ key: "index", data: indices, format: "u32" });
   for (const name of attrNames) {
     specs.push({ key: `attr:${name}`, data: attrs[name], format: "f32" });
   }
-  return withColumns(specs, (map) => {
-    const positions = indices ? map.positions : sharedPositions;
-    if (!positions) return null;
-    return field
-      ? use(FieldPoints, {
-        positions,
-        sources: map,
-        radii,
-        count: n,
-        field,
-        opacity,
-        scale,
-        ...props,
-      })
-      : use(WorldSpacePointLayer, {
-        positions,
-        radii,
-        count: n,
-        scale,
-        color,
-        shape: "circle",
-        shaded: true,
-        ...props,
-      });
-  });
+  const count = indices ? indices.length : data.topology.atoms.count;
+  return withColumns(
+    specs,
+    (map) => use(IndexedPoints, { map, attrNames, count, ...props }),
+  );
 };
 
 /**
  * Render active atom sites as world-space shaded spheres. `select` (a
- * @molgpu/select atom Selection) restricts to a subset, gathered once per
- * selection change. `color` is either a flat colour or a @molgpu/fields Field,
+ * @molgpu/select atom Selection) restricts to a subset, drawn by reading the
+ * shared structure columns through the selection's uploaded atom rows. `color` is either a flat colour or a @molgpu/fields Field,
  * which is composed shader-side over the atoms' columns (no per-atom colour
  * upload) via the viewer's useField. `material` (a @molgpu/viewer material
  * spec) wraps the shaded point layer; without one the atoms use the ambient
@@ -244,12 +209,7 @@ export const Spacefill: ViewerComponent<
   const { resource, sources } = useStructure();
   const { data } = resource;
 
-  if (
-    select !== undefined && select !== null &&
-    (select.dataset !== resource.identity || select.domain !== "atom")
-  ) {
-    throw new TypeError("Spacefill received a foreign or non-atom selection");
-  }
+  checkAtomSelection(select, resource, "Spacefill");
   const field = isField(color) ? color : null;
   // A colour field names the atom columns it reads; gather exactly those.
   const attrNames = useMemo(() => fieldAttrNames(field), [field]);
@@ -273,7 +233,7 @@ export const Spacefill: ViewerComponent<
       (!indices && !field)
         ? use(WorldSpacePointLayer, {
           positions: sources.positions,
-          radii: data.topology.atoms.radius!,
+          radii: sources.radii,
           count: n,
           scale,
           color: flatColor,
@@ -283,16 +243,15 @@ export const Spacefill: ViewerComponent<
           ...drawMode,
           ...props,
         })
-        : use(GatheredSpacefill, {
+        : use(SelectedSpacefill, {
           data,
           identity: resource.identity,
           topologyRevision: resource.topologyRevision,
           indices,
-          selectKey: select?.id ?? "all",
           attrNames,
           field,
           opacity,
-          sharedPositions: sources.positions,
+          shared: sources,
           color: flatColor,
           scale,
           id,
@@ -301,8 +260,7 @@ export const Spacefill: ViewerComponent<
         }),
     );
 
-  // The drawn instance order is the gather order: for a selection that is
-  // `indices`, otherwise identity (instance index === atom row).
+  // Instance k draws atom indices[k] for a selection, otherwise atom row k.
   return pickable
     ? use(Pickable, { resource, indices, render: draw })
     : draw(undefined);

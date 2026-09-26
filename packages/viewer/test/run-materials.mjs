@@ -71,12 +71,12 @@ Deno.test("viewer materials", async () => {
         for (let i = 0; i < 12; i++) await new Promise(requestAnimationFrame);
       });
     // Labels are assigned after createBuffer, so read them live off the buffers.
-    // A shaded point layer's own geometry column is labelled 'molgpu:base-sizes'.
+    // The shaded points read Structure's shared GPU radii column.
     const snap = () =>
       page.evaluate(() => ({
         storage: window.__probe.storage.length,
         geometryBuffers: window.__probe.storageBuffers.filter((b) =>
-          b.label === "molgpu:base-sizes"
+          b.label === "molgpu:radii"
         ).length,
         pipelines: window.__probe.pipelines,
         errors: [...window.__probe.errors],
@@ -93,7 +93,7 @@ Deno.test("viewer materials", async () => {
     );
     assert.ok(
       pbr.geometryBuffers > 0,
-      "expected the shaded point layer to allocate its size column",
+      "expected the structure to upload its radii column",
     );
     assert.ok(
       pbr.pipelines > 0,
@@ -103,7 +103,9 @@ Deno.test("viewer materials", async () => {
     // Change a PBR PARAMETER (matte -> metal, same material type). The wrappers
     // bind albedo/metalness/roughness as shader uniforms, so this must be a plain
     // uniform write: no new render pipeline and no rebuilt geometry.
-    await page.evaluate(() => window.__probe.setMaterial("metal"));
+    await page.evaluate(() =>
+      window.__probe.setMaterial("metal")
+    );
     await settle();
     await settle();
     const metal = await snap();

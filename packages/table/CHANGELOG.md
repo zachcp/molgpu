@@ -6,6 +6,19 @@ All notable changes to `@molgpu/table` are recorded here. The format follows
 
 ## [Unreleased]
 
+- Added `spatialGrid`, a uniform spatial hash with optional partitions, shared
+  by bond inference and `@molgpu/select`'s `within`.
+- `bondTopology` inference uses cells as wide as its largest cutoff and
+  partitions atoms by model. Fix: pairs up to 3.14 Å apart (S/P with padding 1)
+  that straddled two 3 Å cells were missed. Superposed NMR models are no longer
+  scanned against each other (143k-atom 2k39: about 2.8 s to 0.3 s per call).
+  Inferred rows are now in canonical order, by `b` then `a`; the bond set is
+  unchanged on the test corpus.
+- Added `atomRadii(data)` and `elementRadius(z)`: one source for per-atom
+  display radii. `atomRadii` returns the `atoms.radius` column when present,
+  else element van der Waals defaults, cached per dataset identity.
+- `validateStructure` builds cheaper duplicate-site and duplicate-bond keys,
+  about 28% faster on a 400k-atom structure.
 - Source is TypeScript (`src/*.ts`); the hand-written `index.d.ts` is gone. The
   public API is unchanged.
 
