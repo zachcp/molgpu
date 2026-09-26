@@ -1,4 +1,5 @@
 // Public types for @molgpu/io.
+import type { VolumeData } from "@molgpu/table";
 /** Why a BinaryCIF import failed, stable enough to branch on. */
 export type BcifErrorCode =
   /** `bytes` was not a `Uint8Array`. */
@@ -41,26 +42,27 @@ export interface SurfaceFieldOptions {
   probePositions?: number;
 }
 
-/** A solvent-excluded-surface scalar grid. Every array is freshly owned by the caller. */
-export interface SurfaceField {
+/**
+ * A solvent-excluded-surface scalar grid: a `VolumeData` plus surface metadata.
+ * Every array is freshly owned by the caller.
+ */
+export interface SurfaceField extends VolumeData {
   /**
    * Grid samples, length `dims[0] * dims[1] * dims[2]`, laid out **x-fastest**
    * (the layout `@molgpu/geo`'s `marchingCubes` reads): the sample at grid
    * `(i, j, k)` is `values[i + dims[0] * (j + dims[1] * k)]`. Unvisited cells far from every
-   * atom hold the sentinel -1001.
+   * atom hold the sentinel -1001, which `stats` includes.
    */
-  values: Float32Array;
-  /** Grid size along x, y, z. */
-  dims: [number, number, number];
+  readonly values: Float32Array;
   /**
    * Column-major 4x4 scale + translate from grid index to Angstrom: spacing is
    * the diagonal (`[0]`, `[5]`, `[10]`), origin is `[12]`, `[13]`, `[14]`.
    */
-  transform: Float32Array;
+  readonly transform: Float32Array;
   /** Grid spacing in Angstrom; equals the requested `resolution`. */
-  resolution: number;
+  readonly resolution: number;
   /** Largest input van der Waals radius. */
-  maxRadius: number;
-  /** Isovalue of the surface; always equals `probeRadius`. */
-  level: number;
+  readonly maxRadius: number;
+  /** Absolute isovalue of the surface; always equals `probeRadius`. */
+  readonly level: number;
 }

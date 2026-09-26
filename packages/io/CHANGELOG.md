@@ -6,6 +6,9 @@ All notable changes to `@molgpu/io` are recorded here. The format follows
 
 ## [Unreleased]
 
+- `SurfaceField` now extends `@molgpu/table`'s `VolumeData`: it adds `stats` and
+  `components` and is frozen. `values`, `dims`, `transform`, `resolution`,
+  `maxRadius` and `level` keep their meaning.
 - Default atom radii come from `@molgpu/table`'s `elementRadius`; values are
   unchanged.
 - Source is TypeScript (`src/index.ts`); the hand-written `index.d.ts` is gone.

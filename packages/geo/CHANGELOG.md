@@ -6,6 +6,9 @@ All notable changes to `@molgpu/geo` are recorded here. The format follows
 
 ## [Unreleased]
 
+- `marchingCubes` accepts a full index-to-world affine `transform` in place of
+  `origin`/`spacing`. Normals map through the inverse transpose, and a mirroring
+  affine keeps triangle winding consistent.
 - Source is TypeScript (`src/*.ts`); the hand-written `index.d.ts` is gone. The
   public API is unchanged.
 

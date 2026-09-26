@@ -5,7 +5,7 @@ import {
   assertStrictEquals,
 } from "@std/assert";
 import { readFile } from "node:fs/promises";
-import { activeAtoms } from "@molgpu/table";
+import { activeAtoms, validateVolume } from "@molgpu/table";
 import {
   molecularSurfaceField,
   structureFromBcif,
@@ -54,6 +54,14 @@ Deno.test("computes a finite scalar field with a scale+translate transform, over
     m[0] > 0 && m[5] > 0 && m[10] > 0,
     "diagonal scale factors must be positive",
   );
+  // VolumeData compatibility: the surface field is a valid scalar volume that
+  // keeps its surface metadata.
+  assertStrictEquals(validateVolume(field, { maxSamples: Infinity }), field);
+  assertStrictEquals(field.components, 1);
+  assertStrictEquals(field.stats.min, Math.min(...field.values));
+  assertStrictEquals(field.resolution, 0.7);
+  assert(field.maxRadius > 1);
+  assert(Object.isFrozen(field));
 });
 
 Deno.test("probeRadius sets the isolevel and resolution changes the grid size", async () => {

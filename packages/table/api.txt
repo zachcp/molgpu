@@ -16,6 +16,8 @@ Instances
   export interface Instances { readonly count: number; readonly chain: Uint32Array; readonly operatorId: readonly string[]; readonly transform: Float64Array }
 Links
   export interface Links { readonly count: number; readonly a: Uint32Array; readonly b: Uint32Array; /** 0 unknown, 1/2/3/4 multiplicity. */ readonly order: Uint8Array; /** Bond type bits (see `BOND_FLAGS`); 0 is unknown. */ readonly flags: Uint8Array; /** Where the link came from: a chem_comp_bond template, or a struct_conn record. */ readonly source: readonly ("component" | "struct_conn")[] }
+MAX_VOLUME_SAMPLES
+  export const MAX_VOLUME_SAMPLES: number;
 Residues
   export interface Residues { readonly count: number; readonly chain: Uint32Array; /** -1 denotes missing label_seq_id. */ readonly labelSeq: Int32Array; readonly authSeq: readonly string[]; readonly insertionCode: readonly string[]; readonly comp: readonly string[]; readonly polymer: readonly ("protein" | "rna" | "dna" | "other")[]; /** Imported annotation (mmCIF struct_conf/struct_sheet_range) when the source provided one; absent otherwise. */ readonly secondaryStructure?: readonly ("helix" | "sheet" | "coil")[]; /** 1 when the residue's first atom is not a group_PDB ATOM record (a HETATM). Absent when the source has no group_PDB. */ readonly het?: Uint8Array }
 SecondaryStructureTrace
@@ -32,6 +34,14 @@ Trace
   export interface Trace { readonly count: number; readonly guide: Float32Array; readonly tangent: Float32Array; readonly normal: Float32Array; readonly binormal: Float32Array; /** Source residue row per sample (sample-to-residue mapping / retained residue IDs). */ readonly residue: Uint32Array; /** Run r spans [runs[r], runs[r + 1]); length is runCount + 1. */ readonly runs: Uint32Array; readonly runKind: readonly ("protein" | "rna" | "dna")[] }
 ViewPolicy
   export interface ViewPolicy { readonly model?: "first" | "all" | number; readonly altloc?: "primary" | "all" }
+VolumeData
+  export interface VolumeData { readonly values: Float32Array; readonly dims: readonly [number, number, number]; /** Column-major 4×4 affine from grid index to Å. */ readonly transform: Float32Array; readonly stats: VolumeStats; readonly components: 1 | 3; readonly unit?: string }
+VolumeInput
+  export interface VolumeInput { /** * Samples laid out x-fastest: grid point `(i, j, k)` is at * `i + dims[0] * (j + dims[1] * k)`, times `components` when interleaved. */ readonly values: Float32Array; readonly dims: readonly [number, number, number]; /** Column-major 4×4 affine from grid index to Å; may rotate and shear. */ readonly transform: ArrayLike<number>; /** Interleaved components per sample. Default 1. */ readonly components?: 1 | 3; /** Unit label for the values, e.g. "e/Å³" or "kT/e". */ readonly unit?: string }
+VolumeLevel
+  export type VolumeLevel = number | { readonly sigma: number };
+VolumeStats
+  export interface VolumeStats { readonly min: number; readonly max: number; readonly mean: number; /** Population standard deviation about `mean`. */ readonly sigma: number }
 activeAtoms
   export function activeAtoms(data: StructureData, policy?: ViewPolicy): Uint32Array;
 atomRadii
@@ -42,10 +52,14 @@ coordinateBounds
   export function coordinateBounds(data: StructureData, indices?: Uint32Array): null | { min: number[]; max: number[]; center: number[] };
 createStructure
   export function createStructure(input: StructureInput): StructureData;
+createVolume
+  export function createVolume(input: VolumeInput, options?: { maxSamples?: number }): VolumeData;
 elementRadius
   export function elementRadius(atomicNumber: number): number;
 residueKey
   export function residueKey(data: StructureData, row: number): string;
+sampleVolume
+  export function sampleVolume(volume: VolumeData, x: number, y: number, z: number): number;
 secondaryStructureTrace
   export function secondaryStructureTrace(data: StructureData, atomIndices: Uint32Array, trace: Trace): SecondaryStructureTrace;
 selectBonds
@@ -56,5 +70,17 @@ traceTable
   export function traceTable(data: StructureData, atomIndices: Uint32Array): Trace;
 validateStructure
   export function validateStructure<T extends StructureInput>(data: T): T;
+validateVolume
+  export function validateVolume<T extends VolumeInput>(input: T, options?: { maxSamples?: number }): T;
+volumeComponent
+  export function volumeComponent(volume: VolumeData, component: 0 | 1 | 2 | "magnitude"): VolumeData;
+volumeIndexToWorld
+  export function volumeIndexToWorld(volume: VolumeData, i: number, j: number, k: number): [number, number, number];
+volumeInverseTransform
+  export function volumeInverseTransform(volume: VolumeData): Float64Array;
+volumeLevel
+  export function volumeLevel(volume: VolumeData, level: VolumeLevel): number;
+volumeWorldToIndex
+  export function volumeWorldToIndex(volume: VolumeData, x: number, y: number, z: number): [number, number, number];
 withPositions
   export function withPositions(data: StructureData, positions: Float32Array): StructureData;

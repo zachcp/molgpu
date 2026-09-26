@@ -38,8 +38,18 @@ function unit(x: number, y: number, z: number): [number, number, number] {
  * that keeps ownership simple and produces valid indexed triangle geometry.
  */
 export function marchingCubes(input: MarchingCubesInput): MarchingCubesMesh {
-  const { values, dims, level = 0, origin = [0, 0, 0], spacing = [1, 1, 1] } =
-    input;
+  const { values, dims, transform } = input;
+  if (
+    transform !== undefined &&
+    (input.origin !== undefined || input.spacing !== undefined)
+  ) {
+    throw new TypeError("pass either transform or origin/spacing, not both");
+  }
+  if (transform !== undefined) {
+    const mesh = marchingCubes({ values, dims, level: input.level });
+    return transformMesh(mesh, transform);
+  }
+  const { level = 0, origin = [0, 0, 0], spacing = [1, 1, 1] } = input;
   if (!(values instanceof Float32Array)) {
     throw new TypeError("values must be a Float32Array");
   }
@@ -131,4 +141,61 @@ export function marchingCubes(input: MarchingCubesInput): MarchingCubesMesh {
     vertexCount: positions.length / 3,
     triangleCount: indices.length / 3,
   };
+}
+
+/** Map an index-space mesh through a column-major 4×4 affine. */
+function transformMesh(
+  mesh: MarchingCubesMesh,
+  m: ArrayLike<number>,
+): MarchingCubesMesh {
+  if (
+    m.length !== 16 || !Array.prototype.every.call(m, Number.isFinite) ||
+    m[3] !== 0 || m[7] !== 0 || m[11] !== 0 || m[15] !== 1
+  ) {
+    throw new TypeError("transform must be 16 finite numbers, affine");
+  }
+  // Cofactor matrix of the linear part = det * inverse-transpose.
+  const c = [
+    m[5] * m[10] - m[6] * m[9],
+    m[6] * m[8] - m[4] * m[10],
+    m[4] * m[9] - m[5] * m[8],
+    m[2] * m[9] - m[1] * m[10],
+    m[0] * m[10] - m[2] * m[8],
+    m[1] * m[8] - m[0] * m[9],
+    m[1] * m[6] - m[2] * m[5],
+    m[2] * m[4] - m[0] * m[6],
+    m[0] * m[5] - m[1] * m[4],
+  ];
+  const det = m[0] * c[0] + m[4] * c[3] + m[8] * c[6];
+  if (!(Math.abs(det) > 0)) throw new TypeError("transform must be invertible");
+  // Dividing by det's sign keeps the normal on the same side of the surface.
+  const s = Math.sign(det);
+  const { positions: p, normals: n, indices } = mesh;
+  const positions = new Float32Array(p.length);
+  const normals = new Float32Array(n.length);
+  for (let v = 0; v < p.length; v += 3) {
+    const x = p[v], y = p[v + 1], z = p[v + 2];
+    positions[v] = m[0] * x + m[4] * y + m[8] * z + m[12];
+    positions[v + 1] = m[1] * x + m[5] * y + m[9] * z + m[13];
+    positions[v + 2] = m[2] * x + m[6] * y + m[10] * z + m[14];
+    const nx = n[v], ny = n[v + 1], nz = n[v + 2];
+    const [ux, uy, uz] = unit(
+      s * (c[0] * nx + c[3] * ny + c[6] * nz),
+      s * (c[1] * nx + c[4] * ny + c[7] * nz),
+      s * (c[2] * nx + c[5] * ny + c[8] * nz),
+    );
+    normals[v] = ux;
+    normals[v + 1] = uy;
+    normals[v + 2] = uz;
+  }
+  let out = indices;
+  if (det < 0) {
+    out = new Uint32Array(indices.length);
+    for (let t = 0; t < indices.length; t += 3) {
+      out[t] = indices[t];
+      out[t + 1] = indices[t + 2];
+      out[t + 2] = indices[t + 1];
+    }
+  }
+  return { ...mesh, positions, normals, indices: out };
 }

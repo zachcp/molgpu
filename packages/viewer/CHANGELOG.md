@@ -6,6 +6,7 @@ All notable changes to `@molgpu/viewer` are recorded here. The format follows
 
 ## [Unreleased]
 
+- `<Surface>` extracts its mesh through the field's full affine transform.
 - Coordinate stream (Phase 9). Positions are a GPU stream that child providers
   re-provide without changing topology. New experimental
   `useCoordinateSnapshot`, `useCoordinateSelection`, `useCoordinateBounds` and

@@ -103,13 +103,11 @@ export async function buildSurfaceGeometry(
   // the -1001 fill value only matters for dual-contouring's gradient-based
   // normal estimate (see docs/findings/2026-09-15-s3-molecular-surface.md),
   // not for marching cubes, which only interpolates across a real crossing.
-  const m = field.transform;
   const mesh = marchingCubes({
     values: field.values,
     dims: field.dims,
     level: field.level,
-    origin: [m[12], m[13], m[14]],
-    spacing: [m[0], m[5], m[10]],
+    transform: field.transform,
   });
   if (!mesh.vertexCount) return null;
 
