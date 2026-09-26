@@ -6,6 +6,10 @@ All notable changes to `@molgpu/io` are recorded here. The format follows
 
 ## [Unreleased]
 
+- `volumeFromCcp4(bytes, { maxSamples })` reads CCP4/MRC maps (modes 0, 1, 2;
+  little- or big-endian) into `VolumeData`. It covers non-orthogonal cells,
+  `MAPC/MAPR/MAPS` axis order, `N[CRS]START` and the MRC `ORIGIN` record.
+  Failures throw `VolumeParseError` with a `VolumeErrorCode`.
 - `SurfaceField` now extends `@molgpu/table`'s `VolumeData`: it adds `stats` and
   `components` and is frozen. `values`, `dims`, `transform`, `resolution`,
   `maxRadius` and `level` keep their meaning.

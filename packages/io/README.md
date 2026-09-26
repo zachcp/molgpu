@@ -19,10 +19,10 @@ deno add jsr:@molgpu/io jsr:@molgpu/table
 
 ## Dependencies
 
-| Package         | Range     | Kind       | Notes                                                                                                                                                                                                                                                                                                        |
-| --------------- | --------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `@molgpu/table` | `^0.1.0`  | peer       | Provides the `StructureData` output type; a peer so the app shares one copy (structure identity is module-private).                                                                                                                                                                                          |
-| `molstar`       | `^5.11.0` | dependency | Installed with `io`, but loaded only inside `structureFromBcif` and `molecularSurfaceField`, through dynamic `import()`. Bundlers put it in separate lazy chunks, so code that never calls them never downloads it. If it fails to load, those calls reject with `PARSER_UNAVAILABLE` / `FIELD_UNAVAILABLE`. |
+| Package         | Range     | Kind       | Notes                                                                                                                                                                                                                                                                                                                          |
+| --------------- | --------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `@molgpu/table` | `^0.1.0`  | peer       | Provides the `StructureData` output type; a peer so the app shares one copy (structure identity is module-private).                                                                                                                                                                                                            |
+| `molstar`       | `^5.11.0` | dependency | Installed with `io`, but loaded only inside `structureFromBcif`, `molecularSurfaceField` and `volumeFromCcp4`, through dynamic `import()`. Bundlers put it in separate lazy chunks, so code that never calls them never downloads it. If it fails to load, those calls reject with `PARSER_UNAVAILABLE` / `FIELD_UNAVAILABLE`. |
 
 Mol* was an optional peer before the move to JSR, which has no optional
 dependencies. It is now a regular dependency, because the viewer needs it for
@@ -82,22 +82,25 @@ isosurface.
 
 ## API
 
-| Export                  | Stability    | Description                                                                                                  |
-| ----------------------- | ------------ | ------------------------------------------------------------------------------------------------------------ |
-| `structureFromBcif`     | stable       | Parse BinaryCIF bytes and lower them to a `@molgpu/table` `StructureData`.                                   |
-| `BcifParseError`        | stable       | Error thrown by `structureFromBcif`, with a `code: BcifErrorCode`.                                           |
-| `BcifErrorCode`         | stable       | Union of `structureFromBcif` failure codes.                                                                  |
-| `molecularSurfaceField` | experimental | Solvent-excluded-surface scalar grid over plain atom columns, via Mol*.                                      |
-| `SurfaceFieldError`     | experimental | Error thrown by `molecularSurfaceField`, with a `code: SurfaceFieldErrorCode`.                               |
-| `SurfaceFieldErrorCode` | experimental | Union of `molecularSurfaceField` failure codes.                                                              |
-| `SurfaceFieldAtoms`     | experimental | Input atom columns: `count` and `Float32Array` `x`/`y`/`z`/`radius`.                                         |
-| `SurfaceFieldOptions`   | experimental | `probeRadius`, `resolution` and `probePositions`.                                                            |
-| `SurfaceField`          | experimental | Result grid: `values`, `dims`, `transform`, `resolution`, `maxRadius`, `level`.                              |
-| `parseSelection`        | experimental | Parse MolScript, PyMOL, VMD or Jmol selection text into a plain MolQL tree for `@molgpu/select`'s `compile`. |
-| `SelectionParseError`   | experimental | Error thrown by `parseSelection`, with the `language` and `text` that failed.                                |
-| `SelectionExpr`         | experimental | Type: a MolQL expression as plain JSON; the same shape as `@molgpu/select`'s.                                |
-| `SelectionLanguage`     | experimental | Type: `"mol-script" \| "pymol" \| "vmd" \| "jmol"`.                                                          |
-| `ParseSelectionOptions` | experimental | `symbols`: reject any symbol outside this list at parse time, e.g. `supportedSymbols`.                       |
+| Export                  | Stability    | Description                                                                                                     |
+| ----------------------- | ------------ | --------------------------------------------------------------------------------------------------------------- |
+| `structureFromBcif`     | stable       | Parse BinaryCIF bytes and lower them to a `@molgpu/table` `StructureData`.                                      |
+| `BcifParseError`        | stable       | Error thrown by `structureFromBcif`, with a `code: BcifErrorCode`.                                              |
+| `BcifErrorCode`         | stable       | Union of `structureFromBcif` failure codes.                                                                     |
+| `molecularSurfaceField` | experimental | Solvent-excluded-surface scalar grid over plain atom columns, via Mol*.                                         |
+| `SurfaceFieldError`     | experimental | Error thrown by `molecularSurfaceField`, with a `code: SurfaceFieldErrorCode`.                                  |
+| `SurfaceFieldErrorCode` | experimental | Union of `molecularSurfaceField` failure codes.                                                                 |
+| `SurfaceFieldAtoms`     | experimental | Input atom columns: `count` and `Float32Array` `x`/`y`/`z`/`radius`.                                            |
+| `SurfaceFieldOptions`   | experimental | `probeRadius`, `resolution` and `probePositions`.                                                               |
+| `SurfaceField`          | experimental | `VolumeData` plus surface metadata: `resolution`, `maxRadius`, `level`.                                         |
+| `volumeFromCcp4`        | experimental | CCP4/MRC map (modes 0–2, either endianness) to a scalar `VolumeData` with Mol*'s full grid-to-Cartesian affine. |
+| `VolumeParseError`      | experimental | Error thrown by `volumeFromCcp4`, with a `code: VolumeErrorCode`.                                               |
+| `VolumeErrorCode`       | experimental | Union of `volumeFromCcp4` failure codes, including `VOLUME_TOO_LARGE`.                                          |
+| `parseSelection`        | experimental | Parse MolScript, PyMOL, VMD or Jmol selection text into a plain MolQL tree for `@molgpu/select`'s `compile`.    |
+| `SelectionParseError`   | experimental | Error thrown by `parseSelection`, with the `language` and `text` that failed.                                   |
+| `SelectionExpr`         | experimental | Type: a MolQL expression as plain JSON; the same shape as `@molgpu/select`'s.                                   |
+| `SelectionLanguage`     | experimental | Type: `"mol-script" \| "pymol" \| "vmd" \| "jmol"`.                                                             |
+| `ParseSelectionOptions` | experimental | `symbols`: reject any symbol outside this list at parse time, e.g. `supportedSymbols`.                          |
 
 The surface exports are experimental while the result shape settles.
 

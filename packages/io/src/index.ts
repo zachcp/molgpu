@@ -15,6 +15,7 @@ import type {
 } from "./types.ts";
 
 export type * from "./types.ts";
+export { volumeFromCcp4, VolumeParseError } from "./ccp4.ts";
 export {
   parseSelection,
   type ParseSelectionOptions,

@@ -11,6 +11,19 @@ export type BcifErrorCode =
   /** The optional Mol* parser is absent or failed to load. */
   | "PARSER_UNAVAILABLE";
 
+/** Why a volume file import failed, stable enough to branch on. */
+export type VolumeErrorCode =
+  /** `bytes` was not a `Uint8Array`. */
+  | "INVALID_INPUT"
+  /** The header or data is malformed or truncated, or Mol* rejected it. */
+  | "INVALID_MAP"
+  /** The map's value mode is not one the reader supports. */
+  | "UNSUPPORTED_MODE"
+  /** The map has more samples than `maxSamples`. */
+  | "VOLUME_TOO_LARGE"
+  /** The optional Mol* reader is absent or failed to load. */
+  | "PARSER_UNAVAILABLE";
+
 /** Why a molecular surface field computation failed, stable enough to branch on. */
 export type SurfaceFieldErrorCode =
   /** `count` is not a nonnegative safe integer, or a column is not a `Float32Array` of length `count`. */

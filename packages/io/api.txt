@@ -24,9 +24,15 @@ SurfaceFieldErrorCode
   export type SurfaceFieldErrorCode = /** `count` is not a nonnegative safe integer, or a column is not a `Float32Array` of length `count`. */ "INVALID_INPUT" /** `count` is 0. */ | "EMPTY_INPUT" /** The optional Mol* surface code is absent, failed to load, or threw while computing. */ | "FIELD_UNAVAILABLE";
 SurfaceFieldOptions
   export interface SurfaceFieldOptions { /** Solvent probe radius in Angstrom. Default 1.4. */ probeRadius?: number; /** Requested grid spacing in Angstrom. Default 0.5. */ resolution?: number; /** Probe positions sampled per atom. Default 36. */ probePositions?: number }
+VolumeErrorCode
+  export type VolumeErrorCode = /** `bytes` was not a `Uint8Array`. */ "INVALID_INPUT" /** The header or data is malformed or truncated, or Mol* rejected it. */ | "INVALID_MAP" /** The map's value mode is not one the reader supports. */ | "UNSUPPORTED_MODE" /** The map has more samples than `maxSamples`. */ | "VOLUME_TOO_LARGE" /** The optional Mol* reader is absent or failed to load. */ | "PARSER_UNAVAILABLE";
+VolumeParseError
+  export class VolumeParseError extends Error { readonly name: "VolumeParseError"; readonly code: VolumeErrorCode; constructor(message: string, code: VolumeErrorCode, cause?: unknown) }
 molecularSurfaceField
   export function molecularSurfaceField(atoms: SurfaceFieldAtoms, options?: SurfaceFieldOptions): Promise<SurfaceField>;
 parseSelection
   export function parseSelection(language: SelectionLanguage, text: string, options?: ParseSelectionOptions): Promise<SelectionExpr>;
 structureFromBcif
   export function structureFromBcif(bytes: Uint8Array): Promise<StructureData>;
+volumeFromCcp4
+  export function volumeFromCcp4(bytes: Uint8Array, options?: { maxSamples?: number }): Promise<VolumeData>;
