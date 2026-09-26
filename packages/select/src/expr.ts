@@ -13,12 +13,7 @@
 // compile time. Adding a symbol needs its own bead (lkd.14 as amended by
 // molgpu-sept-922.1; docs/findings/2026-09-26-molql-selection-spike.md §4.7).
 
-import {
-  type Bonds,
-  bondTopology,
-  spatialGrid,
-  type StructureData,
-} from "@molgpu/table";
+import { BOND_FLAGS, spatialGrid, type StructureData } from "@molgpu/table";
 import {
   type AtomSets,
   EMPTY,
@@ -37,11 +32,8 @@ import {
   ELEMENT_VDW_RADIUS,
 } from "./elements.ts";
 import type { RevisionStream } from "./index.ts";
-import {
-  bondAdjacency,
-  type TopologyCache,
-  topologyCache,
-} from "./topology-cache.ts";
+import { type BondGraph, bondGraph } from "./bond-graph.ts";
+import { type TopologyCache, topologyCache } from "./topology-cache.ts";
 
 /**
  * A MolQL expression: a literal, a symbol reference, or a symbol call with
@@ -82,8 +74,8 @@ interface Ctx {
   atom: number;
   /** Current bond row for bond-property symbols; -1 outside a bond test. */
   bond: number;
-  /** The bonds `bond` indexes: bondTopology(data), set during a bond test. */
-  bonds: Bonds | null;
+  /** The bond graph `bond` indexes, set during a bond test. */
+  bonds: BondGraph | null;
   /** Current atom set for atom-set symbols, set while a filter tests a set. */
   current: Uint32Array | null;
 }
@@ -225,6 +217,21 @@ const RESIDUE_SS: Readonly<Record<string, number>> = {
   coil: 0,
 };
 
+// Mol*'s runtime only knows its BondType names (metal-coordination,
+// hydrogen-bond, ...), so the MolQL symbol table's own names (metallic,
+// hydrogen, sulfide) read as no flags there. Both vocabularies work here.
+const BOND_FLAG_NAMES: Readonly<Record<string, number>> = {
+  covalent: BOND_FLAGS.covalent,
+  "metal-coordination": BOND_FLAGS.metallic,
+  metallic: BOND_FLAGS.metallic,
+  "hydrogen-bond": BOND_FLAGS.hydrogen,
+  hydrogen: BOND_FLAGS.hydrogen,
+  disulfide: BOND_FLAGS.disulfide,
+  sulfide: BOND_FLAGS.disulfide,
+  aromatic: BOND_FLAGS.aromatic,
+  computed: BOND_FLAGS.computed,
+};
+
 const atomProp = (
   get: (ctx: Ctx, atom: number) => unknown,
   reads?: RevisionStream,
@@ -251,7 +258,7 @@ const residueOf = (ctx: Ctx, atom: number) =>
 const chainOf = (ctx: Ctx, atom: number) => ctx.topo.atomChain[atom];
 
 const bondProp = (
-  get: (ctx: Ctx, bonds: Bonds, bond: number) => unknown,
+  get: (ctx: Ctx, bonds: BondGraph, bond: number) => unknown,
   reads?: RevisionStream,
 ): Spec => ({
   returns: "value",
@@ -427,6 +434,9 @@ const SPECS: Readonly<Record<string, Spec>> = {
       return (ctx) => String(x(ctx)).toUpperCase();
     },
   },
+  [`${SQ}type.bond-flags`]: variadic((xs) =>
+    xs.reduce((f: number, x) => f | (BOND_FLAG_NAMES[String(x)] ?? 0), 0)
+  ),
   [`${SQ}type.secondary-structure-flags`]: variadic((xs) =>
     xs.reduce((f: number, x) => f | ssFlag(String(x)), 0)
   ),
@@ -538,6 +548,7 @@ const SPECS: Readonly<Record<string, Spec>> = {
 
   // ---- structure-query: bond properties (inside a bond-test) ----
   [`${SQ}bond-property.order`]: bondProp((_, bonds, r) => bonds.order[r]),
+  [`${SQ}bond-property.flags`]: bondProp((_, bonds, r) => bonds.flags[r]),
   [`${SQ}bond-property.length`]: bondProp((ctx, bonds, r) => {
     const { a, b } = bonds, P = ctx.data.positions;
     const i = a[r] * 3, j = b[r] * 3;
@@ -1054,10 +1065,11 @@ function includeConnected(a: Args): Fn {
     const whole = asWhole?.(ctx) ? wholeResidues(ctx) : null;
     const inInput = new Uint8Array(n);
     for (const i of ctx.input) inInput[i] = 1;
-    const bonds = bondTopology(ctx.data);
-    const { offsets, neighbour, bond } = bondAdjacency(bonds, n);
+    const bonds = bondGraph(ctx.data);
+    const { offsets, neighbour, edge: bond } = bonds;
     const passes = (r: number): boolean => {
-      if (!bondTest) return true; // every table bond is covalent (Mol*'s default test)
+      // Mol*'s default test: covalent bonds only; unknown types do not pass.
+      if (!bondTest) return (bonds.flags[r] & BOND_FLAGS.covalent) !== 0;
       ctx.bond = r;
       ctx.bonds = bonds;
       const ok = !!bondTest(ctx);
@@ -1112,8 +1124,8 @@ function isConnectedTo(a: Args): Fn {
     const disjunct = !!disjunctArg?.(ctx);
     const inTarget = new Uint8Array(n);
     for (const i of flatten(targetSel, n)) inTarget[i] = 1;
-    const bonds = bondTopology(ctx.data);
-    const { offsets, neighbour, bond } = bondAdjacency(bonds, n);
+    const bonds = bondGraph(ctx.data);
+    const { offsets, neighbour, edge: bond } = bonds;
     const inSet = new Uint8Array(n);
     const out = new SetBuilder(n, false);
     forEachSet(sel, (s) => {
@@ -1124,7 +1136,9 @@ function isConnectedTo(a: Args): Fn {
         for (let e = offsets[i]; e < offsets[i + 1]; e++) {
           const j = neighbour[e];
           if (!inTarget[j] || (disjunct && inSet[j])) continue;
-          if (bondTest) {
+          if (!bondTest) {
+            if (!(bonds.flags[bond[e]] & BOND_FLAGS.covalent)) continue;
+          } else {
             ctx.bond = bond[e];
             ctx.bonds = bonds;
             const ok = !!bondTest(ctx);

@@ -1,6 +1,8 @@
 import {
+  BOND_FLAGS,
   createStructure,
   elementRadius,
+  type Links,
   type StructureData,
 } from "@molgpu/table";
 import type {
@@ -447,6 +449,154 @@ function markSecondaryStructure(
  * secondary structure from geometry when a file carries no annotation —
  * see molgpu-sept-0sj.2's notes for that documented scope boundary.
  */
+/**
+ * Source-declared bonds, typed the way Mol* types them
+ * (mol-model-formats/structure/property/bonds): chem_comp_bond templates applied
+ * to each residue's atoms (covalent, plus aromatic for pdbx_aromatic_flag Y or
+ * order delo), and struct_conn records resolved by label_asym_id, auth_seq_id
+ * (else label_seq_id), insertion code, atom name and altloc in the first model.
+ */
+function readLinks(
+  categories: Categories,
+  atoms: {
+    readonly name: readonly string[];
+    readonly altloc: readonly string[];
+    readonly comp: readonly string[];
+    readonly residue: Uint32Array;
+  },
+  residues: readonly ResidueRow[],
+  chains: readonly ChainRow[],
+): Links | undefined {
+  const templates = categories.chem_comp_bond, conn = categories.struct_conn;
+  if (!templates && !conn) return undefined;
+  const a: number[] = [], b: number[] = [], order: number[] = [];
+  const flags: number[] = [], source: ("component" | "struct_conn")[] = [];
+  const add = (
+    x: number,
+    y: number,
+    o: number,
+    f: number,
+    from: "component" | "struct_conn",
+  ) => {
+    a.push(x);
+    b.push(y);
+    order.push(o);
+    flags.push(f);
+    source.push(from);
+  };
+  const compatible = (x: number, y: number) =>
+    !atoms.altloc[x] || !atoms.altloc[y] || atoms.altloc[x] === atoms.altloc[y];
+
+  // Atoms of each residue by name.
+  const byName = residues.map(() => new Map<string, number[]>());
+  for (let i = 0; i < atoms.residue.length; i++) {
+    const names = byName[atoms.residue[i]];
+    const list = names.get(atoms.name[i]);
+    if (list) list.push(i);
+    else names.set(atoms.name[i], [i]);
+  }
+
+  const bonds = new Map<string, [string, string, number, number][]>();
+  for (let k = 0; templates && k < templates.rowCount; k++) {
+    const comp = str(templates, "comp_id", k);
+    const value = str(templates, "value_order", k).toLowerCase();
+    let f: number = BOND_FLAGS.covalent, o = 1;
+    if (str(templates, "pdbx_aromatic_flag", k).toUpperCase() === "Y") {
+      f |= BOND_FLAGS.aromatic;
+    }
+    if (value === "delo") f |= BOND_FLAGS.aromatic;
+    else if (value === "doub") o = 2;
+    else if (value === "trip") o = 3;
+    else if (value === "quad") o = 4;
+    const list = bonds.get(comp) ?? [];
+    list.push([
+      str(templates, "atom_id_1", k),
+      str(templates, "atom_id_2", k),
+      o,
+      f,
+    ]);
+    bonds.set(comp, list);
+  }
+  for (let r = 0; bonds.size && r < residues.length; r++) {
+    const names = byName[r];
+    const comps = new Set<string>();
+    for (const list of names.values()) {
+      for (const i of list) comps.add(atoms.comp[i]);
+    }
+    for (const comp of comps) {
+      for (const [nameA, nameB, o, f] of bonds.get(comp) ?? []) {
+        for (const x of names.get(nameA) ?? []) {
+          if (atoms.comp[x] !== comp) continue;
+          for (const y of names.get(nameB) ?? []) {
+            if (atoms.comp[y] === comp && x !== y && compatible(x, y)) {
+              add(x, y, o, f, "component");
+            }
+          }
+        }
+      }
+    }
+  }
+
+  if (conn && chains.length) {
+    const firstModel = chains[0].model;
+    const residueAt = new Map<string, number>();
+    residues.forEach((row, r) => {
+      const chain = chains[row.chain];
+      if (chain.model !== firstModel) return;
+      const key = (seq: string) => `${chain.labelId}|${seq}|${row.insertion}`;
+      if (!residueAt.has(key(row.authSeq))) residueAt.set(key(row.authSeq), r);
+      if (!residueAt.has(`label:${key(String(row.seq))}`)) {
+        residueAt.set(`label:${key(String(row.seq))}`, r);
+      }
+    });
+    const partner = (row: number, p: 1 | 2): number => {
+      const asym = str(conn, `ptnr${p}_label_asym_id`, row);
+      const name = str(conn, `ptnr${p}_label_atom_id`, row);
+      if (!asym || !name) return -1;
+      const ins = str(conn, `pdbx_ptnr${p}_PDB_ins_code`, row);
+      const auth = str(conn, `ptnr${p}_auth_seq_id`, row);
+      const r = auth ? residueAt.get(`${asym}|${auth}|${ins}`) : residueAt.get(
+        `label:${asym}|${str(conn, `ptnr${p}_label_seq_id`, row)}|${ins}`,
+      );
+      if (r === undefined) return -1;
+      const alt = str(conn, `pdbx_ptnr${p}_label_alt_id`, row);
+      const candidates = byName[r].get(name) ?? [];
+      return candidates.find((i) => !alt || atoms.altloc[i] === alt) ?? -1;
+    };
+    for (let k = 0; k < conn.rowCount; k++) {
+      const x = partner(k, 1), y = partner(k, 2);
+      if (x < 0 || y < 0 || x === y) continue;
+      const type = str(conn, "conn_type_id", k);
+      const f = type === "covale"
+        ? BOND_FLAGS.covalent
+        : type === "disulf"
+        ? BOND_FLAGS.covalent | BOND_FLAGS.disulfide
+        : type === "hydrog"
+        ? BOND_FLAGS.hydrogen
+        : type === "metalc"
+        ? BOND_FLAGS.metallic
+        : 0;
+      const value = str(conn, "pdbx_value_order", k);
+      add(
+        x,
+        y,
+        value === "doub" ? 2 : value === "trip" ? 3 : 1,
+        f,
+        "struct_conn",
+      );
+    }
+  }
+  if (!a.length) return undefined;
+  return {
+    count: a.length,
+    a: Uint32Array.from(a),
+    b: Uint32Array.from(b),
+    order: Uint8Array.from(order),
+    flags: Uint8Array.from(flags),
+    source,
+  };
+}
+
 function readSecondaryStructure(
   categories: Categories,
   residues: readonly ResidueRow[],
@@ -574,6 +724,17 @@ export async function structureFromBcif(
     formalCharge[i] = Math.trunc(num(atom, "pdbx_formal_charge", i, 0));
   }
   const residueCount = residues.length, chainCount = chains.length;
+  const links = readLinks(
+    categories,
+    {
+      name: names,
+      altloc,
+      comp: atomComp,
+      residue: atomResidue,
+    },
+    residues,
+    chains,
+  );
   const entityTypes = new Map<string, string>();
   const entity = categories.entity;
   for (let i = 0; entity && i < entity.rowCount; i++) {
@@ -630,6 +791,7 @@ export async function structureFromBcif(
         order: new Uint8Array(),
         source: [],
       },
+      ...(links ? { links } : {}),
       instances: {
         count: chainCount,
         chain: Uint32Array.from({ length: chainCount }, (_, i) => i),

@@ -12,7 +12,25 @@ export type * from "./types.ts";
 export { traceTable } from "./trace.ts";
 export { secondaryStructureTrace } from "./secondary-structure.ts";
 export { type SpatialGrid, spatialGrid } from "./spatial-grid.ts";
+
 import { spatialGrid } from "./spatial-grid.ts";
+
+/** Bond type bits for `bonds.flags` and `links.flags`, with Mol*'s BondType values. */
+export const BOND_FLAGS: Readonly<{
+  covalent: 1;
+  metallic: 2;
+  hydrogen: 4;
+  disulfide: 8;
+  aromatic: 16;
+  computed: 32;
+}> = Object.freeze({
+  covalent: 1,
+  metallic: 2,
+  hydrogen: 4,
+  disulfide: 8,
+  aromatic: 16,
+  computed: 32,
+});
 
 type TypedArrayConstructor =
   | Float32ArrayConstructor
@@ -211,6 +229,27 @@ export function validateStructure<T extends StructureInput>(data: T): T {
     const key = Math.min(x, y) * a.count + Math.max(x, y);
     if (pairs.has(key)) fail(`bonds[${i}]`, "duplicate bond");
     pairs.add(key);
+  }
+  if (b.flags !== undefined) {
+    column(b.flags, b.count, Uint8Array, "bonds.flags");
+  }
+  const l = t.links;
+  if (l !== undefined) {
+    count(l.count, "links.count");
+    for (const k of ["a", "b"] as const) {
+      column(l[k], l.count, Uint32Array, `links.${k}`);
+      refs(l[k], a.count, `links.${k}`);
+    }
+    column(l.order, l.count, Uint8Array, "links.order");
+    column(l.flags, l.count, Uint8Array, "links.flags");
+    strings(l.source, l.count, "links.source");
+    for (let i = 0; i < l.count; i++) {
+      if (l.a[i] === l.b[i]) fail(`links[${i}]`, "self link");
+      if (l.order[i] > 4) fail(`links.order[${i}]`, "expected 0 to 4");
+      if (l.source[i] !== "component" && l.source[i] !== "struct_conn") {
+        fail(`links.source[${i}]`, "expected component or struct_conn");
+      }
+    }
   }
   column(ins.chain, ins.count, Uint32Array, "instances.chain");
   refs(ins.chain, c.count, "instances.chain");
@@ -483,6 +522,9 @@ export function bondTopology(
     b: Uint32Array.from(b),
     order: new Uint8Array(a.length).fill(1),
     source: Object.freeze(new Array<"inferred">(a.length).fill("inferred")),
+    flags: new Uint8Array(a.length).fill(
+      BOND_FLAGS.covalent | BOND_FLAGS.computed,
+    ),
   });
   byPolicy.set(key, result);
   return result;

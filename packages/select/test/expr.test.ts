@@ -1,5 +1,5 @@
 import { assertEquals, assertStrictEquals, assertThrows } from "@std/assert";
-import { bondTopology, createStructure, withPositions } from "@molgpu/table";
+import { createStructure, withPositions } from "@molgpu/table";
 import {
   compile,
   isStale,
@@ -223,7 +223,7 @@ Deno.test("include-connected: layers, fixed point, zero layers read as one", () 
   );
 });
 
-Deno.test("include-connected infers bonds when the structure declares none", () => {
+Deno.test("without declared bonds, bonds follow Mol*'s computation", () => {
   const input = fixture();
   input.topology.bonds = {
     count: 0,
@@ -233,20 +233,26 @@ Deno.test("include-connected infers bonds when the structure declares none", () 
     source: [],
   };
   const bare = createStructure(input);
-  const inferred = bondTopology(bare);
-  const expected = new Set([0]);
-  for (let r = 0; r < inferred.count; r++) {
-    if (inferred.a[r] === 0) expected.add(inferred.b[r]);
-    if (inferred.b[r] === 0) expected.add(inferred.a[r]);
-  }
+  // Mol*'s pair threshold: N-C (1.6 + 1.75) / 1.95 = 1.72 A bonds the atom at
+  // 1 A; N-S (1.6 + 1.9) / 1.95 = 1.79 A does not reach the sulfur at 2 A.
   const q = compile(sq("modifier.include-connected", { 0: atom0 }));
+  assertEquals([...resolve(q, bare).indices], [0, 1]);
+  assertEquals(q.deps, ["topology", "positions"]); // computed bonds move with atoms
+  // Explicit bonds with no type are unknown: the default covalent test skips
+  // them, an explicit bond-test does not.
+  const untyped = fixture();
+  delete (untyped.topology.bonds as { flags?: Uint8Array }).flags;
+  const data2 = createStructure(untyped);
+  assertEquals(rows(sq("modifier.include-connected", { 0: atom0 }), data2), [
+    0,
+  ]);
   assertEquals(
-    rows(sq("modifier.include-connected", { 0: atom0 }), bare),
-    [
-      ...expected,
-    ].sort((a, b) => a - b),
+    rows(
+      sq("modifier.include-connected", { 0: atom0, "bond-test": true }),
+      data2,
+    ),
+    [0, 1],
   );
-  assertEquals(q.deps, ["topology", "positions"]); // inferred bonds move with atoms
 });
 
 Deno.test("within: Mol*'s three distance modes", () => {
@@ -676,4 +682,45 @@ Deno.test("het, formal charge and entity columns, and errors without them", () =
       "needs",
     );
   }
+});
+
+Deno.test("bond flags from links: metal, hydrogen, disulfide, aromatic", () => {
+  const input = fixture();
+  // Declared bonds 0-1, 2-3, 4-5 are covalent; links add a metal 1-2 and a
+  // hydrogen bond 3-4.
+  input.topology.links = {
+    count: 2,
+    a: Uint32Array.from([1, 3]),
+    b: Uint32Array.from([2, 4]),
+    order: Uint8Array.from([1, 1]),
+    flags: Uint8Array.from([2, 4]),
+    source: ["struct_conn", "struct_conn"],
+  };
+  const data = createStructure(input);
+  const via = (names: SelectionExpr[]) =>
+    rows(
+      sq("modifier.include-connected", {
+        0: atom0,
+        "bond-test": call("core.flags.has-any", [
+          sq("bond-property.flags"),
+          sq("type.bond-flags", names),
+        ]),
+        "fixed-point": true,
+      }),
+      data,
+    );
+  assertEquals(via(["covalent"]), [0, 1]);
+  assertEquals(via(["covalent", "metal-coordination"]), [0, 1, 2, 3]);
+  // MolQL's own names work too (Mol*'s runtime reads them as no flags).
+  assertEquals(via(["covalent", "metallic"]), [0, 1, 2, 3]);
+  assertEquals(via(["covalent", "metallic", "hydrogen"]), [0, 1, 2, 3, 4, 5]);
+  assertEquals(via(["disulfide"]), [0]);
+  // Default test: covalent only, so metal and hydrogen links are not followed.
+  assertEquals(
+    rows(
+      sq("modifier.include-connected", { 0: atom0, "fixed-point": true }),
+      data,
+    ),
+    [0, 1],
+  );
 });

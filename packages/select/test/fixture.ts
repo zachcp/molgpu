@@ -68,6 +68,7 @@ export function fixture(
         b: Uint32Array.from([1, 3, 5]),
         order: Uint8Array.from([1, 1, 1]),
         source: ["explicit", "explicit", "explicit"],
+        flags: Uint8Array.from([1, 1, 1]), // covalent
       },
       instances: {
         count: 1,

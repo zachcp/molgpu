@@ -62,6 +62,33 @@ const CURATED: readonly Case[] = [
   ["vmd", "nucleic"],
   ["vmd", "resid 100 to 120 and name CA"],
   ["jmol", "[HEM]"],
+  // Bond types: Mol*'s runtime names (metal-coordination, hydrogen-bond, ...).
+  [
+    "mol-script",
+    "(sel.atom.include-connected (sel.atom.res (= atom.label_comp_id HEM)) :bond-test (bond.is metal-coordination))",
+  ],
+  [
+    "mol-script",
+    "(sel.atom.include-connected (sel.atom.atoms (= atom.name N1)) :bond-test (bond.is hydrogen-bond))",
+  ],
+  [
+    "mol-script",
+    "(sel.atom.include-connected (sel.atom.atoms (= atom.name SG)) :bond-test (bond.is disulfide))",
+  ],
+  [
+    "mol-script",
+    "(sel.atom.include-connected (sel.atom.atoms (= atom.name CZ)) :bond-test (bond.is aromatic) :fixed-point true)",
+  ],
+  [
+    "mol-script",
+    "(sel.atom.include-connected (sel.atom.atoms (= atom.name CA)) :bond-test (bond.is covalent) :layer-count 2)",
+  ],
+  [
+    "mol-script",
+    "(sel.atom.is-connected-to sel.atom.res :target (sel.atom.res (= atom.label_comp_id HEM)) :bond-test true :disjunct true)",
+  ],
+  ["pymol", "bound_to elem Fe"],
+  ["pymol", "resn PHE extend 3"],
   ["pymol", "hetatm"],
   ["pymol", "hetatm and not solvent"],
   ["jmol", "hetero"],
@@ -115,9 +142,6 @@ const CASES: readonly Case[] = [
  * these starts matching (remove it) or a new difference appears.
  */
 const KNOWN_DIFFERENCES: Readonly<Record<string, string>> = {
-  // Mol* follows the heme Fe-S(Cys) metal coordination from struct_conn; the
-  // table's inferred bonds do not include it (molgpu-sept-922.14).
-  "pymol: resn HEM extend 7 [1tqn]": "struct_conn bonds",
   // Deliberate: `not X` is everything when X is empty. Mol*'s
   // query-in-selection returns nothing, even with :in-complement.
   "pymol: elem S or (polymer and not hydro) [1bna]": "complement of nothing",

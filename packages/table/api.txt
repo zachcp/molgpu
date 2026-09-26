@@ -4,14 +4,18 @@
 
 Atoms
   export interface Atoms { readonly count: number; readonly id: readonly string[]; readonly name: readonly string[]; readonly altloc: readonly string[]; readonly residue: Uint32Array; /** Atomic number; 0 denotes unknown. */ readonly element: Uint8Array; readonly occupancy: Float32Array; readonly bfactor: Float32Array; readonly radius?: Float32Array; /** Per-atom chemical component, present only when some residue mixes components (microheterogeneity); residues.comp is then the residue's first atom's. */ readonly comp?: readonly string[]; /** mmCIF pdbx_formal_charge; a missing value reads 0. Absent when the source has no charges. */ readonly formalCharge?: Int8Array }
+BOND_FLAGS
+  export const BOND_FLAGS: Readonly<{ covalent: 1; metallic: 2; hydrogen: 4; disulfide: 8; aromatic: 16; computed: 32 }>;
 BondPolicy
   export interface BondPolicy { readonly padding?: number; readonly interChain?: boolean }
 Bonds
-  export interface Bonds { readonly count: number; readonly a: Uint32Array; readonly b: Uint32Array; /** 0 unknown, 1/2/3 multiplicity, 4 aromatic. */ readonly order: Uint8Array; readonly source: readonly ("explicit" | "inferred")[] }
+  export interface Bonds { readonly count: number; readonly a: Uint32Array; readonly b: Uint32Array; /** 0 unknown, 1/2/3 multiplicity, 4 aromatic. */ readonly order: Uint8Array; readonly source: readonly ("explicit" | "inferred")[]; /** Bond type bits (see `BOND_FLAGS`); 0 is unknown. Inferred bonds are covalent | computed. */ readonly flags?: Uint8Array }
 Chains
   export interface Chains { readonly count: number; readonly model: Int32Array; readonly labelId: readonly string[]; readonly authId: readonly string[]; /** mmCIF label_entity_id. Absent when the source has none. */ readonly entityId?: readonly string[]; /** mmCIF _entity.type of the chain's entity, lower-cased ("polymer", "non-polymer", "water", "branched", ...); "" when unlisted. Absent with entityId. */ readonly entityType?: readonly string[] }
 Instances
   export interface Instances { readonly count: number; readonly chain: Uint32Array; readonly operatorId: readonly string[]; readonly transform: Float64Array }
+Links
+  export interface Links { readonly count: number; readonly a: Uint32Array; readonly b: Uint32Array; /** 0 unknown, 1/2/3/4 multiplicity. */ readonly order: Uint8Array; /** Bond type bits (see `BOND_FLAGS`); 0 is unknown. */ readonly flags: Uint8Array; /** Where the link came from: a chem_comp_bond template, or a struct_conn record. */ readonly source: readonly ("component" | "struct_conn")[] }
 Residues
   export interface Residues { readonly count: number; readonly chain: Uint32Array; /** -1 denotes missing label_seq_id. */ readonly labelSeq: Int32Array; readonly authSeq: readonly string[]; readonly insertionCode: readonly string[]; readonly comp: readonly string[]; readonly polymer: readonly ("protein" | "rna" | "dna" | "other")[]; /** Imported annotation (mmCIF struct_conf/struct_sheet_range) when the source provided one; absent otherwise. */ readonly secondaryStructure?: readonly ("helix" | "sheet" | "coil")[]; /** 1 when the residue's first atom is not a group_PDB ATOM record (a HETATM). Absent when the source has no group_PDB. */ readonly het?: Uint8Array }
 SecondaryStructureTrace
@@ -23,7 +27,7 @@ StructureData
 StructureInput
   export interface StructureInput { readonly topology: Topology; readonly positions: Float32Array }
 Topology
-  export interface Topology { readonly atoms: Atoms; readonly residues: Residues; readonly chains: Chains; readonly bonds: Bonds; readonly instances: Instances }
+  export interface Topology { readonly atoms: Atoms; readonly residues: Residues; readonly chains: Chains; readonly bonds: Bonds; readonly instances: Instances; readonly links?: Links }
 Trace
   export interface Trace { readonly count: number; readonly guide: Float32Array; readonly tangent: Float32Array; readonly normal: Float32Array; readonly binormal: Float32Array; /** Source residue row per sample (sample-to-residue mapping / retained residue IDs). */ readonly residue: Uint32Array; /** Run r spans [runs[r], runs[r + 1]); length is runCount + 1. */ readonly runs: Uint32Array; readonly runKind: readonly ("protein" | "rna" | "dna")[] }
 ViewPolicy

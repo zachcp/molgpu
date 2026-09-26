@@ -47,6 +47,26 @@ export interface Bonds {
   /** 0 unknown, 1/2/3 multiplicity, 4 aromatic. */
   readonly order: Uint8Array;
   readonly source: readonly ("explicit" | "inferred")[];
+  /** Bond type bits (see `BOND_FLAGS`); 0 is unknown. Inferred bonds are covalent | computed. */
+  readonly flags?: Uint8Array;
+}
+/**
+ * Bonds the source declares in its chemistry annotations (mmCIF chem_comp_bond
+ * templates applied to residues, and struct_conn records), with type flags.
+ * Unlike `bonds` they add to inferred connectivity instead of replacing it, and
+ * renderers do not draw them; selections read them (bond types, metal and
+ * hydrogen-bond links).
+ */
+export interface Links {
+  readonly count: number;
+  readonly a: Uint32Array;
+  readonly b: Uint32Array;
+  /** 0 unknown, 1/2/3/4 multiplicity. */
+  readonly order: Uint8Array;
+  /** Bond type bits (see `BOND_FLAGS`); 0 is unknown. */
+  readonly flags: Uint8Array;
+  /** Where the link came from: a chem_comp_bond template, or a struct_conn record. */
+  readonly source: readonly ("component" | "struct_conn")[];
 }
 /** A row expands one chain with one column-major affine assembly operator. */
 export interface Instances {
@@ -61,6 +81,7 @@ export interface Topology {
   readonly chains: Chains;
   readonly bonds: Bonds;
   readonly instances: Instances;
+  readonly links?: Links;
 }
 export interface StructureInput {
   readonly topology: Topology;

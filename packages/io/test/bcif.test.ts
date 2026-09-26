@@ -1,5 +1,6 @@
 import { assert, assertRejects, assertStrictEquals } from "@std/assert";
 import { readFile } from "node:fs/promises";
+import { BOND_FLAGS, type Topology } from "@molgpu/table";
 import { BcifParseError, structureFromBcif } from "../src/index.ts";
 
 Deno.test("lowers public 1TQN BinaryCIF into owned table domains", async () => {
@@ -62,4 +63,45 @@ Deno.test("atoms.comp is omitted without microheterogeneity", async () => {
     await readFile(new URL("./fixtures/1crn.bcif", import.meta.url)),
   );
   assertStrictEquals(data.topology.atoms.comp, undefined);
+});
+
+Deno.test("links carry typed bonds from chem_comp_bond and struct_conn", async () => {
+  const load = async (id: string) =>
+    (await structureFromBcif(
+      await readFile(new URL(`./fixtures/${id}.bcif`, import.meta.url)),
+    )).topology;
+  const seen = (id: string, links: NonNullable<Topology["links"]>) => {
+    const out = new Map<string, number>();
+    for (let r = 0; r < links.count; r++) {
+      for (const [name, bit] of Object.entries(BOND_FLAGS)) {
+        if (links.flags[r] & bit) {
+          const key = `${links.source[r]}:${name}`;
+          out.set(key, (out.get(key) ?? 0) + 1);
+        }
+      }
+    }
+    return out;
+  };
+  const crn = seen("1crn", (await load("1crn")).links!);
+  assertStrictEquals(crn.get("struct_conn:disulfide"), 3);
+  assert(
+    (crn.get("component:aromatic") ?? 0) > 0,
+    "PHE/TYR rings are aromatic",
+  );
+  assert((crn.get("component:covalent") ?? 0) > 0);
+  assertStrictEquals(
+    seen("1tqn", (await load("1tqn")).links!).get("struct_conn:metallic"),
+    2,
+  );
+  assertStrictEquals(
+    seen("1bna", (await load("1bna")).links!).get("struct_conn:hydrogen"),
+    32,
+  );
+  // Unknown struct_conn types would carry no flags; none are guessed covalent.
+  const tqn = (await load("1tqn")).links!;
+  for (let r = 0; r < tqn.count; r++) {
+    if (tqn.source[r] === "struct_conn") {
+      assertStrictEquals(tqn.flags[r] & BOND_FLAGS.covalent, 0);
+    }
+  }
 });
