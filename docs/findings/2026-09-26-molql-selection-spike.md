@@ -486,6 +486,61 @@ P2), because MolScript's `sel.atom.res`/`sel.atom.chains` and VMD's
 - **The comparison test now covers 5 structures and 387 pairs.** Everything
   outside the recorded differences matches.
 
+### 4.11 The shipped allowlist (gate `922.20`)
+
+Generated from `supportedSymbols`. This replaces the Phase 1 list in §4.7, which
+grouping, radii, table data and bond types have since extended.
+`test/selection/unsupported.test.ts` checks two things: every symbol here is in
+Mol*'s MolQL table, and every other MolQL symbol is rejected by name at compile
+time.
+
+- **`core.flags`**: `has-all`, `has-any`
+- **`core.list`**: `equal`, `get-at`
+- **`core.logic`**: `and`, `not`, `or`
+- **`core.math`**: `abs`, `acos`, `add`, `asin`, `atan`, `atan2`, `cbrt`,
+  `ceil`, `cos`, `cosh`, `div`, `exp`, `floor`, `log`, `log10`, `max`, `min`,
+  `mod`, `mult`, `pow`, `round-int`, `sign`, `sin`, `sinh`, `sqrt`, `sub`,
+  `tan`, `tanh`, `trunc`
+- **`core.rel`**: `eq`, `gr`, `gre`, `in-range`, `lt`, `lte`, `neq`
+- **`core.set`**: `has`, `is-subset`
+- **`core.str`**: `concat`, `match`
+- **`core.type`**: `bool`, `composite-key`, `list`, `num`, `regex`, `set`, `str`
+- **`structure-query.atom-property.core`**: `atom-key`, `atomic-number`,
+  `element-symbol`, `mass`, `vdw`, `x`, `y`, `z`
+- **`structure-query.atom-property.macromolecular`**: `B_iso_or_equiv`,
+  `auth_asym_id`, `auth_atom_id`, `auth_comp_id`, `auth_seq_id`, `chain-key`,
+  `entity-key`, `entity-subtype`, `entity-type`, `id`, `is-het`, `label_alt_id`,
+  `label_asym_id`, `label_atom_id`, `label_comp_id`, `label_entity_id`,
+  `label_seq_id`, `occupancy`, `pdbx_PDB_ins_code`, `pdbx_formal_charge`,
+  `residue-key`, `secondary-structure-flags`
+- **`structure-query.atom-set`**: `atom-count`, `property-set`
+- **`structure-query.bond-property`**: `flags`, `length`, `order`
+- **`structure-query.combinator`**: `merge`
+- **`structure-query.filter`**: `first`, `intersected-by`, `is-connected-to`,
+  `pick`, `with-same-atom-properties`, `within`
+- **`structure-query.generator`**: `all`, `atom-groups`, `empty`,
+  `query-in-selection`
+- **`structure-query.modifier`**: `except-by`, `expand-property`,
+  `include-connected`, `include-surroundings`, `intersect-by`,
+  `surrounding-ligands`, `union`, `whole-residues`
+- **`structure-query.type`**: `atom-name`, `bond-flags`, `element-symbol`,
+  `secondary-structure-flags`
+
+112 symbols.
+
+Still unsupported, with reasons in the beads:
+
+- `generator.rings`, `generator.bonded-atomic-pairs`,
+  `combinator.distance-cluster`, `modifier.query-each`/`union-by`/`cluster` and
+  `atom-set.reduce`. Mol*'s runtime lacks most of these; rings need ring
+  perception.
+- `atom-set.count-query` and `filter.is-connected-to :invert`, whose Mol*
+  behaviour is a bug.
+- `core.bond-count`, `connected-component-key`, `core.ctrl.*`: Mol*'s runtime
+  doesn't implement them.
+- Operator, instance, model-index and IHM properties (`922.17`).
+- Fine secondary-structure flags (`922.16`).
+
 ## 5. Proposed phases
 
 **Phase 0: decisions (you).**
