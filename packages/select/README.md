@@ -171,6 +171,20 @@ the asymmetric unit only; `label_*` and `auth_*` atom and component names read
 the same column; bonds are the table's (`bondTopology`), so `include-connected`
 depends on positions when bonds are inferred.
 
+Grouping stays inside evaluation. `atom-groups :group-by` (MolScript's
+`sel.atom.res`) and the per-set filters (`pick`, `first`, `within`,
+`intersected-by`, `with-same-atom-properties`, `is-connected-to`) act on atom
+sets, but `resolve` always returns the flat union.
+
+Mol*'s quirks are kept, so results match Mol* exactly
+(`test/selection/oracle.test.ts`):
+
+- `within` without `:min-radius` (PyMOL `around`) widens the cutoff by each
+  selected atom's VDW radius.
+- A residue or chain test reads the first atom of the residue or chain.
+- `query-in-selection` returns nothing when its selection is empty, so a
+  PyMOL/VMD `not X` is empty when `X` matches no atoms.
+
 ### Set operations and conversions
 
 `union` / `intersect` / `difference` act on resolved selections and reject
