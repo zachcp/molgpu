@@ -8,13 +8,23 @@
 // is how the fixtures under test/hardening are exercised. --update rewrites each
 // package's api.txt snapshot (H5) instead of diffing it. Exit status is 1 when
 // any criterion fails.
-import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
-import { builtinModules } from "node:module";
-import { dirname, join, relative, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { dirname, fromFileUrl, join, relative, resolve } from "@std/path";
 import ts from "typescript";
 
-const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+/** True if `path` exists (file or directory), without the TOCTOU race of a
+ * separate stat-then-read; callers still just want a boolean here. */
+const exists = (path) => {
+  try {
+    Deno.statSync(path);
+    return true;
+  } catch (error) {
+    if (error instanceof Deno.errors.NotFound) return false;
+    throw error;
+  }
+};
+const readFile = (path) => Deno.readTextFileSync(path);
+
+const ROOT = resolve(dirname(fromFileUrl(import.meta.url)), "..");
 const CRITERIA = ["H1", "H2", "H3", "H4", "H5", "H6"];
 const STABILITY = new Set(["stable", "experimental", "advanced"]);
 // The one package allowed to depend on use.gpu's component layers and to expose
@@ -26,20 +36,22 @@ const PACKABLE =
   /^(package\.json|README\.md|LICENSE(\.\w+)?|CHANGELOG\.md|src\/.+)$/;
 const SOURCE = /\.(mjs|js|ts|tsx|mts)$/;
 
-const readJson = (path) => JSON.parse(readFileSync(path, "utf8"));
+const readJson = (path) => JSON.parse(readFile(path));
 const pkgRoot = (spec) =>
   spec.startsWith("@")
     ? spec.split("/").slice(0, 2).join("/")
     : spec.split("/")[0];
+// Package sources only ever reach Node builtins through an explicit "node:"
+// specifier (Deno resolves nothing else there), so that prefix alone is
+// enough to exclude them from the "must be a declared dependency" check.
 const isBare = (spec) =>
-  !spec.startsWith(".") && !spec.startsWith("/") && !spec.startsWith("node:") &&
-  !builtinModules.includes(spec.split("/")[0]);
+  !spec.startsWith(".") && !spec.startsWith("/") && !spec.startsWith("node:");
 
 function walk(dir, filter, out = []) {
-  if (!existsSync(dir)) return out;
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+  if (!exists(dir)) return out;
+  for (const entry of Deno.readDirSync(dir)) {
     const path = join(dir, entry.name);
-    if (entry.isDirectory()) walk(path, filter, out);
+    if (entry.isDirectory) walk(path, filter, out);
     else if (filter.test(entry.name)) out.push(path);
   }
   return out;
@@ -61,7 +73,7 @@ const isTsSource = (file) => /\.m?ts$/.test(file) && !/\.d\.m?ts$/.test(file);
  * source, the declarations TS generates from it (isolatedDeclarations makes that
  * a per-file transform). Checks on the public surface read this, never bodies. */
 function declarationText(file) {
-  const text = readFileSync(file, "utf8");
+  const text = readFile(file);
   return isTsSource(file)
     ? ts.transpileDeclaration(text, {
       fileName: file,
@@ -71,7 +83,7 @@ function declarationText(file) {
 }
 
 /** Every module specifier a source file references: static, dynamic, re-export, import type. */
-function specifiers(file, text = readFileSync(file, "utf8")) {
+function specifiers(file, text = readFile(file)) {
   const sf = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true);
   const out = [];
   const visit = (node) => {
@@ -279,7 +291,7 @@ function declarationClosure(entry) {
   const stack = [entry];
   while (stack.length) {
     const file = stack.pop();
-    if (seen.has(file) || !existsSync(file)) continue;
+    if (seen.has(file) || !exists(file)) continue;
     seen.add(file);
     for (const spec of specifiers(file, declarationText(file))) {
       if (!spec.startsWith(".")) continue;
@@ -290,7 +302,7 @@ function declarationClosure(entry) {
         base.replace(/\.mjs$/, ".d.mts"),
         `${base}.d.ts`,
       ]
-        .find((p) => p.endsWith(".ts") && existsSync(p));
+        .find((p) => p.endsWith(".ts") && exists(p));
       if (hit) stack.push(hit);
     }
   }
@@ -329,7 +341,7 @@ function checkPackage(dir, { update = false } = {}) {
   const fails = Object.fromEntries(CRITERIA.map((c) => [c, []]));
   const fail = (c, msg) => fails[c].push(msg);
   const manifestPath = join(dir, "deno.json");
-  if (!existsSync(manifestPath)) {
+  if (!exists(manifestPath)) {
     return { name: relative(ROOT, dir), fails: { H1: ["no deno.json"] } };
   }
   const m = readJson(manifestPath);
@@ -360,7 +372,7 @@ function checkPackage(dir, { update = false } = {}) {
   if (m.license && m.license !== "MIT") {
     fail("H1", `license must be "MIT", got "${m.license}"`);
   }
-  if (!existsSync(join(dir, "LICENSE"))) fail("H1", "missing LICENSE file");
+  if (!exists(join(dir, "LICENSE"))) fail("H1", "missing LICENSE file");
   if (m.private) fail("H1", '"private": true');
   if (m.type !== "module") fail("H1", '"type" must be "module"');
   if (!("sideEffects" in m)) fail("H1", 'missing "sideEffects"');
@@ -415,11 +427,11 @@ function checkPackage(dir, { update = false } = {}) {
   for (const e of ents) {
     const types = e.types && join(dir, e.types);
     const runtime = e.import && join(dir, e.import);
-    if (!types || !existsSync(types)) {
+    if (!types || !exists(types)) {
       fail("H2", `exports["${e.subpath}"].types file missing`);
       continue;
     }
-    if (!runtime || !existsSync(runtime)) {
+    if (!runtime || !exists(runtime)) {
       fail("H2", `exports["${e.subpath}"].import file missing`);
       continue;
     }
@@ -457,7 +469,7 @@ function checkPackage(dir, { update = false } = {}) {
 
   // H3 — no use.gpu / Mol* types in public declarations (viewer: "." entry only).
   for (const e of ents) {
-    if (!e.types || !existsSync(join(dir, e.types))) continue;
+    if (!e.types || !exists(join(dir, e.types))) continue;
     if (isViewer) {
       // The viewer's modules host both "." and advanced exports, so check what
       // each "." export's types reach, not whole files.
@@ -501,7 +513,7 @@ function checkPackage(dir, { update = false } = {}) {
       }
       if (spec.startsWith("@molgpu/") && spec !== pkgRoot(spec)) {
         const sub = `.${spec.slice(pkgRoot(spec).length)}`;
-        const target = existsSync(
+        const target = exists(
             join(ROOT, "packages", pkgRoot(spec).slice(8), "deno.json"),
           )
           ? entries(
@@ -543,15 +555,15 @@ function checkPackage(dir, { update = false } = {}) {
     }
     const snapshot = apiSnapshot(name, apis);
     const snapPath = join(dir, "api.txt");
-    if (update) writeFileSync(snapPath, snapshot);
-    else if (!existsSync(snapPath)) {
+    if (update) Deno.writeTextFileSync(snapPath, snapshot);
+    else if (!exists(snapPath)) {
       fail("H5", "api.txt missing (run with --update, then review the diff)");
-    } else if (readFileSync(snapPath, "utf8") !== snapshot) {
+    } else if (readFile(snapPath) !== snapshot) {
       fail("H5", "api.txt is stale (run with --update, then review the diff)");
     }
     const readmePath = join(dir, "README.md");
-    const rows = existsSync(readmePath)
-      ? readmeApi(readFileSync(readmePath, "utf8"))
+    const rows = exists(readmePath)
+      ? readmeApi(readFile(readmePath))
       : undefined;
     if (!rows) fail("H5", 'README.md has no "## API" section');
     else {for (const [subpath, api] of apis) {
@@ -646,8 +658,9 @@ function main(argv) {
   const args = argv.filter((a) => !a.startsWith("--"));
   const dirs = args.length
     ? args.map((a) => a.includes("/") ? resolve(a) : join(ROOT, "packages", a))
-    : readdirSync(join(ROOT, "packages")).map((p) => join(ROOT, "packages", p))
-      .filter((d) => existsSync(join(d, "deno.json")));
+    : [...Deno.readDirSync(join(ROOT, "packages"))]
+      .map((entry) => join(ROOT, "packages", entry.name))
+      .filter((d) => exists(join(d, "deno.json")));
   const results = dirs.map((d) =>
     checkPackage(d, { update: flags.has("--update") })
   );
