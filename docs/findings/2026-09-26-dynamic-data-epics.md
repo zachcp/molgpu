@@ -12,7 +12,8 @@ Today `<Structure>` uploads `positions` once (`structure-context.ts`,
 
 | Consumer                                   | Reads positions from    | Under moving coordinates |
 | ------------------------------------------ | ----------------------- | ------------------------ |
-| Spacefill, BallAndStick atoms, bonds       | GPU `sources.positions` | follows for free         |
+| Spacefill, BallAndStick atoms              | GPU `sources.positions` | follows for free         |
+| Bonds                                      | CPU `data.positions`    | goes stale               |
 | Ribbon, Tube, Surface                      | CPU `data.positions`    | goes stale               |
 | Camera focus (`camera-curve.ts`), `within` | CPU `data.positions`    | goes stale               |
 | Fields `attribute()`                       | CPU columns via `fill`  | no GPU-produced columns  |
@@ -44,7 +45,9 @@ its children. It never changes topology, atom count or atom order.
 </Structure>;
 ```
 
-Sketch of the contract (the Plan bead settles it):
+Sketch of the contract. The settled version is
+[the coordinate-provider contract](2026-09-26-coordinate-provider-contract.md)
+(molgpu-sept-e99.1), which supersedes this sketch where they differ:
 
 - `CoordinatesContext` holds
   `{ source: ShaderSource /* vec3<f32> or padded vec4 */,
@@ -220,9 +223,9 @@ playback proves inadequate. A GPU AABB/centroid reduction alone does not make
 the CPU camera live: the Plan must specify how its result reaches the camera
 without a synchronous GPU readback each frame, including measured lag. The Plan
 must also define when a content version advances, when a kernel dispatches, and
-how an obsolete asynchronous snapshot is discarded. At 1M atoms, each vec3
-coordinate buffer is about 12 MB (vec4: 16 MB), so provider chains and double
-buffering need an explicit memory budget.
+how an obsolete asynchronous snapshot is discarded. At 1M atoms, each coordinate
+buffer is 16 MB (use.gpu stores `vec3<f32>` with a 16-byte stride), so provider
+chains and double buffering need an explicit memory budget.
 
 ### Phase 11: independently shippable volume slice
 

@@ -53,6 +53,25 @@ without threading.
 
 Everything else in the design is a function of this table.
 
+**Coordinates are a stream over the table.** Topology (atoms, residues, bonds,
+radii, attribute columns) is fixed by `<Structure>`; positions are not. A
+coordinate provider (`<Trajectory>`, `<Superpose>`, `<NormalMode>`, later
+`<ElasticNetwork>`) reads the nearest coordinates, runs a GPU kernel and
+re-provides new ones to its children. It never changes atom count or order.
+Providers are child nodes on purpose: they transform data, not appearance, so
+the "modifiers are props" rule below does not apply. Topology stays in
+`StructureContext`; coordinates live in their own context with a content
+`version`, so re-providing one never re-provides the other. Derived per-row
+columns (charges, DSSP codes, kernel outputs) follow the same idea: they are
+added after import with provenance and bump `revision.attributes`. See the
+[dynamic-data plan](findings/2026-09-26-dynamic-data-epics.md) (Phases 9–10).
+
+**Volumes are a second dataset.** A `VolumeData` grid (values, dims, a full
+index-to-world affine transform, stats) sits beside the atom table and is
+published by `<Volume>`. Imported maps and computed fields (`<EField>`) both
+produce Volumes, so isosurfaces, slices and volume-sampled fields work the same
+on either (Phases 11 and 16).
+
 ### 2. Selections are values, not nodes
 
 A selection compiles to a sorted index buffer. That makes union / intersect /
@@ -95,6 +114,14 @@ of work, not a wrapper. See `@molgpu/timeline`.
 Representations memoize geometry on `(selection, geometry params)` only. Style
 fields change uniforms and bound buffers. This is what makes animation cheap and
 is the main reason to be on use.gpu rather than porting naively.
+
+Under moving coordinates every consumer declares a policy. **Live** consumers
+(spacefill, ball-and-stick, bonds) read the GPU coordinate source and follow for
+free. **Snapshot** consumers (ribbon, tube, surface, CPU selections such as
+`within`) rebuild from a throttled asynchronous readback and on pause; a stale
+readback is discarded by `version`. Bounds and centroid move to a GPU reduction
+so framing works on live coordinates. GPU-native ribbon/tube geometry is a
+follow-on only if snapshot playback proves inadequate.
 
 ### 6. Framing derives from selections
 
@@ -143,6 +170,7 @@ exactly one wall, and (b) everything correctness-critical is a pure function.
 | `@molgpu/select`   | `table`                            | Selection language → sorted index buffers.                                                                                                      |
 | `@molgpu/fields`   | `table`, `@use-gpu/shader`         | Field abstraction, expression sublanguage → WGSL.                                                                                               |
 | `@molgpu/geo`      | —                                  | Geometry kernels: ported ribbon/spline math, molecular surface, sphere/cylinder instancing. Typed arrays in, typed arrays out. No GPU, no Live. |
+| `@molgpu/dynamics` | `table`                            | Planned (Phase 13). Pure coordinate math: CPU references plus WGSL strings. **Never imports `@use-gpu/*`.**                                     |
 | `@molgpu/timeline` | `@use-gpu/workbench`               | Global scrubbable timeline, beats, curve sampling.                                                                                              |
 | `@molgpu/viewer`   | all of the above                   | The Live components. **The only package that imports `@use-gpu/workbench` components.**                                                         |
 

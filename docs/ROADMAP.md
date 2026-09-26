@@ -148,6 +148,29 @@ explicitly. Remaining entity, bond and microheterogeneity cases have their own
 beads; fine secondary-structure flags follow Phase 15. See the
 [MolQL spike](findings/2026-09-26-molql-selection-spike.md).
 
+## Phases 9–17 — Dynamic data
+
+Trajectories, volumes, charges, computed secondary structure, dynamics and
+fields share two foundations: a coordinate stream (Phase 9) and derived
+attribute channels (Phase 10). Each phase opens with a Plan bead and a
+Counter-review bead before any build bead unblocks, and closes with a gate. See
+the [dynamic-data plan](findings/2026-09-26-dynamic-data-epics.md).
+
+Recommended order: 9 → {11 in parallel} → 12 → 13 → 10 → 14 → 15 → 16 → 17.
+Phase 11 has no prerequisites and can start immediately.
+
+| Phase | Hard prerequisites |
+| ----- | ------------------ |
+| 9     | —                  |
+| 10    | —                  |
+| 11    | —                  |
+| 12    | 9                  |
+| 13    | 9                  |
+| 14    | 10                 |
+| 15    | 10, 13             |
+| 16    | 9, 10, 11, 13, 14  |
+| 17    | 9, 12, 13          |
+
 ## Phase 9 — Coordinate stream
 
 Structure topology stays fixed while child providers re-provide positions. Gate
@@ -155,13 +178,60 @@ Structure topology stays fixed while child providers re-provide positions. Gate
 CPU consumers, and bounded asynchronous readback. GPU-native ribbon/tube
 geometry follows only if snapshot playback proves inadequate.
 
+## Phase 10 — Derived attribute channels
+
+`withAttributes(data, columns, provenance)` in `@molgpu/table` adds named,
+domain-tagged, typed columns and bumps `revision.attributes`. `attribute()` in
+`@molgpu/fields` resolves registered columns through a typed registry, and the
+viewer lets a GPU kernel produce a column that fields link against directly.
+
 ## Phase 11 — Volume dataset
 
 The independent first gate covers `VolumeData`, CCP4/MRC import, `<Volume>`, CPU
 isosurfaces, slices and static volume-sampled fields. Later readers, GPU
 marching cubes, raymarching and live-coordinate volume sampling remain tracked
-follow-ons. See the
-[dynamic-data plan](findings/2026-09-26-dynamic-data-epics.md) for Phases 9–17.
+follow-ons.
+
+## Phase 12 — Trajectories
+
+`TrajectoryData` with a streaming `FrameSource`; DCD and XTC readers behind the
+io wall, then TRR, NetCDF and multi-model BCIF. `<Trajectory>` keeps a GPU
+window of frames and interpolates at a fractional frame index, so `frame`
+accepts a timeline curve and playback is scrubbing.
+
+## Phase 13 — `@molgpu/dynamics` and pure transforms
+
+A renderer-free package, shaped like `@molgpu/fields`: CPU reference
+implementations plus WGSL source strings, never importing `@use-gpu/*`. Pure
+transforms `f(coords, t)` ship first as coordinate providers: `<Transform>`,
+`<Superpose>`, PBC unwrap and `<NormalMode>`. A shared GPU cell list lands here.
+
+## Phase 14 — Per-atom charge
+
+`partialCharge` columns with provenance from PQR import, residue templates and
+Gasteiger for het groups, reconciled with the imported `formalCharge` column
+from Phase 8. Missing hydrogens and protonation states are a stated limit.
+
+## Phase 15 — Secondary structure codes and DSSP
+
+A residue column of DSSP 8-state codes, projected to helix/sheet/coil for the
+cartoon. Mol*'s DSSP ported to the CPU as the oracle, then a GPU path over the
+cell list. Unblocks fine secondary-structure selection flags deferred from Phase
+8.
+
+## Phase 16 — Electric fields
+
+`<EField>` computes potential and field on a grid by direct Coulomb summation
+and outputs a Volume, so isosurfaces, slices and `volumeSample` work unchanged.
+Adds `<FieldLines>` and `<FieldArrows>`; recomputes when coordinates or charges
+change.
+
+## Phase 17 — Stateful dynamics, elastic network first
+
+Transforms with an integrator clock, starting with `<ElasticNetwork>` Langevin
+dynamics. Live stateful output is not scrubbable; recording into a trajectory
+ring buffer makes it scrubbable again. Physics grows one rung at a time;
+force-field parameterisation and protonation stay out of scope.
 
 ---
 
