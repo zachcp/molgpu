@@ -208,3 +208,38 @@ Deno.test("frame cache: aborts stale prefetches and pins needed frames", async (
   assertEquals(cache.stats.frames, 1);
   cache.close();
 });
+
+Deno.test("frame cache: a failed prefetch is reported when needed, without retry churn", async () => {
+  const reads: number[] = [];
+  const errors: number[] = [];
+  const cache = new FrameCache({
+    read(index: number) {
+      reads.push(index);
+      return index === 1
+        ? Promise.reject(new Error("bad frame"))
+        : Promise.resolve({ positions: Float32Array.of(index, index, index) });
+    },
+  }, 3);
+  cache.onError = (index) => errors.push(index);
+  cache.want([0], [1]);
+  await sleep(0);
+  assertEquals(errors, [], "a failed prefetch is not yet on screen");
+  cache.want([0], [1]);
+  await sleep(0);
+  assertEquals(reads.filter((i) => i === 1).length, 1);
+
+  cache.want([1]);
+  await sleep(0);
+  assertEquals(errors, [1], "the needed frame failure reaches the caller");
+  cache.want([1]);
+  await sleep(0);
+  assertEquals(reads.filter((i) => i === 1).length, 1);
+  assertEquals(errors, [1]);
+
+  cache.want([2]); // seeking away permits a later retry
+  cache.want([1]);
+  await sleep(0);
+  assertEquals(reads.filter((i) => i === 1).length, 2);
+  assertEquals(errors, [1, 1]);
+  cache.close();
+});

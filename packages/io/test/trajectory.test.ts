@@ -425,3 +425,27 @@ Deno.test("openTrajectory: formats, Blobs, Files and HTTP Range", async () => {
   const error = await assertRejects(() => t.source.read(0, controller.signal));
   assertInstanceOf(error, DOMException);
 });
+
+Deno.test("URL fallback stops a chunked download at maxDownload", async () => {
+  let chunks = 0;
+  let cancelled = false;
+  const stream = new ReadableStream<Uint8Array>({
+    pull(controller) {
+      chunks++;
+      controller.enqueue(new Uint8Array(4));
+    },
+    cancel() {
+      cancelled = true;
+    },
+  }, { highWaterMark: 0 });
+  const get = (async () => new Response(stream)) as typeof fetch;
+  await code(
+    urlByteSource("https://example.test/run.xtc", {
+      maxDownload: 5,
+      fetch: get,
+    }),
+    "TRAJECTORY_TOO_LARGE",
+  );
+  assert(cancelled, "the response body is cancelled at the limit");
+  assert(chunks < 10, "the stream is not consumed to completion");
+});

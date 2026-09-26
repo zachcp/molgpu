@@ -31,6 +31,8 @@ export class FrameCache {
   readonly #maxBytes: number;
   readonly #frames = new Map<number, TrajectoryFrame>(); // insertion = LRU order
   readonly #inflight = new Map<number, AbortController>();
+  readonly #errors = new Map<number, unknown>();
+  readonly #reported = new Set<number>();
   #pinned = new Set<number>();
   #bytes = 0;
   #reads = 0;
@@ -85,6 +87,14 @@ export class FrameCache {
       Number.isInteger(i) && i >= 0 && i < this.#frameCount;
     this.#pinned = new Set(needed.filter(valid));
     const wanted = new Set([...this.#pinned, ...prefetch.filter(valid)]);
+    // Keep a failed read quiet while it remains wanted. Seeking away clears
+    // the failure so a later seek can retry (for example after a network blip).
+    for (const index of this.#errors.keys()) {
+      if (!wanted.has(index)) {
+        this.#errors.delete(index);
+        this.#reported.delete(index);
+      }
+    }
     for (const [index, controller] of this.#inflight) {
       if (!wanted.has(index)) {
         controller.abort();
@@ -93,7 +103,17 @@ export class FrameCache {
       }
     }
     for (const index of wanted) {
-      if (!this.#frames.has(index) && !this.#inflight.has(index)) {
+      if (this.#errors.has(index)) {
+        if (this.#pinned.has(index) && !this.#reported.has(index)) {
+          this.#reported.add(index);
+          const error = this.#errors.get(index);
+          queueMicrotask(() => {
+            if (!this.#closed && this.#pinned.has(index)) {
+              this.onError(index, error);
+            }
+          });
+        }
+      } else if (!this.#frames.has(index) && !this.#inflight.has(index)) {
         this.#start(index);
       }
     }
@@ -117,7 +137,11 @@ export class FrameCache {
         if (this.#inflight.get(index) !== controller || this.#closed) return;
         this.#inflight.delete(index);
         this.#failures++;
-        this.onError(index, error);
+        this.#errors.set(index, error);
+        if (this.#pinned.has(index)) {
+          this.#reported.add(index);
+          this.onError(index, error);
+        }
       },
     );
   }
@@ -137,6 +161,8 @@ export class FrameCache {
     for (const controller of this.#inflight.values()) controller.abort();
     this.#inflight.clear();
     this.#frames.clear();
+    this.#errors.clear();
+    this.#reported.clear();
     this.#bytes = 0;
   }
 }

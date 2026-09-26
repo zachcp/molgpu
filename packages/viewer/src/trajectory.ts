@@ -238,6 +238,9 @@ const TrajectoryPlayer: LC<PlayerProps> = (
   const device = useDeviceContext();
   const requestRepaint = useContext(LoopContext);
   const [, setLanded] = useState(0);
+  const [failure, setFailure] = useState<
+    { index: number; error: unknown } | null
+  >(null);
   let requested: number;
   if (typeof frame === "number") requested = frame;
   else {
@@ -266,10 +269,16 @@ const TrajectoryPlayer: LC<PlayerProps> = (
       requestRepaint();
     };
     player.cache.onError = (index, error) => {
-      console.error(`<Trajectory>: frame ${index} failed to load`, error);
+      setFailure({ index, error });
+      requestRepaint();
     };
     dispose(() => player.close());
   }, [player]);
+  if (failure) {
+    throw new Error(`<Trajectory>: frame ${failure.index} failed to load`, {
+      cause: failure.error,
+    });
+  }
 
   const clamped = Math.min(Math.max(requested, 0), trajectory.frameCount - 1);
   const display = player.scheduler.update(requested, interpolate);

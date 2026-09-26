@@ -164,12 +164,35 @@ export async function urlByteSource(
       "TRAJECTORY_TOO_LARGE",
     );
   }
-  const bytes = new Uint8Array(await probe.arrayBuffer());
-  if (bytes.byteLength > maxDownload) {
-    throw new TrajectoryParseError(
-      `${url} is ${bytes.byteLength} bytes, over maxDownload ${maxDownload}`,
-      "TRAJECTORY_TOO_LARGE",
-    );
+  // Content-Length may be absent (chunked transfer) or incorrect. Enforce
+  // the cap while consuming the body, before buffering the entire response.
+  const chunks: Uint8Array[] = [];
+  let length = 0;
+  const reader = probe.body?.getReader();
+  if (reader) {
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        length += value.byteLength;
+        if (length > maxDownload) {
+          await reader.cancel();
+          throw new TrajectoryParseError(
+            `${url} exceeds maxDownload ${maxDownload}`,
+            "TRAJECTORY_TOO_LARGE",
+          );
+        }
+        chunks.push(value);
+      }
+    } finally {
+      reader.releaseLock();
+    }
+  }
+  const bytes = new Uint8Array(length);
+  let at = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, at);
+    at += chunk.byteLength;
   }
   return byteSource(bytes);
 }
