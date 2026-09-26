@@ -183,9 +183,12 @@ Mol*'s quirks are kept, so results match Mol* exactly
   selected atom's VDW radius.
 - A residue or chain test reads the first atom of the residue or chain.
 
-One deliberate difference: `not X` (`query-in-selection :in-complement`) is the
-whole current input when `X` matches nothing. Mol* returns nothing there, so
-PyMOL `polymer and not hydro` selected nothing on structures without hydrogens.
+Two deliberate differences:
+
+- `not X` (`query-in-selection :in-complement`) is the whole current input when
+  `X` matches nothing. Mol* returns nothing there, so PyMOL
+  `polymer and not hydro` selected nothing on structures without hydrogens.
+- `core.mass` gives carbon 12.011. Mol*'s table lists boron's 10.81.
 
 ### Set operations and conversions
 
