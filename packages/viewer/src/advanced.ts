@@ -3,6 +3,9 @@
 // signature, so it is kept out of the "." entry (see README "API").
 export { WorldSpacePointLayer } from "./world-space-points.ts";
 export { StructureContext, useStructure } from "./structure-context.ts";
+export { CoordinatesContext, useCoordinates } from "./coordinates-context.ts";
+export type { Coordinates } from "./coordinates-context.ts";
+export { IdentityCoordinates } from "./identity-coordinates.ts";
 export type {
   StructureContextValue,
   StructureSources,

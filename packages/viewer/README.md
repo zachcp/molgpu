@@ -187,6 +187,10 @@ may change before 0.1.0; _advanced_ — only from `@molgpu/viewer/advanced`.
 | `StructureContextValue`      | advanced     | `{ resource, sources }` from the structure context.                                                   |
 | `StructureSources`           | advanced     | Shared positions/radii shader sources.                                                                |
 | `useStructure`               | advanced     | Read the nearest `<Structure>`'s resource and sources.                                                |
+| `CoordinatesContext`         | advanced     | Live context carrying the nearest GPU coordinate stream.                                              |
+| `Coordinates`                | advanced     | GPU positions source, atom count, content generation and owning resource.                             |
+| `useCoordinates`             | advanced     | Read the nearest coordinate stream; an empty structure returns null.                                  |
+| `IdentityCoordinates`        | advanced     | Forward the nearest coordinates without allocating a GPU buffer.                                      |
 | `TimelineContext`            | advanced     | Live context carrying timeline time.                                                                  |
 | `FlatMaterial`               | advanced     | Custom unlit fragment-shader material.                                                                |
 | `LitMaterial`                | advanced     | Custom lit shader material.                                                                           |

@@ -26,6 +26,8 @@ import {
   useStructureResource,
 } from "@molgpu/viewer";
 import type { StructureLoader, StructureProps } from "@molgpu/viewer";
+import { IdentityCoordinates, useCoordinates } from "@molgpu/viewer/advanced";
+import { OffsetCoordinates } from "./offset-coordinates.ts";
 import { probe } from "./diagnostics.ts";
 import type { Mode, Phase, State } from "./diagnostics.ts";
 
@@ -194,7 +196,14 @@ const Ready = (): LiveElement => {
   return [report("ready"), <Spacefill />];
 };
 
-const Scene = ({ mode, src }: { mode: Mode; src: string }): LiveElement => {
+const CoordinateProbe = (): LiveElement => {
+  probe.coordinateSource = useCoordinates()?.source ?? null;
+  return <Spacefill />;
+};
+
+const Scene = (
+  { mode, src, offsetX }: { mode: Mode; src: string; offsetX: number },
+): LiveElement => {
   if (mode === "preloaded") {
     return (
       <Structure data={left}>
@@ -206,6 +215,19 @@ const Scene = ({ mode, src }: { mode: Mode; src: string }): LiveElement => {
     return (
       <Structure data={blank}>
         <Spacefill />
+      </Structure>
+    );
+  }
+  if (mode === "offset") {
+    return (
+      <Structure data={left}>
+        <OffsetCoordinates offset={[offsetX, 0, 0]}>
+          <IdentityCoordinates>
+            <OffsetCoordinates offset={[-2, 1, 0]}>
+              <CoordinateProbe />
+            </OffsetCoordinates>
+          </IdentityCoordinates>
+        </OffsetCoordinates>
       </Structure>
     );
   }
@@ -248,7 +270,14 @@ const App = (): LiveElement => {
     mode: "preloaded",
     src: "",
     mounted: true,
+    offsetX: 5,
   });
+  try {
+    useCoordinates();
+    probe.missingCoordinatesError = null;
+  } catch (failure) {
+    probe.missingCoordinatesError = String(failure);
+  }
   probe.update = (patch) => setState((previous) => ({ ...previous, ...patch }));
   probe.mounted = true;
   // 1CRN's own centre, so the loaded protein is framed rather than clipped.
@@ -274,7 +303,11 @@ const App = (): LiveElement => {
         {state.mounted
           ? (
             <Molecule>
-              <Scene mode={state.mode} src={state.src} />
+              <Scene
+                mode={state.mode}
+                src={state.src}
+                offsetX={state.offsetX}
+              />
             </Molecule>
           )
           : null}

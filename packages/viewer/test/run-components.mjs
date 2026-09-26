@@ -108,6 +108,31 @@ Deno.test("viewer components", async () => {
         for (let i = 0; i < 8; i++) await new Promise(requestAnimationFrame);
       });
     const snapshot = () => page.evaluate(() => window.__viewer.snapshot());
+    const readCoordinates = () =>
+      page.evaluate(async () => {
+        const { coordinateSource: source, device } = window.__viewer;
+        if (!source || !device) throw new Error("missing coordinate source");
+        const staging = device.createBuffer({
+          size: source.length * 12,
+          usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+        });
+        const encoder = device.createCommandEncoder();
+        encoder.copyBufferToBuffer(
+          source.buffer,
+          0,
+          staging,
+          0,
+          source.length * 12,
+        );
+        device.queue.submit([encoder.finish()]);
+        await staging.mapAsync(GPUMapMode.READ);
+        const values = Array.from(
+          new Float32Array(staging.getMappedRange().slice(0)),
+        );
+        staging.unmap();
+        staging.destroy();
+        return values;
+      });
     const update = async (patch, keepHistory = false) => {
       await page.evaluate(([p, keep]) => {
         if (!keep) window.__viewer.reset();
@@ -185,8 +210,82 @@ Deno.test("viewer components", async () => {
     // 1. Preloaded StructureData draws, and never reaches for the BCIF parser.
     const preloaded = await blobs("preloaded", "components-preloaded");
     assert.equal(preloaded.length, 1, "preloaded structure draws one cluster");
+    assert.match(
+      await page.evaluate(() => window.__viewer.missingCoordinatesError),
+      /Required context 'CoordinatesContext' was used without being provided/,
+      "useCoordinates outside Structure reports a composition error",
+    );
     assert.equal(molstar(), 0, "a preloaded dataset must not load Mol*");
     report.states.preloaded = { blobs: preloaded, molstarRequests: 0 };
+
+    const ownedBefore = await page.evaluate(() =>
+      window.__viewer.counters().ownedBuffers.live
+    );
+    await update({ mode: "offset" });
+    const offsetBlobs = await blobs("offset", "components-offset");
+    assert.equal(offsetBlobs.length, 1, "the provider chain draws Spacefill");
+    assert.ok(
+      offsetBlobs[0].x > preloaded[0].x,
+      "the chained offset moves the Spacefill draw",
+    );
+    const positions = await readCoordinates();
+    assert.deepEqual(
+      positions,
+      [-13, 1, 0, -10, 1, 0, -7, 1, 0],
+      "the two offsets compose exactly in the GPU buffer",
+    );
+    const firstDispatches = await page.evaluate(() =>
+      window.__viewer.dispatches
+    );
+    assert.equal(firstDispatches, 2, "one dispatch per offset provider");
+    await settle();
+    assert.equal(
+      await page.evaluate(() => window.__viewer.dispatches),
+      firstDispatches,
+      "unchanged content does not redispatch",
+    );
+    const uploadsBefore = await page.evaluate(() =>
+      window.__viewer.counters().uploadBytes
+    );
+    await page.evaluate(() => window.__viewer.update({ offsetX: 6 }));
+    let visibilityFrame = null;
+    for (let frame = 1; frame <= 4; frame++) {
+      await page.evaluate(() => new Promise(requestAnimationFrame));
+      const drawn = await analyze(await page.locator("canvas").screenshot());
+      if (drawn.length === 1 && drawn[0].x > offsetBlobs[0].x + 5) {
+        visibilityFrame = frame;
+        break;
+      }
+    }
+    assert.ok(visibilityFrame !== null, "updated coordinates reach the draw");
+    await settle();
+    assert.deepEqual(
+      await readCoordinates(),
+      [-12, 1, 0, -9, 1, 0, -6, 1, 0],
+      "changing a parameter republishes both provider generations",
+    );
+    assert.equal(
+      await page.evaluate(() => window.__viewer.dispatches),
+      firstDispatches + 2,
+      "each changed provider dispatches once",
+    );
+    assert.equal(
+      await page.evaluate(() => window.__viewer.counters().uploadBytes),
+      uploadsBefore,
+      "coordinate updates do not upload topology or style data",
+    );
+    await update({ mode: "preloaded" });
+    assert.equal(
+      await page.evaluate(() => window.__viewer.counters().ownedBuffers.live),
+      ownedBefore,
+      "provider teardown returns owned GPU buffers to baseline",
+    );
+    report.states.offset = {
+      positions,
+      blobs: offsetBlobs,
+      dispatches: 4,
+      firstObservedFrame: visibilityFrame,
+    };
 
     // 2. The runtime rejects the same prop combinations the types reject.
     const invalid = await page.evaluate(() => window.__viewer.invalid());

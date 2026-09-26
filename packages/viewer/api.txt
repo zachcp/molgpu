@@ -161,8 +161,14 @@ withMaterial
 
 ## ./advanced
 
+Coordinates
+  export interface Coordinates { readonly source: StorageSource; readonly count: number; readonly generation: number; readonly resource: StructureResource }
+CoordinatesContext
+  export const CoordinatesContext: LiveContext<Coordinates | null | undefined>;
 FlatMaterial
   export const FlatMaterial: LC<ShaderFlatMaterialProps>;
+IdentityCoordinates
+  export const IdentityCoordinates: LC<{ children?: LiveElement }>;
 LitMaterial
   export const LitMaterial: LC<ShaderLitMaterialProps>;
 StructureContext
@@ -170,11 +176,13 @@ StructureContext
 StructureContextValue
   export interface StructureContextValue { readonly resource: StructureResource; /** Null for an empty structure, which owns no GPU source. */ readonly sources: StructureSources | null }
 StructureSources
-  export interface StructureSources { readonly positions: ShaderSource; readonly radii: ShaderSource }
+  export interface StructureSources { /** @deprecated Read the nearest stream with useCoordinates().source. */ readonly positions: ShaderSource; readonly radii: ShaderSource }
 TimelineContext
   export const TimelineContext: LiveContext<number | null>;
 WorldSpacePointLayer
   export const WorldSpacePointLayer: LC<{ positions: ShaderSource; colors?: ShaderSource; radii: ShaderSource; count: number; scale?: number } & Omit<PointLayerProps, "positions" | "colors" | "sizes" | "count" | "depth">>;
+useCoordinates
+  export function useCoordinates(): Coordinates | null;
 useField
   export function useField(field: Field, inputs?: Record<string, ShaderSource | number | { current: number }>, options?: { domain?: "atom" | "residue" }): ShaderSource;
 useStructure
