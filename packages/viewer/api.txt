@@ -61,7 +61,7 @@ LoadedStructureProps
 MaterialProps
   export interface MaterialProps { children?: ViewerElement }
 MaterialSpec
-  export type MaterialSpec = | ({ type?: MaterialType } & Record<string, unknown>) | ((children: ViewerElement) => ViewerElement);
+  export type MaterialSpec = ({ type?: MaterialType } & Record<string, unknown>) | ((children: ViewerElement) => ViewerElement);
 MaterialType
   export type MaterialType = 'pbr' | 'basic' | 'normal' | 'flat' | 'lit';
 Molecule
@@ -125,7 +125,7 @@ Translucency
 Tube
   export const Tube: ViewerComponent<{ /** A @molgpu/select atom Selection; without one, active model/primary-altloc atoms are used. */ select?: Selection | null; /** Ångström tube radius; defaults to 0.3. */ radius?: number; /** Samples per guide segment; defaults to 6. */ smooth?: number; color?: VectorLike; sides?: number; join?: 'tangent' | 'bevel' | 'miter' | 'round'; /** Wraps the shaded tube layer; without one, the ambient scene material. */ material?: MaterialSpec } & Translucency>;
 TypedArray
-  export type TypedArray = | Int8Array | Uint8Array | Uint8ClampedArray | Int16Array | Uint16Array | Int32Array | Uint32Array | Float32Array | Float64Array;
+  export type TypedArray = Int8Array | Uint8Array | Uint8ClampedArray | Int16Array | Uint16Array | Int32Array | Uint32Array | Float32Array | Float64Array;
 VectorLike
   export type VectorLike = readonly number[] | TypedArray;
 ViewerComponent

@@ -5,7 +5,7 @@ import {
   all, where, element, comp, within,
   resolve, union, intersect, difference,
   toAtoms, toResidues, toBonds, isStale, isEmpty, count,
-} from '../src/index.mjs';
+} from '../src/index.ts';
 import { fixture } from './fixture.mjs';
 
 const rows = (sel) => [...sel.indices];

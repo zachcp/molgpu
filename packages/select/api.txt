@@ -11,7 +11,7 @@ Selection
 SelectionQuery
   export interface SelectionQuery { readonly type: string; readonly domain: Domain; readonly label: string; readonly deps: readonly RevisionStream[] }
 SourceMap
-  export type SourceMap = | { readonly domain: 'residue'; readonly rows: Uint32Array } | { readonly domain: 'atom'; readonly a: Uint32Array; readonly b: Uint32Array };
+  export type SourceMap = { readonly domain: 'residue'; readonly rows: Uint32Array } | { readonly domain: 'atom'; readonly a: Uint32Array; readonly b: Uint32Array };
 all
   export function all(domain?: Domain): SelectionQuery;
 comp

@@ -125,9 +125,10 @@ function moduleExports(file) {
       // Print the declaring statement, without JSDoc, whitespace-collapsed.
       let node = d;
       while (node.parent && !ts.isSourceFile(node.parent) && !ts.isModuleBlock(node.parent)) node = node.parent;
-      // Generated and hand-written declarations differ only in `declare` and
-      // optional trailing semicolons; normalize both so diffs show API changes.
-      return node.getText().replace(/\s+/g, ' ').trim().replace(/^export declare /, 'export ').replace(/;\s*\}/g, ' }');
+      // Generated and hand-written declarations differ only in `declare`,
+      // optional trailing semicolons and a leading union `|`; normalize them so
+      // diffs show API changes.
+      return node.getText().replace(/\s+/g, ' ').trim().replace(/^export declare /, 'export ').replace(/;\s*\}/g, ' }').replace(/= \| /g, '= ');
     });
     out.set(exp.name, { decls: [...new Set(decls)], anyNodes: decls.length ? countAny(target) : 0 });
   }
