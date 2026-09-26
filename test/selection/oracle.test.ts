@@ -104,6 +104,13 @@ const KNOWN_DIFFERENCES: Readonly<Record<string, string>> = {
   // Mol* follows the heme Fe-S(Cys) metal coordination from struct_conn; the
   // table's inferred bonds do not include it (molgpu-sept-922.14).
   "pymol: resn HEM extend 7 [1tqn]": "struct_conn bonds",
+  // Deliberate: `not X` is everything when X is empty. Mol*'s
+  // query-in-selection returns nothing, even with :in-complement.
+  "pymol: elem S or (polymer and not hydro) [1bna]": "complement of nothing",
+  "pymol: elem S or (polymer and not hydro) [1crn]": "complement of nothing",
+  "pymol: elem S or (polymer and not hydro) [1tqn]": "complement of nothing",
+  "pymol: not resn CYS [1bna]": "complement of nothing",
+  "vmd: not protein [1bna]": "complement of nothing",
 };
 
 // Single-model entries only: our rows then equal Mol*'s source indices.

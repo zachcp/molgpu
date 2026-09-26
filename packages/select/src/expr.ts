@@ -519,9 +519,15 @@ const SPECS: Readonly<Record<string, Spec>> = {
       const inComplement = optArg(a, "in-complement");
       return (ctx) => {
         const target = selection(ctx);
-        if (setCount(target) === 0) return target;
+        const complement = !!inComplement?.(ctx);
+        // Deliberate difference from Mol*, which returns the empty selection
+        // here even with :in-complement, so PyMOL/VMD `not X` selected nothing
+        // whenever X was empty. The complement of nothing is the whole input.
+        if (setCount(target) === 0) {
+          return complement ? inner(childCtx(ctx, ctx.input)) : target;
+        }
         const n = ctx.data.topology.atoms.count;
-        const rows = inComplement?.(ctx)
+        const rows = complement
           ? subtractRows(ctx.input, flatten(target, n))
           : flatten(target, n);
         if (rows.length === 0) return EMPTY;

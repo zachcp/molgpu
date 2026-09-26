@@ -146,6 +146,20 @@ Deno.test("query-in-selection narrows the input; in-complement is 'not'", () => 
     })),
     [2, 3],
   );
+  // Not nothing is everything (Mol* would return nothing here).
+  const none = atoms(eq(symbol, "H"));
+  assertEquals(
+    rows(sq("generator.query-in-selection", {
+      0: none,
+      query: all,
+      "in-complement": true,
+    })),
+    [0, 1, 2, 3, 4, 5],
+  );
+  assertEquals(
+    rows(sq("generator.query-in-selection", { 0: none, query: all })),
+    [],
+  );
   // Surroundings only see the narrowed input: atom 3 is excluded.
   assertEquals(
     rows(sq("generator.query-in-selection", {

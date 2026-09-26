@@ -182,8 +182,10 @@ Mol*'s quirks are kept, so results match Mol* exactly
 - `within` without `:min-radius` (PyMOL `around`) widens the cutoff by each
   selected atom's VDW radius.
 - A residue or chain test reads the first atom of the residue or chain.
-- `query-in-selection` returns nothing when its selection is empty, so a
-  PyMOL/VMD `not X` is empty when `X` matches no atoms.
+
+One deliberate difference: `not X` (`query-in-selection :in-complement`) is the
+whole current input when `X` matches nothing. Mol* returns nothing there, so
+PyMOL `polymer and not hydro` selected nothing on structures without hydrogens.
 
 ### Set operations and conversions
 
