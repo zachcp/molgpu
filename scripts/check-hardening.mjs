@@ -117,8 +117,13 @@ function moduleExports(file) {
   const checker = program.getTypeChecker();
   const sf = program.getSourceFile(file);
   const symbol = sf && checker.getSymbolAtLocation(sf);
-  if (!symbol) return new Map(); // a file with no import/export is not a module
+  if (!symbol) return Object.assign(new Map(), { exportedKeys: new Set(), typeRefs: new Map() }); // not a module
   const out = new Map();
+  // Beside the name -> declarations map: which in-package declarations the
+  // entry exports, and which in-package types its public declarations use.
+  const packageRoot = file.slice(0, file.lastIndexOf('/src/') + 1);
+  out.exportedKeys = new Set();
+  out.typeRefs = new Map();
   for (const exp of checker.getExportsOfModule(symbol)) {
     const target = exp.flags & ts.SymbolFlags.Alias ? checker.getAliasedSymbol(exp) : exp;
     const decls = (target.declarations ?? []).map(d => {
@@ -131,8 +136,36 @@ function moduleExports(file) {
       return node.getText().replace(/\s+/g, ' ').trim().replace(/^export declare /, 'export ').replace(/;\s*\}/g, ' }').replace(/= \| /g, '= ');
     });
     out.set(exp.name, { decls: [...new Set(decls)], anyNodes: decls.length ? countAny(target) : 0 });
+    for (const d of target.declarations ?? []) {
+      out.exportedKeys.add(declKey(d, target.name));
+      collectTypeRefs(checker, d, packageRoot, out.typeRefs);
+    }
   }
   return out;
+}
+
+const declKey = (decl, name) => `${decl.getSourceFile().fileName}#${name}`;
+
+/** Record every type a public declaration refers to that is declared inside the
+ * package (not another package, a lib file or a type parameter), keyed like
+ * declKey, so the caller can check each one is itself exported. */
+function collectTypeRefs(checker, decl, packageRoot, refs) {
+  const visit = node => {
+    const nameNode = ts.isTypeReferenceNode(node) ? node.typeName
+      : ts.isExpressionWithTypeArguments(node) ? node.expression : null;
+    if (nameNode) {
+      let symbol = checker.getSymbolAtLocation(nameNode);
+      if (symbol && symbol.flags & ts.SymbolFlags.Alias) symbol = checker.getAliasedSymbol(symbol);
+      if (symbol && !(symbol.flags & ts.SymbolFlags.TypeParameter)) {
+        for (const d of symbol.declarations ?? []) {
+          const file = d.getSourceFile().fileName;
+          if (file.startsWith(packageRoot) && !file.includes('/node_modules/')) refs.set(declKey(d, symbol.name), symbol.name);
+        }
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(decl);
 }
 
 /** Count `any` keywords in a symbol's declarations that lack an explaining comment. */
@@ -300,6 +333,13 @@ function checkPackage(dir, { update = false } = {}) {
 
   // H5 — reviewed API: committed snapshot, and every export classified in the README.
   if (apis.size) {
+    // A public signature may only name types some entry exports: a private
+    // alias would appear in the generated docs with nothing to link to.
+    const exported = new Set([...apis.values()].flatMap(api => [...api.exportedKeys]));
+    const reported = new Set();
+    for (const api of apis.values()) for (const [key, typeName] of api.typeRefs) {
+      if (!exported.has(key) && !reported.has(key)) { reported.add(key); fail('H5', `public declarations use "${typeName}", which no entry exports (${relative(dir, key.split('#')[0])})`); }
+    }
     const snapshot = apiSnapshot(name, apis);
     const snapPath = join(dir, 'api.txt');
     if (update) writeFileSync(snapPath, snapshot);

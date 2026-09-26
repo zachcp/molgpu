@@ -134,20 +134,20 @@ export type StructureLoader = (
   cancelled: () => boolean,
 ) => StructureData | null | Promise<StructureData | null>;
 
-interface StructureCommonProps {
+/** Preloaded values. This path never loads a parser. */
+export interface PreloadedStructureProps {
   /** Per-structure selection cache bound; defaults to 64. */
   maxSelections?: number;
   children?: ViewerElement;
-}
-
-/** Preloaded values. This path never loads a parser. */
-export interface PreloadedStructureProps extends StructureCommonProps {
   data: StructureData;
   src?: undefined; loader?: undefined; loading?: undefined; error?: undefined;
 }
 
 /** A source to load. Replacing or unmounting it rejects in-flight results. */
-export interface LoadedStructureProps extends StructureCommonProps {
+export interface LoadedStructureProps {
+  /** Per-structure selection cache bound; defaults to 64. */
+  maxSelections?: number;
+  children?: ViewerElement;
   src: string;
   data?: undefined;
   /** Defaults to fetch + BCIF lowering through @molgpu/io. Its identity is a

@@ -3,12 +3,15 @@
 // chain plus residue discriminators, NEVER a raw sequence number alone — and
 // lifted to a per-atom `annotation` field that is indistinguishable from any
 // other field. This is pure CPU work; there is no WGSL compilation here.
-import { SCALAR, COLOR, annotation } from './index.mjs';
+import type { StructureData } from '@molgpu/table';
+import { SCALAR, COLOR, annotation } from './index.ts';
+import type { ChainIdentity, Color, Field, IdentityField, JoinOptions, ResidueIdentity } from './types.ts';
 
-const fail = (field, message) => { throw new TypeError(`@molgpu/fields ${field}: ${message}`); };
+function fail(field: string, message: string): never { throw new TypeError(`@molgpu/fields ${field}: ${message}`); }
 
 /** Full residue identity as a plain object (mirrors table.residueKey fields). */
-export function residueIdentity(data, r) {
+export function residueIdentity(data: StructureData, row: number): ResidueIdentity {
+  const r = row;
   const { residues, chains } = data.topology;
   const c = residues.chain[r];
   return {
@@ -19,15 +22,17 @@ export function residueIdentity(data, r) {
 }
 
 /** Chain identity as a plain object. */
-export function chainIdentity(data, c) {
+export function chainIdentity(data: StructureData, row: number): ChainIdentity {
+  const c = row;
   const { chains } = data.topology;
   return { model: chains.model[c], chainLabel: chains.labelId[c], chainAuth: chains.authId[c] };
 }
 
-const CHAIN_FIELDS = ['chainLabel', 'chainAuth'];
+const CHAIN_FIELDS: readonly IdentityField[] = ['chainLabel', 'chainAuth'];
 
 /** Canonical string key over the chosen identity fields. */
-export const identityKey = (identity, fields) => JSON.stringify(fields.map((f) => identity[f] ?? null));
+export const identityKey = (identity: Partial<Record<IdentityField, unknown>>, fields: readonly IdentityField[]): string =>
+  JSON.stringify(fields.map((f) => identity[f] ?? null));
 
 /**
  * Join external `records` onto `data` and return an `annotation` Field.
@@ -39,10 +44,11 @@ export const identityKey = (identity, fields) => JSON.stringify(fields.map((f) =
  * `fail`); records that collide on a key follow `duplicate` (`error`/`first`/
  * `last`). A residue/chain annotation is lifted to atoms unless `lift` is false.
  */
-export function joinAnnotation(data, records, {
-  domain = 'residue', fields, value = (r) => r.value, type = SCALAR,
-  policy = 'fallback', fallback, duplicate = 'error', lift = true,
-} = {}) {
+export function joinAnnotation<R>(data: StructureData, records: readonly R[], options: JoinOptions<R>): Field {
+  const {
+    domain = 'residue', fields, value = (r: R) => (r as { value: number | Color }).value, type = SCALAR,
+    policy = 'fallback', fallback, duplicate = 'error', lift = true,
+  } = options ?? ({} as JoinOptions<R>);
   if (!Array.isArray(records)) fail('joinAnnotation.records', 'expected an array of records');
   if (!['residue', 'chain'].includes(domain)) fail('joinAnnotation.domain', 'expected residue or chain');
   if (!Array.isArray(fields) || !fields.length) fail('joinAnnotation.fields', 'expected a non-empty identity field list');
@@ -52,9 +58,9 @@ export function joinAnnotation(data, records, {
   if (!['error', 'first', 'last'].includes(duplicate)) fail('joinAnnotation.duplicate', 'expected error, first, or last');
 
   // Index records by identity key, applying the duplicate policy.
-  const byKey = new Map();
+  const byKey = new Map<string, number | Color>();
   for (const record of records) {
-    const key = identityKey(record, fields);
+    const key = identityKey(record as Partial<Record<IdentityField, unknown>>, fields);
     if (byKey.has(key)) {
       if (duplicate === 'error') fail('joinAnnotation', `duplicate annotation for key ${key}`);
       if (duplicate === 'first') continue;
@@ -62,24 +68,25 @@ export function joinAnnotation(data, records, {
     byKey.set(key, value(record));
   }
 
-  const identityOf = domain === 'residue' ? residueIdentity : chainIdentity;
+  const identityOf: (data: StructureData, row: number) => Partial<Record<IdentityField, unknown>> =
+    domain === 'residue' ? residueIdentity : chainIdentity;
   const rowCount = domain === 'residue' ? data.topology.residues.count : data.topology.chains.count;
 
   // Resolve a value (or absence) for each row of the record domain.
-  const rowValue = new Array(rowCount);
+  const rowValue = new Array<number | Color>(rowCount);
   const rowPresent = new Uint8Array(rowCount);
   for (let row = 0; row < rowCount; row++) {
     const key = identityKey(identityOf(data, row), fields);
-    if (byKey.has(key)) { rowValue[row] = byKey.get(key); rowPresent[row] = 1; }
+    if (byKey.has(key)) { rowValue[row] = byKey.get(key)!; rowPresent[row] = 1; }
   }
 
   // Lift residue/chain rows onto atoms, or keep the record domain.
   const targetDomain = lift ? 'atom' : domain;
-  const rowOfAtom = (i) => domain === 'residue'
+  const rowOfAtom = (i: number): number => domain === 'residue'
     ? data.topology.atoms.residue[i]
     : data.topology.residues.chain[data.topology.atoms.residue[i]];
   const n = lift ? data.topology.atoms.count : rowCount;
-  const rowFor = lift ? rowOfAtom : ((i) => i);
+  const rowFor = lift ? rowOfAtom : ((i: number): number => i);
 
   const c = type === COLOR ? 4 : 1;
   const values = new Float32Array(n * c);
@@ -88,8 +95,8 @@ export function joinAnnotation(data, records, {
     const row = rowFor(i);
     if (rowPresent[row]) {
       missing[i] = 1;
-      if (c === 1) values[i] = rowValue[row]; else values.set(rowValue[row], i * c);
+      if (c === 1) values[i] = rowValue[row] as number; else values.set(rowValue[row] as Color, i * c);
     }
   }
-  return annotation(targetDomain, type, values, { missing, policy, fallback });
+  return annotation(targetDomain as 'atom' | 'residue', type, values, { missing, policy, fallback });
 }

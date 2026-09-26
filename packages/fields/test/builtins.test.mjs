@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createStructure } from '@molgpu/table';
-import { COLOR, byElement, byBfactor, bySeq, byChain, columnRange, evaluate, compile } from '../src/index.mjs';
+import { COLOR, byElement, byBfactor, bySeq, byChain, columnRange, evaluate, compile } from '../src/index.ts';
 import { fixture } from './fixture.mjs';
 
 // The base fixture: 4 atoms C/N/O/S, residues 0,0,1,1, bfactor 10..40, one chain.

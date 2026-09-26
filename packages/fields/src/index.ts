@@ -1,4 +1,3 @@
-// @ts-self-types="./index.d.ts"
 // @molgpu/fields — typed per-row value descriptions with one pure CPU evaluator
 // and a renderer-free WGSL code generator.
 //
@@ -14,23 +13,46 @@
 // schema that the viewer lowers to GPU sources. Numeric/vector fields lower;
 // string fields are CPU-only. There is no arbitrary JS->WGSL and no user parser.
 
-const fail = (field, message) => { throw new TypeError(`@molgpu/fields ${field}: ${message}`); };
+import type { StructureData } from '@molgpu/table';
+import type { Binding, Color, Compiled, Domain, EvalContext, Field, Overflow, Target, ValueType } from './types.ts';
+
+export type * from './types.ts';
+
+// Field is opaque in the public types; these are the node kinds only this
+// module reads. `Value` is one row's value: a number, a colour, or a label.
+type Value = number | Color | string;
+type AnyDomain = Domain | 'any';
+type AttributeName = 'element' | 'occupancy' | 'bfactor' | 'radius' | 'residue' | 'atomChain' | 'labelSeq' | 'chain';
+type FieldNode =
+  | (Field & { readonly kind: 'constant'; readonly value: Value })
+  | (Field & { readonly kind: 'attribute'; readonly name: AttributeName })
+  | (Field & { readonly kind: 'categorical'; readonly input: FieldNode; readonly table: readonly (readonly [number, number | Color])[]; readonly fallback: number | Color })
+  | (Field & { readonly kind: 'linear'; readonly input: FieldNode; readonly lo: number; readonly hi: number; readonly a: number; readonly b: number; readonly overflow: Overflow })
+  | (Field & { readonly kind: 'colormap'; readonly input: FieldNode; readonly table: readonly (readonly [number, Color])[] })
+  | (Field & { readonly kind: 'annotation'; readonly values: ArrayLike<number>; readonly missing: ArrayLike<number> | null; readonly policy: 'fallback' | 'fail'; readonly fallback: number | Color | null })
+  | (Field & { readonly kind: 'curve'; readonly table: readonly (readonly [number, number])[]; readonly overflow: 'clamp' | 'wrap' });
+
+/** A binding while compiling: the public Binding plus its WGSL accessor name. */
+interface PendingBinding extends Omit<Binding, 'accessor'> { readonly name: string }
+interface EmitContext { readonly bindings: PendingBinding[]; readonly helpers: string[]; nextHelper: number }
+
+function fail(field: string, message: string): never { throw new TypeError(`@molgpu/fields ${field}: ${message}`); }
 
 // ---- value types -----------------------------------------------------------
 
-export const SCALAR = Object.freeze({ kind: 'scalar', components: 1, wgsl: 'f32' });
-export const COLOR = Object.freeze({ kind: 'color', components: 4, wgsl: 'vec4<f32>' });
-export const STRING = Object.freeze({ kind: 'string', components: 0, wgsl: null });
-const sameType = (a, b) => a.kind === b.kind;
-const numeric = (t) => t.kind === 'scalar' || t.kind === 'color';
+export const SCALAR: ValueType = Object.freeze({ kind: 'scalar', components: 1, wgsl: 'f32' });
+export const COLOR: ValueType = Object.freeze({ kind: 'color', components: 4, wgsl: 'vec4<f32>' });
+export const STRING: ValueType = Object.freeze({ kind: 'string', components: 0, wgsl: null });
+const sameType = (a: ValueType, b: ValueType): boolean => a.kind === b.kind;
+const numeric = (t: ValueType): boolean => t.kind === 'scalar' || t.kind === 'color';
 
 // ---- table attribute registry (the only columns a field may read) ----------
 
-const ATTRIBUTES = {
+const ATTRIBUTES: Record<AttributeName, { readonly domain: Domain; readonly read: (d: StructureData) => ArrayLike<number> & Iterable<number> }> = {
   element:   { domain: 'atom', read: (d) => d.topology.atoms.element },
   occupancy: { domain: 'atom', read: (d) => d.topology.atoms.occupancy },
   bfactor:   { domain: 'atom', read: (d) => d.topology.atoms.bfactor },
-  radius:    { domain: 'atom', read: (d) => d.topology.atoms.radius },
+  radius:    { domain: 'atom', read: (d) => d.topology.atoms.radius ?? new Float32Array() },
   residue:   { domain: 'atom', read: (d) => d.topology.atoms.residue },
   // Derived atom->chain (via residue): a per-atom chain index for byChain.
   atomChain: { domain: 'atom', read: (d) => Uint32Array.from(d.topology.atoms.residue, (r) => d.topology.residues.chain[r]) },
@@ -40,8 +62,8 @@ const ATTRIBUTES = {
 
 /** Min/max of a column over a dataset, for auto-ranging a built-in field's
  *  domain. Returns [lo, lo+1] for an empty or constant column. */
-export function columnRange(data, name) {
-  const spec = ATTRIBUTES[name];
+export function columnRange(data: StructureData, name: string): [number, number] {
+  const spec = ATTRIBUTES[name as AttributeName];
   if (!spec) fail('columnRange', `unknown column ${name}; known: ${Object.keys(ATTRIBUTES).join(', ')}`);
   const column = spec.read(data);
   if (!column.length) return [0, 1];
@@ -50,12 +72,12 @@ export function columnRange(data, name) {
   return lo === hi ? [lo, lo + 1] : [lo, hi];
 }
 
-const rowCount = (domain, data) =>
+const rowCount = (domain: string, data: StructureData): number =>
   domain === 'atom' ? data.topology.atoms.count :
   domain === 'residue' ? data.topology.residues.count :
   fail('domain', `unknown domain ${domain}`);
 
-const reconcileDomain = (a, b, field) => {
+const reconcileDomain = (a: AnyDomain, b: AnyDomain, field: string): AnyDomain => {
   if (a === 'any') return b;
   if (b === 'any') return a;
   if (a !== b) fail(field, `mixes atom and residue domains`);
@@ -64,21 +86,21 @@ const reconcileDomain = (a, b, field) => {
 
 // ---- field constructors ----------------------------------------------------
 
-const field = (node) => Object.freeze(node);
-const asColorArray = (v, where) => {
+const field = (node: FieldNode): Field => Object.freeze(node);
+const asColorArray = (v: unknown, where: string): Color => {
   if (!Array.isArray(v) || v.length !== 4 || !v.every((x) => Number.isFinite(x))) fail(where, 'expected [r,g,b,a]');
-  return Object.freeze([...v]);
+  return Object.freeze([...v]) as unknown as Color;
 };
 
 /** A single value for every row. Number -> scalar, [r,g,b,a] -> colour, string -> label. */
-export function constant(value) {
+export function constant(value: number | string | Color): Field {
   if (typeof value === 'number') return field({ kind: 'constant', type: SCALAR, domain: 'any', value });
   if (typeof value === 'string') return field({ kind: 'constant', type: STRING, domain: 'any', value });
   return field({ kind: 'constant', type: COLOR, domain: 'any', value: asColorArray(value, 'constant') });
 }
 
 /** Read a numeric table column as a scalar field on that column's domain. */
-export function attribute(name) {
+export function attribute(name: 'element' | 'occupancy' | 'bfactor' | 'radius' | 'residue' | 'atomChain' | 'labelSeq' | 'chain'): Field {
   const spec = ATTRIBUTES[name];
   if (!spec) fail('attribute', `unknown column ${name}; known: ${Object.keys(ATTRIBUTES).join(', ')}`);
   return field({ kind: 'attribute', type: SCALAR, domain: spec.domain, name });
@@ -89,16 +111,16 @@ export function attribute(name) {
  * fallback for categories not listed. `cases` is { category: value }; every
  * value (and the fallback) must share one type.
  */
-export function categorical(input, cases, fallback) {
+export function categorical(input: Field, cases: Record<number, number | Color>, fallback: number | Color): Field {
   assertField(input, 'categorical.input');
   if (input.type.kind !== 'scalar') fail('categorical.input', 'expected a scalar field');
-  const entries = Object.entries(cases).map(([k, v]) => [Number(k), v]);
+  const entries = Object.entries(cases).map(([k, v]): [number, number | Color] => [Number(k), v]);
   if (!entries.length) fail('categorical.cases', 'expected at least one case');
   const type = valueType(entries[0][1], 'categorical.cases');
   for (const [, v] of entries) if (!sameType(valueType(v, 'categorical.cases'), type)) fail('categorical.cases', 'all cases must share a type');
   const fb = normalizeValue(fallback, type, 'categorical.fallback');
-  const table = entries.map(([category, v]) => [category, normalizeValue(v, type, 'categorical.cases')]);
-  return field({ kind: 'categorical', type, domain: input.domain, input, table, fallback: fb });
+  const table = entries.map(([category, v]): [number, number | Color] => [category, normalizeValue(v, type, 'categorical.cases')]);
+  return field({ kind: 'categorical', type, domain: input.domain, input: input as FieldNode, table, fallback: fb });
 }
 
 /**
@@ -106,25 +128,26 @@ export function categorical(input, cases, fallback) {
  * [lo,hi]. `overflow` handles inputs outside [lo,hi]: 'clamp' (default) or
  * 'wrap'. 'fail' rejects out-of-range on the CPU and does not lower to GPU.
  */
-export function linear(input, { domain: dom, range = [0, 1], overflow = 'clamp' } = {}) {
+export function linear(input: Field, options: { domain: readonly [number, number]; range?: readonly [number, number]; overflow?: Overflow }): Field {
+  const { domain: dom, range = [0, 1], overflow = 'clamp' } = options ?? {};
   assertField(input, 'linear.input');
   if (input.type.kind !== 'scalar') fail('linear.input', 'expected a scalar field');
   if (!Array.isArray(dom) || dom.length !== 2 || dom[0] === dom[1]) fail('linear.domain', 'expected [lo,hi] with lo != hi');
   if (!Array.isArray(range) || range.length !== 2) fail('linear.range', 'expected [a,b]');
   if (!['clamp', 'wrap', 'fail'].includes(overflow)) fail('linear.overflow', 'expected clamp, wrap, or fail');
-  return field({ kind: 'linear', type: SCALAR, domain: input.domain, input, lo: dom[0], hi: dom[1], a: range[0], b: range[1], overflow });
+  return field({ kind: 'linear', type: SCALAR, domain: input.domain, input: input as FieldNode, lo: dom[0], hi: dom[1], a: range[0], b: range[1], overflow });
 }
 
 /** Piecewise-linear colour gradient over a scalar input. `stops` is [[t,color],...]. */
-export function colormap(input, stops) {
+export function colormap(input: Field, stops: ReadonlyArray<readonly [number, Color]>): Field {
   assertField(input, 'colormap.input');
   if (input.type.kind !== 'scalar') fail('colormap.input', 'expected a scalar field');
   if (!Array.isArray(stops) || stops.length < 2) fail('colormap.stops', 'expected at least two [t,color] stops');
-  const table = stops.map(([t, c], i) => {
+  const table = stops.map(([t, c], i): [number, Color] => {
     if (!Number.isFinite(t)) fail('colormap.stops', `stop ${i} t must be finite`);
     return [t, asColorArray(c, `colormap.stops[${i}]`)];
   }).sort((x, y) => x[0] - y[0]);
-  return field({ kind: 'colormap', type: COLOR, domain: input.domain, input, table });
+  return field({ kind: 'colormap', type: COLOR, domain: input.domain, input: input as FieldNode, table });
 }
 
 /**
@@ -132,7 +155,8 @@ export function colormap(input, stops) {
  * `values` is a typed array (scalar) or length-4N array (colour). `missing` is a
  * boolean mask; absent rows take `fallback` ('fallback' policy) or throw ('fail').
  */
-export function annotation(domain, type, values, { missing, policy = 'fallback', fallback } = {}) {
+export function annotation(domain: Domain, type: ValueType, values: ArrayLike<number>, options: { missing?: ArrayLike<number> | null; policy?: 'fallback' | 'fail'; fallback?: number | Color } = {}): Field {
+  const { missing, policy = 'fallback', fallback } = options;
   if (!['atom', 'residue'].includes(domain)) fail('annotation.domain', 'expected atom or residue');
   if (!numeric(type)) fail('annotation.type', 'annotations must be scalar or color');
   if (!['fallback', 'fail'].includes(policy)) fail('annotation.policy', 'expected fallback or fail');
@@ -141,10 +165,11 @@ export function annotation(domain, type, values, { missing, policy = 'fallback',
 }
 
 /** A scalar value along the global parameter `t` (uniform, same for every row). */
-export function curve(stops, { overflow = 'clamp' } = {}) {
+export function curve(stops: ReadonlyArray<readonly [number, number]>, options: { overflow?: 'clamp' | 'wrap' } = {}): Field {
+  const { overflow = 'clamp' } = options;
   if (!Array.isArray(stops) || stops.length < 2) fail('curve.stops', 'expected at least two [t,value] stops');
   if (!['clamp', 'wrap'].includes(overflow)) fail('curve.overflow', 'expected clamp or wrap');
-  const table = stops.map(([t, v], i) => {
+  const table = stops.map(([t, v], i): [number, number] => {
     if (!Number.isFinite(t) || !Number.isFinite(v)) fail('curve.stops', `stop ${i} must be finite`);
     return [t, v];
   }).sort((x, y) => x[0] - y[0]);
@@ -153,53 +178,56 @@ export function curve(stops, { overflow = 'clamp' } = {}) {
 
 // ---- value helpers ---------------------------------------------------------
 
-function valueType(v, where) {
+function valueType(v: unknown, where: string): ValueType {
   if (typeof v === 'number') return SCALAR;
   if (Array.isArray(v)) { asColorArray(v, where); return COLOR; }
-  fail(where, 'expected a number or [r,g,b,a]');
+  return fail(where, 'expected a number or [r,g,b,a]');
 }
-function normalizeValue(v, type, where) {
+function normalizeValue(v: unknown, type: ValueType, where: string): number | Color {
   if (type === SCALAR) { if (typeof v !== 'number' || !Number.isFinite(v)) fail(where, 'expected a finite number'); return v; }
   return asColorArray(v, where);
 }
-const assertField = (f, where) => { if (!f || f.kind === undefined || !f.type) fail(where, 'expected a Field'); };
+const assertField = (f: unknown, where: string): void => {
+  const node = f as Partial<Field> | null;
+  if (!node || node.kind === undefined || !node.type) fail(where, 'expected a Field');
+};
 
 // ---- CPU evaluation --------------------------------------------------------
 
-const wrap01 = (x) => x - Math.floor(x);
+const wrap01 = (x: number): number => x - Math.floor(x);
 
-function rowValue(node, data, t, row) {
+function rowValue(node: FieldNode, data: StructureData, t: number | undefined, row: number): Value {
   switch (node.kind) {
     case 'constant': return node.value;
     case 'attribute': return ATTRIBUTES[node.name].read(data)[row];
     case 'categorical': {
-      const key = rowValue(node.input, data, t, row);
+      const key = rowValue(node.input, data, t, row) as number;
       for (const [category, v] of node.table) if (Math.abs(key - category) < 0.5) return v;
       return node.fallback;
     }
     case 'linear': {
-      let u = (rowValue(node.input, data, t, row) - node.lo) / (node.hi - node.lo);
+      let u = ((rowValue(node.input, data, t, row) as number) - node.lo) / (node.hi - node.lo);
       if (u < 0 || u > 1) {
         if (node.overflow === 'fail') fail('linear', `input ${rowValue(node.input, data, t, row)} outside domain`);
         u = node.overflow === 'wrap' ? wrap01(u) : Math.min(1, Math.max(0, u));
       }
       return u * (node.b - node.a) + node.a;
     }
-    case 'colormap': return sampleColor(node.table, rowValue(node.input, data, t, row));
+    case 'colormap': return sampleColor(node.table, rowValue(node.input, data, t, row) as number);
     case 'annotation': {
       if (node.missing && !node.missing[row]) {
         if (node.policy === 'fail') fail('annotation', `missing value at row ${row}`);
-        return node.fallback;
+        return node.fallback!;
       }
-      if (node.type === COLOR) return [node.values[row * 4], node.values[row * 4 + 1], node.values[row * 4 + 2], node.values[row * 4 + 3]];
+      if (node.type === COLOR) return [node.values[row * 4], node.values[row * 4 + 1], node.values[row * 4 + 2], node.values[row * 4 + 3]] as const;
       return node.values[row];
     }
     case 'curve': return sampleScalar(node.table, t ?? 0, node.overflow);
-    default: fail('field', `unknown field kind ${node.kind}`);
+    default: return fail('field', `unknown field kind ${(node as Field).kind}`);
   }
 }
 
-function sampleScalar(table, x, overflow) {
+function sampleScalar(table: readonly (readonly [number, number])[], x: number, overflow: 'clamp' | 'wrap'): number {
   const lo = table[0][0], hi = table[table.length - 1][0];
   if (x <= lo) return overflow === 'wrap' ? sampleScalar(table, lo + wrap01((x - lo) / (hi - lo)) * (hi - lo), 'clamp') : table[0][1];
   if (x >= hi) return overflow === 'wrap' ? sampleScalar(table, lo + wrap01((x - lo) / (hi - lo)) * (hi - lo), 'clamp') : table[table.length - 1][1];
@@ -209,13 +237,13 @@ function sampleScalar(table, x, overflow) {
   }
   return table[table.length - 1][1];
 }
-function sampleColor(table, x) {
+function sampleColor(table: readonly (readonly [number, Color])[], x: number): Color {
   if (x <= table[0][0]) return table[0][1];
   if (x >= table[table.length - 1][0]) return table[table.length - 1][1];
   for (let i = 1; i < table.length; i++) if (x <= table[i][0]) {
     const [t0, c0] = table[i - 1], [t1, c1] = table[i];
     const u = (x - t0) / (t1 - t0);
-    return c0.map((c, k) => c + (c1[k] - c) * u);
+    return c0.map((c, k) => c + (c1[k] - c) * u) as unknown as Color;
   }
   return table[table.length - 1][1];
 }
@@ -225,25 +253,27 @@ function sampleColor(table, x) {
  * (rowCount * components); string fields return an array of strings. `domain`
  * overrides a broadcast ('any') field's target domain.
  */
-export function evaluate(f, data, { t, domain } = {}) {
+export function evaluate(field: Field, data: StructureData, ctx: EvalContext = {}): Float32Array | string[] {
+  const f = field as FieldNode;
+  const { t, domain } = ctx;
   assertField(f, 'evaluate.field');
   const dom = reconcileDomain(f.domain, domain ?? 'any', 'evaluate');
   if (dom === 'any') fail('evaluate.domain', 'a broadcast field needs an explicit { domain }');
   const n = rowCount(dom, data);
-  if (f.type === STRING) return Array.from({ length: n }, (_, row) => rowValue(f, data, t, row));
+  if (f.type === STRING) return Array.from({ length: n }, (_, row) => rowValue(f, data, t, row) as string);
   const c = f.type.components;
   const out = new Float32Array(n * c);
   for (let row = 0; row < n; row++) {
     const v = rowValue(f, data, t, row);
-    if (c === 1) out[row] = v; else out.set(v, row * c);
+    if (c === 1) out[row] = v as number; else out.set(v as Color, row * c);
   }
   return out;
 }
 
 // ---- WGSL code generation --------------------------------------------------
 
-const f32 = (x) => (Number.isInteger(x) ? `${x}.0` : `${x}`);
-const vec4 = (c) => `vec4<f32>(${c.map(f32).join(', ')})`;
+const f32 = (x: number): string => (Number.isInteger(x) ? `${x}.0` : `${x}`);
+const vec4 = (c: readonly number[]): string => `vec4<f32>(${c.map(f32).join(', ')})`;
 
 /**
  * Lower a numeric field to WGSL plus a plain-data binding schema. Returns
@@ -255,12 +285,14 @@ const vec4 = (c) => `vec4<f32>(${c.map(f32).join(', ')})`;
  * getField(row) -> T` for the use.gpu shader linker (the viewer binds the
  * accessors to sources/uniforms in `bindings` order). No ShaderSource either way.
  */
-export function compile(f, { domain, target = 'raw' } = {}) {
+export function compile(field: Field, options: { domain?: Domain; target?: Target } = {}): Compiled {
+  const f = field as FieldNode;
+  const { domain, target = 'raw' } = options;
   assertField(f, 'compile.field');
   if (!numeric(f.type)) fail('compile', 'string fields are CPU-only and do not lower to WGSL');
   if (!['raw', 'link'].includes(target)) fail('compile.target', 'expected raw or link');
   const dom = reconcileDomain(f.domain, domain ?? 'any', 'compile');
-  const ctx = { bindings: [], helpers: [], nextHelper: 0 };
+  const ctx: EmitContext = { bindings: [], helpers: [], nextHelper: 0 };
   const { expr, type } = emit(f, ctx);
   const accessors = ctx.bindings.map((b) => accessorDecl(b, target)).join('\n');
   const helpers = ctx.helpers.join('\n');
@@ -270,10 +302,10 @@ export function compile(f, { domain, target = 'raw' } = {}) {
   return Object.freeze({ valueType: type, domain: dom, target, entry, bindings: Object.freeze(ctx.bindings.map(publicBinding)), wgsl: `${parts.join('\n')}\n` });
 }
 
-const publicBinding = (b) => Object.freeze({ id: b.id, binding: b.binding, kind: b.kind, wgslType: b.wgslType, accessor: b.name, fill: b.fill });
+const publicBinding = (b: PendingBinding): Binding => Object.freeze({ id: b.id, binding: b.binding, kind: b.kind, wgslType: b.wgslType, accessor: b.name, fill: b.fill });
 
 /** WGSL for one input accessor, in the chosen target's binding convention. */
-function accessorDecl(b, target) {
+function accessorDecl(b: PendingBinding, target: Target): string {
   if (b.kind === 'uniform') {
     return target === 'link'
       ? `@link fn ${b.name}() -> f32;`
@@ -286,33 +318,34 @@ function accessorDecl(b, target) {
   return `@group(0) @binding(${b.binding}) var<storage, read> _buf${b.binding}: array<f32>;\nfn ${b.name}(i: u32) -> ${b.wgslType} { return ${read}; }`;
 }
 
-function bufferBinding(ctx, id, wgslType, fill) {
+function bufferBinding(ctx: EmitContext, id: string, wgslType: string, fill: (data: StructureData) => Float32Array): string {
   const binding = ctx.bindings.length;
   const name = `field_get${binding}`;
-  ctx.bindings.push({ id, binding, kind: 'buffer', wgslType, fill, name });
+  ctx.bindings.push({ id, binding, kind: 'buffer', wgslType, fill: fill as Binding['fill'], name });
   return `${name}(row)`;
 }
-function uniformBinding(ctx, id, fill) {
+function uniformBinding(ctx: EmitContext, id: string, fill: (source: { t?: number }) => Float32Array): string {
   const binding = ctx.bindings.length;
   const name = `field_uni${binding}`;
-  ctx.bindings.push({ id, binding, kind: 'uniform', wgslType: 'f32', fill, name });
+  ctx.bindings.push({ id, binding, kind: 'uniform', wgslType: 'f32', fill: fill as Binding['fill'], name });
   return `${name}()`;
 }
 
-function emit(node, ctx) {
+function emit(node: FieldNode, ctx: EmitContext): { expr: string; type: ValueType } {
   switch (node.kind) {
     case 'constant':
-      return { expr: node.type === COLOR ? vec4(node.value) : f32(node.value), type: node.type };
+      return { expr: node.type === COLOR ? vec4(node.value as Color) : f32(node.value as number), type: node.type };
     case 'attribute': {
-      const call = bufferBinding(ctx, `attr:${node.name}`, 'f32', (data) => Float32Array.from(ATTRIBUTES[node.name].read(data)));
+      const { name } = node;
+      const call = bufferBinding(ctx, `attr:${name}`, 'f32', (data) => Float32Array.from(ATTRIBUTES[name].read(data)));
       return { expr: call, type: SCALAR };
     }
     case 'categorical': {
       const inner = emit(node.input, ctx);
       const name = `h_cat${ctx.nextHelper++}`;
       const body = node.table.map(([category, v]) =>
-        `  if (abs(x - ${f32(category)}) < 0.5) { return ${node.type === COLOR ? vec4(v) : f32(v)}; }`).join('\n');
-      ctx.helpers.push(`fn ${name}(x: f32) -> ${node.type.wgsl} {\n${body}\n  return ${node.type === COLOR ? vec4(node.fallback) : f32(node.fallback)};\n}`);
+        `  if (abs(x - ${f32(category)}) < 0.5) { return ${node.type === COLOR ? vec4(v as Color) : f32(v as number)}; }`).join('\n');
+      ctx.helpers.push(`fn ${name}(x: f32) -> ${node.type.wgsl} {\n${body}\n  return ${node.type === COLOR ? vec4(node.fallback as Color) : f32(node.fallback as number)};\n}`);
       return { expr: `${name}(${inner.expr})`, type: node.type };
     }
     case 'linear': {
@@ -335,7 +368,7 @@ function emit(node, ctx) {
       return { expr: `${name}(${inner.expr})`, type: COLOR };
     }
     case 'annotation': {
-      const call = bufferBinding(ctx, `annotation`, node.type.wgsl, (data) => bakeAnnotation(node, rowCount(node.domain, data)));
+      const call = bufferBinding(ctx, `annotation`, node.type.wgsl!, (data) => bakeAnnotation(node, rowCount(node.domain, data)));
       return { expr: call, type: node.type };
     }
     case 'curve': {
@@ -354,18 +387,18 @@ function emit(node, ctx) {
       ctx.helpers.push(`fn ${name}(x: f32) -> f32 {\n${body}\n}`);
       return { expr: `${name}(${u})`, type: SCALAR };
     }
-    default: fail('compile', `unknown field kind ${node.kind}`);
+    default: return fail('compile', `unknown field kind ${(node as Field).kind}`);
   }
 }
 
 /** Bake an annotation's values + missing policy into a dense f32 array for GPU. */
-function bakeAnnotation(node, n) {
+function bakeAnnotation(node: Extract<FieldNode, { kind: 'annotation' }>, n: number): Float32Array {
   const c = node.type.components;
   const out = new Float32Array(n * c);
   for (let row = 0; row < n; row++) {
     if (node.missing && !node.missing[row]) {
       if (node.policy === 'fail') fail('annotation', `missing value at row ${row}`);
-      if (c === 1) out[row] = node.fallback; else out.set(node.fallback, row * c);
+      if (c === 1) out[row] = node.fallback as number; else out.set(node.fallback as Color, row * c);
     } else if (c === 1) out[row] = node.values[row];
     else out.set([node.values[row * 4], node.values[row * 4 + 1], node.values[row * 4 + 2], node.values[row * 4 + 3]], row * c);
   }
@@ -373,7 +406,7 @@ function bakeAnnotation(node, n) {
 }
 
 // Built-in colour presets composed from the primitives above.
-export { byElement, byBfactor, bySeq, byChain } from './builtins.mjs';
+export { byElement, byBfactor, bySeq, byChain } from './builtins.ts';
 
 // Identity-keyed annotation joins that produce annotation fields.
-export { joinAnnotation, residueIdentity, chainIdentity } from './annotation-join.mjs';
+export { joinAnnotation, residueIdentity, chainIdentity } from './annotation-join.ts';

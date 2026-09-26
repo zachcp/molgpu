@@ -112,6 +112,10 @@ test('H5: export not classified in README', () =>
   expectOnly('H5', /"Options" is not classified/, ({ edit }) =>
     edit('README.md', s => s.replace(/^\| `Options`.*\n/m, ''))));
 
+test('H5: public signature uses a private type', () =>
+  expectOnly('H5', /use "Num", which no entry exports/, ({ edit }) =>
+    edit('src/index.d.ts', s => `export {};\ntype Num = number;\n${s.replace('midpoint(a: number, b: number)', 'midpoint(a: Num, b: number)')}`)));
+
 test('H6: tarball includes non-shipping files', () =>
   expectOnly('H6', /tarball would include test\/x\.test\.mjs/, ({ manifest, write }) => {
     manifest(m => { m.files = ['src', 'test']; });

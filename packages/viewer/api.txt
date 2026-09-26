@@ -57,7 +57,7 @@ KEY_LIGHT_DIRECTION
 Label
   export const Label: ViewerComponent<{ select?: Selection | null; /** Explicit [x, y, z] anchor, overriding the selection centroid. */ at?: readonly number[]; text?: string; size?: number; color?: VectorLike; offset?: readonly number[]; family?: string; /** 0–1, multiplied into the text colour's alpha (text always blends). */ opacity?: number }>;
 LoadedStructureProps
-  export interface LoadedStructureProps extends StructureCommonProps { src: string; data?: undefined; /** Defaults to fetch + BCIF lowering through @molgpu/io. Its identity is a * reload dependency alongside `src`, so pass a stable or memoized function. */ loader?: StructureLoader; loading?: ViewerElement | (() => ViewerElement); error?: ViewerElement | ((failure: unknown) => ViewerElement) }
+  export interface LoadedStructureProps { /** Per-structure selection cache bound; defaults to 64. */ maxSelections?: number; children?: ViewerElement; src: string; data?: undefined; /** Defaults to fetch + BCIF lowering through @molgpu/io. Its identity is a * reload dependency alongside `src`, so pass a stable or memoized function. */ loader?: StructureLoader; loading?: ViewerElement | (() => ViewerElement); error?: ViewerElement | ((failure: unknown) => ViewerElement) }
 MaterialProps
   export interface MaterialProps { children?: ViewerElement }
 MaterialSpec
@@ -93,7 +93,7 @@ PointLight
 PointLightProps
   export interface PointLightProps { position?: VectorLike; color?: ColorLike; intensity?: number; cutoff?: number; shadowMap?: ShadowMapOptions; infinite?: boolean; debug?: boolean }
 PreloadedStructureProps
-  export interface PreloadedStructureProps extends StructureCommonProps { data: StructureData; src?: undefined; loader?: undefined; loading?: undefined; error?: undefined }
+  export interface PreloadedStructureProps { /** Per-structure selection cache bound; defaults to 64. */ maxSelections?: number; children?: ViewerElement; data: StructureData; src?: undefined; loader?: undefined; loading?: undefined; error?: undefined }
 Ribbon
   export const Ribbon: ViewerComponent<{ /** A @molgpu/select atom Selection; without one, active model/primary-altloc atoms are used. */ select?: Selection | null; /** Samples per guide segment; defaults to 8. */ smooth?: number; color?: VectorLike; /** Wraps the shaded ribbon layer; without one, the ambient scene material. */ material?: MaterialSpec } & Translucency>;
 SSAOOptions

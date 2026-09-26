@@ -48,6 +48,8 @@ advanced entry (`@molgpu/viewer/advanced`), never from `.`.
 - A committed snapshot, `packages/<pkg>/api.txt`, holds the sorted export names
   and their d.ts signatures. The check fails when the snapshot and the source
   disagree, so an API change always shows up in the diff.
+- Public declarations name only types the package exports from some entry. A
+  private alias would show up in the generated docs with nothing to link to.
 
 **H6 — Packs and imports cleanly.**
 - `npm pack --dry-run` lists only the intended files.
