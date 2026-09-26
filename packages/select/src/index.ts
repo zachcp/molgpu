@@ -12,10 +12,20 @@
 //                   cache key: identity is derived from resolved content.
 //
 // Set operations and conversions act on RESOLVED selections and reject mixing
-// datasets, domains, or inconsistent revisions. There is no string parser and no
-// arbitrary WGSL promise here — this package is pure CPU index math.
+// datasets, domains, or inconsistent revisions. Queries can also be compiled from
+// a SelectionExpr (the MolQL expression tree, see expr.ts). There is no string
+// parser here (text front ends live in @molgpu/io) and no arbitrary WGSL
+// promise — this package is pure CPU index math.
 
 import { spatialGrid, type StructureData } from "@molgpu/table";
+import {
+  type CompiledExpr,
+  compileExpr,
+  type SelectionExpr,
+  SUPPORTED_SYMBOLS,
+} from "./expr.ts";
+
+export type { SelectionExpr };
 
 // Smallest grid cell for within(); a zero cutoff still needs a positive cell.
 const MIN_CELL = 1;
@@ -26,8 +36,8 @@ export type RevisionStream = "topology" | "positions" | "attributes";
 /**
  * A pure, dataset-independent recipe. Build once, resolve against many datasets.
  *
- * Opaque: create queries only with `all`, `where`, `element`, `comp` and
- * `within`, and pass them only to this package's functions. The four fields
+ * Opaque: create queries only with `all`, `where`, `element`, `comp`,
+ * `within` and `compile`, and pass them only to this package's functions. The four fields
  * below are the public surface. Runtime query objects carry further
  * per-kind fields (for example a `where` predicate or a `within` cutoff) that
  * are internal and may change in any release.
@@ -75,7 +85,8 @@ type QueryNode =
     readonly type: "within";
     readonly cutoff: number;
     readonly of: SelectionQuery;
-  });
+  })
+  | (SelectionQuery & { readonly type: "expr"; readonly expr: CompiledExpr });
 
 /** An unresolved evaluation result: rows in some domain plus the streams read. */
 interface Evaluated {
@@ -206,6 +217,27 @@ export function within(cutoff: number, of: SelectionQuery): SelectionQuery {
   });
 }
 
+/**
+ * Compile a SelectionExpr (a MolQL expression tree) into an atom-domain query.
+ * Compilation is pure and dataset-independent; the label is the canonical
+ * S-expression and the revision deps are inferred from the symbols used.
+ * Throws a TypeError naming the symbol or argument for anything outside the
+ * supported language (see `supportedSymbols`).
+ */
+export function compile(expr: SelectionExpr): SelectionQuery {
+  const compiled = compileExpr(expr);
+  return freezeQuery({
+    type: "expr",
+    domain: "atom",
+    label: compiled.label,
+    deps: compiled.deps,
+    expr: compiled,
+  });
+}
+
+/** The MolQL symbol names `compile` accepts, sorted. */
+export const supportedSymbols: readonly string[] = SUPPORTED_SYMBOLS;
+
 // ---- resolution ------------------------------------------------------------
 
 const sortedUnique = (
@@ -328,6 +360,8 @@ const evalQuery = (
       }
       return { domain: "atom", rows, deps: mergeDeps(node.deps, inner.deps) };
     }
+    case "expr":
+      return { domain: "atom", rows: node.expr.run(data), deps: node.deps };
     default:
       return fail(
         "query",

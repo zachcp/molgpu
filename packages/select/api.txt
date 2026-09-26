@@ -8,6 +8,8 @@ RevisionStream
   export type RevisionStream = "topology" | "positions" | "attributes";
 Selection
   export interface Selection { readonly domain: Domain; /** The originating StructureData identity; compared by reference for set ops. */ readonly dataset: StructureData["identity"]; readonly indices: Uint32Array; /** Revision of each stream the resolution read, for staleness and set-op checks. */ readonly deps: Readonly<Partial<Record<RevisionStream, number>>>; /** Human label from the query; NOT the cache key. */ readonly label: string; /** Library-owned identity derived from dataset, revisions, and membership. */ readonly id: string; readonly source: SourceMap | null }
+SelectionExpr
+  export type SelectionExpr = string | number | boolean | { readonly name: string } | { readonly head: SelectionExpr; readonly args?: readonly SelectionExpr[] | { readonly [name: string]: SelectionExpr } };
 SelectionQuery
   export interface SelectionQuery { readonly type: string; readonly domain: Domain; readonly label: string; readonly deps: readonly RevisionStream[] }
 SourceMap
@@ -16,6 +18,8 @@ all
   export function all(domain?: Domain): SelectionQuery;
 comp
   export function comp(names: readonly string[]): SelectionQuery;
+compile
+  export function compile(expr: SelectionExpr): SelectionQuery;
 count
   export function count(sel: Selection): number;
 difference
@@ -30,6 +34,8 @@ isStale
   export function isStale(sel: Selection, data: StructureData): boolean;
 resolve
   export function resolve(query: SelectionQuery, data: StructureData): Selection;
+supportedSymbols
+  export const supportedSymbols: readonly string[];
 toAtoms
   export function toAtoms(sel: Selection, data: StructureData): Selection;
 toBonds
