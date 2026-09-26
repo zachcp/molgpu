@@ -1,0 +1,62 @@
+{
+  "adapter": {
+    "vendor": "apple",
+    "architecture": "metal-3"
+  },
+  "features": {
+    "float32Filterable": true,
+    "timestampQuery": true
+  },
+  "grid": "256^3",
+  "bytes": {
+    "f32": 67108864,
+    "f16": 33554432
+  },
+  "upload": {
+    "storageMs": 48.2,
+    "r32floatMs": 45.3,
+    "r16floatMs": 16.1
+  },
+  "workload": {
+    "slice": "1024x1024 samples",
+    "raymarch": "512x512 rays x 256 steps",
+    "repeat": 20,
+    "timing": "wall clock around submit + onSubmittedWorkDone"
+  },
+  "summary": {
+    "storage": {
+      "sliceMedianMs": 0.6,
+      "sliceMinMs": 0.5,
+      "rayMedianMs": 4.8,
+      "rayMinMs": 4.7,
+      "sliceMaxAbsErrVsStorage": 0,
+      "rayMaxAbsErrVsStorage": 0
+    },
+    "textureLoad": {
+      "sliceMedianMs": 1,
+      "sliceMinMs": 0.9,
+      "rayMedianMs": 13.8,
+      "rayMinMs": 13.6,
+      "sliceMaxAbsErrVsStorage": 0,
+      "rayMaxAbsErrVsStorage": 0
+    },
+    "r32floatLinear": {
+      "sliceMedianMs": 0.4,
+      "sliceMinMs": 0.2,
+      "rayMedianMs": 3.4,
+      "rayMinMs": 3.1,
+      "sliceMaxAbsErrVsStorage": 0.0001611560583114624,
+      "rayMaxAbsErrVsStorage": 0.00012809038162231445
+    },
+    "r16floatLinear": {
+      "sliceMedianMs": 0.4,
+      "sliceMinMs": 0.3,
+      "rayMedianMs": 2.2,
+      "rayMinMs": 2.1,
+      "sliceMaxAbsErrVsStorage": 0.0014270544052124023,
+      "rayMaxAbsErrVsStorage": 0.0014913082122802734
+    }
+  },
+  "date": "2026-09-26T22:33:07.945Z",
+  "browser": "153.0.8010.53"
+}

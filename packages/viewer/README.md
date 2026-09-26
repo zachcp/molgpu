@@ -117,6 +117,13 @@ may change before 0.1.0; _advanced_ — only from `@molgpu/viewer/advanced`.
 | `Tube`                       | stable       | Backbone as a GPU-extruded tube.                                                                      |
 | `Ribbon`                     | stable       | Backbone as an oriented ribbon mesh.                                                                  |
 | `Surface`                    | stable       | Molecular (solvent-excluded) surface.                                                                 |
+| `Volume`                     | experimental | Own one scalar volume (`data` or CCP4/MRC `src`); one shared GPU copy per volume identity.            |
+| `VolumeProps`                | experimental | `<Volume>` props: `data` or `src`, with `loader`/`loading`/`error`.                                   |
+| `VolumeLoader`               | experimental | Cancellable `(src, cancelled) => VolumeData` loader.                                                  |
+| `Isosurface`                 | experimental | CPU marching-cubes isosurface of the nearest `<Volume>` at an absolute or sigma `level`.              |
+| `VolumeSlice`                | experimental | Per-fragment planar cross-section of the nearest `<Volume>` through a colour ramp.                    |
+| `SlicePlane`                 | experimental | A grid plane `{ axis, index }` or a world plane `{ normal, point }`.                                  |
+| `SliceStops`                 | experimental | `[t, color]` stops over 0–1 for `<VolumeSlice>`.                                                      |
 | `TimelineProvider`           | stable       | Provides caller-owned global time in seconds.                                                         |
 | `ViewerElement`              | experimental | Opaque rendered scene element (owned alias).                                                          |
 | `ViewerComponent`            | experimental | A component: `(props) => ViewerElement` (owned alias).                                                |
@@ -199,10 +206,25 @@ may change before 0.1.0; _advanced_ — only from `@molgpu/viewer/advanced`.
 | `IdentityCoordinates`        | advanced     | Forward the nearest coordinates without allocating a GPU buffer.                                      |
 | `WobbleCoordinates`          | advanced     | Example GPU coordinate transform driven by a phase and amplitude.                                     |
 | `TimelineContext`            | advanced     | Live context carrying timeline time.                                                                  |
+| `VolumeContext`              | advanced     | Live context carrying the nearest `<Volume>`'s data and GPU samples.                                  |
+| `VolumeContextValue`         | advanced     | `{ volume, source }` from the volume context.                                                         |
+| `useVolume`                  | advanced     | Read the nearest `<Volume>`; throws without one.                                                      |
 | `FlatMaterial`               | advanced     | Custom unlit fragment-shader material.                                                                |
 | `LitMaterial`                | advanced     | Custom lit shader material.                                                                           |
 | `WorldSpacePointLayer`       | advanced     | PointLayer with GPU radii source and Ångström size conversion in a shader.                            |
 | `useField`                   | advanced     | Lower a field to a use.gpu shader source.                                                             |
+
+## Volumes
+
+`<Volume>` sits beside `<Structure>`, not inside it: a structure never owns a
+volume. Its samples upload once per `VolumeData` identity to a GPU buffer that
+`<Isosurface>`, `<VolumeSlice>` and any `volumeSample` field share; the last
+consumer to unmount destroys it. `<Isosurface>` meshes on the CPU through the
+volume's full index-to-world affine and remeshes only when the volume or the
+resolved level changes. `<VolumeSlice>` samples per fragment, so moving its
+plane, range or opacity updates uniforms only. Colour atoms from a map with
+`color={colormap(volumeSample(map), stops)}`: the field reads the atoms'
+positions and the shared samples, with no per-atom colour upload.
 
 ## Coordinate consumers
 

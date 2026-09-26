@@ -1,6 +1,7 @@
 import {
   BOND_FLAGS,
   createStructure,
+  createVolume,
   elementRadius,
   type Links,
   type StructureData,
@@ -14,6 +15,7 @@ import type {
 } from "./types.ts";
 
 export type * from "./types.ts";
+export { volumeFromCcp4, VolumeParseError } from "./ccp4.ts";
 export {
   parseSelection,
   type ParseSelectionOptions,
@@ -403,14 +405,19 @@ export async function molecularSurfaceField(
         }
       }
     }
-    return {
+    // The caller (e.g. the viewer's grid budget) has already bounded the grid,
+    // so the VolumeData default ceiling does not apply here.
+    const volume = createVolume({
       values,
       dims: [nx, ny, nz],
       transform: Float32Array.from(result.transform),
+    }, { maxSamples: Infinity });
+    return Object.freeze({
+      ...volume,
       resolution: result.resolution,
       maxRadius: result.maxRadius,
       level: probeRadius,
-    };
+    });
   } catch (error) {
     if (error instanceof SurfaceFieldError) throw error;
     throw new SurfaceFieldError(

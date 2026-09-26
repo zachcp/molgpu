@@ -181,6 +181,19 @@ and ribbon geometry.
 | `BondPolicy`              | experimental | Bond inference options: distance padding and whether inter-chain bonds are allowed.                                           |
 | `Trace`                   | experimental | Return type of `traceTable`.                                                                                                  |
 | `SecondaryStructureTrace` | experimental | Return type of `secondaryStructureTrace`.                                                                                     |
+| `createVolume`            | experimental | Validate and wrap a grid plus index-to-world affine as a frozen `VolumeData`; adopts `values`, computes stats.                |
+| `validateVolume`          | experimental | Throw a `TypeError` naming the malformed field, or a `RangeError` over `maxSamples`; returns the input.                       |
+| `MAX_VOLUME_SAMPLES`      | experimental | Default `createVolume` ceiling: 256³ samples (64 MiB of scalar f32).                                                          |
+| `sampleVolume`            | experimental | Trilinear sample at a world position; 0 outside the grid, clamped on its faces.                                               |
+| `volumeIndexToWorld`      | experimental | World position of a fractional grid index.                                                                                    |
+| `volumeWorldToIndex`      | experimental | Fractional grid index of a world position.                                                                                    |
+| `volumeInverseTransform`  | experimental | Cached double-precision world-to-index affine.                                                                                |
+| `volumeComponent`         | experimental | Scalar volume from one channel or the magnitude of a 3-component volume.                                                      |
+| `volumeLevel`             | experimental | Absolute isovalue for `number` or `{ sigma: k }` (`mean + k * sigma`).                                                        |
+| `VolumeData`              | experimental | Immutable grid: x-fastest `values`, `dims`, index-to-Å `transform`, `stats`, `components`, `unit`.                            |
+| `VolumeInput`             | experimental | Input to `createVolume`.                                                                                                      |
+| `VolumeStats`             | experimental | Min, max, mean and population sigma of a volume.                                                                              |
+| `VolumeLevel`             | experimental | Absolute isovalue or `{ sigma }`.                                                                                             |
 
 The column schema interfaces are experimental because columns may still be
 added; `StructureData` as the nominal value passed between packages is stable.

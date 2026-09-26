@@ -70,7 +70,9 @@ added after import with provenance and bump `revision.attributes`. See the
 index-to-world affine transform, stats) sits beside the atom table and is
 published by `<Volume>`. Imported maps and computed fields (`<EField>`) both
 produce Volumes, so isosurfaces, slices and volume-sampled fields work the same
-on either (Phases 11 and 16).
+on either (Phases 11 and 16). A volume's samples reach the GPU once per
+`VolumeData` identity, in a buffer every consumer shares; sampling (trilinear,
+zero outside) has one CPU and one WGSL implementation that agree to 1e-5.
 
 ### 2. Selections are values, not nodes
 

@@ -1,5 +1,5 @@
 // Public types for @molgpu/fields. Fields are opaque: build them with the constructors.
-import type { StructureData } from "@molgpu/table";
+import type { StructureData, VolumeData } from "@molgpu/table";
 
 export type Domain = "atom" | "residue";
 export type Overflow = "clamp" | "wrap" | "fail";
@@ -38,6 +38,8 @@ export interface Binding {
   readonly accessor: string;
   /** buffer: fill(data) -> Float32Array; uniform: fill({ t }) -> Float32Array. */
   readonly fill: (source: StructureData | { t?: number }) => Float32Array;
+  /** For a `volume:<n>` buffer: the volume whose samples fill it. */
+  readonly volume?: VolumeData;
 }
 
 export interface Compiled {

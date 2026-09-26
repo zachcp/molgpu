@@ -15,6 +15,12 @@ export interface MarchingCubesInput {
   readonly origin?: readonly [number, number, number];
   /** World distance between grid points on each axis (nonzero). Default `[1, 1, 1]`. */
   readonly spacing?: readonly [number, number, number];
+  /**
+   * Column-major 4×4 affine from grid index to world, which may rotate and
+   * shear. Replaces `origin`/`spacing` (passing both is an error). Normals map
+   * through the inverse transpose; a mirroring affine keeps winding consistent.
+   */
+  readonly transform?: ArrayLike<number>;
 }
 
 export interface MarchingCubesMesh {

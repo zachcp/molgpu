@@ -5,14 +5,16 @@ import { compile, type Field } from "@molgpu/fields";
 import type { ShaderSource } from "@use-gpu/shader";
 import { TimelineContext } from "./timeline-context.ts";
 import { useBindingProbe } from "./internal/use-binding-probe.ts";
+import { useVolumeSources } from "./internal/volume-buffers.ts";
 
 /**
  * Lower a numeric `@molgpu/fields` Field to a use.gpu shader source, composing
  * it over existing GPU inputs instead of materialising a per-row array.
  *
  * `inputs` maps each compiled binding id to a use.gpu value: a StorageSource for
- * a buffer input (e.g. the already-uploaded `attr:element` column) and a number
- * or ShaderRef for a uniform input. Because the field is composed shader-side,
+ * a buffer input (e.g. the already-uploaded `attr:element` column or the row's
+ * `positions`) and a number or ShaderRef for a uniform input. A `volumeSample`
+ * field's `volume:<n>` input is bound here to the volume's shared GPU samples. Because the field is composed shader-side,
  * a per-atom colour/size column is never uploaded, and changing a uniform value
  * is a binding update — no re-upload. This is the viewer-owned GPU lowering that
  * `@molgpu/fields` deliberately leaves out (its API exposes no ShaderSource).
@@ -33,8 +35,18 @@ export function useField(
     () => loadModuleWithCache(compiled.wgsl, "molgpu-field", "auto"),
     [compiled.wgsl],
   );
+  // volumeSample inputs bind the volume's shared GPU samples, never a copy.
+  const volumes = useVolumeSources(
+    useMemo(
+      () =>
+        compiled.bindings.flatMap((b) =>
+          b.volume ? [{ id: b.id, volume: b.volume }] : []
+        ),
+      [compiled],
+    ),
+  );
   const values = compiled.bindings.map((b) => {
-    const value = inputs?.[b.id] ??
+    const value = inputs?.[b.id] ?? volumes[b.id] ??
       (b.id === "curve:t" ? time ?? undefined : undefined);
     if (value === undefined) {
       throw new Error(`useField: no input provided for '${b.id}'`);

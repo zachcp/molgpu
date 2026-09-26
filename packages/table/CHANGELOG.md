@@ -6,6 +6,13 @@ All notable changes to `@molgpu/table` are recorded here. The format follows
 
 ## [Unreleased]
 
+- `VolumeData`: an immutable grid with an index-to-world affine that may rotate
+  and shear. New experimental `createVolume`, `validateVolume`,
+  `MAX_VOLUME_SAMPLES`, `sampleVolume`, `volumeIndexToWorld`,
+  `volumeWorldToIndex`, `volumeInverseTransform`, `volumeComponent` and
+  `volumeLevel`. `createVolume` adopts `values` without copying, always computes
+  statistics, and rejects more than 256³ samples unless `maxSamples` allows
+  them.
 - Added `spatialGrid`, a uniform spatial hash with optional partitions, shared
   by bond inference and `@molgpu/select`'s `within`.
 - `bondTopology` inference uses cells as wide as its largest cutoff and

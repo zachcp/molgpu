@@ -54,6 +54,8 @@ FresnelMaterialEffect
   export const FresnelMaterialEffect: ViewerComponent<FresnelMaterialEffectProps>;
 FresnelMaterialEffectProps
   export interface FresnelMaterialEffectProps extends MaterialProps { opacity?: number }
+Isosurface
+  export const Isosurface: ViewerComponent<{ /** Absolute isovalue, or `{ sigma: k }`. Defaults to `{ sigma: 1 }`. */ level?: VolumeLevel; color?: VectorLike; /** Wraps the shaded face layer; without one, the ambient scene material. */ material?: MaterialSpec; loading?: ViewerElement | (() => ViewerElement); error?: ViewerElement | ((failure: unknown) => ViewerElement) } & Translucency>;
 KEY_LIGHT_DIRECTION
   export const KEY_LIGHT_DIRECTION: readonly [number, number, number];
 Label
@@ -102,6 +104,10 @@ SSAOOptions
   export interface SSAOOptions { opacity: number; indirect: number; radius: number; depthRamp: number; normalRamp: number; temporalBlend: number }
 ShadowMapOptions
   export interface ShadowMapOptions { size?: readonly number[]; depth?: readonly number[]; bias?: readonly number[]; span?: readonly number[]; up?: readonly number[]; blur?: number; resolution?: number; fov?: number }
+SlicePlane
+  export type SlicePlane = { readonly axis: 0 | 1 | 2; readonly index: number } | { readonly normal: readonly [number, number, number]; readonly point?: readonly [number, number, number] };
+SliceStops
+  export type SliceStops = ReadonlyArray<readonly [number, readonly [number, number, number, number]]>;
 Spacefill
   export const Spacefill: ViewerComponent<{ /** Multiplies each atom's Ångström radius; defaults to 1. */ scale?: number; /** A @molgpu/select atom Selection for this structure; restricts the draw. */ select?: Selection | null; /** A flat colour, or a @molgpu/fields Field composed shader-side per atom. */ color?: VectorLike | Field; /** Wraps the shaded point layer; without one, the ambient scene material. */ material?: MaterialSpec; /** Draw the atoms into the picking buffer so usePicking() can resolve them * (needs a <PickingProvider> and a <Pass picking>). Defaults to false. */ pickable?: boolean } & Translucency & PointLayerOptions>;
 SpotLight
@@ -134,6 +140,14 @@ ViewerComponent
   export type ViewerComponent<P = {}> = (props: P) => ViewerElement;
 ViewerElement
   export type ViewerElement = object | null | undefined | false;
+Volume
+  export const Volume: ViewerComponent<VolumeProps>;
+VolumeLoader
+  export type VolumeLoader = (src: string, cancelled: () => boolean) => VolumeData | null | Promise<VolumeData | null>;
+VolumeProps
+  export type VolumeProps = { children?: ViewerElement; data: VolumeData; src?: undefined; loader?: undefined; loading?: undefined; error?: undefined } | { children?: ViewerElement; src: string; data?: undefined; /** Its identity is a reload dependency alongside `src`. */ loader?: VolumeLoader; loading?: ViewerElement | (() => ViewerElement); error?: ViewerElement | ((failure: unknown) => ViewerElement) };
+VolumeSlice
+  export const VolumeSlice: ViewerComponent<{ /** Defaults to the middle k (third-axis) grid plane. */ plane?: SlicePlane; /** Value interval mapped to 0–1. Defaults to the volume's min and max. */ range?: readonly [number, number]; /** Colour stops over 0–1. Defaults to black → white. */ stops?: SliceStops; /** Multiplied into every fragment's colour. Defaults to white. */ color?: VectorLike } & Translucency>;
 centroid
   export function centroid(data: StructureData, select?: Selection | null): [number, number, number];
 createCameraCurve
@@ -191,6 +205,10 @@ StructureSources
   export interface StructureSources { /** @deprecated Read the nearest stream with useCoordinates().source. */ readonly positions: ShaderSource; readonly radii: ShaderSource }
 TimelineContext
   export const TimelineContext: LiveContext<number | null>;
+VolumeContext
+  export const VolumeContext: LiveContext<VolumeContextValue | undefined>;
+VolumeContextValue
+  export interface VolumeContextValue { readonly volume: VolumeData; /** Scalar samples, x-fastest, as an f32 storage source. */ readonly source: StorageSource }
 WobbleCoordinates
   export const WobbleCoordinates: LC<{ phase: number; amplitude?: number; children?: LiveElement }>;
 WorldSpacePointLayer
@@ -201,3 +219,5 @@ useField
   export function useField(field: Field, inputs?: Record<string, ShaderSource | number | { current: number }>, options?: { domain?: "atom" | "residue" }): ShaderSource;
 useStructure
   export function useStructure(): StructureContextValue;
+useVolume
+  export function useVolume(): VolumeContextValue;

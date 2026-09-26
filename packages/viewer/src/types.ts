@@ -1,7 +1,7 @@
 // The "." entry's types. It carries no use.gpu types: everything below is
 // owned by @molgpu/viewer. Exports that are inherently use.gpu-shaped (shader sources,
 // Live contexts, custom-shader materials) live in `@molgpu/viewer/advanced`.
-import type { StructureData } from "@molgpu/table";
+import type { StructureData, VolumeData } from "@molgpu/table";
 import type { SelectionQuery } from "@molgpu/select";
 
 // --- Owned element, component and value types -------------------------------
@@ -137,6 +137,35 @@ export interface LoadedStructureProps {
 
 /** `data` and `src` are mutually exclusive, and exactly one is required. */
 export type StructureProps = PreloadedStructureProps | LoadedStructureProps;
+
+/** Load one volume source; resolve null when `cancelled()` became true. */
+export type VolumeLoader = (
+  src: string,
+  cancelled: () => boolean,
+) => VolumeData | null | Promise<VolumeData | null>;
+
+/**
+ * `<Volume>` props: exactly one of `data` (a preloaded `VolumeData`) or `src`
+ * (loaded with `loader`, by default fetch + CCP4/MRC through @molgpu/io).
+ */
+export type VolumeProps =
+  | {
+    children?: ViewerElement;
+    data: VolumeData;
+    src?: undefined;
+    loader?: undefined;
+    loading?: undefined;
+    error?: undefined;
+  }
+  | {
+    children?: ViewerElement;
+    src: string;
+    data?: undefined;
+    /** Its identity is a reload dependency alongside `src`. */
+    loader?: VolumeLoader;
+    loading?: ViewerElement | (() => ViewerElement);
+    error?: ViewerElement | ((failure: unknown) => ViewerElement);
+  };
 
 /** How a representation's layer draws: opaque (writes depth, hides what is
  *  behind) or transparent (blended after opaques; exact under <Pass oit>). */

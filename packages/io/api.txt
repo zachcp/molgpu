@@ -15,7 +15,7 @@ SelectionLanguage
 SelectionParseError
   export class SelectionParseError extends Error { readonly language: SelectionLanguage; readonly text: string; constructor(language: SelectionLanguage, text: string, message: string) }
 SurfaceField
-  export interface SurfaceField { /** * Grid samples, length `dims[0] * dims[1] * dims[2]`, laid out **x-fastest** * (the layout `@molgpu/geo`'s `marchingCubes` reads): the sample at grid * `(i, j, k)` is `values[i + dims[0] * (j + dims[1] * k)]`. Unvisited cells far from every * atom hold the sentinel -1001. */ values: Float32Array; /** Grid size along x, y, z. */ dims: [number, number, number]; /** * Column-major 4x4 scale + translate from grid index to Angstrom: spacing is * the diagonal (`[0]`, `[5]`, `[10]`), origin is `[12]`, `[13]`, `[14]`. */ transform: Float32Array; /** Grid spacing in Angstrom; equals the requested `resolution`. */ resolution: number; /** Largest input van der Waals radius. */ maxRadius: number; /** Isovalue of the surface; always equals `probeRadius`. */ level: number }
+  export interface SurfaceField extends VolumeData { /** * Grid samples, length `dims[0] * dims[1] * dims[2]`, laid out **x-fastest** * (the layout `@molgpu/geo`'s `marchingCubes` reads): the sample at grid * `(i, j, k)` is `values[i + dims[0] * (j + dims[1] * k)]`. Unvisited cells far from every * atom hold the sentinel -1001, which `stats` includes. */ readonly values: Float32Array; /** * Column-major 4x4 scale + translate from grid index to Angstrom: spacing is * the diagonal (`[0]`, `[5]`, `[10]`), origin is `[12]`, `[13]`, `[14]`. */ readonly transform: Float32Array; /** Grid spacing in Angstrom; equals the requested `resolution`. */ readonly resolution: number; /** Largest input van der Waals radius. */ readonly maxRadius: number; /** Absolute isovalue of the surface; always equals `probeRadius`. */ readonly level: number }
 SurfaceFieldAtoms
   export interface SurfaceFieldAtoms { readonly count: number; /** Length `count`. */ readonly x: Float32Array; /** Length `count`. */ readonly y: Float32Array; /** Length `count`. */ readonly z: Float32Array; /** Van der Waals radius per atom, without the probe; length `count`. */ readonly radius: Float32Array }
 SurfaceFieldError
@@ -24,9 +24,15 @@ SurfaceFieldErrorCode
   export type SurfaceFieldErrorCode = /** `count` is not a nonnegative safe integer, or a column is not a `Float32Array` of length `count`. */ "INVALID_INPUT" /** `count` is 0. */ | "EMPTY_INPUT" /** The optional Mol* surface code is absent, failed to load, or threw while computing. */ | "FIELD_UNAVAILABLE";
 SurfaceFieldOptions
   export interface SurfaceFieldOptions { /** Solvent probe radius in Angstrom. Default 1.4. */ probeRadius?: number; /** Requested grid spacing in Angstrom. Default 0.5. */ resolution?: number; /** Probe positions sampled per atom. Default 36. */ probePositions?: number }
+VolumeErrorCode
+  export type VolumeErrorCode = /** `bytes` was not a `Uint8Array`. */ "INVALID_INPUT" /** The header or data is malformed or truncated, or Mol* rejected it. */ | "INVALID_MAP" /** The map's value mode is not one the reader supports. */ | "UNSUPPORTED_MODE" /** The map has more samples than `maxSamples`. */ | "VOLUME_TOO_LARGE" /** The optional Mol* reader is absent or failed to load. */ | "PARSER_UNAVAILABLE";
+VolumeParseError
+  export class VolumeParseError extends Error { readonly name: "VolumeParseError"; readonly code: VolumeErrorCode; constructor(message: string, code: VolumeErrorCode, cause?: unknown) }
 molecularSurfaceField
   export function molecularSurfaceField(atoms: SurfaceFieldAtoms, options?: SurfaceFieldOptions): Promise<SurfaceField>;
 parseSelection
   export function parseSelection(language: SelectionLanguage, text: string, options?: ParseSelectionOptions): Promise<SelectionExpr>;
 structureFromBcif
   export function structureFromBcif(bytes: Uint8Array): Promise<StructureData>;
+volumeFromCcp4
+  export function volumeFromCcp4(bytes: Uint8Array, options?: { maxSamples?: number }): Promise<VolumeData>;

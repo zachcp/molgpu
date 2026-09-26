@@ -12,6 +12,17 @@ export type * from "./types.ts";
 export { traceTable } from "./trace.ts";
 export { secondaryStructureTrace } from "./secondary-structure.ts";
 export { type SpatialGrid, spatialGrid } from "./spatial-grid.ts";
+export {
+  createVolume,
+  MAX_VOLUME_SAMPLES,
+  sampleVolume,
+  validateVolume,
+  volumeComponent,
+  volumeIndexToWorld,
+  volumeInverseTransform,
+  volumeLevel,
+  volumeWorldToIndex,
+} from "./volume.ts";
 
 import { spatialGrid } from "./spatial-grid.ts";
 
