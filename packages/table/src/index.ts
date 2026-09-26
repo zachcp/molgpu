@@ -19,6 +19,7 @@ type TypedArrayConstructor =
   | Uint32ArrayConstructor
   | Int32ArrayConstructor
   | Uint8ArrayConstructor
+  | Int8ArrayConstructor
   | Float64ArrayConstructor;
 type Domain = Record<string, unknown>;
 type Identity = StructureData["identity"];
@@ -108,6 +109,9 @@ export function validateStructure<T extends StructureInput>(data: T): T {
       }
     });
   }
+  if (a.formalCharge !== undefined) {
+    column(a.formalCharge, a.count, Int8Array, "atoms.formalCharge");
+  }
   a.element.forEach((v, i) => {
     if (v > 118) {
       fail(`atoms.element[${i}]`, "expected atomic number 0 (unknown) to 118");
@@ -152,9 +156,24 @@ export function validateStructure<T extends StructureInput>(data: T): T {
       }
     });
   }
+  if (r.het !== undefined) {
+    column(r.het, r.count, Uint8Array, "residues.het");
+    r.het.forEach((v, i) => {
+      if (v > 1) fail(`residues.het[${i}]`, "expected 0 or 1");
+    });
+  }
   column(c.model, c.count, Int32Array, "chains.model");
   for (const k of ["labelId", "authId"] as const) {
     strings(c[k], c.count, `chains.${k}`);
+  }
+  if (c.entityId !== undefined) {
+    strings(c.entityId, c.count, "chains.entityId");
+  }
+  if (c.entityType !== undefined) {
+    if (c.entityId === undefined) {
+      fail("chains.entityType", "requires chains.entityId");
+    }
+    strings(c.entityType, c.count, "chains.entityType");
   }
   const chainKeys = new Set<string>();
   for (let i = 0; i < c.count; i++) {

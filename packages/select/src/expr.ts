@@ -236,6 +236,13 @@ const atomProp = (
     return get(ctx, ctx.atom);
   },
 });
+/** A column the structure may lack; selecting on it without one is an error. */
+function need<T>(column: T | undefined, name: string, symbol: string): T {
+  if (column === undefined) {
+    fail(`${symbol} needs ${name} on the structure`);
+  }
+  return column!;
+}
 const residueOf = (ctx: Ctx, atom: number) =>
   ctx.data.topology.atoms.residue[atom];
 const chainOf = (ctx: Ctx, atom: number) => ctx.topo.atomChain[atom];
@@ -475,6 +482,41 @@ const SPECS: Readonly<Record<string, Spec>> = {
   ),
   [`${AP}macromolecular.auth_asym_id`]: atomProp((ctx, i) =>
     ctx.data.topology.chains.authId[chainOf(ctx, i)]
+  ),
+  [`${AP}macromolecular.is-het`]: atomProp((ctx, i) =>
+    need(ctx.data.topology.residues.het, "residues.het", "is-het")[
+      residueOf(ctx, i)
+    ] === 1
+  ),
+  [`${AP}macromolecular.pdbx_formal_charge`]: atomProp((ctx, i) =>
+    need(
+      ctx.data.topology.atoms.formalCharge,
+      "atoms.formalCharge",
+      "pdbx_formal_charge",
+    )[i]
+  ),
+  [`${AP}macromolecular.label_entity_id`]: atomProp((ctx, i) =>
+    need(
+      ctx.data.topology.chains.entityId,
+      "chains.entityId",
+      "label_entity_id",
+    )[
+      chainOf(ctx, i)
+    ]
+  ),
+  [`${AP}macromolecular.entity-type`]: atomProp((ctx, i) =>
+    need(
+      ctx.data.topology.chains.entityType,
+      "chains.entityType",
+      "entity-type",
+    )[
+      chainOf(ctx, i)
+    ]
+  ),
+  [`${AP}macromolecular.entity-key`]: atomProp((ctx, i) =>
+    need(ctx.topo.chainEntity ?? undefined, "chains.entityId", "entity-key")[
+      chainOf(ctx, i)
+    ]
   ),
   [`${AP}macromolecular.occupancy`]: atomProp(
     (ctx, i) => ctx.data.topology.atoms.occupancy[i],

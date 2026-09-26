@@ -17,6 +17,8 @@ export interface TopologyCache {
   readonly atomId: Int32Array;
   /** Chain row of each atom. */
   readonly atomChain: Uint32Array;
+  /** Entity ordinal of each chain (first-seen order of chains.entityId); null without that column. */
+  readonly chainEntity: Uint32Array | null;
 }
 
 /** Bond adjacency in CSR form: bonds of atom i are `bond[offsets[i]..offsets[i+1]]`. */
@@ -46,12 +48,23 @@ function build(data: StructureData): TopologyCache {
     atomId[i] = parseIntOrZero(atoms.id[i]);
   }
   const authSeq = Int32Array.from(residues.authSeq, parseIntOrZero);
+  const { entityId } = data.topology.chains;
+  let chainEntity: Uint32Array | null = null;
+  if (entityId) {
+    const ordinal = new Map<string, number>();
+    chainEntity = Uint32Array.from(entityId, (id) => {
+      let k = ordinal.get(id);
+      if (k === undefined) ordinal.set(id, k = ordinal.size);
+      return k;
+    });
+  }
   return Object.freeze({
     revision: data.revision.topology,
     allAtoms,
     authSeq,
     atomId,
     atomChain,
+    chainEntity,
   });
 }
 

@@ -36,9 +36,11 @@ interface ResidueRow {
   authSeq: string;
   insertion: string;
   comp: string;
+  het: number;
 }
 interface ChainRow {
   model: number;
+  entityId: string;
   labelId: string;
   authId: string;
 }
@@ -503,7 +505,12 @@ export async function structureFromBcif(
   const occupancy = new Float32Array(atom.rowCount),
     bfactor = new Float32Array(atom.rowCount),
     radius = new Float32Array(atom.rowCount),
+    formalCharge = new Int8Array(atom.rowCount),
     atomResidue = new Uint32Array(atom.rowCount);
+  // Optional columns are only emitted when the file carries their source field.
+  const hasCharge = !!field(atom, "pdbx_formal_charge"),
+    hasGroup = !!field(atom, "group_PDB"),
+    hasEntity = !!field(atom, "label_entity_id");
   const residueRows = new Map<string, number>(),
     residues: ResidueRow[] = [],
     chainRows = new Map<string, number>(),
@@ -518,6 +525,7 @@ export async function structureFromBcif(
       chainRows.set(chainKey, chain);
       chains.push({
         model,
+        entityId: str(atom, "label_entity_id", i, ""),
         labelId: chainId,
         authId: str(atom, "auth_asym_id", i, chainId),
       });
@@ -540,6 +548,8 @@ export async function structureFromBcif(
         authSeq,
         insertion: str(atom, "pdbx_PDB_ins_code", i),
         comp,
+        // Mol* reads is-het from the residue's first atom record.
+        het: str(atom, "group_PDB", i) === "ATOM" ? 0 : 1,
       });
     }
     atomResidue[i] = residue;
@@ -554,8 +564,14 @@ export async function structureFromBcif(
     positions[i * 3 + 2] = num(atom, "Cartn_z", i);
     occupancy[i] = num(atom, "occupancy", i, 1);
     bfactor[i] = num(atom, "B_iso_or_equiv", i, 0);
+    formalCharge[i] = Math.trunc(num(atom, "pdbx_formal_charge", i, 0));
   }
   const residueCount = residues.length, chainCount = chains.length;
+  const entityTypes = new Map<string, string>();
+  const entity = categories.entity;
+  for (let i = 0; entity && i < entity.rowCount; i++) {
+    entityTypes.set(str(entity, "id", i), str(entity, "type", i).toLowerCase());
+  }
   const secondaryStructure = readSecondaryStructure(
     categories,
     residues,
@@ -574,6 +590,7 @@ export async function structureFromBcif(
         occupancy,
         bfactor,
         radius,
+        ...(hasCharge ? { formalCharge } : {}),
       },
       residues: {
         count: residueCount,
@@ -584,12 +601,19 @@ export async function structureFromBcif(
         comp: residues.map((r) => r.comp),
         polymer: residues.map((r) => polymerKind(r.comp)),
         secondaryStructure,
+        ...(hasGroup ? { het: Uint8Array.from(residues, (r) => r.het) } : {}),
       },
       chains: {
         count: chainCount,
         model: Int32Array.from(chains, (c) => c.model),
         labelId: chains.map((c) => c.labelId),
         authId: chains.map((c) => c.authId),
+        ...(hasEntity
+          ? {
+            entityId: chains.map((c) => c.entityId),
+            entityType: chains.map((c) => entityTypes.get(c.entityId) ?? ""),
+          }
+          : {}),
       },
       bonds: {
         count: 0,

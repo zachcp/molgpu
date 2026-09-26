@@ -11,6 +11,8 @@ export interface Atoms {
   readonly occupancy: Float32Array;
   readonly bfactor: Float32Array;
   readonly radius?: Float32Array;
+  /** mmCIF pdbx_formal_charge; a missing value reads 0. Absent when the source has no charges. */
+  readonly formalCharge?: Int8Array;
 }
 export interface Residues {
   readonly count: number;
@@ -23,12 +25,18 @@ export interface Residues {
   readonly polymer: readonly ("protein" | "rna" | "dna" | "other")[];
   /** Imported annotation (mmCIF struct_conf/struct_sheet_range) when the source provided one; absent otherwise. */
   readonly secondaryStructure?: readonly ("helix" | "sheet" | "coil")[];
+  /** 1 when the residue's first atom is not a group_PDB ATOM record (a HETATM). Absent when the source has no group_PDB. */
+  readonly het?: Uint8Array;
 }
 export interface Chains {
   readonly count: number;
   readonly model: Int32Array;
   readonly labelId: readonly string[];
   readonly authId: readonly string[];
+  /** mmCIF label_entity_id. Absent when the source has none. */
+  readonly entityId?: readonly string[];
+  /** mmCIF _entity.type of the chain's entity, lower-cased ("polymer", "non-polymer", "water", "branched", ...); "" when unlisted. Absent with entityId. */
+  readonly entityType?: readonly string[];
 }
 export interface Bonds {
   readonly count: number;

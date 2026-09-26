@@ -626,3 +626,54 @@ Deno.test("every core symbol evaluates like Mol*'s runtime", () => {
     6,
   );
 });
+
+Deno.test("het, formal charge and entity columns, and errors without them", () => {
+  const input = fixture();
+  input.topology.atoms.formalCharge = Int8Array.from([1, 0, 0, 0, -1, 0]);
+  input.topology.residues.het = Uint8Array.from([0, 1, 0]);
+  input.topology.chains.entityId = ["7"];
+  input.topology.chains.entityType = ["polymer"];
+  const full = createStructure(input);
+  assertEquals(rows(atoms(prop("macromolecular.is-het")), full), [2, 3]);
+  assertEquals(
+    rows(
+      atoms(
+        call("core.rel.neq", [prop("macromolecular.pdbx_formal_charge"), 0]),
+      ),
+      full,
+    ),
+    [0, 4],
+  );
+  assertEquals(
+    rows(
+      sq("generator.atom-groups", {
+        "entity-test": eq(prop("macromolecular.label_entity_id"), "7"),
+      }),
+      full,
+    ),
+    [0, 1, 2, 3, 4, 5],
+  );
+  assertEquals(
+    rows(atoms(eq(prop("macromolecular.entity-type"), "water")), full),
+    [],
+  );
+  assertEquals(
+    rows(atoms(eq(prop("macromolecular.entity-key"), 0)), full).length,
+    6,
+  );
+  // The base fixture has none of these columns.
+  for (
+    const name of [
+      "is-het",
+      "pdbx_formal_charge",
+      "label_entity_id",
+      "entity-type",
+    ]
+  ) {
+    assertThrows(
+      () => rows(atoms(eq(prop(`macromolecular.${name}`), 1))),
+      TypeError,
+      "needs",
+    );
+  }
+});
