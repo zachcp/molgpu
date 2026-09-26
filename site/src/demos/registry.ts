@@ -12,7 +12,8 @@ export type DemoId =
   | "surface"
   | "materials"
   | "figure"
-  | "coordinates";
+  | "coordinates"
+  | "volume";
 export interface DemoDefinition {
   readonly id: DemoId;
   readonly title: string;
@@ -115,6 +116,16 @@ export const demos: readonly DemoDefinition[] = [
     assertion:
       "the provider chain updates live geometry, snapshot geometry, and camera focus",
     options: { coordinates: true },
+  },
+  {
+    id: "volume",
+    title: "Density volume",
+    summary:
+      "A Gaussian density map built from 1CRN is contoured as a glass isosurface, cut by a scrubbable slice, and sampled at every atom to colour packing.",
+    fixture: "1crn",
+    assertion:
+      "the isosurface, slice, and atom colours share one uploaded VolumeData",
+    options: { oit: true },
   },
   {
     id: "figure",
