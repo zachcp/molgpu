@@ -12,6 +12,8 @@ Bonds
   export interface Bonds { readonly count: number; readonly a: Uint32Array; readonly b: Uint32Array; /** 0 unknown, 1/2/3 multiplicity, 4 aromatic. */ readonly order: Uint8Array; readonly source: readonly ("explicit" | "inferred")[]; /** Bond type bits (see `BOND_FLAGS`); 0 is unknown. Inferred bonds are covalent | computed. */ readonly flags?: Uint8Array }
 Chains
   export interface Chains { readonly count: number; readonly model: Int32Array; readonly labelId: readonly string[]; readonly authId: readonly string[]; /** mmCIF label_entity_id. Absent when the source has none. */ readonly entityId?: readonly string[]; /** mmCIF _entity.type of the chain's entity, lower-cased ("polymer", "non-polymer", "water", "branched", ...); "" when unlisted. Absent with entityId. */ readonly entityType?: readonly string[]; /** Entity subtype as Mol* assigns it (entity_poly / pdbx_entity_branch type, else derived from the component: "polypeptide(L)", "oligosaccharide", "other", ...). Absent with entityId. */ readonly entitySubtype?: readonly string[] }
+FrameSource
+  export interface FrameSource { /** Decode frame `index`. Rejects with an `AbortError` when `signal` aborts. */ read(index: number, signal?: AbortSignal): Promise<TrajectoryFrame> }
 Instances
   export interface Instances { readonly count: number; readonly chain: Uint32Array; readonly operatorId: readonly string[]; readonly transform: Float64Array }
 Links
@@ -32,6 +34,14 @@ Topology
   export interface Topology { readonly atoms: Atoms; readonly residues: Residues; readonly chains: Chains; readonly bonds: Bonds; readonly instances: Instances; readonly links?: Links }
 Trace
   export interface Trace { readonly count: number; readonly guide: Float32Array; readonly tangent: Float32Array; readonly normal: Float32Array; readonly binormal: Float32Array; /** Source residue row per sample (sample-to-residue mapping / retained residue IDs). */ readonly residue: Uint32Array; /** Run r spans [runs[r], runs[r + 1]); length is runCount + 1. */ readonly runs: Uint32Array; readonly runKind: readonly ("protein" | "rna" | "dna")[] }
+TrajectoryData
+  export interface TrajectoryData { /** Atoms per frame. */ readonly atomCount: number; readonly frameCount: number; readonly time: Float64Array; readonly timeUnit: TrajectoryTimeUnit; /** Trajectory atom `i` moves topology row `atomMap[i]`; other rows keep upstream coordinates. */ readonly atomMap?: Uint32Array; readonly source: FrameSource }
+TrajectoryFrame
+  export interface TrajectoryFrame { /** x, y, z per trajectory atom in Å, in trajectory atom order. */ readonly positions: Float32Array; /** Column-major 3×3 box vectors in Å (a, b, c as columns); absent if none. */ readonly box?: Float32Array; /** Å/ps in the layout of `positions`; only when a reader was asked for them. */ readonly velocities?: Float32Array }
+TrajectoryInput
+  export interface TrajectoryInput { readonly atomCount: number; readonly frames?: readonly TrajectoryFrame[]; readonly source?: FrameSource; readonly frameCount?: number; /** Per-frame time, nondecreasing. Default: the frame index, unit "index". */ readonly time?: ArrayLike<number>; readonly timeUnit?: TrajectoryTimeUnit; /** Topology row of each trajectory atom, for trajectories over a subset. */ readonly atomMap?: ArrayLike<number> }
+TrajectoryTimeUnit
+  export type TrajectoryTimeUnit = "ps" | "step" | "index";
 ViewPolicy
   export interface ViewPolicy { readonly model?: "first" | "all" | number; readonly altloc?: "primary" | "all" }
 VolumeData
@@ -52,10 +62,14 @@ coordinateBounds
   export function coordinateBounds(data: StructureData, indices?: Uint32Array): null | { min: number[]; max: number[]; center: number[] };
 createStructure
   export function createStructure(input: StructureInput): StructureData;
+createTrajectory
+  export function createTrajectory(input: TrajectoryInput): TrajectoryData;
 createVolume
   export function createVolume(input: VolumeInput, options?: { maxSamples?: number }): VolumeData;
 elementRadius
   export function elementRadius(atomicNumber: number): number;
+frameAtTime
+  export function frameAtTime(trajectory: TrajectoryData, t: number): number;
 residueKey
   export function residueKey(data: StructureData, row: number): string;
 sampleVolume
@@ -68,8 +82,14 @@ spatialGrid
   export function spatialGrid(positions: Float32Array, rows: ArrayLike<number> | null, cellSize: number, partition?: (row: number) => number): SpatialGrid;
 traceTable
   export function traceTable(data: StructureData, atomIndices: Uint32Array): Trace;
+trajectoryFromModels
+  export function trajectoryFromModels(data: StructureData): TrajectoryData;
 validateStructure
   export function validateStructure<T extends StructureInput>(data: T): T;
+validateTrajectory
+  export function validateTrajectory(structure: StructureData, trajectory: TrajectoryData): TrajectoryData;
+validateTrajectoryFrame
+  export function validateTrajectoryFrame(frame: TrajectoryFrame, atomCount: number, path?: string): TrajectoryFrame;
 validateVolume
   export function validateVolume<T extends VolumeInput>(input: T, options?: { maxSamples?: number }): T;
 volumeComponent

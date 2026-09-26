@@ -23,6 +23,13 @@ export {
   volumeLevel,
   volumeWorldToIndex,
 } from "./volume.ts";
+export {
+  createTrajectory,
+  frameAtTime,
+  trajectoryFromModels,
+  validateTrajectory,
+  validateTrajectoryFrame,
+} from "./trajectory.ts";
 
 import { spatialGrid } from "./spatial-grid.ts";
 
