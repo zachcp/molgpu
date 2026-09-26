@@ -139,6 +139,32 @@ Explicitly _not_ where tests first appear — the harness lands in Phase 1.
 
 ---
 
+## Phase 8 — Allowlisted MolQL selection
+
+Mol* text parsers stay behind `@molgpu/io`; `@molgpu/select` evaluates a
+documented, enumerated expression subset against our tables. Gate 8 checks four
+text front ends against the Mol* oracle and rejects unsupported symbols
+explicitly. Remaining entity, bond and microheterogeneity cases have their own
+beads; fine secondary-structure flags follow Phase 15. See the
+[MolQL spike](findings/2026-09-26-molql-selection-spike.md).
+
+## Phase 9 — Coordinate stream
+
+Structure topology stays fixed while child providers re-provide positions. Gate
+9 checks provider composition, live focus, explicit live/snapshot policies for
+CPU consumers, and bounded asynchronous readback. GPU-native ribbon/tube
+geometry follows only if snapshot playback proves inadequate.
+
+## Phase 11 — Volume dataset
+
+The independent first gate covers `VolumeData`, CCP4/MRC import, `<Volume>`, CPU
+isosurfaces, slices and static volume-sampled fields. Later readers, GPU
+marching cubes, raymarching and live-coordinate volume sampling remain tracked
+follow-ons. See the
+[dynamic-data plan](findings/2026-09-26-dynamic-data-epics.md) for Phases 9–17.
+
+---
+
 ## Deliberately out of scope for now
 
 - **MVS import/export.** Not a goal (decided 2026-09-15). If it ever returns, it
@@ -146,6 +172,3 @@ Explicitly _not_ where tests first appear — the harness lands in Phase 1.
 - **Headless / server-side rendering.** Blocked on dependable Node WebGPU (risk
   R4). Kept _possible_ by keeping `geo` and `table` renderer-free, but not
   pursued.
-- **Trajectories and MD playback.** The timeline should not foreclose it; no
-  work until the static story path is solid.
-- **Volumes beyond what `dual-contour-layer` gives for free.**

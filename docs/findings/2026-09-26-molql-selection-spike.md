@@ -523,6 +523,20 @@ bond flags, VDW radius column. Then `surrounding-ligands`.
 **Deferred (🔴):** `rings`, `distance-cluster`, instance/operator properties,
 IHM.
 
+### Gate 8 refinement (2026-09-26)
+
+The phases above describe the original decomposition, not a promise to support
+every MolQL symbol. Gate 8 audits the documented allowlist across MolScript,
+PyMOL, VMD and Jmol, with explicit errors for unsupported symbols. The remaining
+required table work is entity/subtype and surrounding-ligands (`922.12`), bond
+flags and `struct_conn` parity (`922.14`), and their oracle fixtures. Imported
+`isHet`, formal charge, element tables, atom radius/mass and 1EJG
+microheterogeneous residue identity have their own completed beads and remain
+part of the gate's regression suite. Fine secondary-structure flags consume
+Phase 15's future `ssCode` column and do not hold Gate 8. Phase 14 must
+reconcile its provenance-aware charge attributes with the formal-charge column
+that Phase 8 already imports.
+
 ## 6. Risks
 
 - **Scope creep (R5/R6).** This is the risk `lkd.14` was written for. The

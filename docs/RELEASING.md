@@ -37,12 +37,26 @@ and a minor bump while we are on 0.x.
    Run the browser suites too (`deno task test:components`,
    `deno task test:site` and the `deno task test:viewer:*` tasks). They need
    Chrome with WebGPU, so CI does not run them.
-5. Commit, then tag `vX.Y.Z`.
-6. Publish to JSR with `deno publish` from each package directory, in dependency
-   order (`table`, `geo`, `timeline`, `select`, `fields`, `io`, `viewer`).
+5. Commit and push the release commit, then create and push the `vX.Y.Z` tag.
+   The `Publish` GitHub Actions workflow runs the same quality gates and then
+   publishes the root Deno workspace to JSR with `deno publish`. Deno resolves
+   workspace package dependencies and publishes the seven packages in the
+   required order. A tag push is the explicit action that starts publishing.
 
-## Not yet done
+The GitHub repository must be linked to every `@molgpu/*` package in JSR
+settings before the first workflow publish. GitHub Actions uses the JSR OIDC
+integration (`id-token: write`); no long-lived publish token is stored in GitHub
+secrets. Repository links are configured in JSR rather than in `package.json`:
+this repository has no npm package manifests, and JSR package configuration
+lives in each package's `deno.json`.
 
-- `repository` fields (with `directory`) get added once the repo has a remote.
-- CI (`.github/workflows/ci.yml`) is written but hasn't run yet, because there
-  is no remote.
+## First release setup
+
+- Create the `@molgpu` scope and packages on jsr.io, then link each package to
+  `zachcp/molgpu` in its JSR settings. Linking is an account-level setup step
+  that cannot be completed by this repository's CI configuration.
+- Push the repository to its `origin` remote so GitHub Actions can run CI. The
+  remote URL is `https://github.com/zachcp/molgpu`.
+- After the first release tag is pushed, verify Node/Vite consumption through
+  JSR's npm compatibility endpoint (`npx jsr add @molgpu/viewer`). The npm
+  compatibility path depends on the package having been published first.
