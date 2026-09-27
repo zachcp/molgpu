@@ -14,10 +14,11 @@ import {
   Structure,
   TimelineProvider,
   useCoordinateFocus,
+  type ViewerElement,
 } from "@molgpu/viewer";
 import { WobbleCoordinates } from "./coordinates.ts";
 
-export type Scene = (data: StructureData) => unknown;
+export type Scene = (data: StructureData) => ViewerElement;
 
 type ViewerOptions = {
   worldLight?: boolean;
@@ -54,7 +55,7 @@ const OrbitControls = (
     pitch: number;
     radius: number;
     target: [number, number, number];
-    children: unknown;
+    children: ViewerElement;
   },
 ) => {
   const [bearing, setBearing] = useState(initialBearing);
@@ -86,7 +87,7 @@ const OrbitControls = (
     pitch,
     radius,
     target,
-    children: children as never,
+    children,
   });
 };
 
@@ -166,12 +167,10 @@ const ViewerRoot = (initial: ViewerState) => {
               }),
               use(TimelineProvider, {
                 time: options.time ?? 0,
-                children: insideStructure
-                  ? scene(data) as never
-                  : use(Structure, {
-                    data,
-                    children: scene(data) as never,
-                  }),
+                children: insideStructure ? scene(data) : use(Structure, {
+                  data,
+                  children: scene(data),
+                }),
               }),
             ],
           });
