@@ -28,6 +28,7 @@ export function createStructureResource(
     identity: data.identity,
     topologyRevision: data.revision.topology,
     positionsRevision: data.revision.positions,
+    attributesRevision: data.revision.attributes,
     get bounds(): Bounds {
       if (disposed) fail("resource has been disposed");
       return bounds ??= coordinateBounds(data);

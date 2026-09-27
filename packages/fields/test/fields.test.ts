@@ -22,7 +22,7 @@ import {
   volumeSample,
 } from "../src/index.ts";
 import type { Color } from "../src/index.ts";
-import { createVolume } from "@molgpu/table";
+import { createVolume, withAttributes } from "@molgpu/table";
 import { structure } from "./fixture.ts";
 
 const RED: Color = [1, 0, 0, 1],
@@ -65,6 +65,48 @@ Deno.test("attribute reads a numeric column on its own domain", () => {
   assertEquals([...evaluate(attribute("bfactor"), data)], [10, 20, 30, 40]);
   assertStrictEquals(attribute("labelSeq").domain, "residue");
   assertEquals([...evaluate(attribute("labelSeq"), data)], [1, 2]);
+});
+
+Deno.test("registered scalar and code attributes agree across CPU and GPU bindings", () => {
+  const root = structure();
+  const data = withAttributes(root, {
+    "user:score": {
+      domain: "atom",
+      kind: "scalar",
+      provenance: "user",
+      values: Float32Array.of(.25, .5, .75, 1),
+    },
+    ssCode: {
+      domain: "residue",
+      kind: "code",
+      provenance: "computed:test",
+      values: Uint8Array.of(1, 2),
+    },
+  });
+  const score = attribute("user:score", { domain: "atom" });
+  assertEquals([...evaluate(score, data)], [.25, .5, .75, 1]);
+  assertEquals([...compile(score).bindings[0].fill(data)], [.25, .5, .75, 1]);
+  const codes = categorical(attribute("ssCode"), { 1: 10, 2: 20 }, 0);
+  assertEquals([...evaluate(codes, data)], [10, 20]);
+  const lifted = attribute("ssCode", { domain: "atom" });
+  assertEquals([...evaluate(lifted, data)], [1, 1, 2, 2]);
+  const compiled = compile(lifted);
+  assertEquals(compiled.bindings.map((b) => b.id), [
+    "attr:residue",
+    "attr:ssCode",
+  ]);
+  assertEquals([...compiled.bindings[1].fill(data)], [1, 2]);
+  assertMatch(compiled.wgsl, /field_get1\(u32\(field_get0\(row\)\)\)/);
+  assertThrows(
+    () => attribute("user:score"),
+    TypeError,
+    "requires options.domain",
+  );
+  assertThrows(
+    () => evaluate(attribute("partialCharge"), data),
+    TypeError,
+    "missing column partialCharge",
+  );
 });
 
 Deno.test("categorical maps integer categories with an explicit fallback", () => {
@@ -156,7 +198,6 @@ Deno.test("curve samples a scalar along the global t uniform", () => {
 });
 
 Deno.test("rejects wrong types, unknown columns, mixed domains, and CPU-only lowering", () => {
-  // @ts-expect-error: not a column
   assertThrows(() => attribute("nope"), Error, "unknown column");
   assertThrows(
     () => categorical(attribute("element"), {}, GREY),

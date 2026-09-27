@@ -16,6 +16,11 @@ import type { StructureResource } from "./types.ts";
 import { createStructureResource } from "./internal/structure-resource.ts";
 import { ColumnSource } from "./internal/column-source.ts";
 import { CoordinatesContext } from "./coordinates-context.ts";
+import { AttributesContext, EMPTY_ATTRIBUTES } from "./attributes-context.ts";
+import {
+  AttributeSnapshotContext,
+  EMPTY_ATTRIBUTE_SNAPSHOTS,
+} from "./attribute-snapshot.ts";
 import {
   CoordinateSnapshotContext,
   rootSnapshot,
@@ -70,6 +75,7 @@ function guardedStructure(
     identity: resource.identity,
     topologyRevision: resource.topologyRevision,
     positionsRevision: resource.positionsRevision,
+    attributesRevision: resource.attributesRevision,
     get bounds() {
       return resource.bounds;
     },
@@ -107,7 +113,19 @@ const provideSources = (
           resource,
         })
         : null,
-      provide(CoordinateSnapshotContext, rootSnapshot(resource), children),
+      provide(
+        CoordinateSnapshotContext,
+        rootSnapshot(resource),
+        provide(
+          AttributesContext,
+          EMPTY_ATTRIBUTES,
+          provide(
+            AttributeSnapshotContext,
+            EMPTY_ATTRIBUTE_SNAPSHOTS,
+            children,
+          ),
+        ),
+      ),
     ),
   );
 

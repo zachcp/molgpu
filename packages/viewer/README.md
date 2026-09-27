@@ -149,6 +149,8 @@ may change before 0.1.0; _advanced_ — only from `@molgpu/viewer/advanced`.
 | `useStructureResource`       | experimental | The nearest `<Structure>`'s `StructureResource`, for `focusSelection` and other resource-taking APIs.                                                                                              |
 | `useCoordinateSnapshot`      | experimental | Shared, throttled CPU positions below a GPU provider; `null` until first readback.                                                                                                                 |
 | `CoordinateSnapshot`         | experimental | Published structure data, revisioned resource and source generation.                                                                                                                               |
+| `useAttributeSnapshot`       | experimental | Demand-driven CPU copy of a GPU-produced attribute, with its source generation.                                                                                                                    |
+| `AttributeSnapshot`          | experimental | Published structure data and attribute producer generation.                                                                                                                                        |
 | `useCoordinateSelection`     | experimental | Re-resolve position-dependent queries against a published snapshot.                                                                                                                                |
 | `useCoordinateBounds`        | experimental | Asynchronous GPU bounds and centroid of the nearest stream.                                                                                                                                        |
 | `CoordinateBounds`           | experimental | GPU-reduced min, max, centroid, count and generation.                                                                                                                                              |
@@ -210,6 +212,10 @@ may change before 0.1.0; _advanced_ — only from `@molgpu/viewer/advanced`.
 | `StructureSources`           | advanced     | Shared positions/radii shader sources.                                                                                                                                                             |
 | `useStructure`               | advanced     | Read the nearest `<Structure>`'s resource and sources.                                                                                                                                             |
 | `CoordinatesContext`         | advanced     | Live context carrying the nearest GPU coordinate stream.                                                                                                                                           |
+| `AttributesContext`          | advanced     | Live context carrying GPU-produced attribute sources.                                                                                                                                              |
+| `Attributes`                 | advanced     | Name-to-source map of produced attributes.                                                                                                                                                         |
+| `ProducedAttribute`          | advanced     | GPU source, domain, kind, provenance and generation for one attribute.                                                                                                                             |
+| `AttributeProducer`          | advanced     | Compute a live scalar or code column for descendant fields.                                                                                                                                        |
 | `Coordinates`                | advanced     | GPU positions source, atom count, content generation and owning resource.                                                                                                                          |
 | `useCoordinates`             | advanced     | Read the nearest coordinate stream; an empty structure returns null.                                                                                                                               |
 | `IdentityCoordinates`        | advanced     | Forward the nearest coordinates without allocating a GPU buffer.                                                                                                                                   |
@@ -235,6 +241,16 @@ resolved level changes. `<VolumeSlice>` samples per fragment, so moving its
 plane, range or opacity updates uniforms only. Colour atoms from a map with
 `color={colormap(volumeSample(map), stops)}`: the field reads the atoms'
 positions and the shared samples, with no per-atom colour upload.
+
+## Attribute channels
+
+`<AttributeProducer>` from `@molgpu/viewer/advanced` computes one `f32` atom or
+residue column from a WGSL kernel and makes it available to descendant fields as
+`attribute(name, { domain })`. Pass `parameterKey` when kernel parameters change
+so its generation advances. `useAttributeSnapshot(name)` subscribes to a
+throttled CPU copy for a tooltip or analysis; it returns `null` until the first
+readback. The snapshot contains a revised table with the produced column and the
+producer generation.
 
 ## Coordinate consumers
 

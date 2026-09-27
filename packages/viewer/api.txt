@@ -6,6 +6,8 @@ AmbientLight
   export const AmbientLight: ViewerComponent<AmbientLightProps>;
 AmbientLightProps
   export interface AmbientLightProps { color?: ColorLike; intensity?: number }
+AttributeSnapshot
+  export interface AttributeSnapshot { readonly data: StructureData; readonly generation: number }
 BallAndStick
   export const BallAndStick: ViewerComponent<{ select?: Selection | null; /** A flat colour or a @molgpu/fields Field, applied to balls and sticks. */ color?: VectorLike | Field; /** Ball radius scale; defaults to 0.3. */ ball?: number; /** Stick width; defaults to 0.28. */ stick?: number; endpoints?: "both" | "either"; /** Forwarded to both balls and sticks, so they share one shading model. */ material?: MaterialSpec } & Translucency>;
 BasicMaterial
@@ -127,7 +129,7 @@ StructureLoader
 StructureProps
   export type StructureProps = PreloadedStructureProps | LoadedStructureProps;
 StructureResource
-  export interface StructureResource { readonly data: StructureData; readonly identity: StructureData["identity"]; readonly topologyRevision: number; readonly positionsRevision: number; /** Lazily computed and cached; throws once the resource is disposed. */ readonly bounds: StructureBounds | null; dispose(): void }
+  export interface StructureResource { readonly data: StructureData; readonly identity: StructureData["identity"]; readonly topologyRevision: number; readonly positionsRevision: number; readonly attributesRevision: number; /** Lazily computed and cached; throws once the resource is disposed. */ readonly bounds: StructureBounds | null; dispose(): void }
 Surface
   export const Surface: ViewerComponent<{ /** A @molgpu/select atom Selection; without one, active model/primary-altloc atoms are used. */ select?: Selection | null; /** Ångström probe radius; defaults to 1.4 (water). */ probeRadius?: number; /** Grid spacing in Ångströms; defaults to 0.5. Smaller is finer and slower. */ resolution?: number; /** Grid byte budget override; defaults to 256 MiB. */ maxBytes?: number; color?: VectorLike; /** Wraps the shaded face layer; without one, the ambient scene material. */ material?: MaterialSpec; loading?: ViewerElement | (() => ViewerElement); error?: ViewerElement | ((failure: unknown) => ViewerElement) } & Translucency>;
 TimelineProvider
@@ -180,6 +182,8 @@ tooltipFields
   export function tooltipFields(fields: Record<string, Field>, data: StructureData, atom: number, options?: { t?: number }): Record<string, number | number[] | string>;
 useAnnotation
   export function useAnnotation<R = unknown>(input: { records?: readonly R[]; src?: string; loader?: (src: string, cancelled: () => boolean) => unknown; domain?: "residue" | "chain"; fields: readonly string[]; value?: (record: R) => number | readonly number[]; type?: unknown; policy?: "fallback" | "fail"; fallback?: number | readonly number[]; duplicate?: "error" | "first" | "last"; lift?: boolean }): { field: Field | null; pending: boolean; error: unknown };
+useAttributeSnapshot
+  export function useAttributeSnapshot(name: string, options?: { maxHz?: number; onPause?: boolean; enabled?: boolean }): AttributeSnapshot | null;
 useCameraCurve
   export function useCameraCurve(curve: CameraCurve, resource: StructureResource, options?: FocusOptions): CameraPose;
 useCoordinateBounds
@@ -205,6 +209,14 @@ withMaterial
 
 ## ./advanced
 
+AttributeProducer
+  export const AttributeProducer: LC<{ name: string; domain: AttributeDomain; kind: "scalar" | "code"; kernel: ShaderModule; args?: unknown[]; sources?: readonly StorageSource[]; parameterKey?: string; children?: LiveElement }>;
+AttributeSnapshot
+  export interface AttributeSnapshot { readonly data: StructureData; readonly generation: number }
+Attributes
+  export type Attributes = Readonly<Record<string, ProducedAttribute>>;
+AttributesContext
+  export const AttributesContext: LiveContext<Attributes | undefined>;
 Coordinates
   export interface Coordinates { readonly source: StorageSource; readonly count: number; readonly generation: number; readonly resource: StructureResource }
 CoordinatesContext
@@ -215,6 +227,8 @@ IdentityCoordinates
   export const IdentityCoordinates: LC<{ children?: LiveElement }>;
 LitMaterial
   export const LitMaterial: LC<ShaderLitMaterialProps>;
+ProducedAttribute
+  export interface ProducedAttribute { readonly source: StorageSource; readonly domain: AttributeDomain; readonly kind: "scalar" | "code"; readonly generation: number; readonly provenance: AttributeProvenance }
 StructureContext
   export const StructureContext: LiveContext<StructureContextValue | undefined>;
 StructureContextValue
@@ -233,6 +247,8 @@ WobbleCoordinates
   export const WobbleCoordinates: LC<{ phase: number; amplitude?: number; children?: LiveElement }>;
 WorldSpacePointLayer
   export const WorldSpacePointLayer: LC<{ positions: ShaderSource; colors?: ShaderSource; radii: ShaderSource; count: number; scale?: number } & Omit<PointLayerProps, "positions" | "colors" | "sizes" | "count" | "depth">>;
+useAttributeSnapshot
+  export function useAttributeSnapshot(name: string, options?: { maxHz?: number; onPause?: boolean; enabled?: boolean }): AttributeSnapshot | null;
 useCoordinates
   export function useCoordinates(): Coordinates | null;
 useField

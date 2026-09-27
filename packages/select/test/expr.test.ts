@@ -1,5 +1,5 @@
 import { assertEquals, assertStrictEquals, assertThrows } from "@std/assert";
-import { createStructure, withPositions } from "@molgpu/table";
+import { createStructure, withAttributes, withPositions } from "@molgpu/table";
 import {
   compile,
   isStale,
@@ -650,6 +650,21 @@ Deno.test("het, formal charge and entity columns, and errors without them", () =
     ),
     [0, 4],
   );
+  const chargeQuery = compile(
+    atoms(eq(prop("macromolecular.pdbx_formal_charge"), 2)),
+  );
+  const original = resolve(chargeQuery, full);
+  const derived = withAttributes(full, {
+    formalCharge: {
+      domain: "atom",
+      kind: "code",
+      provenance: "user",
+      values: Int8Array.from([0, 2, 0, 0, 0, 0]),
+    },
+  });
+  assertEquals(chargeQuery.deps, ["topology", "attributes"]);
+  assertEquals(isStale(original, derived), true);
+  assertEquals([...resolve(chargeQuery, derived).indices], [1]);
   assertEquals(
     rows(
       sq("generator.atom-groups", {

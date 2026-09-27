@@ -6,6 +6,9 @@ All notable changes to `@molgpu/fields` are recorded here. The format follows
 
 ## [Unreleased]
 
+- `attribute` and `columnRange` now use the shared table resolver. Namespaced
+  custom columns require a domain; residue columns can be lifted to atoms.
+
 - `volumeSample(volume)`: the scalar value of a `VolumeData` at each atom's
   position. It evaluates on the CPU and compiles to WGSL that agrees within 1e-5
   (relative) at interior, face and outside points. `sampleVolumeWgsl` exposes

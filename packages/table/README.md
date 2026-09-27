@@ -155,6 +155,14 @@ and ribbon geometry.
 | ------------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------- |
 | `createStructure`         | stable       | Validate and copy a `StructureInput` into a frozen `StructureData` with a fresh identity.                                             |
 | `withPositions`           | stable       | Replace coordinates, keeping dataset/topology identity and bumping the positions revision.                                            |
+| `withAttributes`          | experimental | Add, replace or remove validated atom or residue columns while preserving structure identity.                                         |
+| `attributeColumn`         | experimental | Resolve built-in and derived columns through one provenance-aware view.                                                               |
+| `attributeNames`          | experimental | List resolvable column names for a structure.                                                                                         |
+| `AttributeDomain`         | experimental | Atom or residue row domain for an attribute.                                                                                          |
+| `AttributeValues`         | experimental | Supported numeric typed arrays for attribute values.                                                                                  |
+| `AttributeProvenance`     | experimental | Origin label for an attribute column.                                                                                                 |
+| `AttributeColumnInput`    | experimental | Input values, domain, kind and provenance for `withAttributes`.                                                                       |
+| `AttributeColumn`         | experimental | Resolved immutable-by-contract column descriptor.                                                                                     |
 | `activeAtoms`             | stable       | Atom indices for a view policy (default: first model, primary altloc conformer).                                                      |
 | `residueKey`              | stable       | Namespaced, join-safe string key for one residue row.                                                                                 |
 | `atomRadii`               | experimental | Per-atom display radii: the `atoms.radius` column, else element van der Waals defaults (cached).                                      |

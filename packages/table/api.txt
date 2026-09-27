@@ -4,6 +4,16 @@
 
 Atoms
   export interface Atoms { readonly count: number; readonly id: readonly string[]; readonly name: readonly string[]; readonly altloc: readonly string[]; readonly residue: Uint32Array; /** Atomic number; 0 denotes unknown. */ readonly element: Uint8Array; readonly occupancy: Float32Array; readonly bfactor: Float32Array; readonly radius?: Float32Array; /** Per-atom chemical component, present only when some residue mixes components (microheterogeneity); residues.comp is then the residue's first atom's. */ readonly comp?: readonly string[]; /** mmCIF pdbx_formal_charge; a missing value reads 0. Absent when the source has no charges. */ readonly formalCharge?: Int8Array }
+AttributeColumn
+  export interface AttributeColumn extends AttributeColumnInput { readonly name: string }
+AttributeColumnInput
+  export interface AttributeColumnInput { readonly domain: AttributeDomain; readonly values: AttributeValues; readonly provenance: AttributeProvenance; readonly kind: "scalar" | "code" }
+AttributeDomain
+  export type AttributeDomain = "atom" | "residue";
+AttributeProvenance
+  export type AttributeProvenance = "legacy" | "default" | "user" | `imported:${string}` | `template:${string}` | `computed:${string}` | `gpu:${string}`;
+AttributeValues
+  export type AttributeValues = Float32Array | Int8Array | Uint8Array | Int32Array | Uint32Array;
 BOND_FLAGS
   export const BOND_FLAGS: Readonly<{ covalent: 1; metallic: 2; hydrogen: 4; disulfide: 8; aromatic: 16; computed: 32 }>;
 BondPolicy
@@ -27,7 +37,7 @@ SecondaryStructureTrace
 SpatialGrid
   export interface SpatialGrid { readonly cellSize: number; /** * Visit, in a fixed cell order and then insertion order, every indexed row in the * cells around (x, y, z), restricted to `partition` when the grid has * partitions. This covers every row within `cellSize` of the point; callers * test the exact distance. Stops and returns true when `visit` returns true. */ near(x: number, y: number, z: number, visit: (row: number) => boolean | void, partition?: number): boolean }
 StructureData
-  export interface StructureData extends StructureInput { readonly identity: { readonly [brand]: true }; readonly revision: { readonly topology: number; readonly positions: number; readonly attributes: number } }
+  export interface StructureData extends StructureInput { readonly identity: { readonly [brand]: true }; readonly attributes?: Readonly<Record<string, AttributeColumn>>; readonly revision: { readonly topology: number; readonly positions: number; readonly attributes: number } }
 StructureInput
   export interface StructureInput { readonly topology: Topology; readonly positions: Float32Array }
 Topology
@@ -56,6 +66,10 @@ activeAtoms
   export function activeAtoms(data: StructureData, policy?: ViewPolicy): Uint32Array;
 atomRadii
   export function atomRadii(data: StructureData): Float32Array;
+attributeColumn
+  export function attributeColumn(data: StructureData, name: string): AttributeColumn | undefined;
+attributeNames
+  export function attributeNames(data: StructureData): string[];
 bondTopology
   export function bondTopology(data: StructureData, policy?: BondPolicy): Bonds;
 coordinateBounds
@@ -102,5 +116,7 @@ volumeLevel
   export function volumeLevel(volume: VolumeData, level: VolumeLevel): number;
 volumeWorldToIndex
   export function volumeWorldToIndex(volume: VolumeData, x: number, y: number, z: number): [number, number, number];
+withAttributes
+  export function withAttributes(data: StructureData, changes: Readonly<Record<string, AttributeColumnInput | null>>): StructureData;
 withPositions
   export function withPositions(data: StructureData, positions: Float32Array): StructureData;

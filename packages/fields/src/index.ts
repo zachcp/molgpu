@@ -14,6 +14,8 @@
 // string fields are CPU-only. There is no arbitrary JS->WGSL and no user parser.
 
 import {
+  attributeColumn,
+  attributeNames,
   sampleVolume,
   type StructureData,
   type VolumeData,
@@ -37,18 +39,13 @@ export type * from "./types.ts";
 // module reads. `Value` is one row's value: a number, a colour, or a label.
 type Value = number | Color | string;
 type AnyDomain = Domain | "any";
-type AttributeName =
-  | "element"
-  | "occupancy"
-  | "bfactor"
-  | "radius"
-  | "residue"
-  | "atomChain"
-  | "labelSeq"
-  | "chain";
 type FieldNode =
   | (Field & { readonly kind: "constant"; readonly value: Value })
-  | (Field & { readonly kind: "attribute"; readonly name: AttributeName })
+  | (Field & {
+    readonly kind: "attribute";
+    readonly name: string;
+    readonly lift: boolean;
+  })
   | (Field & {
     readonly kind: "categorical";
     readonly input: FieldNode;
@@ -118,34 +115,40 @@ const sameType = (a: ValueType, b: ValueType): boolean => a.kind === b.kind;
 const numeric = (t: ValueType): boolean =>
   t.kind === "scalar" || t.kind === "color";
 
-// ---- table attribute registry (the only columns a field may read) ----------
-
-const ATTRIBUTES: Record<
-  AttributeName,
-  {
-    readonly domain: Domain;
-    readonly read: (d: StructureData) => ArrayLike<number> & Iterable<number>;
+// Construction needs a domain before there is data. Values live in @molgpu/table.
+const KNOWN_DOMAINS: Record<string, Domain> = Object.freeze({
+  element: "atom",
+  occupancy: "atom",
+  bfactor: "atom",
+  radius: "atom",
+  residue: "atom",
+  atomChain: "atom",
+  formalCharge: "atom",
+  partialCharge: "atom",
+  labelSeq: "residue",
+  chain: "residue",
+  ssCode: "residue",
+});
+const CUSTOM_ATTRIBUTE = /^[a-z][a-z0-9-]*:[A-Za-z][A-Za-z0-9_-]*$/;
+const resolvedAttribute = (
+  data: StructureData,
+  name: string,
+  expected?: Domain,
+) => {
+  const column = attributeColumn(data, name);
+  if (!column) {
+    fail(
+      "attribute",
+      `missing column ${name}; available: ${attributeNames(data).join(", ")}`,
+    );
   }
-> = {
-  element: { domain: "atom", read: (d) => d.topology.atoms.element },
-  occupancy: { domain: "atom", read: (d) => d.topology.atoms.occupancy },
-  bfactor: { domain: "atom", read: (d) => d.topology.atoms.bfactor },
-  radius: {
-    domain: "atom",
-    read: (d) => d.topology.atoms.radius ?? new Float32Array(),
-  },
-  residue: { domain: "atom", read: (d) => d.topology.atoms.residue },
-  // Derived atom->chain (via residue): a per-atom chain index for byChain.
-  atomChain: {
-    domain: "atom",
-    read: (d) =>
-      Uint32Array.from(
-        d.topology.atoms.residue,
-        (r) => d.topology.residues.chain[r],
-      ),
-  },
-  labelSeq: { domain: "residue", read: (d) => d.topology.residues.labelSeq },
-  chain: { domain: "residue", read: (d) => d.topology.residues.chain },
+  if (expected && column.domain !== expected) {
+    fail(
+      "attribute",
+      `column ${name} has domain ${column.domain}; expected ${expected}`,
+    );
+  }
+  return column;
 };
 
 /** Min/max of a column over a dataset, for auto-ranging a built-in field's
@@ -154,14 +157,13 @@ export function columnRange(
   data: StructureData,
   name: string,
 ): [number, number] {
-  const spec = ATTRIBUTES[name as AttributeName];
-  if (!spec) {
+  const column = attributeColumn(data, name)?.values;
+  if (!column) {
     fail(
       "columnRange",
-      `unknown column ${name}; known: ${Object.keys(ATTRIBUTES).join(", ")}`,
+      `unknown column ${name}; available: ${attributeNames(data).join(", ")}`,
     );
   }
-  const column = spec.read(data);
   if (!column.length) return [0, 1];
   let lo = Infinity, hi = -Infinity;
   for (const v of column) {
@@ -217,24 +219,27 @@ export function constant(value: number | string | Color): Field {
 
 /** Read a numeric table column as a scalar field on that column's domain. */
 export function attribute(
-  name:
-    | "element"
-    | "occupancy"
-    | "bfactor"
-    | "radius"
-    | "residue"
-    | "atomChain"
-    | "labelSeq"
-    | "chain",
+  name: string,
+  options: { domain?: Domain } = {},
 ): Field {
-  const spec = ATTRIBUTES[name];
-  if (!spec) {
+  const known = Object.hasOwn(KNOWN_DOMAINS, name)
+    ? KNOWN_DOMAINS[name]
+    : undefined;
+  if (!known && !CUSTOM_ATTRIBUTE.test(name)) {
     fail(
       "attribute",
-      `unknown column ${name}; known: ${Object.keys(ATTRIBUTES).join(", ")}`,
+      `unknown column ${name}; known: ${Object.keys(KNOWN_DOMAINS).join(", ")}`,
     );
   }
-  return field({ kind: "attribute", type: SCALAR, domain: spec.domain, name });
+  if (!known && !options.domain) {
+    fail("attribute", `custom column ${name} requires options.domain`);
+  }
+  const domain = options.domain ?? known!;
+  const lift = known === "residue" && domain === "atom";
+  if (known && domain !== known && !lift) {
+    fail("attribute", `column ${name} has domain ${known}`);
+  }
+  return field({ kind: "attribute", type: SCALAR, domain, name, lift });
 }
 
 /**
@@ -484,7 +489,13 @@ function rowValue(
     case "constant":
       return node.value;
     case "attribute":
-      return ATTRIBUTES[node.name].read(data)[row];
+      return resolvedAttribute(
+        data,
+        node.name,
+        node.lift ? "residue" : node.domain as Domain,
+      ).values[
+        node.lift ? data.topology.atoms.residue[row] : row
+      ];
     case "categorical": {
       const key = rowValue(node.input, data, t, row) as number;
       for (const [category, v] of node.table) {
@@ -753,14 +764,33 @@ function emit(
         type: node.type,
       };
     case "attribute": {
-      const { name } = node;
+      const { name, lift } = node;
+      const residue = lift
+        ? bufferBinding(
+          ctx,
+          "attr:residue",
+          "f32",
+          (data) =>
+            Float32Array.from(resolvedAttribute(data, "residue").values),
+        )
+        : null;
       const call = bufferBinding(
         ctx,
         `attr:${name}`,
         "f32",
-        (data) => Float32Array.from(ATTRIBUTES[name].read(data)),
+        (data) =>
+          Float32Array.from(
+            resolvedAttribute(
+              data,
+              name,
+              lift ? "residue" : node.domain as Domain,
+            ).values,
+          ),
       );
-      return { expr: call, type: SCALAR };
+      return {
+        expr: residue ? call.replace("(row)", `(u32(${residue}))`) : call,
+        type: SCALAR,
+      };
     }
     case "categorical": {
       const inner = emit(node.input, ctx);

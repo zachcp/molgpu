@@ -17,16 +17,49 @@ import {
   linear,
   volumeSample,
 } from "../src/index.ts";
-import { createVolume, sampleVolume, volumeIndexToWorld } from "@molgpu/table";
+import {
+  createVolume,
+  sampleVolume,
+  volumeIndexToWorld,
+  withAttributes,
+} from "@molgpu/table";
 import { structure } from "./fixture.ts";
 
 Deno.test("fields GPU parity", async () => {
   const RED = [1, 0, 0, 1], BLUE = [0, 0, 1, 1], GREY = [0.5, 0.5, 0.5, 1];
-  const data = structure();
+  const base = structure();
+  const data = withAttributes(base, {
+    "user:score": {
+      domain: "atom",
+      kind: "scalar",
+      provenance: "user",
+      values: Float32Array.from(
+        { length: base.topology.atoms.count },
+        (_, i) => i / 3,
+      ),
+    },
+    ssCode: {
+      domain: "residue",
+      kind: "code",
+      provenance: "computed:test",
+      values: Uint8Array.from(
+        { length: base.topology.residues.count },
+        (_, i) => i % 3,
+      ),
+    },
+  });
   const atoms = data.topology.atoms.count;
 
   // Each case: a field, the domain it evaluates over, and any t uniform.
   const cases = {
+    customScalar: {
+      field: attribute("user:score", { domain: "atom" }),
+      domain: "atom",
+    },
+    liftedResidueCode: {
+      field: attribute("ssCode", { domain: "atom" }),
+      domain: "atom",
+    },
     byElement: {
       field: categorical(attribute("element"), {
         6: RED,

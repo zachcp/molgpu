@@ -21,6 +21,9 @@ export type Mode =
   | "controlled"
   | "offset"
   | "bonds"
+  | "attributes"
+  | "attribute-revision"
+  | "attribute-producer"
   | "snapshot";
 export type Phase = "idle" | "loading" | "error" | "ready";
 export interface State {
@@ -53,6 +56,7 @@ export interface Probe {
     revision: number;
     positions: number[];
   } | null;
+  attributeSnapshot: { generation: number; values: number[] } | null;
   coordinateBounds: {
     min: readonly number[];
     max: readonly number[];
@@ -97,6 +101,7 @@ export const probe: Probe = {
   coordinateSource: null,
   bondSource: null,
   coordinateSnapshot: null,
+  attributeSnapshot: null,
   coordinateBounds: null,
   selectedBounds: null,
   emptyBounds: null,

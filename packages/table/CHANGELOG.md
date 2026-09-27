@@ -6,6 +6,10 @@ All notable changes to `@molgpu/table` are recorded here. The format follows
 
 ## [Unreleased]
 
+- Derived attribute channels (Phase 10): `withAttributes` validates and copies
+  atom or residue columns, advancing the attribute revision. `attributeColumn`
+  and `attributeNames` resolve built-in and derived columns with provenance.
+
 - Trajectories (Phase 12). New experimental `createTrajectory`,
   `validateTrajectory`, `validateTrajectoryFrame`, `frameAtTime` and
   `trajectoryFromModels`, with the `TrajectoryData`, `TrajectoryInput`,

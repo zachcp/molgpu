@@ -89,10 +89,35 @@ export interface StructureInput {
   readonly topology: Topology;
   readonly positions: Float32Array;
 }
+export type AttributeDomain = "atom" | "residue";
+export type AttributeValues =
+  | Float32Array
+  | Int8Array
+  | Uint8Array
+  | Int32Array
+  | Uint32Array;
+export type AttributeProvenance =
+  | "legacy"
+  | "default"
+  | "user"
+  | `imported:${string}`
+  | `template:${string}`
+  | `computed:${string}`
+  | `gpu:${string}`;
+export interface AttributeColumnInput {
+  readonly domain: AttributeDomain;
+  readonly values: AttributeValues;
+  readonly provenance: AttributeProvenance;
+  readonly kind: "scalar" | "code";
+}
+export interface AttributeColumn extends AttributeColumnInput {
+  readonly name: string;
+}
 /** Private nominal brand for dataset identity; deliberately not exported. */
 declare const brand: unique symbol;
 export interface StructureData extends StructureInput {
   readonly identity: { readonly [brand]: true };
+  readonly attributes?: Readonly<Record<string, AttributeColumn>>;
   readonly revision: {
     readonly topology: number;
     readonly positions: number;
