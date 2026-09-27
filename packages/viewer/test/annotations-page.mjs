@@ -18,7 +18,7 @@ import { resolve, where } from "@molgpu/select";
 import { Distance, Label, Spacefill, Structure } from "../src/index.ts";
 import { centroidOf } from "../src/internal/centroid.ts";
 
-const probe = window.__probe = {
+const probe = globalThis.__probe = {
   storage: 0,
   textures: 0,
   pipelines: 0,
@@ -117,8 +117,8 @@ const data = createStructure({
     },
   },
 });
-const selA = resolve(where("atom", "a", (d, i) => i < 2), data); // rows 0,1
-const selB = resolve(where("atom", "b", (d, i) => i >= 2), data); // rows 2,3
+const selA = resolve(where("atom", "a", (_d, i) => i < 2), data); // rows 0,1
+const selB = resolve(where("atom", "b", (_d, i) => i >= 2), data); // rows 2,3
 probe.centroidA = centroidOf(data, selA.indices);
 probe.distance = Math.hypot(
   ...centroidOf(data, selA.indices).map((v, i) =>

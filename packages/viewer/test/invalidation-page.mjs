@@ -49,7 +49,7 @@ import {
 } from "../src/internal/instrumentation.ts";
 
 enableInstrumentation();
-const probe = window.__inv = { errors: [], mounted: false, renders: 0 };
+const probe = globalThis.__inv = { errors: [], mounted: false, renders: 0 };
 const request = GPUAdapter.prototype.requestDevice;
 GPUAdapter.prototype.requestDevice = async function (...args) {
   const device = instrumentDevice(await request.apply(this, args));

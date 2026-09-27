@@ -81,7 +81,7 @@ Deno.test("electric fields", async () => {
       }
     });
     await page.goto(`http://127.0.0.1:${PORT}/`);
-    await page.waitForFunction(() => window.__efield?.mounted, null, {
+    await page.waitForFunction(() => globalThis.__efield?.mounted, null, {
       timeout: 30000,
     }).catch((failure) => {
       throw new Error(`not mounted: ${JSON.stringify(errors)}`, {
@@ -94,17 +94,17 @@ Deno.test("electric fields", async () => {
         for (let i = 0; i < n; i++) await new Promise(requestAnimationFrame);
       }, n);
     const update = async (patch) => {
-      await page.evaluate((p) => window.__efield.update(p), patch);
+      await page.evaluate((p) => globalThis.__efield.update(p), patch);
       await frames();
     };
     const ready = () =>
-      page.waitForFunction(() => window.__efield.phase === "ready", null, {
+      page.waitForFunction(() => globalThis.__efield.phase === "ready", null, {
         timeout: 30000,
       }).catch(async (failure) => {
         const state = await page.evaluate(() => ({
-          phase: window.__efield.phase,
-          failure: window.__efield.failure,
-          errors: window.__efield.errors,
+          phase: globalThis.__efield.phase,
+          failure: globalThis.__efield.failure,
+          errors: globalThis.__efield.errors,
         }));
         throw new Error(`not ready: ${JSON.stringify(state)} ${errors}`, {
           cause: failure,
@@ -116,7 +116,7 @@ Deno.test("electric fields", async () => {
       for (let attempt = 0; attempt < 40; attempt++) {
         await frames(4);
         const values = await page.evaluate(() =>
-          window.__efield.readPotential()
+          globalThis.__efield.readPotential()
         );
         if (previous && values.every((v, i) => v === previous[i])) {
           return values;
@@ -125,7 +125,7 @@ Deno.test("electric fields", async () => {
       }
       throw new Error("potential never settled");
     };
-    const counters = () => page.evaluate(() => window.__efield.counters());
+    const counters = () => page.evaluate(() => globalThis.__efield.counters());
     const classify = (png) =>
       page.evaluate(async (base64) => {
         const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
@@ -150,7 +150,7 @@ Deno.test("electric fields", async () => {
     const parity = async (which, extra, tolerance = 1e-4) => {
       const gpu = await settledPotential();
       const cpu = await page.evaluate(
-        ([w, e]) => window.__efield.cpuPotential(w, e),
+        ([w, e]) => globalThis.__efield.cpuPotential(w, e),
         [which, extra],
       );
       assertStrictEquals(gpu.length, cpu.length);
@@ -178,7 +178,7 @@ Deno.test("electric fields", async () => {
         {},
       );
     }
-    const grid = await page.evaluate(() => window.__efield.grid);
+    const grid = await page.evaluate(() => globalThis.__efield.grid);
     report.states.grid = { dims: grid.dims, unit: grid.unit };
     assertStrictEquals(grid.unit, "kcal/mol/e");
 
@@ -192,7 +192,7 @@ Deno.test("electric fields", async () => {
     await update({ mode: "none", physics: {} });
     await update({ mode: "sparse" });
     await ready();
-    assertEquals(await page.evaluate(() => window.__efield.grid.dims), [
+    assertEquals(await page.evaluate(() => globalThis.__efield.grid.dims), [
       17,
       17,
       17,
@@ -212,14 +212,14 @@ Deno.test("electric fields", async () => {
     await update({ mode: "wobble", phase: 0 });
     await ready();
     await parity("wobble", { phase: 0 });
-    const gridBefore = await page.evaluate(() => window.__efield.grid.dims);
+    const gridBefore = await page.evaluate(() => globalThis.__efield.grid.dims);
     for (const phase of [0.7, 1.9]) {
       await update({ phase });
       await parity("wobble", { phase });
     }
     now = await counters();
     assertEquals(
-      await page.evaluate(() => window.__efield.grid.dims),
+      await page.evaluate(() => globalThis.__efield.grid.dims),
       gridBefore,
       "the grid stays locked while coordinates move",
     );
@@ -240,7 +240,7 @@ Deno.test("electric fields", async () => {
     // 4. One computation in flight: while it is held, new generations only
     //    mark it pending; on release the newest one is computed.
     before = await counters();
-    await page.evaluate(() => window.__efield.hold());
+    await page.evaluate(() => globalThis.__efield.hold());
     await update({ phase: 2.1 });
     for (const phase of [2.2, 2.3, 2.4]) await update({ phase });
     now = await counters();
@@ -249,7 +249,7 @@ Deno.test("electric fields", async () => {
       1,
       "held: later generations wait",
     );
-    await page.evaluate(() => window.__efield.release());
+    await page.evaluate(() => globalThis.__efield.release());
     await parity("wobble", { phase: 2.4 });
     now = await counters();
     report.states.coalesce = {
@@ -260,11 +260,11 @@ Deno.test("electric fields", async () => {
 
     // 4b. Many sample-range dispatches in one submission match one.
     await update({ mode: "none" });
-    await page.evaluate(() => window.__efield.dispatchPairs(300 * 64 * 10));
+    await page.evaluate(() => globalThis.__efield.dispatchPairs(300 * 64 * 10));
     await update({ mode: "random", physics: { model: "vacuum" } });
     await ready();
     report.states.chunked = await parity("random", {});
-    await page.evaluate(() => window.__efield.dispatchPairs(2 ** 28));
+    await page.evaluate(() => globalThis.__efield.dispatchPairs(2 ** 28));
     await update({ physics: {} });
 
     // 5. Scrubbing a trajectory recomputes for the displayed frame.
@@ -312,18 +312,18 @@ Deno.test("electric fields", async () => {
     });
 
     // 8. 1CRN with AMBER template charges, at the default 1 Å grid.
-    await page.evaluate(() => window.__efield.load("/1crn.bcif"));
+    await page.evaluate(() => globalThis.__efield.load("/1crn.bcif"));
     await update({ mode: "none" });
     await update({ mode: "crambin", physics: {} });
     await ready();
     report.states.crambin = await parity("crambin", {});
     report.states.crambin.dims = await page.evaluate(() =>
-      window.__efield.grid.dims
+      globalThis.__efield.grid.dims
     );
 
     // 9. <Surface color={byPotential()}> colours 1CRN red and blue live.
     await update({ mode: "none" });
-    const center = await page.evaluate(() => window.__efield.center);
+    const center = await page.evaluate(() => globalThis.__efield.center);
     await update({ mode: "surface", target: center, radius: 55 });
     await ready();
     await frames(60);
@@ -348,9 +348,9 @@ Deno.test("electric fields", async () => {
 
     // 10. 1A4Y: ribonuclease inhibitor (chain A) is negative and angiogenin
     //     (chain B) positive, each computed alone, as published.
-    await page.evaluate(() => window.__efield.load("/1a4y.bcif"));
+    await page.evaluate(() => globalThis.__efield.load("/1a4y.bcif"));
     await update({
-      target: await page.evaluate(() => window.__efield.center),
+      target: await page.evaluate(() => globalThis.__efield.center),
       radius: 130,
     });
     report.states.complementarity = {};
@@ -360,7 +360,7 @@ Deno.test("electric fields", async () => {
       await ready();
       await settledPotential();
       const stats = await page.evaluate(
-        (c) => window.__efield.surfaceStats(c),
+        (c) => globalThis.__efield.surfaceStats(c),
         chain,
       );
       report.states.complementarity[chain] = stats;
@@ -381,7 +381,9 @@ Deno.test("electric fields", async () => {
     await page.waitForTimeout(1200);
     await settledPotential();
     await frames(4);
-    const { vertices } = await page.evaluate(() => window.__efield.readLines());
+    const { vertices } = await page.evaluate(() =>
+      globalThis.__efield.readLines()
+    );
     const span = 2 * 160 + 1;
     const drift = [];
     for (let l = 0; l < vertices.length / 4 / span; l++) {
@@ -421,7 +423,7 @@ Deno.test("electric fields", async () => {
     await page.waitForTimeout(1200);
     await settledPotential();
     const { ends } = await page.evaluate(() =>
-      window.__efield.arrowEnds(12, 2, 1, 1.8)
+      globalThis.__efield.arrowEnds(12, 2, 1, 1.8)
     );
     let checked = 0;
     for (let a = 0; a < ends.length / 8; a++) {
@@ -478,12 +480,15 @@ Deno.test("electric fields", async () => {
       await ready();
       await page.waitForTimeout(1500);
       await page.evaluate(() =>
-        window.__efield.device.queue.onSubmittedWorkDone()
+        globalThis.__efield.device.queue.onSubmittedWorkDone()
       );
       const ms = [];
       for (const phase of [0.3, 0.6, 0.9]) {
         ms.push(
-          await page.evaluate((p) => window.__efield.timeRecompute(p), phase),
+          await page.evaluate(
+            (p) => globalThis.__efield.timeRecompute(p),
+            phase,
+          ),
         );
       }
       const best = Math.min(...ms);
@@ -499,7 +504,7 @@ Deno.test("electric fields", async () => {
     await update({ mode: "none", physics: {} });
 
     assertEquals(
-      await page.evaluate(() => window.__efield.errors),
+      await page.evaluate(() => globalThis.__efield.errors),
       [],
       "no WebGPU errors",
     );

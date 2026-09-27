@@ -34,7 +34,6 @@ import {
   FieldArrows,
   FieldLines,
   Isosurface,
-  Spacefill,
   Structure,
   Surface,
   Trajectory,
@@ -50,6 +49,8 @@ import { fieldLinesTesting } from "../../src/field-lines.ts";
 import { positionsWgsl } from "../../src/field-arrows.ts";
 import { slicePlaneFrame } from "../../src/internal/slice-plane.ts";
 import { WobbleCoordinates } from "../fixtures/wobble-coordinates.ts";
+
+void React;
 
 enableInstrumentation();
 
@@ -264,16 +265,16 @@ const probe: Probe = {
   counters: snapshotCounters,
   update: () => {},
   load: async () => {},
-  readPotential: async () => [],
+  readPotential: () => Promise.resolve([]),
   cpuPotential: () => [],
-  readLines: async () => ({ vertices: [], generation: 0 }),
+  readLines: () => Promise.resolve({ vertices: [], generation: 0 }),
   hold: () => {},
   release: () => {},
   dispatchPairs: () => {},
-  surfaceStats: async () => ({ mean: 0, count: 0 }),
-  arrowEnds: async () => ({ side: 0, ends: [] }),
+  surfaceStats: () => Promise.resolve({ mean: 0, count: 0 }),
+  arrowEnds: () => Promise.resolve({ side: 0, ends: [] }),
   center: [0, 0, 0],
-  timeRecompute: async () => 0,
+  timeRecompute: () => Promise.resolve(0),
 };
 (globalThis as unknown as { __efield: Probe }).__efield = probe;
 
@@ -742,7 +743,7 @@ const App = (): LiveElement => {
       pitch={0.3}
       target={state.target}
     >
-      <Pass lights={true}>
+      <Pass lights>
         <AmbientLight color={[1, 1, 1]} intensity={0.6} />
         <DirectionalLight
           position={[0.3, 0.5, 1]}

@@ -205,6 +205,21 @@ footer {
 .timeline-control output {
   font-variant-numeric: tabular-nums;
 }
+.timeline-control button {
+  padding: .35rem .65rem;
+  border: 1px solid #45627f;
+  border-radius: .4rem;
+  background: #16283d;
+  color: #e2edf7;
+  cursor: pointer;
+}
+.timeline-control button:hover {
+  border-color: #7ed6cc;
+}
+.timeline-control button:focus-visible {
+  outline: 2px solid #7ed6cc;
+  outline-offset: 2px;
+}
 @media (max-width: 720px) {
   .card-grid,
   .package-grid,

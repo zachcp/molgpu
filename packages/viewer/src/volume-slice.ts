@@ -1,6 +1,11 @@
 import { sampleVolumeWgsl } from "@molgpu/fields";
 import { type VolumeGrid, volumeInverseTransform } from "@molgpu/table";
-import type { Translucency, VectorLike, ViewerComponent } from "./types.ts";
+import type {
+  ColorStops,
+  Translucency,
+  VectorLike,
+  ViewerComponent,
+} from "./types.ts";
 import { use, useMemo } from "@use-gpu/live";
 import {
   FaceLayer,
@@ -16,13 +21,12 @@ import { type SlicePlane, slicePlaneFrame } from "./internal/slice-plane.ts";
 import { useRepaint } from "./internal/use-repaint.ts";
 import { useBindingProbe } from "./internal/use-binding-probe.ts";
 import { count } from "./internal/instrumentation.ts";
+import { colorRampWgsl, wgslF32 as f32 } from "./internal/color-ramp.ts";
 
 export type { SlicePlane } from "./internal/slice-plane.ts";
 
 /** Colour stops `[t, [r, g, b, a]]` over the normalised range 0–1. */
-export type SliceStops = ReadonlyArray<
-  readonly [number, readonly [number, number, number, number]]
->;
+export type SliceStops = ColorStops;
 
 const GREYS: SliceStops = [[0, [0, 0, 0, 1]], [1, [1, 1, 1, 1]]];
 const QUAD = Uint32Array.from([0, 1, 2, 2, 1, 3]);
@@ -40,28 +44,13 @@ const CORNERS = wgsl`
 }
 `;
 
-const f32 = (x: number): string => {
-  const s = `${Math.fround(x)}`;
-  return /[.e]/.test(s) ? s : `${s}.0`;
-};
-const vec4 = (c: readonly number[]) => `vec4<f32>(${c.map(f32).join(", ")})`;
-
 /** Fragment WGSL: sample the volume at the interpolated world position. */
 function sliceFragment(volume: VolumeGrid, stops: SliceStops): string {
   const m = volumeInverseTransform(volume);
   const t = volume.transform;
   const [nx, ny, nz] = volume.dims;
   const row = (r: number) => `${f32(m[r])}, ${f32(m[4 + r])}, ${f32(m[8 + r])}`;
-  let ramp = `  if (x <= ${f32(stops[0][0])}) { return ${
-    vec4(stops[0][1])
-  }; }\n`;
-  for (let i = 1; i < stops.length; i++) {
-    const [t0, c0] = stops[i - 1], [t1, c1] = stops[i];
-    ramp += `  if (x <= ${f32(t1)}) { return mix(${vec4(c0)}, ${
-      vec4(c1)
-    }, (x - ${f32(t0)}) / ${f32(Math.max(t1 - t0, 1e-12))}); }\n`;
-  }
-  ramp += `  return ${vec4(stops[stops.length - 1][1])};`;
+  const ramp = colorRampWgsl(stops);
   return `@link fn getVolumeValue(i: u32) -> f32;
 @link fn getRange() -> vec2<f32>;
 ${sampleVolumeWgsl(volume, "sliceSample", "getVolumeValue")}

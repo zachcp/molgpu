@@ -126,7 +126,8 @@ Two concepts, kept apart on purpose:
   a library-owned `id`. The caller's label is only a label, never the cache key.
   Identity is derived from dataset, revisions and membership, so two datasets
   that share a query label still get distinct ids, and changed membership
-  changes the id.
+  changes the id. Treat `indices` as immutable: JavaScript cannot freeze typed
+  arrays, and mutating them would make the content-derived `id` stale.
 
 ### Invalidation
 

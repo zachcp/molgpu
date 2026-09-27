@@ -101,6 +101,24 @@ isosurface.
 The surface exports are experimental while the result shape settles. The
 per-format trajectory readers are internal; `openTrajectory` dispatches to them.
 
+## Parser decisions
+
+| Input             | Mol* reuse                                                                                            | Local adapter work                                                                                                                                              |
+| ----------------- | ----------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| BCIF/mmCIF        | BinaryCIF reader and mmCIF model builder supply entity, secondary-structure and connection semantics. | Lower `atom_site` into owned table columns in source order, retaining every model; map Mol* model indices back to those rows.                                   |
+| CCP4/MRC          | Mol* CCP4 parser and volume builder.                                                                  | Validate bounds/modes, normalize big-endian input for Mol*'s float reader, then lower its grid to x-fastest `VolumeData`.                                       |
+| XTC               | Mol* XTC decoder.                                                                                     | Index frame offsets for streaming and pass one frame at a time to the decoder.                                                                                  |
+| DCD               | Mol* parser is the test oracle.                                                                       | Keep the streaming reader because Mol* reads whole files, treats variants as CHARMM, and misreads some cell encodings.                                          |
+| TRR               | Mol* parser is the positions test oracle.                                                             | Keep the streaming reader because Mol* drops velocities, which this API can expose.                                                                             |
+| PQR               | Mol* reader is the column-aligned comparison oracle.                                                  | Keep whitespace tokenization to accept widened PDB2PQR records and preserve both partial charge and radius; Mol*'s reader only provides the charge needed here. |
+| Selections        | Mol* language parsers, transpilers and symbol table.                                                  | Normalize the result to plain JSON and check the requested symbol allow-list.                                                                                   |
+| Molecular surface | Mol* `calcMolecularSurface`.                                                                          | Supply probe-inflated search radii and lower the tensor to the shared x-fastest layout.                                                                         |
+
+The BCIF adapter retains source-row columns because the GPU table preserves atom
+identity and ensemble order instead of exposing Mol*'s sorted model objects.
+Model-derived semantics and all volume conversions remain plain owned values at
+the package boundary.
+
 `structureFromBcif` always sets the derived `formalCharge` attribute: the file's
 `pdbx_formal_charge` values (provenance `imported:mmcif`), or zeros marked
 `default` when the file has none, as Mol* reads them.

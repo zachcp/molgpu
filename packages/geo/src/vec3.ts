@@ -8,9 +8,6 @@ export type Vec3 = number[];
 /** A readable 3-vector: a plain or typed array of at least three numbers. */
 type Vec3Like = ArrayLike<number>;
 
-export function create(x = 0, y = 0, z = 0): Vec3 {
-  return [x, y, z];
-}
 export function zero(): Vec3 {
   return [0, 0, 0];
 }

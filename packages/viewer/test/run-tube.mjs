@@ -53,7 +53,7 @@ Deno.test("viewer tube", async () => {
     });
     await page.goto("http://127.0.0.1:5197/packages/viewer/test/tube.html");
     await page.waitForFunction(
-      () => window.__probe?.mounted && document.querySelector("canvas"),
+      () => globalThis.__probe?.mounted && document.querySelector("canvas"),
       null,
       { timeout: 30000 },
     )
@@ -70,11 +70,11 @@ Deno.test("viewer tube", async () => {
     const shot = () => page.locator("canvas").screenshot();
     const snap = () =>
       page.evaluate(() => ({
-        storage: window.__probe.storage.length,
-        storageCapacities: window.__probe.storage.map((s) => s.capacity),
-        storageLabels: window.__probe.storageBuffers.map((b) => b.label),
-        storageWrites: [...window.__probe.storageWrites],
-        errors: [...window.__probe.errors],
+        storage: globalThis.__probe.storage.length,
+        storageCapacities: globalThis.__probe.storage.map((s) => s.capacity),
+        storageLabels: globalThis.__probe.storageBuffers.map((b) => b.label),
+        storageWrites: [...globalThis.__probe.storageWrites],
+        errors: [...globalThis.__probe.errors],
       }));
 
     await settle();
@@ -105,7 +105,7 @@ Deno.test("viewer tube", async () => {
     );
 
     // Empty input (a selection that matches no atoms): renders nothing, no crash.
-    await page.evaluate(() => window.__probe.setMode("empty"));
+    await page.evaluate(() => globalThis.__probe.setMode("empty"));
     await settle();
     await settle();
     const empty = await snap();
@@ -132,7 +132,7 @@ Deno.test("viewer tube", async () => {
     // Back to the multi-run scene (a fresh mount, so new buffers are expected),
     // then a width/color edit on that now-settled tree: rendered image changes,
     // but zero new geometry (positions/segments) buffers are created.
-    await page.evaluate(() => window.__probe.setMode("multi"));
+    await page.evaluate(() => globalThis.__probe.setMode("multi"));
     await settle();
     await settle();
     const restored = await snap();
@@ -143,8 +143,8 @@ Deno.test("viewer tube", async () => {
     );
 
     await page.evaluate(() => {
-      window.__probe.setRadius(0.6);
-      window.__probe.setColor([0.9, 0.3, 0.2, 1]);
+      globalThis.__probe.setRadius(0.6);
+      globalThis.__probe.setColor([0.9, 0.3, 0.2, 1]);
     });
     await settle();
     await settle();

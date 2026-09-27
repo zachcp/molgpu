@@ -55,7 +55,7 @@ Deno.test("viewer surface", async () => {
     });
     await page.goto("http://127.0.0.1:5201/packages/viewer/test/surface.html");
     await page.waitForFunction(
-      () => window.__probe?.mounted && document.querySelector("canvas"),
+      () => globalThis.__probe?.mounted && document.querySelector("canvas"),
       null,
       { timeout: 30000 },
     )
@@ -68,7 +68,7 @@ Deno.test("viewer surface", async () => {
     // buffer to actually appear rather than guessing a frame count.
     await page.waitForFunction(
       () =>
-        window.__probe.storageBuffers.some((b) =>
+        globalThis.__probe.storageBuffers.some((b) =>
           b.label === "molgpu:positions"
         ),
       null,
@@ -89,9 +89,9 @@ Deno.test("viewer surface", async () => {
     const shot = () => page.locator("canvas").screenshot();
     const snap = () =>
       page.evaluate(() => ({
-        storage: window.__probe.storage.length,
-        storageLabels: window.__probe.storageBuffers.map((b) => b.label),
-        errors: [...window.__probe.errors],
+        storage: globalThis.__probe.storage.length,
+        storageLabels: globalThis.__probe.storageBuffers.map((b) => b.label),
+        errors: [...globalThis.__probe.errors],
       }));
 
     await settle();
@@ -117,9 +117,9 @@ Deno.test("viewer surface", async () => {
     );
 
     // A resolution change rebuilds the field/mesh: new geometry buffers appear.
-    await page.evaluate(() => window.__probe.setResolution(0.7));
+    await page.evaluate(() => globalThis.__probe.setResolution(0.7));
     await page.waitForFunction(
-      (n) => window.__probe.storage.length > n,
+      (n) => globalThis.__probe.storage.length > n,
       initial.storage,
       { timeout: 30000 },
     );
@@ -142,7 +142,7 @@ Deno.test("viewer surface", async () => {
     );
 
     // Color/opacity is a style edit: the image changes, geometry does not.
-    await page.evaluate(() => window.__probe.setColor([0.9, 0.3, 0.2, 1]));
+    await page.evaluate(() => globalThis.__probe.setColor([0.9, 0.3, 0.2, 1]));
     await settle();
     await settle();
     const styled = await snap();
@@ -159,7 +159,7 @@ Deno.test("viewer surface", async () => {
     );
 
     // Empty input (a selection that matches no atoms): renders nothing, no crash.
-    await page.evaluate(() => window.__probe.setMode("empty"));
+    await page.evaluate(() => globalThis.__probe.setMode("empty"));
     await settle();
     await settle();
     const empty = await snap();

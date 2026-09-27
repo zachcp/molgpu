@@ -432,7 +432,7 @@ Deno.test("URL fallback stops a chunked download at maxDownload", async () => {
       cancelled = true;
     },
   }, { highWaterMark: 0 });
-  const get = (async () => new Response(stream)) as typeof fetch;
+  const get = (() => Promise.resolve(new Response(stream))) as typeof fetch;
   await code(
     urlByteSource("https://example.test/run.xtc", {
       maxDownload: 5,

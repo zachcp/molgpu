@@ -66,11 +66,12 @@ function useStableProjection(
  * a selection that drops a residue's guide atom all end a run rather than
  * bridging across it.
  *
- * Scope, deliberate: helix/sheet residues get a wide cross-section, coil a
- * narrow one, but there is no beta-strand arrowhead taper yet — a flat
- * ribbon throughout, not the full cartoon vocabulary. Only `select` and
- * `smooth` (samples per guide segment) rebuild the trace/spline geometry;
- * `color`/`opacity` update bindings.
+ * Helix and sheet residues get a wide cross-section, coil a narrow one, and
+ * beta-sheet ends form a widened shoulder that converges at the terminal
+ * residue. This is a compact ribbon cartoon, not a complete Mol* replacement:
+ * it does not fit whole-helix orientation axes or build custom coil profiles.
+ * Only `select` and `smooth` (samples per guide segment) rebuild the
+ * trace/spline geometry; `color`/`opacity` update bindings.
  */
 export const Ribbon: ViewerComponent<
   {

@@ -2,43 +2,46 @@ import {
   assert,
   assertEquals,
   assertMatch,
-  assertNotMatch,
   assertStrictEquals,
 } from "@std/assert";
 import { fromFileUrl } from "@std/path";
 import { createServer } from "vite";
 import { chromium } from "playwright";
+import { demos } from "../src/demos/registry.ts";
 
 const frames = (page) =>
   page.evaluate(async () => {
     for (let i = 0; i < 8; i++) await new Promise(requestAnimationFrame);
   });
 
+const litPixels = (page, png) =>
+  page.evaluate(async (base64) => {
+    const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+    const bmp = await createImageBitmap(
+      new Blob([bytes], { type: "image/png" }),
+    );
+    const canvas = new OffscreenCanvas(bmp.width, bmp.height);
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(bmp, 0, 0);
+    const { data } = ctx.getImageData(0, 0, bmp.width, bmp.height);
+    let count = 0;
+    for (let i = 0; i < data.length; i += 4) {
+      if (data[i] + data[i + 1] + data[i + 2] > 120) count++;
+    }
+    return count;
+  }, png.toString("base64"));
+
 /** A canvas frame equal to its successor, with something drawn on it. */
 const settledFrame = async (page) => {
   const shot = () => page.locator("#molecule-canvas canvas").screenshot();
-  const lit = (png) =>
-    page.evaluate(async (base64) => {
-      const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
-      const bmp = await createImageBitmap(
-        new Blob([bytes], { type: "image/png" }),
-      );
-      const canvas = new OffscreenCanvas(bmp.width, bmp.height);
-      const ctx = canvas.getContext("2d");
-      ctx.drawImage(bmp, 0, 0);
-      const { data } = ctx.getImageData(0, 0, bmp.width, bmp.height);
-      let count = 0;
-      for (let i = 0; i < data.length; i += 4) {
-        if (data[i] + data[i + 1] + data[i + 2] > 120) count++;
-      }
-      return count;
-    }, png.toString("base64"));
   await frames(page);
   let previous = await shot();
   for (let attempt = 0; attempt < 30; attempt++) {
     await frames(page);
     const current = await shot();
-    if (current.equals(previous) && (await lit(current)) > 0) return current;
+    if (current.equals(previous) && (await litPixels(page, current)) > 0) {
+      return current;
+    }
     previous = current;
   }
   throw new Error("volume demo frame never settled");
@@ -71,31 +74,36 @@ Deno.test("site landing page and maintained gallery routes", async () => {
       await page.locator("#hero-title").textContent(),
       /composable toolkit/i,
     );
-    assertStrictEquals(
-      await page.locator(".package-grid a").count(),
-      7,
-      "every public package is presented",
+    assertEquals(
+      (await page.locator(".package-grid a code").allTextContents()).map(
+        (name) => name.trim(),
+      ),
+      [
+        "@molgpu/table",
+        "@molgpu/select",
+        "@molgpu/fields",
+        "@molgpu/io",
+        "@molgpu/geo",
+        "@molgpu/timeline",
+        "@molgpu/dynamics",
+        "@molgpu/viewer",
+      ],
+      "every public package has a card in dependency order",
+    );
+    for (const link of await page.locator(".package-grid a").all()) {
+      assertMatch(
+        await link.getAttribute("href"),
+        /^https:\/\/github\.com\/zachcp\/molgpu\/blob\/main\/packages\/[\w-]+\/README\.md$/,
+        "package documentation links work from deployed pages",
+      );
+    }
+    assertMatch(
+      await page.getByRole("link", { name: "API", exact: true })
+        .getAttribute("href"),
+      /^https:\/\/github\.com\/zachcp\/molgpu\/blob\/main\/packages\/viewer\/README\.md$/,
     );
 
-    for (
-      const [id, title, fixture] of [
-        ["scene", "Composed scene", "1crn"],
-        ["select", "Selections + fields", "1crn"],
-        ["lighting", "World-fixed lighting", "1crn"],
-        ["timeline", "Controlled timeline", "1crn"],
-        ["bonds", "Bond topology", "1crn"],
-        ["coordinates", "Coordinate stream", "1crn"],
-        ["trajectory", "Trajectory playback", "1crn"],
-        ["tube", "Backbone tube", "1crn"],
-        ["ribbon", "Secondary-structure ribbon", "1crn"],
-        ["surface", "Solvent-excluded surface", "1crn"],
-        ["materials", "Materials", "1crn"],
-        ["volume", "Density volume", "1crn"],
-        ["charge", "Partial charge", "1crn"],
-        ["efield", "Electrostatic potential", "1crn"],
-        ["figure", "Feature composition", "1crn"],
-      ]
-    ) {
+    for (const { id, title, fixture } of demos) {
       await page.goto(`http://127.0.0.1:5190/#demos/${id}`);
       await page.waitForSelector(`#molecule-canvas[data-demo="${id}"]`);
       assertStrictEquals(
@@ -106,19 +114,53 @@ Deno.test("site landing page and maintained gallery routes", async () => {
         await page.locator("#molecule-canvas").getAttribute("data-fixture"),
         fixture,
       );
-      assertMatch(
-        await page.locator(`[data-demo-assertion="${id}"]`).textContent(),
-        /Behavior:/,
-      );
+      const host = page.locator("#molecule-canvas");
+      assert(Number(await host.getAttribute("data-atom-count")) > 0);
+      assert(Number(await host.getAttribute("data-residue-count")) > 0);
+      if (id === "select") {
+        assert(
+          Number(await host.getAttribute("data-selected-count")) > 0,
+          "the neighbourhood query resolves real CYS residues",
+        );
+      }
+      if (id === "lighting") {
+        assertStrictEquals(await host.getAttribute("data-world-light"), "true");
+      }
+      if (id === "bonds") {
+        assert(
+          Number(await host.getAttribute("data-bond-count")) > 0,
+          "the imported structure yields a bond topology",
+        );
+      }
+      if (id === "tube" || id === "ribbon") {
+        assert(
+          Number(await host.getAttribute("data-trace-count")) > 0,
+          "the representation uses a polymer trace from the imported structure",
+        );
+      }
+      if (id === "figure") {
+        assert(
+          Number(await host.getAttribute("data-sulfur-count")) > 0,
+          "the figure's sulfur selection contains atoms",
+        );
+      }
       assertStrictEquals(
         await page.locator("[data-webgpu-error]").count(),
         1,
-        "each route keeps a visible fallback",
+        "each route keeps a status region for WebGPU errors",
       );
       await page.waitForTimeout(250);
-      assertNotMatch(
+      assertStrictEquals(
         await page.locator("[data-webgpu-error]").textContent(),
-        /unavailable|unable|error/i,
+        "",
+        "successful mounting clears the loading status",
+      );
+      await frames(page);
+      const initialFrame = await page.locator("#molecule-canvas canvas")
+        .screenshot();
+      assert(
+        await litPixels(page, initialFrame) > 0,
+        `${id} produces visible WebGPU output`,
       );
       await page.locator("#molecule-canvas").hover();
       await page.mouse.down();
@@ -167,11 +209,23 @@ Deno.test("site landing page and maintained gallery routes", async () => {
         }
       }
       if (id === "timeline" || id === "coordinates" || id === "trajectory") {
+        const beforeScrub = id === "timeline"
+          ? await page.locator("#molecule-canvas canvas").screenshot()
+          : undefined;
         await page.getByLabel("Timeline time in seconds").fill("2");
         assertMatch(
           await page.locator(".timeline-control output").textContent(),
           /2\.00 s/,
         );
+        if (beforeScrub) {
+          await frames(page);
+          const afterScrub = await page.locator("#molecule-canvas canvas")
+            .screenshot();
+          assert(
+            !beforeScrub.equals(afterScrub),
+            "scrubbing changes the timeline-colored scene",
+          );
+        }
       }
       if (id === "coordinates") {
         await page.waitForFunction((previous) => {
@@ -182,10 +236,25 @@ Deno.test("site landing page and maintained gallery routes", async () => {
         }, focusY);
       }
       if (id === "surface") {
+        const before = await page.locator("#molecule-canvas canvas")
+          .screenshot();
         await page.getByLabel("Surface material").selectOption("pumice");
+        await frames(page);
+        const changed = await page.locator("#molecule-canvas canvas")
+          .screenshot();
+        assert(!before.equals(changed), "surface mode changes the scene");
       }
       if (id === "materials") {
+        const before = await page.locator("#molecule-canvas canvas")
+          .screenshot();
         await page.getByLabel("Material model").selectOption("normal");
+        await frames(page);
+        const changed = await page.locator("#molecule-canvas canvas")
+          .screenshot();
+        assert(
+          !before.equals(changed),
+          "material model changes the scene shading",
+        );
       }
       assertStrictEquals(
         await page.locator("#molecule-canvas canvas").count(),
@@ -232,6 +301,20 @@ Deno.test("site landing page and maintained gallery routes", async () => {
         );
       }
     }
+    await page.getByRole("link", { name: "Overview" }).click();
+    await page.waitForSelector("#molecule-canvas", { state: "detached" });
+    assertStrictEquals(
+      await page.locator("canvas").count(),
+      0,
+      "leaving the demo page disposes its canvas root",
+    );
+    await page.getByRole("link", { name: "Demos" }).click();
+    await page.waitForSelector('#molecule-canvas[data-demo="scene"]');
+    assertStrictEquals(
+      await page.locator("#molecule-canvas canvas").count(),
+      1,
+      "returning to demos creates one fresh viewer root",
+    );
     assertEquals(errors, [], "page has no JavaScript errors");
   } finally {
     await browser?.close();

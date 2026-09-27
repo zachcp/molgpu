@@ -88,7 +88,7 @@ async function setup() {
     `http://127.0.0.1:${PORT}/packages/viewer/test/invalidation.html`,
   );
   await page.waitForFunction(
-    () => window.__inv?.mounted && document.querySelector("canvas"),
+    () => globalThis.__inv?.mounted && document.querySelector("canvas"),
     null,
     { timeout: 60000 },
   )
@@ -101,7 +101,7 @@ async function setup() {
     });
   // vite may reload once after discovering a dependency; wait it out.
   await page.waitForTimeout(500);
-  await page.waitForFunction(() => window.__inv?.mounted, null, {
+  await page.waitForFunction(() => globalThis.__inv?.mounted, null, {
     timeout: 60000,
   });
 }
@@ -122,7 +122,7 @@ const frames = (n) =>
   page.evaluate(async (k) => {
     for (let i = 0; i < k; i++) await new Promise(requestAnimationFrame);
   }, n);
-const snapshot = () => page.evaluate(() => window.__inv.snapshot());
+const snapshot = () => page.evaluate(() => globalThis.__inv.snapshot());
 const stableKey = (s) =>
   JSON.stringify([
     s.topologyBuilds,
@@ -157,8 +157,9 @@ async function settle(until) {
   }
   throw new Error("counters never reached a fixed point");
 }
-const setScene = (state) => page.evaluate((s) => window.__inv.set(s), state);
-const reset = () => page.evaluate(() => window.__inv.reset());
+const setScene = (state) =>
+  page.evaluate((s) => globalThis.__inv.set(s), state);
+const reset = () => page.evaluate(() => globalThis.__inv.reset());
 const scene = (kind, { props = {}, dataKey = "base", time = 0 } = {}) => ({
   mounted: true,
   dataKey,
@@ -951,7 +952,7 @@ async function mountCycles() {
   const cdp = await page.context().newCDPSession(page);
   const origins = async () => {
     await cdp.send("HeapProfiler.collectGarbage");
-    return page.evaluate(() => window.__inv.origins());
+    return page.evaluate(() => globalThis.__inv.origins());
   };
   const before = await origins();
   const cycles = [];

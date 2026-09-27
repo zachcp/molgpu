@@ -42,7 +42,7 @@ declare global {
   }
 }
 
-window.runDsspOverflowPolicy = () => {
+globalThis.runDsspOverflowPolicy = () => {
   const root = {} as GPUBuffer;
   const live = {} as GPUBuffer;
   return [
@@ -52,7 +52,7 @@ window.runDsspOverflowPolicy = () => {
   ];
 };
 
-window.benchmarkGpuDssp = async (copies: number) => {
+globalThis.benchmarkGpuDssp = async (copies: number) => {
   const response = await fetch("/1crn.bcif");
   const source = await structureFromBcif(
     new Uint8Array(await response.arrayBuffer()),
@@ -195,7 +195,7 @@ window.benchmarkGpuDssp = async (copies: number) => {
   };
 };
 
-window.runDenseDsspOverflow = async () => {
+globalThis.runDenseDsspOverflow = async () => {
   const count = 12;
   const names = ["N", "CA", "C", "O", "H"];
   const points = [[1, 0, 0], [0, 0, 0], [0, 1, 0], [0, 0, 0], [0.5, 0, 0]];
@@ -335,7 +335,10 @@ window.runDenseDsspOverflow = async () => {
   return { named, equal, sparseNamed, sparseReason, sparseEqual };
 };
 
-window.runGpuDssp = async (id: string, model: "first" | number = "first") => {
+globalThis.runGpuDssp = async (
+  id: string,
+  model: "first" | number = "first",
+) => {
   const adapter = await navigator.gpu.requestAdapter();
   if (!adapter) throw new Error("WebGPU adapter unavailable");
   const device = await adapter.requestDevice();

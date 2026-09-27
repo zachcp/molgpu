@@ -5,6 +5,7 @@ import {
   assertThrows,
 } from "@std/assert";
 import {
+  ATTRIBUTE_DOMAINS,
   attributeColumn,
   attributeNames,
   createStructure,
@@ -75,6 +76,34 @@ Deno.test("built-in attribute views are stable and formal charge can be overridd
     },
   });
   assertEquals(attributeColumn(charged, "formalCharge")?.values[0], -1);
+});
+
+Deno.test("resolved attribute columns use the shared domain registry", () => {
+  const root = createStructure(fixture());
+  const data = withAttributes(root, {
+    formalCharge: {
+      domain: "atom",
+      kind: "code",
+      provenance: "user",
+      values: new Int8Array(root.topology.atoms.count),
+    },
+    partialCharge: {
+      domain: "atom",
+      kind: "scalar",
+      provenance: "user",
+      values: new Float32Array(root.topology.atoms.count),
+    },
+    ssCode: {
+      domain: "residue",
+      kind: "code",
+      provenance: "user",
+      values: new Uint8Array(root.topology.residues.count),
+    },
+  });
+  for (const [name, domain] of Object.entries(ATTRIBUTE_DOMAINS)) {
+    const column = attributeColumn(data, name);
+    if (column) assertEquals(column.domain, domain, name);
+  }
 });
 
 Deno.test("attribute validation rejects invalid names, types, lengths and provenance", () => {

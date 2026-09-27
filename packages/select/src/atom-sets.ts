@@ -73,19 +73,6 @@ export function flatten(sel: AtomSets, count: number): Uint32Array {
   return out;
 }
 
-export function intersectRows(a: Uint32Array, b: Uint32Array): Uint32Array {
-  const out: number[] = [];
-  for (let i = 0, j = 0; i < a.length && j < b.length;) {
-    if (a[i] === b[j]) {
-      out.push(a[i]);
-      i++;
-      j++;
-    } else if (a[i] < b[j]) i++;
-    else j++;
-  }
-  return Uint32Array.from(out);
-}
-
 export function subtractRows(a: Uint32Array, b: Uint32Array): Uint32Array {
   const out: number[] = [];
   for (let i = 0, j = 0; i < a.length; i++) {

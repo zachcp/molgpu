@@ -1,4 +1,9 @@
-import { assert, assertRejects, assertStrictEquals } from "@std/assert";
+import {
+  assert,
+  assertEquals,
+  assertRejects,
+  assertStrictEquals,
+} from "@std/assert";
 import { BOND_FLAGS, type Topology } from "@molgpu/table";
 import { IoError, structureFromBcif } from "../src/index.ts";
 
@@ -64,12 +69,28 @@ Deno.test("atoms.comp is omitted without microheterogeneity", async () => {
   assertStrictEquals(data.topology.atoms.comp, undefined);
 });
 
+Deno.test("entity type and subtype come from Mol*'s mmCIF model", async () => {
+  const data = await structureFromBcif(
+    await Deno.readFile(new URL("./fixtures/4c7r.bcif", import.meta.url)),
+  );
+  const { entityType, entitySubtype } = data.topology.chains;
+  assert(entityType && entitySubtype);
+  assertEquals(
+    new Set(entityType),
+    new Set(["polymer", "non-polymer", "water"]),
+  );
+  assertEquals(
+    new Set(entitySubtype),
+    new Set(["polypeptide(L)", "other", "ion"]),
+  );
+});
+
 Deno.test("links carry typed bonds from chem_comp_bond and struct_conn", async () => {
   const load = async (id: string) =>
     (await structureFromBcif(
       await Deno.readFile(new URL(`./fixtures/${id}.bcif`, import.meta.url)),
     )).topology;
-  const seen = (id: string, links: NonNullable<Topology["links"]>) => {
+  const seen = (links: NonNullable<Topology["links"]>) => {
     const out = new Map<string, number>();
     for (let r = 0; r < links.count; r++) {
       for (const [name, bit] of Object.entries(BOND_FLAGS)) {
@@ -81,7 +102,7 @@ Deno.test("links carry typed bonds from chem_comp_bond and struct_conn", async (
     }
     return out;
   };
-  const crn = seen("1crn", (await load("1crn")).links!);
+  const crn = seen((await load("1crn")).links!);
   assertStrictEquals(crn.get("struct_conn:disulfide"), 3);
   assert(
     (crn.get("component:aromatic") ?? 0) > 0,
@@ -89,11 +110,11 @@ Deno.test("links carry typed bonds from chem_comp_bond and struct_conn", async (
   );
   assert((crn.get("component:covalent") ?? 0) > 0);
   assertStrictEquals(
-    seen("1tqn", (await load("1tqn")).links!).get("struct_conn:metallic"),
+    seen((await load("1tqn")).links!).get("struct_conn:metallic"),
     2,
   );
   assertStrictEquals(
-    seen("1bna", (await load("1bna")).links!).get("struct_conn:hydrogen"),
+    seen((await load("1bna")).links!).get("struct_conn:hydrogen"),
     32,
   );
   // Unknown struct_conn types would carry no flags; none are guessed covalent.

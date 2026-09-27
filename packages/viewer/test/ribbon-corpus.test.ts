@@ -28,13 +28,13 @@ async function loadFixture(id: string) {
 }
 
 /**
- * Golden-file style checks against the real corpus (gap, altloc, nucleic
- * entries), per this project's own architecture guidance: compare molecular
+ * Golden-file style checks against the real corpus (gap, altloc, nucleic,
+ * helix/sheet-rich, and beta-heavy entries), per this project's own architecture guidance: compare molecular
  * identity, run boundaries, bounds, and finite geometry within a stated
  * tolerance rather than an assumed matching mesh/vertex order against Mol*'s
  * own (structurally different) cartoon tessellation.
  */
-for (const id of ["1tqn", "1ejg", "1bna"]) {
+for (const id of ["1tqn", "1ejg", "1bna", "1crn", "2k39"]) {
   Deno.test(`${id}: ribbon geometry is finite, in-bounds, and never bridges a run`, async () => {
     const { data, trace, ss, mesh } = await loadFixture(id);
     assert(mesh.vertexCount > 0, "expected a non-empty ribbon");
@@ -51,10 +51,11 @@ for (const id of ["1tqn", "1ejg", "1bna"]) {
     }
 
     // The mesh must stay within the atom cloud's bounds, expanded by the
-    // widest possible ribbon half-extent (helix/sheet width 2.2, height 0.35).
+    // Widest profile is the beta-sheet shoulder: 1.5 * 2.2 width and
+    // 0.35 height, so its axis-aligned half-extent is at most 1.825 Å.
     const bounds = coordinateBounds(data);
     assert(bounds);
-    const margin = 1.2;
+    const margin = 1.85;
     for (let v = 0; v < mesh.vertexCount; v++) {
       for (let c = 0; c < 3; c++) {
         const p = mesh.positions[v * 3 + c];

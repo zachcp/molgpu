@@ -45,6 +45,8 @@ import {
 } from "../../src/internal/instrumentation.ts";
 import { WobbleCoordinates } from "../fixtures/wobble-coordinates.ts";
 
+void React;
+
 enableInstrumentation();
 
 const ATOMS = 3;
@@ -792,7 +794,7 @@ const App = (): LiveElement => {
   probe.mounted = true;
   return (
     <OrbitCamera radius={40} bearing={0} pitch={0} target={[4, 4, 0]}>
-      <Pass lights={true}>
+      <Pass lights>
         <AmbientLight color={[1, 1, 1]} intensity={0.6} />
         <DirectionalLight
           position={[0.3, 0.5, 1]}

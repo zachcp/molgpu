@@ -55,11 +55,14 @@ export interface CurveOptions {
   readonly extrapolate?: "clamp" | "loop";
 }
 
-/** What a curve holds besides its public fields. Only this module reads it. */
-interface CurveState<T extends CurveValue> extends Curve<T> {
+/** Private curve data. The public Curve object exposes none of this state. */
+interface CurveState {
   readonly keyframes: readonly Frame[];
   readonly splines: readonly Spline[];
+  readonly extrapolate: "clamp" | "loop";
 }
+
+const curveStates = new WeakMap<object, CurveState>();
 
 type AnyVector = readonly number[] | Float32Array | Float64Array;
 
@@ -70,6 +73,18 @@ const finite = (value: unknown, label: string): void => {
 };
 const clone = (value: number | ArrayLike<number>): Value =>
   typeof value === "number" ? value : Array.from(value);
+const freezeValue = (value: Value): Value =>
+  typeof value === "number" ? value : Object.freeze([...value]) as number[];
+const freezeFrame = (frame: Frame): Frame =>
+  Object.freeze({
+    ...frame,
+    value: freezeValue(frame.value),
+    bezier: frame.bezier && Object.freeze([...frame.bezier]),
+    knots: frame.knots && Object.freeze([
+      freezeValue(frame.knots[0]),
+      freezeValue(frame.knots[1]),
+    ]) as Knots,
+  });
 
 /** Named instants in one global clock. Beats need unique nonempty names and
  * times strictly increasing from 0 or later. All times are seconds. */
@@ -169,12 +184,39 @@ export function createCurve(
       (!Array.isArray(controls) || controls.length !== 4 ||
         controls.some((x) => !Number.isFinite(x)))
     ) throw new TypeError("bezier ease needs four finite controls");
+    let knots: Knots | undefined;
+    if (frame.knots !== undefined) {
+      const controls = frame.knots as unknown;
+      if (!Array.isArray(controls) || controls.length !== 2) {
+        throw new TypeError(`frame ${i} knots must contain two controls`);
+      }
+      const normalized = controls.map((control: unknown) => {
+        if (shape === 0) {
+          finite(control, `frame ${i} knot`);
+          return control;
+        }
+        if (!Array.isArray(control) && !ArrayBuffer.isView(control)) {
+          throw new TypeError(`frame ${i} knot must match its value shape`);
+        }
+        const vector = Array.from(control as ArrayLike<number>);
+        if (
+          vector.length !== width ||
+          vector.some((component) => !Number.isFinite(component))
+        ) {
+          throw new TypeError(
+            `frame ${i} knot must match its value shape and be finite`,
+          );
+        }
+        return vector;
+      });
+      knots = [normalized[0] as Value, normalized[1] as Value];
+    }
     return {
       time: frame.time,
       value: clone(value),
       ease: frame.ease,
-      bezier: frame.bezier,
-      knots: frame.knots as Knots | undefined,
+      bezier: controls && [...controls],
+      knots,
     };
   });
   if (auto && input.some((frame) => frame.ease || frame.knots)) {
@@ -182,18 +224,21 @@ export function createCurve(
       "automatic curves do not accept explicit easing or knots",
     );
   }
-  const keyframes = auto ? automatic(input, type) : input;
-  const et = easingType(type)!;
-  const splines = keyframes.slice(0, -1).map((frame, i) =>
-    et.spline(frame.value, keyframes[i + 1].value, frame.knots)
+  const keyframes = Object.freeze(
+    (auto ? automatic(input.map(freezeFrame), type) : input).map(freezeFrame),
   );
-  const curve: CurveState<number | number[]> = Object.freeze({
+  const et = easingType(type)!;
+  const splines = Object.freeze(
+    keyframes.slice(0, -1).map((frame, i) =>
+      et.spline(frame.value, keyframes[i + 1].value, frame.knots)
+    ),
+  );
+  const curve: Curve<number | number[]> = Object.freeze({
     unit: "seconds",
     type,
     extrapolate,
-    keyframes,
-    splines,
   });
+  curveStates.set(curve, Object.freeze({ keyframes, splines, extrapolate }));
   return curve;
 }
 
@@ -247,7 +292,9 @@ export function frameTime(
  * previous samples. Returned vectors are fresh arrays the caller owns. */
 export function sample<T extends CurveValue>(curve: Curve<T>, time: number): T {
   finite(time, "sample time");
-  const { keyframes, splines, extrapolate } = curve as CurveState<T>;
+  const state = curveStates.get(curve);
+  if (!state) throw new TypeError("curve must be created by createCurve");
+  const { keyframes, splines, extrapolate } = state;
   const start = keyframes[0].time, end = keyframes.at(-1)!.time;
   const t = extrapolate === "loop" && (time < start || time >= end)
     ? start + (((time - start) % (end - start)) + (end - start)) % (end - start)

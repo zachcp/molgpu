@@ -63,10 +63,10 @@ export const demos: readonly DemoDefinition[] = [
     id: "timeline",
     title: "Controlled timeline",
     summary:
-      "The explicit seconds clock drives the imported 1CRN scene through overview, colour, and focus beats.",
+      "Scrub or play a four-second color curve on the imported 1CRN scene.",
     fixture: "1crn",
     assertion:
-      "timeline beats are declared rather than driven by wall-clock time",
+      "timeline time drives the spacefill color without changing the camera",
   },
   {
     id: "bonds",

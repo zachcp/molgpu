@@ -137,7 +137,7 @@ representation rather than evaluating it yourself.
   input.
 - `annotation(domain, type, values, { missing?, policy?, fallback? })` —
   externally supplied per-row values with an explicit missing policy (`fallback`
-  or `fail`).
+  or `fail`). Use the package-root `SCALAR` or `COLOR` descriptor as `type`.
 - `curve(stops, { overflow? })` — a scalar along the global parameter `t`
   (uniform, same for every row).
 
@@ -169,7 +169,9 @@ compute pass, no use.gpu). Type-checked contract tests run under
 `byElement`, `byBfactor`, `bySeq`, `byChain`, `byCharge` and
 `bySecondaryStructure` are a small closed set of colour presets composed from
 the primitives (no expression language); choose an explicit domain when
-normalising a field over a selected range.
+normalising a field over a selected range. `columnRange(data, name)` is
+available from the package root when a preset needs a range derived from an
+attribute column.
 
 ```js
 import { byBfactor, bySecondaryStructure, bySeq } from "@molgpu/fields";
@@ -211,6 +213,9 @@ before 0.1.0. _advanced_: for renderer integrations (the viewer), not app code.
 | `byElement`                | stable       | CPK colour-by-element preset.                                                                                 |
 | `linear`                   | experimental | Affine map of a scalar input with clamp/wrap/fail overflow.                                                   |
 | `annotation`               | experimental | Externally supplied per-row values with a missing policy.                                                     |
+| `SCALAR`                   | experimental | Scalar `ValueType` descriptor accepted by `annotation`.                                                       |
+| `COLOR`                    | experimental | Colour `ValueType` descriptor accepted by `annotation`.                                                       |
+| `columnRange`              | experimental | Min/max range of a numeric table column for built-in field domains.                                           |
 | `Overflow`                 | experimental | `linear` overflow mode: `'clamp' \| 'wrap' \| 'fail'`.                                                        |
 | `Scalar`                   | experimental | Alias for `number` as a field value.                                                                          |
 | `ValueType`                | experimental | Field value type descriptor (kind, components, WGSL type name).                                               |

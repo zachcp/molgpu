@@ -42,6 +42,7 @@
   },
   "tasks": {
     "fmt": "deno fmt --check",
+    "lint": "deno lint packages/* test site",
     "test": "deno test -A packages/*/test/*.test.ts test/selection/*.test.ts",
     "check:hardening": "deno run -A scripts/check-hardening.mjs",
     "jsr:check": "deno publish --dry-run --allow-dirty",

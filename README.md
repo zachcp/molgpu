@@ -30,8 +30,13 @@ Each package has a `CHANGELOG.md` next to its README.
 
 ## Development
 
+Lint covers package source, tests, browser harnesses and the site. Playwright
+page callbacks use `globalThis` for browser globals so the harnesses stay in
+Deno's regular lint scope.
+
 ```bash
 deno task fmt                  # verify Deno formatting
+deno task lint                 # lint package source, tests, browser harnesses and site
 deno task test                 # type-checked unit tests
 deno task check:hardening      # per-package manifest/types/API checks
 deno task test:components      # typed consumer in Chrome WebGPU

@@ -28,7 +28,7 @@ import { useAttributeSnapshot } from "../src/advanced.ts";
 
 enableInstrumentation();
 
-const probe = window.__probe = {
+const probe = globalThis.__probe = {
   storage: [],
   storageBuffers: [],
   storageWrites: [],

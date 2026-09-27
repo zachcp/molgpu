@@ -15,7 +15,8 @@ import {
   residueKey,
   withPositions,
 } from "../src/index.ts";
-import { selectBonds, validateStructure } from "../src/structure.ts";
+import { selectBonds } from "../src/bond-topology.ts";
+import { validateStructure } from "../src/structure.ts";
 import type { StructureInput } from "../src/index.ts";
 import type { Mutable } from "../../../test/support/mutable.ts";
 import { fixture } from "./fixture.ts";

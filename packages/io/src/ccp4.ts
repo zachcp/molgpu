@@ -7,6 +7,7 @@ import {
 } from "@molgpu/table";
 import { errorFor } from "./error.ts";
 import { type FileInput, readInput } from "./input.ts";
+import { gridToXFast } from "./grid.ts";
 
 const volumeError = errorFor("ccp4");
 
@@ -162,19 +163,11 @@ export async function volumeFromCcp4(
     );
   }
   const { space, data } = grid.cells;
-  const [nx, ny, nz] = space.dimensions as unknown as [number, number, number];
-  const values = new Float32Array(nx * ny * nz);
-  for (let k = 0; k < nz; k++) {
-    for (let j = 0; j < ny; j++) {
-      for (let i = 0; i < nx; i++) {
-        values[i + nx * (j + ny * k)] = space.get(data, i, j, k);
-      }
-    }
-  }
+  const { dims, values } = gridToXFast(space, data);
   try {
     return createVolume({
       values,
-      dims: [nx, ny, nz],
+      dims,
       transform: Float32Array.from(Grid.getGridToCartesianTransform(grid)),
     }, { maxSamples });
   } catch (error) {

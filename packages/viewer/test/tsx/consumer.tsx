@@ -43,6 +43,16 @@ import { probe } from "./diagnostics.ts";
 import type { Mode, Phase, State } from "./diagnostics.ts";
 import { IdentityCoordinates } from "../fixtures/identity-coordinates.ts";
 
+declare global {
+  namespace JSX {
+    interface IntrinsicAttributes {
+      key?: string | number;
+    }
+  }
+}
+
+void React;
+
 /** One synthetic chain of carbons centred on x, owned by @molgpu/table. */
 const cluster = (
   x: number,
@@ -237,7 +247,7 @@ const report = (next: Phase, failure: unknown = null): null => {
 /** Reports readiness from inside the loaded subtree, then draws it. */
 const Ready = (): LiveElement => {
   probe.atoms = useStructureResource().data.topology.atoms.count;
-  return [report("ready"), <Spacefill />];
+  return [report("ready"), <Spacefill key="ready-spacefill" />];
 };
 
 const CoordinateProbe = (): LiveElement => {
@@ -318,7 +328,7 @@ const Scene = (
   }
   if (mode === "offset") {
     return (
-      <Structure data={left}>
+      <Structure key="left" data={left}>
         <OffsetCoordinates offset={[offsetX, 0, 0]}>
           <IdentityCoordinates>
             <OffsetCoordinates offset={[-2, 1, 0]}>
@@ -400,10 +410,10 @@ const Scene = (
   // <Structure>, so the clusters differ in radius as well as in position.
   if (mode === "siblings") {
     return [
-      <Structure data={left}>
+      <Structure key="left" data={left}>
         <Spacefill />
       </Structure>,
-      <Structure data={right}>
+      <Structure key="right" data={right}>
         <Spacefill />
       </Structure>,
     ];
@@ -458,7 +468,7 @@ const App = (): LiveElement => {
       pitch={0.25}
       target={state.mode === "remote" ? protein : [0, 0, 0]}
     >
-      <Pass lights={true}>
+      <Pass lights>
         <AmbientLight color={[1, 1, 1]} intensity={0.4} />
         <DirectionalLight
           position={[1, 2, 1.5]}

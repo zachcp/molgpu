@@ -56,7 +56,7 @@ Deno.test("viewer picking", async () => {
     });
     await page.goto("http://127.0.0.1:5213/packages/viewer/test/picking.html");
     await page.waitForFunction(
-      () => window.__probe?.mounted && document.querySelector("canvas"),
+      () => globalThis.__probe?.mounted && document.querySelector("canvas"),
       null,
       { timeout: 30000 },
     )
@@ -72,10 +72,10 @@ Deno.test("viewer picking", async () => {
       });
     const snap = () =>
       page.evaluate(() => ({
-        hover: window.__probe.hover,
-        pick: window.__probe.pick,
-        time: window.__probe.time,
-        errors: [...window.__probe.errors],
+        hover: globalThis.__probe.hover,
+        pick: globalThis.__probe.pick,
+        time: globalThis.__probe.time,
+        errors: [...globalThis.__probe.errors],
       }));
     const cx = 320, cy = 240; // canvas centre = the middle atom
 
@@ -137,7 +137,7 @@ Deno.test("viewer picking", async () => {
       "http://127.0.0.1:5213/packages/viewer/test/picking.html?select",
     );
     await page.waitForFunction(
-      () => window.__probe?.mounted && document.querySelector("canvas"),
+      () => globalThis.__probe?.mounted && document.querySelector("canvas"),
       null,
       { timeout: 30000 },
     );

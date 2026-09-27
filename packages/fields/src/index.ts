@@ -33,6 +33,7 @@ export {
   attribute,
   categorical,
   colormap,
+  columnRange,
   compile,
   constant,
   curve,
@@ -41,6 +42,7 @@ export {
   readsNearestVolume,
   volumeSample,
 } from "./primitives.ts";
+export { COLOR, SCALAR } from "./primitives.ts";
 export { sampleVolumeGradientWgsl, sampleVolumeWgsl } from "./volume.ts";
 
 // Built-in colour presets composed from the primitives above.

@@ -10,6 +10,7 @@ import {
   annotation,
   attribute,
   categorical,
+  COLOR,
   colormap,
   compile,
   constant,
@@ -18,12 +19,17 @@ import {
   linear,
   readsNearestVolume,
   sampleVolumeGradientWgsl,
+  SCALAR,
   volumeSample,
 } from "../src/index.ts";
 import { byPotential } from "../src/index.ts";
-import { COLOR, SCALAR, STRING } from "../src/primitives.ts";
 import type { Color } from "../src/index.ts";
-import { createVolume, createVolumeGrid, withAttributes } from "@molgpu/table";
+import {
+  ATTRIBUTE_DOMAINS,
+  createVolume,
+  createVolumeGrid,
+  withAttributes,
+} from "@molgpu/table";
 import { structure } from "./fixture.ts";
 
 const RED: Color = [1, 0, 0, 1],
@@ -389,4 +395,10 @@ Deno.test("sampleVolumeGradientWgsl declares a sampler and a zero-at-faces gradi
   assertMatch(wgsl, /fn grad\(p: vec3<f32>\) -> vec3<f32>/);
   assertMatch(wgsl, /let h = 0\.25;/);
   assertMatch(wgsl, /return vec3<f32>\(0\.0\);/);
+});
+
+Deno.test("attribute fields use the table's built-in domain registry", () => {
+  for (const [name, domain] of Object.entries(ATTRIBUTE_DOMAINS)) {
+    assertEquals(attribute(name).domain, domain, name);
+  }
 });

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { DemosPage } from "./pages/demos.tsx";
 import { HomePage } from "./pages/home.tsx";
+import { packageReadme } from "./links.ts";
 
 type Page = "home" | "demos";
 
@@ -27,7 +28,7 @@ export const App = () => {
           <a href="#demos" aria-current={page === "demos" ? "page" : undefined}>
             Demos
           </a>
-          <a href="../packages/viewer/README.md">API</a>
+          <a href={packageReadme("viewer")}>API</a>
         </nav>
       </header>
       <main>{page === "demos" ? <DemosPage /> : <HomePage />}</main>

@@ -14,6 +14,7 @@
 // string fields are CPU-only. There is no arbitrary JS->WGSL and no user parser.
 
 import {
+  ATTRIBUTE_DOMAINS,
   attributeColumn,
   attributeNames,
   sampleVolume,
@@ -121,19 +122,7 @@ const numeric = (t: ValueType): boolean =>
   t.kind === "scalar" || t.kind === "color";
 
 // Construction needs a domain before there is data. Values live in @molgpu/table.
-const KNOWN_DOMAINS: Record<string, Domain> = Object.freeze({
-  element: "atom",
-  occupancy: "atom",
-  bfactor: "atom",
-  radius: "atom",
-  residue: "atom",
-  atomChain: "atom",
-  formalCharge: "atom",
-  partialCharge: "atom",
-  labelSeq: "residue",
-  chain: "residue",
-  ssCode: "residue",
-});
+const KNOWN_DOMAINS = ATTRIBUTE_DOMAINS;
 const CUSTOM_ATTRIBUTE = /^[a-z][a-z0-9-]*:[A-Za-z][A-Za-z0-9_-]*$/;
 const resolvedAttribute = (
   data: StructureData,
@@ -233,7 +222,7 @@ export function attribute(
   options: { domain?: Domain; lift?: boolean } = {},
 ): Field {
   const known = Object.hasOwn(KNOWN_DOMAINS, name)
-    ? KNOWN_DOMAINS[name]
+    ? KNOWN_DOMAINS[name as keyof typeof KNOWN_DOMAINS]
     : undefined;
   if (!known && !CUSTOM_ATTRIBUTE.test(name)) {
     fail(

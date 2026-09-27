@@ -5,10 +5,9 @@
 // only reads trace.guide/trace.residue/trace.runs and ss.direction/kind/
 // first/last, exactly as they come out of traceTable/secondaryStructureTrace.
 //
-// Scope, deliberate (confirmed with the project owner): flat ribbon only —
-// helix/sheet get a wide cross-section, coil a narrow one, but there is no
-// beta-strand arrowhead taper yet. That is real follow-up work, not
-// something silently approximated here.
+// This remains a compact ribbon representation: sheet ends get a widened
+// shoulder and pointed terminus, while helix axes and coil profiles are not
+// fitted as in a full molecular-cartoon implementation.
 import {
   createCurveSegmentState,
   interpolateCurveSegment,
@@ -43,6 +42,7 @@ const RIBBON_WIDTH: Record<SecondaryStructureTrace["kind"][number], number> = {
   coil: 0.7,
 };
 const RIBBON_HEIGHT = 0.35;
+const SHEET_ARROW_SHOULDER = 1.5;
 
 const clampIndex = (i: number, n: number): number =>
   Math.min(n - 1, Math.max(0, i));
@@ -112,9 +112,24 @@ function buildRun(
       const [cx, cy, cz] = vec3At(state.curvePoints, j);
       const [nx, ny, nz] = vec3At(state.normalVectors, j);
       const [bx, by, bz] = vec3At(state.binormalVectors, j);
-      const halfW = state.widthValues[j] / 2, halfH = state.heightValues[j] / 2;
+      const sampleIndex = j === linearSegments ? at(1) : at(0);
+      const sheetEnd = ss.kind[sampleIndex] === "sheet" &&
+        ss.last[sampleIndex] === 1 && sampleIndex > start &&
+        ss.kind[sampleIndex - 1] === "sheet";
+      const sheetShoulder = ss.kind[sampleIndex] === "sheet" &&
+        sampleIndex + 1 < start + count &&
+        ss.kind[sampleIndex + 1] === "sheet" &&
+        ss.last[sampleIndex + 1] === 1;
+      const widthScale = sheetEnd
+        ? 0
+        : sheetShoulder
+        ? SHEET_ARROW_SHOULDER
+        : 1;
+      const heightScale = sheetEnd ? 0 : 1;
+      const halfW = state.widthValues[j] / 2 * widthScale,
+        halfH = state.heightValues[j] / 2 * heightScale;
       const ringBase = positions.length / 3;
-      const sourceResidue = trace.residue[j === linearSegments ? at(1) : at(0)];
+      const sourceResidue = trace.residue[sampleIndex];
       for (const [sw, sh] of [[1, 1], [-1, 1], [-1, -1], [1, -1]]) {
         positions.push(
           cx + bx * sw * halfW + nx * sh * halfH,

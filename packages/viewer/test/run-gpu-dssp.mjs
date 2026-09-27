@@ -42,15 +42,17 @@ Deno.test("GPU DSSP agrees with CPU on the pinned protein corpus", async () => {
       if (message.type() === "error") errors.push(message.text());
     });
     await page.goto(`http://127.0.0.1:${address.port}/`);
-    await page.waitForFunction(() => typeof window.runGpuDssp === "function");
+    await page.waitForFunction(() =>
+      typeof globalThis.runGpuDssp === "function"
+    );
     assertEquals(
-      await page.evaluate(() => window.runDsspOverflowPolicy()),
+      await page.evaluate(() => globalThis.runDsspOverflowPolicy()),
       ["static", "frame", "frame"],
       "component overflow defaults must distinguish a static root from live coordinates",
     );
     for (const id of ["1crn", "1ejg", "1tqn", "1a4y", "4c7r", "1bna"]) {
       const result = await page.evaluate(
-        (entry) => window.runGpuDssp(entry),
+        (entry) => globalThis.runGpuDssp(entry),
         id,
       );
       console.log(
@@ -79,7 +81,7 @@ Deno.test("GPU DSSP agrees with CPU on the pinned protein corpus", async () => {
     }
     for (const model of [1, 58, 116]) {
       const result = await page.evaluate(
-        (number) => window.runGpuDssp("2k39", number),
+        (number) => globalThis.runGpuDssp("2k39", number),
         model,
       );
       console.log(
@@ -87,7 +89,9 @@ Deno.test("GPU DSSP agrees with CPU on the pinned protein corpus", async () => {
       );
       assertEquals(result.mismatch, [], `2k39 model ${model} mismatch`);
     }
-    const overflow = await page.evaluate(() => window.runDenseDsspOverflow());
+    const overflow = await page.evaluate(() =>
+      globalThis.runDenseDsspOverflow()
+    );
     assertEquals(overflow, {
       named: true,
       equal: true,
@@ -98,7 +102,7 @@ Deno.test("GPU DSSP agrees with CPU on the pinned protein corpus", async () => {
     if (Deno.env.get("MOLGPU_DSSP_BENCH") === "1") {
       for (const copies of [306, 3059]) {
         const result = await page.evaluate(
-          (number) => window.benchmarkGpuDssp(number),
+          (number) => globalThis.benchmarkGpuDssp(number),
           copies,
         );
         console.log(`DSSP benchmark: ${JSON.stringify(result)}`);
