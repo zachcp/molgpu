@@ -5,6 +5,7 @@ import { extname, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 import { build } from "vite";
 import { chromium } from "playwright";
+import { webgpuBrowserArgs } from "./webgpu-browser-args.mjs";
 
 Deno.test("GPU DSSP agrees with CPU on the pinned protein corpus", async () => {
   const fixture = fileURLToPath(new URL("./gpu-dssp/", import.meta.url));
@@ -36,7 +37,7 @@ Deno.test("GPU DSSP agrees with CPU on the pinned protein corpus", async () => {
     browser = await chromium.launch({
       channel: "chrome",
       headless: true,
-      args: ["--enable-unsafe-webgpu"],
+      args: webgpuBrowserArgs,
     });
     const page = await browser.newPage();
     page.setDefaultTimeout(120000);
@@ -58,7 +59,7 @@ Deno.test("GPU DSSP agrees with CPU on the pinned protein corpus", async () => {
         id,
       );
       console.log(
-        `${id}: ${result.residues} residues, ${result.bridges} bridges, ${result.near} near threshold, ${
+        `${id}: ${result.residues} residues, ${result.bridges} bridges, ${result.near} direct threshold centres, ${
           result.milliseconds.toFixed(1)
         } ms`,
       );
@@ -69,6 +70,11 @@ Deno.test("GPU DSSP agrees with CPU on the pinned protein corpus", async () => {
           true,
           "superseded frame must stop before the next GPU pass",
         );
+        assert.equal(
+          result.stableFrame,
+          true,
+          "a source write between submits must not mix coordinate frames",
+        );
       }
     }
     for (const model of [1, 58, 116]) {
@@ -77,12 +83,18 @@ Deno.test("GPU DSSP agrees with CPU on the pinned protein corpus", async () => {
         model,
       );
       console.log(
-        `2k39 model ${model}: ${result.residues} residues, ${result.near} near threshold`,
+        `2k39 model ${model}: ${result.residues} residues, ${result.near} direct threshold centres`,
       );
       assert.deepEqual(result.mismatch, [], `2k39 model ${model} mismatch`);
     }
     const overflow = await page.evaluate(() => window.runDenseDsspOverflow());
-    assert.deepEqual(overflow, { named: true, equal: true });
+    assert.deepEqual(overflow, {
+      named: true,
+      equal: true,
+      sparseNamed: true,
+      sparseReason: true,
+      sparseEqual: true,
+    });
     if (Deno.env.get("MOLGPU_DSSP_BENCH") === "1") {
       for (const copies of [306, 3059]) {
         const result = await page.evaluate(

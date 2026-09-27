@@ -6,6 +6,7 @@ import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
 import { createServer } from "vite";
 import { chromium } from "playwright";
+import { webgpuBrowserArgs } from "./webgpu-browser-args.mjs";
 import { workspaceAliases } from "../../../scripts/workspace-aliases.mjs";
 
 Deno.test("viewer materials", async () => {
@@ -42,7 +43,7 @@ Deno.test("viewer materials", async () => {
     browser = await chromium.launch({
       channel: "chrome",
       headless: true,
-      args: ["--enable-unsafe-webgpu"],
+      args: webgpuBrowserArgs,
     });
     const page = await browser.newPage({
       viewport: { width: 640, height: 480 },

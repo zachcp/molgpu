@@ -118,7 +118,11 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
   var row = i;
   if (params.config.y != 0u) { row = rowMap[i]; }
   let p = vec3<f32>(positions[row * 3u], positions[row * 3u + 1u], positions[row * 3u + 2u]);
-  let q = vec3<i32>(floor((p - params.origin.xyz) * params.scales.x));
+  let q = clamp(
+    vec3<i32>(floor((p - params.origin.xyz) * params.scales.x)),
+    vec3<i32>(0),
+    vec3<i32>(params.dims.xyz) - vec3<i32>(1)
+  );
   var candidates = 0u;
   for (var z = max(0, q.z - 1); z <= min(i32(params.dims.z) - 1, q.z + 1); z++) {
     for (var y = max(0, q.y - 1); y <= min(i32(params.dims.y) - 1, q.y + 1); y++) {

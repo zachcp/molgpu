@@ -143,12 +143,12 @@ put every superposed model into each query.
 So a GPU `ssCode` needs one or two small readbacks per coordinate generation and
 a re-upload. It lags the coordinates by those round trips (2–6 frames). It
 enters as an `AttributesContext` entry and a CPU copy tagged with the coordinate
-generation that produced it, never by replacing the root `StructureData`. It is
-not a per-frame live column. The CPU port is the reference. f32 WGSL cannot be
-bit-identical to the f64 CPU port at the -0.5 kcal/mol, 9 Å, 2.5 Å and 70°
-thresholds, so efv.7's acceptance is identical codes on the corpus except
-residues traced to a comparison within 1e-4 of its threshold, which are counted
-and reported.
+generation that produced it, never by replacing the root `StructureData`. It
+updates once per completed run and may lag displayed frames during playback. The
+CPU port is the reference. f32 WGSL cannot be bit-identical to the f64 CPU port
+at the -0.5 kcal/mol, 9 Å, 2.5 Å and 70° thresholds, so efv.7's acceptance is
+identical codes on the corpus except residues traced to a comparison within 1e-4
+of its threshold, which are counted and reported.
 
 The GPU path pays off only where coordinates live on the GPU (Phase 13 dynamics,
 GPU coordinate providers) at sizes where CPU DSSP on a snapshot is too slow.
@@ -433,22 +433,36 @@ verdicts; accepted ones are folded into the body above.
 - **GPU DSSP (efv.7):** implemented in `@molgpu/dynamics` WGSL stages and
   `@molgpu/viewer` orchestration. `<GpuDssp>` publishes a generation-tagged
   `ssCode` GPU source and CPU copy through the attribute contexts; `<Ribbon>`
-  consumes that copy only with a matching coordinate snapshot. A compact CA
-  bounds readback sizes the Phase 13 cell list. H-bond lists hold eight sorted
-  donors per acceptor, and bridge entries carry the generating edge and pattern
-  so CPU ladder completion restores canonical order. Static overflow raises
-  `GpuDsspOverflowError`; a live frame recomputes from a full coordinate
-  snapshot. The pinned protein corpus (1crn, 1ejg, 1tqn, 1a4y, 4c7r and three
-  2k39 models) matched CPU codes exactly; 1a4y had two residues near a threshold
-  and zero mismatches. A synthetic dense case exercised donor-cap overflow and
-  exact frame fallback. Browser runs on 2026-09-27, replicated 1crn chains:
+  holds the most recent codes for at most one second during playback. A compact
+  CA bounds readback sizes the Phase 13 cell list. H-bond lists hold eight
+  sorted donors per acceptor, and bridge entries carry the generating edge and
+  pattern so CPU ladder completion restores canonical order. Static overflow
+  raises `GpuDsspOverflowError`; a live frame recomputes from a frozen
+  coordinate snapshot. Each run snapshots coordinates before its first pass,
+  coalesces subsequent generations to one pending run, and waits for a
+  coordinate kernel's first dispatch. The pinned protein corpus (1crn, 1ejg,
+  1tqn, 1a4y, 4c7r and three 2k39 models) matched CPU codes exactly; 1a4y had
+  two directly flagged threshold centres and zero mismatches. Dependent residues
+  are not counted in `nearThresholdCenters`. Synthetic dense and sparse cases
+  exercised named overflow and exact frame fallback. Browser runs on 2026-09-27,
+  replicated 1crn chains:
 
   |     Atoms | Residues | CPU DSSP | GPU DSSP incl. readbacks | Temporary GPU allocation | Readback | Code differences |
   | --------: | -------: | -------: | -----------------------: | -----------------------: | -------: | ---------------: |
-  |   100,062 |   14,076 |  41.4 ms |                  20.1 ms |                  3.39 MB |  71.0 KB |                0 |
-  | 1,000,293 |  140,714 | 429.8 ms |                 182.8 ms |                  33.9 MB | 709.7 KB |                0 |
+  |   100,062 |   14,076 |  40.0 ms |                  17.2 ms |                  4.59 MB |  71.0 KB |                0 |
+  | 1,000,293 |  140,714 | 468.1 ms |                 118.3 ms |                  45.9 MB | 709.7 KB |                0 |
 
   These are one browser run on this host, including allocation and mapping,
   excluding the input coordinate buffer and returned `ssCode` buffer. Run
   `MOLGPU_DSSP_BENCH=1 deno test -A packages/viewer/test/run-gpu-dssp.mjs` to
   repeat it.
+
+**Shipping decision (efv.14):** keep GPU DSSP opt-in and experimental through
+the Phase 15 gate (`efv.9`). The original start condition was not established:
+CPU DSSP took about 40–50 ms per 100k atoms, and the snapshot throttle already
+absorbs that cost for typical viewing. The current GPU implementation is about
+2.3 times faster at 100k atoms and 4 times faster at 1M on this host, but it
+adds roughly one frozen-frame buffer and asynchronous pipeline coordination. It
+is useful for GPU-resident coordinates and large structures; CPU DSSP on
+snapshots remains the recommended default until the gate validates the live path
+and CI runs WebGPU browser tests.

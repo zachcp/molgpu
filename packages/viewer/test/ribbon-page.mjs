@@ -11,7 +11,12 @@ import {
   useDeviceContext,
 } from "@use-gpu/workbench";
 import { resolve, where } from "@molgpu/select";
-import { coordinateBounds } from "@molgpu/table";
+import {
+  activeAtoms,
+  coordinateBounds,
+  dssp,
+  withPositions,
+} from "@molgpu/table";
 import { structureFromBcif } from "@molgpu/io";
 import {
   GpuDssp,
@@ -20,6 +25,13 @@ import {
   Transform,
   useAttributeSnapshot,
 } from "../src/index.ts";
+import { WobbleCoordinates } from "../src/wobble-coordinates.ts";
+import {
+  enableInstrumentation,
+  snapshotCounters,
+} from "../src/internal/instrumentation.ts";
+
+enableInstrumentation();
 
 const probe = window.__probe = {
   storage: [],
@@ -30,6 +42,8 @@ const probe = window.__probe = {
   dsspStatus: null,
   dsspSnapshot: null,
   dsspRuns: 0,
+  dsspCodes: null,
+  counters: snapshotCounters,
 };
 const storageInfo = new WeakMap();
 const make = GPUDevice.prototype.createBuffer;
@@ -82,6 +96,13 @@ const data = await structureFromBcif(bytes);
 const nothing = resolve(where("atom", "none", () => false), data);
 const bounds = coordinateBounds(data);
 const extent = Math.max(...bounds.max.map((v, i) => v - bounds.min[i]));
+const wobblePositions = data.positions.slice();
+for (let i = 0; i < wobblePositions.length; i += 3) {
+  wobblePositions[i + 1] += Math.sin(0.7 + wobblePositions[i] * 0.4) * 0.8;
+}
+probe.expectedWobbleCodes = Array.from(
+  dssp(withPositions(data, wobblePositions), { rows: activeAtoms(data) }),
+);
 
 const DsspSnapshotProbe = () => {
   const snapshot = useAttributeSnapshot("ssCode");
@@ -89,6 +110,9 @@ const DsspSnapshotProbe = () => {
     generation: snapshot.generation,
     provenance: snapshot.data.attributes?.ssCode?.provenance,
   };
+  probe.dsspCodes = snapshot?.data.attributes?.ssCode?.provenance === "gpu:dssp"
+    ? Array.from(snapshot.data.attributes.ssCode.values)
+    : null;
   return null;
 };
 
@@ -98,12 +122,21 @@ const RibbonProbe = () => {
   const [mode, setMode] = useState("ribbon");
   const [color, setColor] = useState([0.85, 0.55, 0.35, 1]);
   const [shift, setShift] = useState(0);
+  const [phase, setPhase] = useState(0.7);
   probe.setMode = setMode;
   probe.setColor = setColor;
   probe.setShift = setShift;
+  probe.setPhase = setPhase;
   probe.mounted = true;
   const props = mode === "empty" ? { select: nothing, color } : { color };
   const ribbon = use(Ribbon, props);
+  const gpu = use(GpuDssp, {
+    onStatus: (status) => {
+      probe.dsspStatus = status;
+      probe.dsspRuns++;
+    },
+    children: [ribbon, use(DsspSnapshotProbe, {})],
+  });
   return use(Structure, {
     data,
     children: mode === "gpu"
@@ -126,14 +159,10 @@ const RibbonProbe = () => {
           0,
           1,
         ],
-        children: use(GpuDssp, {
-          onStatus: (status) => {
-            probe.dsspStatus = status;
-            probe.dsspRuns++;
-          },
-          children: [ribbon, use(DsspSnapshotProbe, {})],
-        }),
+        children: gpu,
       })
+      : mode === "wobble"
+      ? use(WobbleCoordinates, { phase, children: gpu })
       : ribbon,
   });
 };

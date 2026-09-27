@@ -17,3 +17,19 @@ jobs:
       - run: deno task typecheck
       - run: deno task check:hardening
       - run: deno task jsr:check
+
+  webgpu:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - run: deno run -A npm:playwright@1.62.1 install --with-deps chrome
+      - run: deno task test:components
+      - name: Viewer WebGPU browser suites
+        run: |
+          for suite in packages/viewer/test/run-*.mjs; do
+            deno test -A "$suite"
+          done

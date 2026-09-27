@@ -140,7 +140,10 @@ export const Ribbon: ViewerComponent<
           rows: dsspRows,
         });
       }
-      if (attributeSnapshot?.generation === coordinateSnapshot?.generation) {
+      // GpuDssp holds its last completed code column briefly while a newer
+      // coordinate generation runs. Its provider limits that staleness and
+      // verifies source/topology identity before publishing the snapshot.
+      if (attributeSnapshot) {
         const column = attributeColumn(attributeSnapshot.data, "ssCode");
         if (column?.provenance === "gpu:dssp") {
           return withAttributes(snapshot, { ssCode: column });

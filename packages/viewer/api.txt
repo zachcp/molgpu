@@ -61,7 +61,7 @@ GpuDssp
 GpuDsspProps
   export interface GpuDsspProps { /** Active primary-altloc atoms from this model; defaults to the first model. */ readonly model?: "first" | number; /** On bounded-list overflow, a live frame reads its coordinates and reruns CPU DSSP. */ readonly overflow?: "static" | "frame"; readonly onStatus?: (status: GpuDsspStatus) => void; readonly children?: ViewerElement }
 GpuDsspStatus
-  export interface GpuDsspStatus { readonly generation: number; readonly nearThresholdResidues: number; readonly bridgeCount: number; readonly fallback: boolean }
+  export interface GpuDsspStatus { readonly generation: number; /** Directly flagged acceptor and bend-centre rows, excluding dependents. */ readonly nearThresholdCenters: number; readonly bridgeCount: number; readonly fallback: boolean; readonly fallbackReason?: string }
 Isosurface
   export const Isosurface: ViewerComponent<{ /** Absolute isovalue, or `{ sigma: k }`. Defaults to `{ sigma: 1 }`. */ level?: VolumeLevel; color?: VectorLike; /** Wraps the shaded face layer; without one, the ambient scene material. */ material?: MaterialSpec; loading?: ViewerElement | (() => ViewerElement); error?: ViewerElement | ((failure: unknown) => ViewerElement) } & Translucency>;
 KEY_LIGHT_DIRECTION
@@ -244,7 +244,7 @@ Attributes
 AttributesContext
   export const AttributesContext: LiveContext<Attributes | undefined>;
 Coordinates
-  export interface Coordinates { readonly source: StorageSource; readonly count: number; readonly generation: number; readonly resource: StructureResource }
+  export interface Coordinates { readonly source: StorageSource; readonly count: number; readonly generation: number; /** False until an asynchronous coordinate kernel has dispatched its first output. */ readonly ready?: boolean; readonly resource: StructureResource }
 CoordinatesContext
   export const CoordinatesContext: LiveContext<Coordinates | null | undefined>;
 FlatMaterial
@@ -254,7 +254,7 @@ GpuDsspOptions
 GpuDsspOverflowError
   export class GpuDsspOverflowError extends RangeError { constructor(stage: string) }
 GpuDsspResult
-  export interface GpuDsspResult { readonly codes: Uint8Array; /** f32 residue codes for AttributesContext GPU consumers; caller owns it. */ readonly codeBuffer: GPUBuffer; readonly generation: number; readonly nearThresholdResidues: number; readonly bridgeCount: number; readonly fallback: boolean; /** Peak temporary allocation owned by this call, excluding input and output. */ readonly workingBytes: number; /** GPU-to-CPU bytes copied for this generation. */ readonly readbackBytes: number }
+  export interface GpuDsspResult { readonly codes: Uint8Array; /** f32 residue codes for AttributesContext GPU consumers; caller owns it. */ readonly codeBuffer: GPUBuffer; readonly generation: number; /** Acceptor and bend-centre rows with a direct near-threshold comparison. */ readonly nearThresholdCenters: number; readonly bridgeCount: number; readonly fallback: boolean; /** Bounded stage that required CPU recovery, when fallback is true. */ readonly fallbackReason?: string; /** Peak temporary allocation owned by this call, excluding input and output. */ readonly workingBytes: number; /** GPU-to-CPU bytes copied for this generation. */ readonly readbackBytes: number }
 IdentityCoordinates
   export const IdentityCoordinates: LC<{ children?: LiveElement }>;
 LitMaterial

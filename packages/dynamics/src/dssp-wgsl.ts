@@ -81,7 +81,11 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
   if (d.backbone.y < 0 || d.backbone.z < 0 || d.backbone.w < 0 ||
       d.hydrogen.w != 0) { return; }
   let p = cap(i);
-  let grid = vec3<i32>(floor((p - params.origin.xyz) * params.scale.x));
+  let grid = clamp(
+    vec3<i32>(floor((p - params.origin.xyz) * params.scale.x)),
+    vec3<i32>(0),
+    vec3<i32>(i32(params.dimX), i32(params.dimY), i32(params.dimZ)) - vec3<i32>(1)
+  );
   let o = point(&positions, d.backbone.w);
   let c = point(&positions, d.backbone.z);
   var donors: array<u32, 8>;

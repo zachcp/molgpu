@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
 import { createServer } from "vite";
 import { chromium } from "playwright";
+import { webgpuBrowserArgs } from "./webgpu-browser-args.mjs";
 import { workspaceAliases } from "../../../scripts/workspace-aliases.mjs";
 
 Deno.test("viewer ribbon", async () => {
@@ -42,7 +43,7 @@ Deno.test("viewer ribbon", async () => {
     browser = await chromium.launch({
       channel: "chrome",
       headless: true,
-      args: ["--enable-unsafe-webgpu"],
+      args: webgpuBrowserArgs,
     });
     const page = await browser.newPage({
       viewport: { width: 640, height: 480 },
@@ -208,6 +209,48 @@ Deno.test("viewer ribbon", async () => {
       window.__probe.dsspSnapshot?.generation ===
         window.__probe.dsspStatus?.generation
     );
+    assert.deepEqual((await snap()).errors, []);
+
+    // A kernel-backed coordinate source may compile after its buffer appears.
+    // One static generation must publish codes only after its first dispatch.
+    await page.evaluate(() => {
+      window.__probe.dsspStatus = null;
+      window.__probe.setMode("wobble");
+    });
+    await page.waitForFunction(() =>
+      window.__probe.dsspStatus !== null && window.__probe.dsspCodes !== null
+    );
+    assert.deepEqual(
+      await page.evaluate(() => window.__probe.dsspCodes),
+      await page.evaluate(() => window.__probe.expectedWobbleCodes),
+      "static WobbleCoordinates must publish DSSP for its computed positions",
+    );
+
+    // Continuous playback keeps one run in flight and publishes intermediate
+    // results even when the coordinate generation advances during a readback.
+    const runsBeforePlayback = await page.evaluate(() =>
+      window.__probe.dsspRuns
+    );
+    await page.evaluate(() => {
+      let phase = 0.7;
+      window.__probe.playback = setInterval(
+        () => window.__probe.setPhase(phase += 0.08),
+        16,
+      );
+    });
+    await page.waitForTimeout(700);
+    const duringPlayback = await page.evaluate(() => ({
+      runs: window.__probe.dsspRuns,
+      inFlight: window.__probe.counters().gauges["dssp:in-flight"],
+      codes: window.__probe.dsspCodes,
+    }));
+    await page.evaluate(() => clearInterval(window.__probe.playback));
+    assert.ok(
+      duringPlayback.runs >= runsBeforePlayback + 2,
+      "continuous playback must publish GPU DSSP at a bounded rate",
+    );
+    assert.equal(duringPlayback.inFlight, 1);
+    assert.ok(duringPlayback.codes?.length > 0);
     assert.deepEqual((await snap()).errors, []);
 
     console.log(
