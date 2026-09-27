@@ -1,8 +1,14 @@
 import React, { useEffect, useState } from "react";
-import type { StructureData } from "@molgpu/table";
+import {
+  activeAtoms,
+  attributeColumn,
+  bondTopology,
+  type StructureData,
+  traceTable,
+} from "@molgpu/table";
 import crambinUrl from "../../../packages/io/test/fixtures/1crn.bcif?url";
 import chargesUrl from "../../../packages/io/test/fixtures/1crn-amber.pqr?url";
-import { attributeColumn } from "@molgpu/table";
+import { comp, element, resolve, within } from "@molgpu/select";
 import {
   densityMapFor,
   loadChargedCrambin,
@@ -76,6 +82,27 @@ export const DemosPage = () => {
           host.dataset.fixture = demo.fixture;
           host.dataset.assertion = demo.assertion;
           host.dataset.orbit = "enabled";
+          host.dataset.atomCount = String(data.topology.atoms.count);
+          host.dataset.residueCount = String(data.topology.residues.count);
+          host.dataset.worldLight = String(!!demo.options?.worldLight);
+          if (demo.id === "select") {
+            host.dataset.selectedCount = String(
+              resolve(within(5, comp(["CYS"])), data).indices.length,
+            );
+          }
+          if (demo.id === "bonds") {
+            host.dataset.bondCount = String(bondTopology(data).count);
+          }
+          if (demo.id === "tube" || demo.id === "ribbon") {
+            host.dataset.traceCount = String(
+              traceTable(data, activeAtoms(data)).count,
+            );
+          }
+          if (demo.id === "figure") {
+            host.dataset.sulfurCount = String(
+              resolve(element(16), data).indices.length,
+            );
+          }
         }
         const sliceIndex = demo.id === "volume"
           ? sliceFraction * (densityMapFor(data).dims[2] - 1)
