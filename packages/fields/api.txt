@@ -39,11 +39,13 @@ ValueType
 annotation
   export function annotation(domain: Domain, type: ValueType, values: ArrayLike<number>, options?: { missing?: ArrayLike<number> | null; policy?: "fallback" | "fail"; fallback?: number | Color }): Field;
 attribute
-  export function attribute(name: string, options?: { domain?: Domain }): Field;
+  export function attribute(name: string, options?: { domain?: Domain; lift?: boolean }): Field;
 byBfactor
   export function byBfactor(options?: { domain?: readonly [number, number]; stops?: ReadonlyArray<readonly [number, Color]> }): Field;
 byChain
   export function byChain(options?: { palette?: ReadonlyArray<Color>; fallback?: Color }): Field;
+byCharge
+  export function byCharge(options?: { domain?: readonly [number, number]; stops?: ReadonlyArray<readonly [number, Color]>; column?: string; lift?: boolean }): Field;
 byElement
   export function byElement(fallback?: Color): Field;
 bySeq

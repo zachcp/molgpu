@@ -6,10 +6,11 @@ import {
   assertStrictEquals,
   assertThrows,
 } from "@std/assert";
-import { createStructure } from "@molgpu/table";
+import { createStructure, withAttributes } from "@molgpu/table";
 import {
   byBfactor,
   byChain,
+  byCharge,
   byElement,
   bySeq,
   COLOR,
@@ -118,4 +119,59 @@ Deno.test("every built-in lowers to WGSL for both targets", () => {
     assertMatch(linked.wgsl, /@export fn getField\(row: u32\) -> vec4<f32>/);
     assertNotMatch(linked.wgsl, /@group/);
   }
+});
+
+Deno.test("byCharge maps charge onto Mol*'s red-white-blue scale", () => {
+  // 4 atoms, residues 0,0,1,1 (see fixture.ts).
+  const charged = withAttributes(data, {
+    partialCharge: {
+      domain: "atom",
+      kind: "scalar",
+      provenance: "user",
+      values: Float32Array.of(-1, 0, 1, 5),
+    },
+    "charge:residueNet": {
+      domain: "residue",
+      kind: "scalar",
+      provenance: "computed:test",
+      values: Float32Array.of(-2, 0.5),
+    },
+  });
+  const RED = [191 / 255, 34 / 255, 34 / 255, 1];
+  const BLUE = [51 / 255, 97 / 255, 225 / 255, 1];
+  const out = evaluate(byCharge(), charged);
+  near(out, 0, RED);
+  near(out, 1, [1, 1, 1, 1]);
+  near(out, 2, BLUE);
+  near(out, 3, BLUE); // clamped
+  assertEquals(compile(byCharge()).bindings.map((b) => b.id), [
+    "attr:partialCharge",
+  ]);
+  // A residue net-charge column lifted onto atoms.
+  const net = evaluate(
+    byCharge({ column: "charge:residueNet", lift: true, domain: [-2, 2] }),
+    charged,
+  );
+  near(net, 0, RED);
+  near(net, 1, RED);
+  // 0.5 on [-2, 2] is a quarter of the way from white to blue.
+  near(net, 2, [
+    0.75 + 0.25 * 51 / 255,
+    0.75 + 0.25 * 97 / 255,
+    0.75 + 0.25 * 225 / 255,
+    1,
+  ]);
+  assertEquals(
+    compile(byCharge({ column: "charge:residueNet", lift: true })).bindings
+      .map((b) => b.id),
+    ["attr:residue", "attr:charge:residueNet"],
+  );
+  // No charge column: the failure names the column.
+  assertThrows(() => evaluate(byCharge(), data), TypeError, "partialCharge");
+  // Lifting needs a residue column read onto atoms.
+  assertThrows(
+    () => byCharge({ column: "bfactor", lift: true }),
+    TypeError,
+    "lift",
+  );
 });

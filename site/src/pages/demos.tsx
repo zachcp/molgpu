@@ -1,7 +1,13 @@
 import React, { useEffect, useState } from "react";
 import type { StructureData } from "@molgpu/table";
 import crambinUrl from "../../../packages/io/test/fixtures/1crn.bcif?url";
-import { densityMapFor, loadCrambin } from "../demos/data.ts";
+import chargesUrl from "../../../packages/io/test/fixtures/1crn-amber.pqr?url";
+import { attributeColumn } from "@molgpu/table";
+import {
+  densityMapFor,
+  loadChargedCrambin,
+  loadCrambin,
+} from "../demos/data.ts";
 import { demoById, demoCamera, type DemoId, demos } from "../demos/registry.ts";
 import {
   type MaterialMode,
@@ -38,7 +44,10 @@ export const DemosPage = () => {
       const status = document.querySelector<HTMLElement>("[data-webgpu-error]");
       if (status) status.textContent = "Loading real 1CRN structure…";
       try {
-        const data = await loadCrambin(crambinUrl);
+        const crambin = await loadCrambin(crambinUrl);
+        const data = demo.id === "charge"
+          ? await loadChargedCrambin(crambin, chargesUrl)
+          : crambin;
         if (cancelled) return;
         const host = document.querySelector<HTMLElement>("#molecule-canvas");
         if (host) {
@@ -50,6 +59,13 @@ export const DemosPage = () => {
         const sliceIndex = demo.id === "volume"
           ? sliceFraction * (densityMapFor(data).dims[2] - 1)
           : 0;
+        if (host && demo.id === "charge") {
+          const charge = attributeColumn(data, "partialCharge")!;
+          let net = 0;
+          for (const q of charge.values) net += q;
+          host.dataset.netCharge = net.toFixed(3);
+          host.dataset.chargeProvenance = charge.provenance;
+        }
         if (host && demo.id === "volume") {
           host.dataset.sliceIndex = sliceIndex.toFixed(2);
         }

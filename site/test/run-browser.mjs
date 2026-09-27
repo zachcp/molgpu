@@ -85,6 +85,7 @@ Deno.test("site landing page and maintained gallery routes", async () => {
         ["surface", "Solvent-excluded surface", "1crn"],
         ["materials", "Materials", "1crn"],
         ["volume", "Density volume", "1crn"],
+        ["charge", "Partial charge", "1crn"],
         ["figure", "Feature composition", "1crn"],
       ]
     ) {
@@ -184,6 +185,21 @@ Deno.test("site landing page and maintained gallery routes", async () => {
         1,
         "re-rendering reuses one canvas instead of stacking new ones",
       );
+      if (id === "charge") {
+        assert.equal(
+          await page.locator("#molecule-canvas").getAttribute(
+            "data-charge-provenance",
+          ),
+          "imported:pqr",
+        );
+        // Crambin is neutral; applyPqr's hydrogen folding keeps the total.
+        const net = Number(
+          await page.locator("#molecule-canvas").getAttribute(
+            "data-net-charge",
+          ),
+        );
+        assert.ok(Math.abs(net) < 1e-3, `net charge ${net}`);
+      }
       if (id === "volume") {
         const before = await settledFrame(page);
         await page.getByLabel("Slice position").fill("0.8");

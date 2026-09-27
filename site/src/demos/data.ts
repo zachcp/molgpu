@@ -4,7 +4,7 @@ import {
   type StructureData,
   type VolumeData,
 } from "@molgpu/table";
-import { structureFromBcif } from "@molgpu/io";
+import { applyPqr, structureFromBcif } from "@molgpu/io";
 
 export const cameraFor = (data: StructureData, scale = 1.7) => {
   const bounds = coordinateBounds(data);
@@ -31,6 +31,25 @@ export const loadCrambin = (url: string): Promise<StructureData> => {
     return structureFromBcif(new Uint8Array(await response.arrayBuffer()));
   });
   return crambin;
+};
+
+let charged: Promise<StructureData> | undefined;
+
+/**
+ * 1CRN with PDB2PQR's AMBER partial charges applied by `applyPqr`: the PQR's
+ * hydrogens fold onto their heavy atoms, so residue net charges survive.
+ */
+export const loadChargedCrambin = (
+  data: StructureData,
+  url: string,
+): Promise<StructureData> => {
+  charged ??= fetch(url).then(async (response) => {
+    if (!response.ok) {
+      throw new Error(`Unable to load 1CRN charges (${response.status})`);
+    }
+    return applyPqr(data, await response.text()).data;
+  });
+  return charged;
 };
 
 const densityMaps = new WeakMap<StructureData, VolumeData>();
