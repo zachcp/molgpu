@@ -42,26 +42,38 @@ export interface ChargeAssignment<R> {
   readonly report: R;
 }
 
-// Standard monatomic ions and oxidation states from the wwPDB Chemical
-// Component Dictionary: https://www.wwpdb.org/data/ccd . Imported nonzero
-// formal charge wins; zero may mean unknown in mmCIF.
+// Monatomic ions by wwPDB Chemical Component Dictionary code, with the CCD's
+// pdbx_formal_charge (https://www.wwpdb.org/data/ccd). Oxidation states are
+// separate codes: FE is Fe(III), FE2 Fe(II); IOD is iodide, while I is
+// inosinic acid. Imported nonzero formal charge wins; zero may mean unknown.
 const IONS: Readonly<Record<string, number>> = {
+  LI: 1,
   NA: 1,
   K: 1,
-  LI: 1,
+  RB: 1,
+  CS: 1,
+  AG: 1,
+  CU1: 1,
+  F: -1,
   CL: -1,
   BR: -1,
-  I: -1,
-  F: -1,
+  IOD: -1,
   MG: 2,
   CA: 2,
-  ZN: 2,
+  SR: 2,
+  BA: 2,
   MN: 2,
-  FE: 2,
-  CU: 2,
+  FE2: 2,
   CO: 2,
   NI: 2,
+  CU: 2,
+  ZN: 2,
   CD: 2,
+  HG: 2,
+  PB: 2,
+  FE: 3,
+  MN3: 3,
+  "3CO": 3,
 };
 const PROTEIN = new Set([
   "ALA",
@@ -198,14 +210,18 @@ export function templateCharges(
       groups.set(comp, group);
     }
     for (const [comp, group] of groups) {
+      // One atom, possibly repeated across alternate locations.
       if (
-        group.length === 1 && IONS[comp] !== undefined &&
-        atoms.element[group[0]] !== 1
+        IONS[comp] !== undefined && atoms.element[group[0]] !== 1 &&
+        group.every((i) => atoms.name[i] === atoms.name[group[0]]) &&
+        new Set(group.map((i) => atoms.altloc[i])).size === group.length
       ) {
-        const row = group[0], imported = formal?.[row] ?? 0;
+        const imported = group.map((i) => formal?.[i] ?? 0).find(Boolean) ?? 0;
         const charge = imported || IONS[comp];
-        values[row] = charge;
-        assigned[row] = 1;
+        for (const row of group) {
+          values[row] = charge;
+          assigned[row] = 1;
+        }
         ions.push({
           residue: residueKey(data, r),
           charge,

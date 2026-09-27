@@ -160,11 +160,17 @@ break stays internal and appears in `report.gaps`.
 to connected non-polymer components. Pass the template mask as `exclude` when
 combining both methods; it computes that mask itself if omitted. It requires
 known bond orders and refuses polymer-linked groups, modified polymer residues,
-unsupported valence and missing element parameters. Implicit hydrogen charges
-fold onto heavy atoms. The report names every refused component and reason. This
-is a heavy-atom, valence-based method, so unspecified protonation and formal
-charge can change the result. No atoms are assigned by guessing a bond order or
-an unsupported element parameter.
+unsupported valence and missing element parameters. Kekulé orders from
+`chem_comp_bond` are used as given, with the aromatic flag marking conjugation;
+order-4 aromatic bonds are kekulized, and refused when the ring hydrogen's
+position (for example an imidazole tautomer) is not determined. Hybridization
+follows RDKit's bonds-plus-lone-pairs rule. Ligands with alternate locations are
+charged per conformer. Implicit hydrogen charges fold onto heavy atoms. The
+report names every refused component and reason; components the templates
+already charged in full, such as water and ions, are not refusals. This is a
+heavy-atom, valence-based method, so unspecified protonation and formal charge
+can change the result. No atoms are assigned by guessing a bond order or an
+unsupported element parameter.
 
 Sources are combined explicitly, with provenance describing both methods:
 

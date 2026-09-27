@@ -2,6 +2,7 @@ import { assertAlmostEquals, assertEquals } from "@std/assert";
 import {
   activeAtoms,
   attributeColumn,
+  BOND_FLAGS,
   createStructure,
   type StructureData,
   withAttributes,
@@ -71,7 +72,13 @@ Deno.test("standard corpus atoms, DNA aliases, ions and active net charges", asy
         true,
       );
     }
-    if (id === "1bna") assertAlmostEquals(result.report.netCharge, -22, 1e-3);
+    if (id === "1bna") {
+      assertAlmostEquals(result.report.netCharge, -22, 1e-3);
+      assertEquals(
+        gasteigerCharges(data, { exclude: result.assigned }).report.refused,
+        [],
+      );
+    }
     if (id === "1tqn") {
       assertEquals(result.report.gaps.length > 0, true);
       assertEquals(
@@ -228,9 +235,14 @@ Deno.test("Gasteiger refuses unknown orders, missing parameters and modified pol
     "modified-polymer",
   );
   const covered = gasteigerCharges(ligand([6, 8], [[0, 1, 1]]), {
-    exclude: Uint8Array.of(1, 1),
+    exclude: Uint8Array.of(1, 0),
   });
   assertEquals(covered.report.refused[0].reason, "template-covered");
+  // A component the templates fully charged (water, ions) is not a refusal.
+  const water = gasteigerCharges(ligand([6, 8], [[0, 1, 1]]), {
+    exclude: Uint8Array.of(1, 1),
+  });
+  assertEquals(water.report.refused, []);
 });
 
 Deno.test("Gasteiger seeds conjugated formal charge like RDKit acetate", () => {
@@ -288,4 +300,261 @@ Deno.test("Gasteiger treats covalently joined het residues as one component", ()
     gasteigerCharges(linked).report.refused[0].reason,
     "polymer-linked",
   );
+});
+
+// As io reads chem_comp_bond: Kekulé orders in links, aromatic as a flag.
+function componentLigand(
+  elements: readonly number[],
+  edges: readonly (readonly [number, number, number, number])[],
+  formal?: readonly number[],
+): StructureData {
+  const base = ligand([...elements], []);
+  const data = createStructure({
+    positions: base.positions,
+    topology: {
+      ...base.topology,
+      links: {
+        count: edges.length,
+        a: Uint32Array.from(edges, (e) => e[0]),
+        b: Uint32Array.from(edges, (e) => e[1]),
+        order: Uint8Array.from(edges, (e) => e[2]),
+        flags: Uint8Array.from(
+          edges,
+          (e) => BOND_FLAGS.covalent | (e[3] ? BOND_FLAGS.aromatic : 0),
+        ),
+        source: edges.map(() => "component" as const),
+      },
+    },
+  });
+  return formal
+    ? withAttributes(data, {
+      formalCharge: {
+        domain: "atom",
+        kind: "code",
+        values: Int8Array.from(formal),
+        provenance: "user",
+      },
+    })
+    : data;
+}
+
+// RDKit 2026.03.6 from SMILES, heavy atom plus its implicit-H charges.
+const COMPONENT_FIXTURES = {
+  pyrrole: {
+    elements: [6, 6, 6, 7, 6],
+    edges: [[0, 1, 1, 1], [1, 2, 2, 1], [2, 3, 1, 1], [3, 4, 1, 1], [
+      4,
+      0,
+      2,
+      1,
+    ]],
+    expected: [0.019137, 0.019137, 0.082026, -0.202326, 0.082026],
+  },
+  thiophene: {
+    elements: [6, 6, 6, 16, 6],
+    edges: [[0, 1, 1, 1], [1, 2, 2, 1], [2, 3, 1, 1], [3, 4, 1, 1], [
+      4,
+      0,
+      2,
+      1,
+    ]],
+    expected: [0.011626, 0.011626, 0.064602, -0.152454, 0.064602],
+  },
+  furan: {
+    elements: [6, 6, 6, 8, 6],
+    edges: [[0, 1, 1, 1], [1, 2, 2, 1], [2, 3, 1, 1], [3, 4, 1, 1], [
+      4,
+      0,
+      2,
+      1,
+    ]],
+    expected: [0.041799, 0.041799, 0.19452, -0.472638, 0.19452],
+  },
+  indole: {
+    elements: [6, 6, 6, 6, 7, 6, 6, 6, 6],
+    edges: [
+      [0, 1, 2, 1],
+      [1, 2, 1, 1],
+      [2, 3, 2, 1],
+      [3, 4, 1, 1],
+      [4, 5, 1, 1],
+      [5, 6, 2, 1],
+      [6, 7, 1, 1],
+      [7, 8, 2, 1],
+      [8, 0, 1, 1],
+      [7, 3, 1, 1],
+    ],
+    expected: [
+      0.000773,
+      0.002187,
+      0.026477,
+      0.045339,
+      -0.195252,
+      0.083258,
+      0.027734,
+      -0.000655,
+      0.010138,
+    ],
+  },
+  adenine: {
+    elements: [7, 6, 7, 6, 7, 6, 7, 6, 7, 6],
+    edges: [
+      [0, 1, 1, 0],
+      [1, 2, 1, 1],
+      [2, 3, 2, 1],
+      [3, 4, 1, 1],
+      [4, 5, 2, 1],
+      [5, 6, 1, 1],
+      [6, 7, 1, 1],
+      [7, 8, 2, 1],
+      [8, 9, 1, 1],
+      [9, 1, 2, 1],
+      [9, 5, 1, 1],
+    ],
+    expected: [
+      -0.066082,
+      0.154613,
+      -0.217354,
+      0.226356,
+      -0.21674,
+      0.162275,
+      -0.16001,
+      0.198703,
+      -0.23124,
+      0.149478,
+    ],
+  },
+  methanesulfonamide: {
+    elements: [6, 16, 7, 8, 8],
+    edges: [[0, 1, 1, 0], [1, 2, 1, 0], [1, 3, 2, 0], [1, 4, 2, 0]],
+    expected: [0.175946, 0.205681, 0.044283, -0.212955, -0.212955],
+  },
+  methylPhosphate: {
+    elements: [6, 8, 15, 8, 8, 8],
+    edges: [[0, 1, 1, 0], [1, 2, 1, 0], [2, 3, 2, 0], [2, 4, 1, 0], [
+      2,
+      5,
+      1,
+      0,
+    ]],
+    expected: [0.208389, -0.290497, 0.468805, -0.228345, -0.079176, -0.079176],
+  },
+  enolate: {
+    elements: [6, 6, 8],
+    edges: [[0, 1, 1, 0], [1, 2, 2, 0]],
+    formal: [-1, 0, 0],
+    expected: [-0.711459, 0.049707, -0.338248],
+  },
+} as const;
+
+Deno.test("Gasteiger matches RDKit on chem_comp_bond Kekulé aromatics, S and P", () => {
+  for (const [name, fixture] of Object.entries(COMPONENT_FIXTURES)) {
+    const result = gasteigerCharges(componentLigand(
+      fixture.elements,
+      fixture.edges,
+      "formal" in fixture ? fixture.formal : undefined,
+    ));
+    assertEquals(result.report.refused, [], name);
+    for (let i = 0; i < fixture.expected.length; i++) {
+      assertAlmostEquals(result.values[i], fixture.expected[i], 1e-3, name);
+    }
+  }
+});
+
+Deno.test("Gasteiger kekulizes order-4 bonds and refuses an unknown tautomer", () => {
+  const aromatic = (key: "pyrrole" | "indole") => {
+    const fixture = COMPONENT_FIXTURES[key];
+    return gasteigerCharges(ligand(
+      [...fixture.elements],
+      fixture.edges.map((e) => [e[0], e[1], e[3] ? 4 : e[2]]),
+    ));
+  };
+  for (const key of ["pyrrole", "indole"] as const) {
+    const result = aromatic(key);
+    assertEquals(result.report.refused, [], key);
+    COMPONENT_FIXTURES[key].expected.forEach((x, i) =>
+      assertAlmostEquals(result.values[i], x, 1e-3, key)
+    );
+  }
+  // Imidazole: either nitrogen could carry the hydrogen.
+  const imidazole = gasteigerCharges(ligand([6, 6, 7, 6, 7], [
+    [0, 1, 4],
+    [1, 2, 4],
+    [2, 3, 4],
+    [3, 4, 4],
+    [4, 0, 4],
+  ]));
+  assertEquals(imidazole.report.refused[0].reason, "unknown-bond-order");
+  assertEquals(imidazole.assigned.every((x) => x === 0), true);
+});
+
+Deno.test("Gasteiger charges each conformer of a partial-altloc ligand", () => {
+  // CCO with the O in two alternate locations; both bond to the shared C.
+  const base = ligand([6, 6, 8, 8], [[0, 1, 1], [1, 2, 1], [1, 3, 1]]);
+  const data = createStructure({
+    positions: base.positions,
+    topology: {
+      ...base.topology,
+      atoms: { ...base.topology.atoms, altloc: ["", "", "A", "B"] },
+    },
+  });
+  const result = gasteigerCharges(data);
+  assertEquals(result.report.refused, []);
+  const ethanol = [0.03428138, 0.15236002, -0.18664140, -0.18664140];
+  ethanol.forEach((x, i) => assertAlmostEquals(result.values[i], x, 1e-3));
+});
+
+Deno.test("Templates use CCD ion charges, including alternate locations", () => {
+  const ion = (comp: string, altlocs: string[]) => {
+    const n = altlocs.length;
+    return templateCharges(createStructure({
+      positions: new Float32Array(3 * n),
+      topology: {
+        atoms: {
+          count: n,
+          id: altlocs.map((_, i) => String(i + 1)),
+          name: altlocs.map(() => comp),
+          altloc: altlocs,
+          residue: new Uint32Array(n),
+          element: new Uint8Array(n).fill(26),
+          occupancy: new Float32Array(n).fill(1 / n),
+          bfactor: new Float32Array(n),
+        },
+        residues: {
+          count: 1,
+          chain: Uint32Array.of(0),
+          labelSeq: Int32Array.of(1),
+          authSeq: ["1"],
+          insertionCode: [""],
+          comp: [comp],
+          polymer: ["other"],
+        },
+        chains: {
+          count: 1,
+          model: Int32Array.of(1),
+          labelId: ["A"],
+          authId: ["A"],
+        },
+        bonds: {
+          count: 0,
+          a: new Uint32Array(),
+          b: new Uint32Array(),
+          order: new Uint8Array(),
+          source: [],
+        },
+        instances: {
+          count: 0,
+          chain: new Uint32Array(),
+          operatorId: [],
+          transform: new Float64Array(),
+        },
+      },
+    }));
+  };
+  assertEquals([...ion("FE", [""]).values], [3]);
+  assertEquals([...ion("FE2", [""]).values], [2]);
+  const split = ion("FE", ["A", "B"]);
+  assertEquals([...split.values], [3, 3]);
+  assertEquals(split.report.netCharge, 3);
+  assertEquals(split.report.unmatched, []);
 });

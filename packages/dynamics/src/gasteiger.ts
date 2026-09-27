@@ -6,7 +6,8 @@ import {
 } from "@molgpu/table";
 import { type ChargeAssignment, templateCharges } from "./template-charges.ts";
 
-// RDKit Release_2025_09_5, GasteigerParams.cpp. Gasteiger & Marsili (1980).
+// RDKit GasteigerParams.cpp (2025.09). Gasteiger & Marsili (1980). RDKit's
+// sulfoxide/sulfone rows are unused: it charges those S atoms as sp3.
 // [electronegativity intercept, linear term, quadratic term].
 const PARAMETERS: Readonly<Record<string, readonly [number, number, number]>> =
   {
@@ -24,8 +25,6 @@ const PARAMETERS: Readonly<Record<string, readonly [number, number, number]>> =
     "Br:sp3": [10.08, 8.47, 1.16],
     "I:sp3": [9.9, 7.96, 0.96],
     "S:sp3": [10.14, 9.13, 1.38],
-    "S:so": [10.14, 9.13, 1.38],
-    "S:so2": [12, 10.81, 1.2],
     "S:sp2": [10.88, 9.49, 1.33],
     "P:sp3": [8.9, 8.24, 0.96],
     "P:sp2": [9.665, 8.53, 0.735],
@@ -58,18 +57,38 @@ const ELEMENT: Readonly<Record<number, string>> = {
   35: "Br",
   53: "I",
 };
-const VALENCE: Readonly<Record<number, number>> = {
+// Allowed valences of neutral atoms, lowest first, from RDKit's periodic
+// table. A charged atom uses its isoelectronic neighbour (N+ as C, O- as F).
+const VALENCES: Readonly<Record<number, readonly number[]>> = {
+  1: [1],
+  5: [3],
+  6: [4],
+  7: [3],
+  8: [2],
+  9: [1],
+  14: [4],
+  15: [3, 5],
+  16: [2, 4, 6],
+  17: [1],
+  35: [1],
+  53: [1, 3, 5],
+};
+// Valence-shell electrons, for RDKit's bonds-plus-lone-pairs hybridization.
+const OUTER: Readonly<Record<number, number>> = {
+  1: 1,
   5: 3,
   6: 4,
-  7: 3,
-  8: 2,
-  9: 1,
+  7: 5,
+  8: 6,
+  9: 7,
+  12: 2,
+  13: 3,
   14: 4,
-  15: 3,
-  16: 2,
-  17: 1,
-  35: 1,
-  53: 1,
+  15: 5,
+  16: 6,
+  17: 7,
+  35: 7,
+  53: 7,
 };
 export type GasteigerRefusalReason =
   | "template-covered"
@@ -93,7 +112,10 @@ export interface GasteigerOptions {
   /** RDKit's default is 12 iterations. */
   readonly iterations?: number;
 }
-type Edge = { a: number; b: number; order: number };
+type Bond = { order: number; readonly aromatic: boolean };
+type Edge = Bond & { readonly a: number; readonly b: number };
+type Neighbor = { readonly row: number; readonly bond: Bond };
+type Refusal = [GasteigerRefusalReason, string];
 
 /** Charge complete non-polymer connected components with RDKit-style PEOE. */
 export function gasteigerCharges(
@@ -112,7 +134,13 @@ export function gasteigerCharges(
     throw new Error("iterations must be an integer from 1 to 100");
   }
   const edges = new Map<string, Edge>();
-  const add = (a: number, b: number, order: number, authoritative = false) => {
+  const add = (
+    a: number,
+    b: number,
+    order: number,
+    aromatic: boolean,
+    authoritative = false,
+  ) => {
     if (a === b || a >= n || b >= n) return;
     const ra = atoms.residue[a], rb = atoms.residue[b];
     if (chains.model[residues.chain[ra]] !== chains.model[residues.chain[rb]]) {
@@ -124,23 +152,28 @@ export function gasteigerCharges(
     const key = a < b ? `${a}:${b}` : `${b}:${a}`;
     const prior = edges.get(key);
     if (!prior || authoritative || (prior.order === 0 && order !== 0)) {
-      edges.set(key, { a, b, order });
+      edges.set(key, { a, b, order, aromatic });
     }
   };
   for (let k = 0; k < bonds.count; k++) {
     if (bonds.flags && !(bonds.flags[k] & BOND_FLAGS.covalent)) continue;
+    const order = bonds.source[k] === "inferred" ? 0 : bonds.order[k];
     add(
       bonds.a[k],
       bonds.b[k],
-      bonds.source[k] === "inferred" ? 0 : bonds.order[k],
+      order,
+      order === 4 || !!(bonds.flags && bonds.flags[k] & BOND_FLAGS.aromatic),
     );
   }
+  // chem_comp_bond gives Kekulé orders; the aromatic flag only marks
+  // conjugation, as RDKit's perceived aromaticity would.
   for (let k = 0; links && k < links.count; k++) {
     if (!(links.flags[k] & BOND_FLAGS.covalent)) continue;
     add(
       links.a[k],
       links.b[k],
-      links.flags[k] & BOND_FLAGS.aromatic ? 4 : links.order[k],
+      links.order[k],
+      links.order[k] === 4 || !!(links.flags[k] & BOND_FLAGS.aromatic),
       true,
     );
   }
@@ -166,6 +199,158 @@ export function gasteigerCharges(
       reason,
       detail,
     });
+  };
+  const solve = (molecule: number[]): Float64Array | Refusal => {
+    const m = molecule.length;
+    const local = new Map(molecule.map((row, index) => [row, index]));
+    const neighbors: Neighbor[][] = molecule.map(() => []);
+    for (let p = 0; p < m; p++) {
+      for (const edge of adjacency[molecule[p]]) {
+        const q = local.get(edge.b);
+        if (edge.a !== molecule[p] || q === undefined) continue;
+        if (edge.order === 0) {
+          return ["unknown-bond-order", "bond order 0 is unknown"];
+        }
+        const bond = { order: edge.order, aromatic: edge.aromatic };
+        neighbors[p].push({ row: q, bond });
+        neighbors[q].push({ row: p, bond });
+      }
+    }
+    const z = molecule.map((i) => atoms.element[i]);
+    const unknown = z.find((e) => !ELEMENT[e]);
+    if (unknown !== undefined) {
+      return [
+        "missing-parameters",
+        `no Gasteiger parameter for atomic number ${unknown}`,
+      ];
+    }
+    const charge = molecule.map((i) => Number(formal?.[i] ?? 0));
+    const kekule = kekulize(z, charge, neighbors);
+    if (kekule) return kekule;
+    const sum = (p: number) =>
+      neighbors[p].reduce((s, x) => s + x.bond.order, 0);
+    const hydrogens = new Array<number>(m).fill(0);
+    for (let p = 0; p < m; p++) {
+      if (z[p] === 1) continue;
+      const degree = sum(p);
+      const allowed = VALENCES[z[p] - charge[p]] ??
+        (degree === 0 ? [0] : undefined);
+      if (!allowed) {
+        return [
+          "unsupported-valence",
+          `no implicit-H valence for ${ELEMENT[z[p]]}`,
+        ];
+      }
+      const target = allowed.find((v) => v >= degree);
+      if (target === undefined || target - degree > 4) {
+        return [
+          "unsupported-valence",
+          `${ELEMENT[z[p]]} has bond-order sum ${degree}`,
+        ];
+      }
+      hydrogens[p] = target - degree;
+    }
+    // RDKit's conjugation (ConjugHybrid.cpp): aromatic bonds, plus a multiple
+    // bond and its neighbour bond on unsaturated first-row atoms.
+    const totalDegree = (p: number) => neighbors[p].length + hydrogens[p];
+    const candidate = (p: number) => {
+      const allowed = VALENCES[z[p]];
+      if (z[p] > 10 || !allowed || allowed[0] <= 1 || totalDegree(p) > 3) {
+        return false;
+      }
+      if (!charge[p] && sum(p) + hydrogens[p] > allowed[0]) return false;
+      const lone = Math.max(OUTER[z[p]] - allowed[0] - charge[p], 0);
+      return allowed[0] - totalDegree(p) + lone > 0;
+    };
+    const conjugated = new Set<Bond>();
+    for (let p = 0; p < m; p++) {
+      for (const x of neighbors[p]) if (x.bond.aromatic) conjugated.add(x.bond);
+    }
+    for (let p = 0; p < m; p++) {
+      if (!candidate(p) || totalDegree(p) < 2) continue;
+      for (const first of neighbors[p]) {
+        if (first.bond.order < 2 && !first.bond.aromatic) continue;
+        for (const other of neighbors[p]) {
+          if (
+            other === first || totalDegree(other.row) > 3 ||
+            !candidate(other.row)
+          ) continue;
+          conjugated.add(first.bond);
+          conjugated.add(other.bond);
+        }
+      }
+    }
+    const params: (readonly [number, number, number])[] = [];
+    for (let p = 0; p < m; p++) {
+      const symbol = ELEMENT[z[p]];
+      let mode = "*";
+      if (z[p] !== 1) {
+        // RDKit numBondsPlusLonePairs hybridization.
+        const lone = Math.max(
+          0,
+          Math.floor((OUTER[z[p]] - sum(p) - hydrogens[p] - charge[p]) / 2),
+        );
+        const orbitals = totalDegree(p) + lone;
+        mode = orbitals === 2 ? "sp" : orbitals === 3 ||
+            (orbitals === 4 && totalDegree(p) <= 3 &&
+              neighbors[p].some((x) => conjugated.has(x.bond)))
+          ? "sp2"
+          : "sp3";
+      }
+      const parameter = PARAMETERS[`${symbol}:${mode}`];
+      if (!parameter) {
+        return [
+          "missing-parameters",
+          `no Gasteiger parameter for ${symbol}:${mode}`,
+        ];
+      }
+      params.push(parameter);
+    }
+    const q = charge.slice();
+    for (let p = 0; p < m; p++) {
+      if (!q[p]) continue;
+      const same = new Set([p]);
+      for (const first of neighbors[p]) {
+        if (!conjugated.has(first.bond)) continue;
+        for (const second of neighbors[first.row]) {
+          if (
+            second.row !== p && conjugated.has(second.bond) &&
+            z[p] === z[second.row]
+          ) same.add(second.row);
+        }
+      }
+      const total = [...same].reduce((s, row) => s + q[row], 0);
+      for (const row of same) q[row] = total / same.size;
+    }
+    const hCharge = new Float64Array(m);
+    const ionX = params.map((x, p) => z[p] === 1 ? 20.02 : x[0] + x[1] + x[2]);
+    const energy = new Float64Array(m);
+    const hParam = PARAMETERS["H:*"];
+    let damp = 0.5;
+    for (let iteration = 0; iteration < iterations; iteration++) {
+      for (let p = 0; p < m; p++) {
+        const parameter = params[p];
+        energy[p] = parameter[0] + q[p] * (parameter[1] + parameter[2] * q[p]);
+      }
+      for (let p = 0; p < m; p++) {
+        let delta = 0;
+        for (const neighbor of neighbors[p]) {
+          const j = neighbor.row, dx = energy[j] - energy[p];
+          delta += dx / (dx < 0 ? ionX[j] : ionX[p]);
+        }
+        const count = hydrogens[p];
+        if (count) {
+          const h = hCharge[p] / count;
+          const dx = hParam[0] + h * (hParam[1] + hParam[2] * h) - energy[p];
+          const hDelta = dx / (dx < 0 ? 20.02 : ionX[p]);
+          delta += count * hDelta;
+          hCharge[p] -= count * hDelta * damp;
+        }
+        q[p] += damp * delta;
+      }
+      damp *= 0.5;
+    }
+    return Float64Array.from(q, (x, p) => x + hCharge[p]);
   };
   for (let start = 0; start < n; start++) {
     if (seen[start]) continue;
@@ -203,11 +388,14 @@ export function gasteigerCharges(
       }
       continue;
     }
-    if (component.some((i) => exclude[i])) {
+    // Water and ions the templates already charged are not refusals.
+    const covered = component.filter((i) => exclude[i]).length;
+    if (covered === component.length) continue;
+    if (covered) {
       refuse(
         component,
         "template-covered",
-        "a template already assigned this component",
+        "a template already assigned part of this component",
       );
       continue;
     }
@@ -224,168 +412,33 @@ export function gasteigerCharges(
       );
       continue;
     }
-    const local = new Map(component.map((row, index) => [row, index]));
-    const componentEdges = component.flatMap((i) =>
-      adjacency[i].filter((edge) => edge.a === i && local.has(edge.b))
-    );
-    if (componentEdges.some((edge) => edge.order === 0)) {
-      refuse(component, "unknown-bond-order", "bond order 0 is unknown");
-      continue;
-    }
-    const unknownElement = component.find((i) => !ELEMENT[atoms.element[i]]);
-    if (unknownElement !== undefined) {
-      refuse(
-        component,
-        "missing-parameters",
-        `no Gasteiger parameter for atomic number ${
-          atoms.element[unknownElement]
-        }`,
+    // Alternate locations share one component; each conformer is its own
+    // molecule, and atoms common to all conformers get identical charges.
+    const altlocs = [
+      ...new Set(component.map((i) => atoms.altloc[i]).filter(Boolean)),
+    ];
+    const solved: [number[], Float64Array][] = [];
+    let error: Refusal | undefined;
+    for (const altloc of altlocs.length ? altlocs : [""]) {
+      const molecule = component.filter((i) =>
+        !atoms.altloc[i] || atoms.altloc[i] === altloc
       );
-      continue;
-    }
-    const neighbors: { row: number; order: number }[][] = component.map(
-      () => [],
-    );
-    for (const edge of componentEdges) {
-      const a = local.get(edge.a)!, b = local.get(edge.b)!;
-      neighbors[a].push({ row: b, order: edge.order });
-      neighbors[b].push({ row: a, order: edge.order });
-    }
-    const params: (readonly [number, number, number])[] = [];
-    const hydrogens: number[] = [];
-    let error: [GasteigerRefusalReason, string] | undefined;
-    for (let p = 0; p < component.length; p++) {
-      const i = component[p], z = atoms.element[i], symbol = ELEMENT[z];
-      const degree = neighbors[p].reduce(
-        (s, x) => s + (x.order === 4 ? 1.5 : x.order),
-        0,
-      );
-      const charge = formal?.[i] ?? 0;
-      let h = 0;
-      if (z !== 1) {
-        const valence = VALENCE[z];
-        if (valence === undefined && symbol) {
-          error = [
-            "unsupported-valence",
-            `no implicit-H valence for ${symbol}`,
-          ];
-          break;
-        }
-        if (valence !== undefined) {
-          const target = (z === 15 && degree > 3
-            ? 5
-            : z === 16 && degree > 2
-            ? 6
-            : valence) +
-            ([6, 7, 8].includes(z) ? charge : 0);
-          h = Math.max(0, Math.round(target - degree));
-          if (h > 4 || Math.abs(degree + h - target) > 0.2) {
-            error = [
-              "unsupported-valence",
-              `${symbol} has bond-order sum ${degree}`,
-            ];
-            break;
-          }
-        }
-      }
-      const orders = neighbors[p].map((x) => x.order);
-      let mode = z === 1 ? "*" : orders.includes(3) ||
-          orders.filter((x) => x === 2).length >= 2
-        ? "sp"
-        : orders.some((x) => x === 2 || x === 4)
-        ? "sp2"
-        : "sp3";
-      if (
-        (z === 7 || z === 8) && mode === "sp3" &&
-        neighbors[p].some((bond) =>
-          bond.order === 1 &&
-          neighbors[bond.row].some((other) =>
-            other.row !== p && (other.order === 2 || other.order === 4)
-          )
-        )
-      ) mode = "sp2";
-      if (z === 16 && mode === "sp3") {
-        const oxygens = neighbors[p].filter((x) =>
-          atoms.element[component[x.row]] === 8
-        ).length;
-        if (oxygens === 1) mode = "so";
-        if (oxygens === 2) mode = "so2";
-      }
-      const parameter = PARAMETERS[`${symbol}:${mode}`];
-      if (!parameter) {
-        error = [
-          "missing-parameters",
-          `no Gasteiger parameter for ${symbol ?? z}:${mode}`,
-        ];
+      const result = solve(molecule);
+      if (Array.isArray(result)) {
+        error = result;
         break;
       }
-      params.push(parameter);
-      hydrogens.push(h);
+      solved.push([molecule, result]);
     }
     if (error) {
       refuse(component, ...error);
       continue;
     }
-    const q = component.map((i) => Number(formal?.[i] ?? 0));
-    const conjugated = (a: number, b: number, order: number) =>
-      order === 2 || order === 4 ||
-      neighbors[a].some((x) =>
-        x.row !== b && (x.order === 2 || x.order === 4)
-      ) ||
-      neighbors[b].some((x) => x.row !== a && (x.order === 2 || x.order === 4));
-    for (let p = 0; p < component.length; p++) {
-      if (!q[p]) continue;
-      const same = new Set([p]);
-      for (const first of neighbors[p]) {
-        if (!conjugated(p, first.row, first.order)) continue;
-        for (const second of neighbors[first.row]) {
-          if (
-            second.row === p ||
-            !conjugated(first.row, second.row, second.order)
-          ) continue;
-          if (
-            atoms.element[component[p]] === atoms.element[component[second.row]]
-          ) {
-            same.add(second.row);
-          }
-        }
+    for (const [molecule, result] of solved) {
+      for (let p = 0; p < molecule.length; p++) {
+        values[molecule[p]] = result[p];
+        assigned[molecule[p]] = 1;
       }
-      const total = [...same].reduce((sum, row) => sum + q[row], 0);
-      for (const row of same) q[row] = total / same.size;
-    }
-    const hCharge = new Float64Array(component.length);
-    const ionX = params.map((p, i) =>
-      atoms.element[component[i]] === 1 ? 20.02 : p[0] + p[1] + p[2]
-    );
-    const energy = new Float64Array(component.length);
-    const hParam = PARAMETERS["H:*"];
-    let damp = 0.5;
-    for (let iteration = 0; iteration < iterations; iteration++) {
-      for (let p = 0; p < component.length; p++) {
-        const parameter = params[p];
-        energy[p] = parameter[0] + q[p] * (parameter[1] + parameter[2] * q[p]);
-      }
-      for (let p = 0; p < component.length; p++) {
-        let delta = 0;
-        for (const neighbor of neighbors[p]) {
-          const j = neighbor.row, dx = energy[j] - energy[p];
-          delta += dx / (dx < 0 ? ionX[j] : ionX[p]);
-        }
-        const count = hydrogens[p];
-        if (count) {
-          const h = hCharge[p] / count;
-          const dx = hParam[0] + h * (hParam[1] + hParam[2] * h) - energy[p];
-          const hDelta = dx / (dx < 0 ? 20.02 : ionX[p]);
-          delta += count * hDelta;
-          hCharge[p] -= count * hDelta * damp;
-        }
-        q[p] += damp * delta;
-      }
-      damp *= 0.5;
-    }
-    for (let p = 0; p < component.length; p++) {
-      values[component[p]] = q[p] + hCharge[p];
-      assigned[component[p]] = 1;
     }
   }
   return {
@@ -393,4 +446,91 @@ export function gasteigerCharges(
     assigned,
     report: { assigned: assigned.reduce((a, b) => a + b, 0), refused },
   };
+}
+
+/**
+ * Give order-4 (aromatic) bonds Kekulé orders in place. Carbon and charged
+ * ring atoms need one double bond; a neutral two-connected N or P may carry
+ * the ring hydrogen instead (pyrrole). The fewest such hydrogens must have a
+ * unique placement, otherwise the tautomer is unknown and nothing is guessed.
+ */
+function kekulize(
+  z: readonly number[],
+  charge: readonly number[],
+  neighbors: readonly Neighbor[][],
+): Refusal | undefined {
+  const m = z.length;
+  const ring = neighbors.map((list) => list.filter((x) => x.bond.order === 4));
+  if (!ring.some((list) => list.length)) return undefined;
+  // 0 no double bond, 1 needs one, 2 needs one or a hydrogen.
+  const role = new Uint8Array(m);
+  for (let p = 0; p < m; p++) {
+    if (!ring[p].length) continue;
+    const allowed = VALENCES[z[p] - charge[p]];
+    if (!allowed) {
+      return [
+        "unsupported-valence",
+        `no aromatic valence for ${ELEMENT[z[p]]}`,
+      ];
+    }
+    const single = neighbors[p].reduce(
+      (s, x) => s + (x.bond.order === 4 ? 1 : x.bond.order),
+      0,
+    );
+    const spare = allowed[0] - single;
+    if (spare <= 0) continue;
+    role[p] = spare === 1 && !charge[p] && (z[p] === 7 || z[p] === 15) &&
+        ring[p].length === 2
+      ? 2
+      : 1;
+  }
+  const mate = new Int32Array(m).fill(-1);
+  let best: Int32Array | undefined, bestKey = "", fewest = Infinity;
+  let ambiguous = false, steps = 0;
+  const visit = (p: number, hydrogens: number[]): boolean => {
+    if (++steps > 100_000) return false;
+    while (p < m && (!role[p] || mate[p] !== -1)) p++;
+    if (hydrogens.length > fewest) return true;
+    if (p === m) {
+      const key = hydrogens.join();
+      if (hydrogens.length < fewest) {
+        fewest = hydrogens.length;
+        best = mate.slice();
+        bestKey = key;
+        ambiguous = false;
+      } else if (key !== bestKey) ambiguous = true;
+      return true;
+    }
+    for (const x of ring[p]) {
+      if (!role[x.row] || mate[x.row] !== -1) continue;
+      mate[p] = x.row;
+      mate[x.row] = p;
+      const ok = visit(p + 1, hydrogens);
+      mate[p] = mate[x.row] = -1;
+      if (!ok) return false;
+    }
+    if (role[p] === 2) {
+      mate[p] = -2;
+      const ok = visit(p + 1, [...hydrogens, p]);
+      mate[p] = -1;
+      if (!ok) return false;
+    }
+    return true;
+  };
+  if (!visit(0, [])) {
+    return ["unknown-bond-order", "aromatic system is too large to kekulize"];
+  }
+  if (!best) {
+    return ["unknown-bond-order", "aromatic bonds have no Kekulé structure"];
+  }
+  if (ambiguous) {
+    return [
+      "unknown-bond-order",
+      "aromatic hydrogen position is ambiguous without explicit hydrogens",
+    ];
+  }
+  for (let p = 0; p < m; p++) {
+    for (const x of ring[p]) x.bond.order = best[p] === x.row ? 2 : 1;
+  }
+  return undefined;
 }
