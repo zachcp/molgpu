@@ -16,15 +16,15 @@ import { extname, fromFileUrl, normalize } from "@std/path";
 import { build } from "vite";
 import { chromium } from "playwright";
 import { webgpuBrowserArgs } from "./webgpu-browser-args.mjs";
+import { applyAffine } from "../../dynamics/src/affine.ts";
 import {
-  applyAffine,
   cellListWgsl,
-  createCellList,
   createUnwrapForest,
-  fitKabsch,
   planCellList,
-  unwrapFrame,
-} from "@molgpu/dynamics";
+} from "@molgpu/dynamics/wgsl";
+import { createCellList } from "../../dynamics/src/cell-list.ts";
+import { fitKabsch } from "@molgpu/dynamics";
+import { unwrapFrame } from "../../dynamics/src/pbc.ts";
 import { writeXtc } from "../../io/test/trajectory-fixture.ts";
 import { structureFromBcif } from "@molgpu/io";
 import { interpolatePositions } from "../src/internal/frame-window.ts";

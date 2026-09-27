@@ -1,11 +1,8 @@
 import { assertAlmostEquals, assertEquals, assertThrows } from "@std/assert";
 import type { Topology } from "@molgpu/table";
-import {
-  createUnwrapForest,
-  minimumImage,
-  PbcSearchLimitError,
-  unwrapFrame,
-} from "../src/index.ts";
+import { createUnwrapForest } from "../src/wgsl.ts";
+import { minimumImage, PbcSearchLimitError } from "../src/index.ts";
+import { unwrapFrame } from "../src/pbc.ts";
 
 const CUBE = Float32Array.of(10, 0, 0, 0, 10, 0, 0, 0, 10);
 

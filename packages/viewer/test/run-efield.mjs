@@ -11,7 +11,7 @@ import { extname, fromFileUrl, normalize } from "@std/path";
 import { build } from "vite";
 import { chromium } from "playwright";
 import { webgpuBrowserArgs } from "./webgpu-browser-args.mjs";
-import { coulombField } from "../../dynamics/src/index.ts";
+import { coulombField } from "../../dynamics/src/electrostatics.ts";
 
 /**
  * max |gpu − cpu| / max |cpu|: f32 tiles cannot hold pointwise relative error

@@ -2,9 +2,9 @@ import { assertEquals, assertThrows } from "@std/assert";
 import {
   affineSelectedWgsl,
   affineWgsl,
-  applyAffine,
   isIdentityAffine,
-} from "../src/index.ts";
+} from "../src/wgsl.ts";
+import { applyAffine } from "../src/affine.ts";
 
 const identity = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
 

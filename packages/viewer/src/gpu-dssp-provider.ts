@@ -10,7 +10,7 @@ import {
   useState,
 } from "@use-gpu/live";
 import { useDeviceContext } from "@use-gpu/workbench";
-import { prepareDsspLayout } from "@molgpu/dynamics";
+import { prepareDsspLayout } from "@molgpu/dynamics/wgsl";
 import { activeAtoms, withAttributes } from "@molgpu/table";
 import { AttributeSnapshotContext } from "./attribute-snapshot.ts";
 import { AttributesContext } from "./attributes-context.ts";

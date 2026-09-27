@@ -14,7 +14,7 @@ import {
   affineWgsl,
   isIdentityAffine,
   validateAffine,
-} from "@molgpu/dynamics";
+} from "@molgpu/dynamics/wgsl";
 import type { Selection, SelectionQuery } from "@molgpu/select";
 import { type Curve, sample } from "@molgpu/timeline";
 import { useCoordinates } from "./coordinates-context.ts";

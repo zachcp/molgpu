@@ -186,7 +186,7 @@ exactly one wall, and (b) everything correctness-critical is a pure function.
 | `@molgpu/select`   | `table`                            | Selection language → sorted index buffers.                                                                                                      |
 | `@molgpu/fields`   | `table`, `@use-gpu/shader`         | Field abstraction, expression sublanguage → WGSL.                                                                                               |
 | `@molgpu/geo`      | —                                  | Geometry kernels: ported ribbon/spline math, molecular surface, sphere/cylinder instancing. Typed arrays in, typed arrays out. No GPU, no Live. |
-| `@molgpu/dynamics` | `table`                            | Pure coordinate math and CPU charge assignment, with WGSL sources. **Never imports `@use-gpu/*`.**                                              |
+| `@molgpu/dynamics` | `table`                            | Pure coordinate math and CPU charge assignment; WGSL sources on `./wgsl`. **Never imports `@use-gpu/*`.**                                       |
 | `@molgpu/timeline` | `@use-gpu/workbench`               | Global scrubbable timeline, beats, curve sampling.                                                                                              |
 | `@molgpu/viewer`   | all of the above                   | The Live components. **The only package that imports `@use-gpu/workbench` components.**                                                         |
 

@@ -6,17 +6,16 @@ import {
 } from "@std/assert";
 import {
   COULOMB_CONSTANT,
-  COULOMB_PARAMS_BYTES,
   coulombField,
   coulombGrid,
-  coulombParams,
   coulombPotential,
   debyeKappa,
-  electrostatics,
   GAS_CONSTANT_KCAL,
   gridPoints,
   packCharges,
-} from "../src/index.ts";
+} from "../src/electrostatics.ts";
+import { COULOMB_PARAMS_BYTES, coulombParams } from "../src/wgsl.ts";
+import { electrostatics } from "../src/index.ts";
 
 const close = (actual: number, expected: number, rel = 1e-9) =>
   assertAlmostEquals(

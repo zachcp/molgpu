@@ -11,11 +11,8 @@ import {
   useResource,
 } from "@use-gpu/live";
 import { useDeviceContext } from "@use-gpu/workbench";
-import {
-  fitKabsch,
-  SUPERPOSE_FIT_BYTES,
-  superposeWgsl,
-} from "@molgpu/dynamics";
+import { fitKabsch } from "@molgpu/dynamics";
+import { SUPERPOSE_FIT_BYTES, superposeWgsl } from "@molgpu/dynamics/wgsl";
 import type { StructureData, TrajectoryData } from "@molgpu/table";
 import { useCoordinates } from "./coordinates-context.ts";
 import { CoordinatePasses } from "./internal/coordinate-passes.ts";

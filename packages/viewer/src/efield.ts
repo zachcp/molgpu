@@ -25,9 +25,8 @@ import {
   COULOMB_WORKGROUP,
   coulombParams,
   coulombWgsl,
-  type Electrostatics,
-  electrostatics,
-} from "@molgpu/dynamics";
+} from "@molgpu/dynamics/wgsl";
+import { type Electrostatics, electrostatics } from "@molgpu/dynamics";
 import { type Coordinates, useCoordinates } from "./coordinates-context.ts";
 import { AttributesContext } from "./attributes-context.ts";
 import {

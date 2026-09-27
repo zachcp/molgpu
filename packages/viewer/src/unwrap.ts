@@ -13,13 +13,12 @@ import {
 import { useDeviceContext } from "@use-gpu/workbench";
 import {
   createUnwrapForest,
-  type PeriodicBox,
-  periodicBox,
   UNWRAP_LINK_BYTES,
   UNWRAP_PARAMS_BYTES,
   type UnwrapForest,
   unwrapWgsl,
-} from "@molgpu/dynamics";
+} from "@molgpu/dynamics/wgsl";
+import { type PeriodicBox, periodicBox } from "@molgpu/dynamics";
 import type { Topology } from "@molgpu/table";
 import { useCoordinates } from "./coordinates-context.ts";
 import { CoordinatePasses } from "./internal/coordinate-passes.ts";
