@@ -13,8 +13,17 @@ import { extname, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 import { build } from "vite";
 import { chromium } from "playwright";
-import { cellListWgsl, createCellList } from "@molgpu/dynamics";
+import {
+  applyAffine,
+  cellListWgsl,
+  createCellList,
+  createUnwrapForest,
+  fitKabsch,
+  planCellList,
+  unwrapFrame,
+} from "@molgpu/dynamics";
 import { writeXtc } from "../../io/test/trajectory-fixture.ts";
+import { structureFromBcif } from "@molgpu/io";
 import { interpolatePositions } from "../src/internal/frame-window.ts";
 
 async function runGpuCellList(page, positions, cutoff) {
@@ -695,6 +704,20 @@ Deno.test("trajectory components", async () => {
       (await counters()).detail["uploadBytes:structure:positions"] ?? 0;
     await update({ time: 0.75 });
     await expectRead(modal(pageFrames[1], 1, -2), "normal mode reverse");
+    // Landing on an exact zero of the sine (t = 0) keeps the kernel mounted:
+    // no mode buffer is uploaded again (9g3.10).
+    const vectorUploads = async () =>
+      (await counters()).detail["uploadBytes:coords:normal-mode:vectors"] ?? 0;
+    const beforeZero = await vectorUploads();
+    await update({ time: 0 });
+    await expectRead(modal(pageFrames[1], 1, 0), "normal mode at a zero");
+    await update({ time: 0.25 });
+    await expectRead(modal(pageFrames[1], 1, 2), "normal mode after a zero");
+    assert.equal(
+      await vectorUploads(),
+      beforeZero,
+      "a zero crossing does not re-upload mode buffers",
+    );
     await update({ time: 0.25, modeVersion: 2 });
     await expectRead(modal(pageFrames[1], 2, 2), "normal mode swap");
     await update({ amplitude: 0 });
@@ -718,6 +741,399 @@ Deno.test("trajectory components", async () => {
       (_, i) => i % 3 === 0 ? i / 3 : 0,
     );
     report.cellList.push(await runGpuCellList(page, longChain, 1));
+    // A corpus structure at two cutoffs (the CPU reference is itself checked
+    // against table.spatialGrid on the corpus in dynamics' unit tests).
+    const crn = await structureFromBcif(
+      await readFile(`${root}packages/io/test/fixtures/1crn.bcif`),
+    );
+    for (const cutoff of [4, 8]) {
+      report.cellList.push(
+        await runGpuCellList(page, Array.from(crn.positions), cutoff),
+      );
+    }
+
+    // 14. <Superpose>: the GPU fit of each displayed frame agrees with the CPU
+    // Kabsch oracle, at a ~1000 Å offset, through a mirror image (still a
+    // proper rotation), for fit subsets and translate=false. Scrubbing moves
+    // no reference or structure bytes. A collinear frame passes through.
+    const sup = await page.evaluate(() => window.__trajectory.superpose);
+    const supFrame = (frame) => {
+      const a = Math.floor(frame), t = frame - a;
+      const b = Math.min(a + 1, sup.frames.length - 1);
+      return Float32Array.from(
+        t
+          ? interpolatePositions(
+            Float32Array.from(sup.frames[a]),
+            Float32Array.from(sup.frames[b]),
+            t,
+          )
+          : sup.frames[a],
+      );
+    };
+    const fitRows = [0, 1, 2, 3, 4, 5];
+    const oracle = (frame, { to = "first", rows = null, translate = true }) => {
+      const upstream = supFrame(frame);
+      const reference = Float32Array.from(
+        to === "first" ? sup.frames[0] : sup.fixed,
+      );
+      const fit = fitKabsch(upstream, reference, rows, translate);
+      return {
+        positions: Array.from(applyAffine(upstream, fit.matrix)),
+        rmsd: fit.rmsd,
+        reference,
+      };
+    };
+    const rmsdOf = (values, reference, rows) => {
+      const list = rows ?? values.map((_, i) => i).filter((i) => i % 3 === 0)
+        .map((i) => i / 3);
+      let sum = 0;
+      for (const row of list) {
+        for (let a = 0; a < 3; a++) {
+          sum += (values[3 * row + a] - reference[3 * row + a]) ** 2;
+        }
+      }
+      return Math.sqrt(sum / list.length);
+    };
+    report.superpose = [];
+    const checkFit = async (frame, options = {}) => {
+      const want = oracle(frame, options);
+      const what = `superpose ${JSON.stringify({ frame, ...options })}`;
+      // f32 positions near 1000 Å carry ~6e-5 Å of rounding.
+      const got = await expectRead(want.positions, what, 2e-3);
+      const rmsd = rmsdOf(got, want.reference, options.rows ?? null);
+      assert.ok(
+        Math.abs(rmsd - want.rmsd) <= 1e-4,
+        `${what}: rmsd ${rmsd} vs ${want.rmsd}`,
+      );
+      report.superpose.push({ frame, ...options, rmsd, oracle: want.rmsd });
+    };
+    await update({
+      mode: "superpose",
+      frame: 0,
+      supTo: "first",
+      supSelect: false,
+      supTranslate: true,
+    });
+    await displayed({ a: 0, b: 0, t: 0 });
+    await checkFit(0);
+    const referenceUploads = async () =>
+      (await counters()).detail["uploadBytes:coords:superpose:reference"] ?? 0;
+    const supUploads = await referenceUploads();
+    const rootUploads =
+      (await counters()).detail["uploadBytes:structure:positions"] ?? 0;
+    for (const frame of [1, 2, 3, 2.5]) {
+      await update({ frame });
+      await displayed({
+        a: Math.floor(frame),
+        b: Math.ceil(frame),
+        t: frame % 1,
+      });
+      await checkFit(frame);
+    }
+    // Rapid backward scrub: one displayed frame per animation frame.
+    await page.evaluate(async () => {
+      for (const frame of [3, 2.75, 2.5, 2, 1.5, 1.25]) {
+        window.__trajectory.update({ frame });
+        await new Promise(requestAnimationFrame);
+      }
+    });
+    await displayed({ a: 1, b: 2, t: 0.25 });
+    await checkFit(1.25);
+    assert.equal(
+      await referenceUploads(),
+      supUploads,
+      "scrubbing does not re-upload the reference",
+    );
+    assert.equal(
+      (await counters()).detail["uploadBytes:structure:positions"] ?? 0,
+      rootUploads,
+      "scrubbing does not re-upload structure positions",
+    );
+    // A collinear frame has no unique rotation: it passes through.
+    await update({ frame: 4 });
+    await displayed({ a: 4, b: 4, t: 0 });
+    await expectRead(Array.from(supFrame(4)), "superpose collinear", 0);
+    // Fit rows, then translate=false, then a fixed reference.
+    await update({ frame: 2, supSelect: true });
+    await displayed({ a: 2, b: 2, t: 0 });
+    await checkFit(2, { rows: fitRows });
+    await update({ supSelect: false, supTranslate: false });
+    await checkFit(2, { translate: false });
+    await update({ supTranslate: true, supTo: "fixed" });
+    await checkFit(2, { to: "fixed" });
+    await update({ mode: "none" });
+
+    // 15. <Unwrap>: each displayed frame agrees with the CPU unwrapFrame on a
+    // skew triclinic cell, bonds come back whole, the box follows frames,
+    // centering moves the ring into the primary cell, ring ambiguity is
+    // reported, and a missing or singular box passes through.
+    const unw = await page.evaluate(() => {
+      const { statuses: _, ...rest } = window.__trajectory.unwrap;
+      return rest;
+    });
+    const unwrapTopology = {
+      atoms: {
+        count: unw.root.length / 3,
+        residue: new Uint32Array(unw.root.length / 3),
+        altloc: new Array(unw.root.length / 3).fill(""),
+      },
+      residues: { chain: new Uint32Array(1) },
+      chains: { model: Int32Array.of(1) },
+      bonds: {
+        count: unw.bonds.length,
+        a: Uint32Array.from(unw.bonds, (bond) => bond[0]),
+        b: Uint32Array.from(unw.bonds, (bond) => bond[1]),
+        flags: new Uint8Array(unw.bonds.length).fill(1),
+      },
+    };
+    const forest = createUnwrapForest(unwrapTopology);
+    const ringRows = [14, 15, 16, 17, 18, 19];
+    const cpuUnwrap = (frame, center = null) =>
+      unwrapFrame(
+        Float32Array.from(unw.frames[frame]),
+        forest,
+        unw.boxes[frame],
+        center,
+      );
+    const bondLengths = (values) =>
+      unw.bonds.map(([a, b]) =>
+        Math.hypot(
+          values[3 * a] - values[3 * b],
+          values[3 * a + 1] - values[3 * b + 1],
+          values[3 * a + 2] - values[3 * b + 2],
+        )
+      );
+    const wholeLengths = bondLengths(unw.root);
+    const unwrapStatuses = () =>
+      page.evaluate(() => window.__trajectory.unwrap.statuses.slice(-1)[0]);
+    await page.evaluate(() => {
+      window.__trajectory.unwrap.statuses.length = 0;
+    });
+    await update({
+      mode: "unwrap",
+      frame: 0,
+      unwrapBox: "trajectory",
+      unwrapCenter: false,
+    });
+    await displayed({ a: 0, b: 0, t: 0 });
+    const graphUploads = async () =>
+      (await counters()).detail["uploadBytes:coords:unwrap:graph"] ?? 0;
+    let graphBytes;
+    report.unwrap = [];
+    for (const frame of [0, 1, 0, 1]) {
+      await update({ frame });
+      await displayed({ a: frame, b: frame, t: 0 });
+      const want = cpuUnwrap(frame);
+      const got = await expectRead(
+        Array.from(want.positions),
+        `unwrap frame ${frame}`,
+        1e-4,
+      );
+      bondLengths(got).forEach((length, k) =>
+        assert.ok(
+          Math.abs(length - wholeLengths[k]) < 1e-4,
+          `unwrap frame ${frame} bond ${k}: ${length} vs ${wholeLengths[k]}`,
+        )
+      );
+      graphBytes ??= await graphUploads();
+      report.unwrap.push({ frame, status: want.status });
+    }
+    assert.equal(
+      await graphUploads(),
+      graphBytes,
+      "frames re-upload no forest",
+    );
+    await page.waitForFunction(
+      () => window.__trajectory.unwrap.statuses.slice(-1)[0]?.status === "ok",
+    );
+    // Centering: the ring's centroid lands in the primary cell.
+    await update({ unwrapCenter: true, frame: 1 });
+    await displayed({ a: 1, b: 1, t: 0 });
+    await expectRead(
+      Array.from(cpuUnwrap(1, ringRows).positions),
+      "unwrap centered",
+      1e-4,
+    );
+    // Ambiguous ring closure is counted like the CPU reference.
+    await update({ unwrapCenter: false, frame: 2 });
+    await displayed({ a: 2, b: 2, t: 0 });
+    const ambiguous = cpuUnwrap(2);
+    assert.equal(ambiguous.status, "ambiguous");
+    await expectRead(
+      Array.from(ambiguous.positions),
+      "unwrap ambiguous frame",
+      1e-4,
+    );
+    await page.waitForFunction(
+      (count) => {
+        const last = window.__trajectory.unwrap.statuses.slice(-1)[0];
+        return last?.status === "ambiguous" &&
+          last.ambiguousRingEdges === count;
+      },
+      ambiguous.ambiguousRingEdges,
+      { timeout: 5000 },
+    );
+    report.unwrap.push(await unwrapStatuses());
+    // No box, or a singular one: positions pass through, with a status.
+    await update({ unwrapBox: "singular" });
+    await expectRead(unw.frames[2], "unwrap singular box", 0);
+    assert.equal((await unwrapStatuses()).status, "invalid-box");
+    await update({ unwrapBox: "none" });
+    // Without a Trajectory the probe sees the root upload itself, which is not
+    // a copy source: check that no provider output is published instead.
+    assert.notEqual(
+      await page.evaluate(() => window.__trajectory.source.buffer.label),
+      "molgpu:coords:provider",
+      "no box: the root coordinates pass through",
+    );
+    assert.equal((await unwrapStatuses()).status, "missing-box");
+    await update({ mode: "none" });
+
+    // 16. Gate 13 budgets (opt-in: `deno task gate:dynamics`). The scene is
+    // root + Trajectory (four slots) + Unwrap + Superpose (reference) +
+    // NormalMode at 100k and 1M atoms, as ten-atom chains in a periodic box.
+    if (Deno.env.get("MOLGPU_DYNAMICS_GATE")) {
+      report.gate = [];
+      const MB = 1e6;
+      for (const atoms of [100_000, 1_000_000]) {
+        const mountStart = performance.now();
+        await update({ mode: "gate", gateAtoms: atoms, frame: 0, time: 0.1 });
+        await page.waitForFunction(
+          (n) => {
+            const t = window.__trajectory;
+            return t.gate?.count === n && t.state?.displayed?.a === 0;
+          },
+          atoms,
+          { timeout: 180000 },
+        );
+        await settle();
+        const mountMs = performance.now() - mountStart;
+        const snap = await counters();
+        const bytes = snap.ownedBuffers.bytes;
+        // Buffers only used inside one generation's passes (held for reuse).
+        const within = [
+          "coords:unwrap:links",
+          "coords:unwrap:params",
+          "coords:unwrap:status",
+          "coords:unwrap:staging",
+          "coords:superpose:fit",
+          "coords:superpose:params",
+        ];
+        let persistent = 0, scratch = 0;
+        for (const [label, n] of Object.entries(bytes)) {
+          if (within.includes(label)) scratch += n;
+          else persistent += n;
+        }
+        // The shared cell list is not mounted in this scene: add its planned
+        // grid for an 8 Å cutoff over frame 0's bounds.
+        const cell = await page.evaluate((n) => {
+          const t = window.__trajectory;
+          return {
+            bounds: t.gateBounds(n),
+            limit: t.device.limits.maxStorageBufferBindingSize,
+          };
+        }, atoms);
+        const plan = planCellList(
+          { generation: 1, values: Float32Array.from(cell.bounds) },
+          1,
+          atoms,
+          8,
+          cell.limit,
+        );
+        // Warm every pipeline, then time a changed generation: a timeline
+        // tick (NormalMode only) and a resident trajectory frame (all four).
+        const change = (patch) =>
+          page.evaluate(async (patch) => {
+            const t = window.__trajectory;
+            const before = t.gate.generation;
+            const start = performance.now();
+            t.update(patch);
+            let frames = 0;
+            while (t.gate.generation === before && frames < 120) {
+              await new Promise(requestAnimationFrame);
+              frames++;
+            }
+            const published = performance.now() - start;
+            await t.device.queue.onSubmittedWorkDone();
+            return {
+              frames,
+              publishedMs: published,
+              gpuDoneMs: performance.now() - start,
+            };
+          }, patch);
+        for (const frame of [1, 2, 3, 0]) {
+          await update({ frame });
+          await page.waitForFunction(
+            (f) => window.__trajectory.state?.displayed?.a === f,
+            frame,
+            { timeout: 60000 },
+          );
+        }
+        const dispatches = async () => {
+          const d = (await counters()).detail;
+          return {
+            unwrap: d["gathers:coords:unwrap:dispatch"] ?? 0,
+            superpose: d["gathers:coords:superpose:dispatch"] ?? 0,
+          };
+        };
+        const ticks = [];
+        let before = await dispatches();
+        for (const time of [0.15, 0.2, 0.25]) {
+          ticks.push(await change({ time }));
+        }
+        const afterTicks = await dispatches();
+        assert.deepEqual(
+          afterTicks,
+          before,
+          "a timeline tick re-runs only NormalMode",
+        );
+        const frames = [];
+        for (const frame of [1, 2, 3]) frames.push(await change({ frame }));
+        const afterFrames = await dispatches();
+        assert.equal(afterFrames.unwrap - afterTicks.unwrap, 3);
+        assert.equal(afterFrames.superpose - afterTicks.superpose, 3);
+        const worst = Math.max(...ticks.map((t) => t.frames));
+        if (atoms === 100_000) {
+          assert.ok(
+            worst <= 3,
+            `100k: a warmed transform shows within 3 frames (${worst})`,
+          );
+        }
+        // Bytes each full generation reads and writes per atom: trajectory
+        // lerp 36; unwrap link 44 + 48 per jump round + place 60; superpose
+        // 72 (centroid, covariance, apply over all rows); normal mode 40.
+        const rounds = 4; // ten-atom chains: depth 9
+        const perAtom = 36 + 44 + 48 * rounds + 60 + 72 + 40;
+        report.gate.push({
+          atoms,
+          mountMs: Math.round(mountMs),
+          ownedBytes: bytes,
+          persistentMB: +(persistent / MB).toFixed(2),
+          withinGenerationMB: +(scratch / MB).toFixed(2),
+          cellList: {
+            cells: plan.cellCount,
+            persistentMB: +(plan.persistentBytes / MB).toFixed(2),
+            scratchMB: +(plan.scratchBytes / MB).toFixed(2),
+          },
+          totalPersistentMB: +((persistent + plan.persistentBytes) / MB)
+            .toFixed(2),
+          totalScratchMB: +((scratch + plan.scratchBytes) / MB).toFixed(2),
+          trafficPerGenerationMB: {
+            fullFrame: +(perAtom * atoms / MB).toFixed(1),
+            timelineTick: +(40 * atoms / MB).toFixed(1),
+            fourPlainPasses: +(4 * 24 * atoms / MB).toFixed(1),
+          },
+          timelineTick: ticks,
+          residentFrame: frames,
+        });
+        await update({ mode: "none" });
+      }
+      console.log(JSON.stringify(report.gate, null, 2));
+      await writeFile(
+        `${out}/dynamics-gate.json`,
+        JSON.stringify(report.gate, null, 2),
+      );
+    }
 
     now = await counters();
     for (const [label, bytes] of Object.entries(now.ownedBuffers.bytes)) {

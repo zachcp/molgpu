@@ -134,6 +134,10 @@ StructureProps
   export type StructureProps = PreloadedStructureProps | LoadedStructureProps;
 StructureResource
   export interface StructureResource { readonly data: StructureData; readonly identity: StructureData["identity"]; readonly topologyRevision: number; readonly positionsRevision: number; readonly attributesRevision: number; /** Lazily computed and cached; throws once the resource is disposed. */ readonly bounds: StructureBounds | null; dispose(): void }
+Superpose
+  export const Superpose: ViewerComponent<SuperposeProps>;
+SuperposeProps
+  export interface SuperposeProps { children?: ViewerElement; /** * Reference positions in topology row order: packed xyz, a `StructureData` * with the same atoms, or `"first"` for frame 0 of the nearest * `<Trajectory>` (upstream passes through while it loads). */ to: Float32Array | StructureData | "first"; /** Fit atoms (at least three, not collinear). Unlike Transform, every * output atom moves. Omitted means all atoms. */ select?: SelectionQuery; /** Align centroids (default). False rotates about the source centroid. */ translate?: boolean }
 Surface
   export const Surface: ViewerComponent<{ /** A @molgpu/select atom Selection; without one, active model/primary-altloc atoms are used. */ select?: Selection | null; /** Ångström probe radius; defaults to 1.4 (water). */ probeRadius?: number; /** Grid spacing in Ångströms; defaults to 0.5. Smaller is finer and slower. */ resolution?: number; /** Grid byte budget override; defaults to 256 MiB. */ maxBytes?: number; color?: VectorLike; /** Wraps the shaded face layer; without one, the ambient scene material. */ material?: MaterialSpec; loading?: ViewerElement | (() => ViewerElement); error?: ViewerElement | ((failure: unknown) => ViewerElement) } & Translucency>;
 TimelineProvider
@@ -160,6 +164,12 @@ TypedArray
   export type TypedArray = Int8Array | Uint8Array | Uint8ClampedArray | Int16Array | Uint16Array | Int32Array | Uint32Array | Float32Array | Float64Array;
 UnitCell
   export const UnitCell: ViewerComponent<{ color?: VectorLike; width?: number; opacity?: number }>;
+Unwrap
+  export const Unwrap: ViewerComponent<UnwrapProps>;
+UnwrapProps
+  export interface UnwrapProps { children?: ViewerElement; /** * Column-major 3×3 box vectors (a, b, c as columns). Defaults to the * nearest `<Trajectory>`'s displayed box; null passes positions through. */ box?: ArrayLike<number> | null; /** Move each component holding these atoms so their centroid lies in the * primary cell. */ center?: SelectionQuery; /** Called asynchronously after unwrapped frames, and when a box is missing * or invalid. Frames may be skipped while earlier reports are in flight. */ onStatus?: (status: UnwrapStatus) => void }
+UnwrapStatus
+  export interface UnwrapStatus { /** * `ok`; `ambiguous` when some covalent ring edge does not close; `search-limit` * when an exact image search exceeded its candidate bound (that bond keeps * its best image so far); `missing-box` or `invalid-box` when positions * passed through. */ readonly status: "ok" | "ambiguous" | "search-limit" | "missing-box" | "invalid-box"; readonly ambiguousRingEdges: number; /** The provider generation (or, when passing through, the upstream one). */ readonly generation: number }
 VectorLike
   export type VectorLike = readonly number[] | TypedArray;
 ViewerComponent

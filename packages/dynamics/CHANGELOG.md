@@ -18,3 +18,13 @@ All notable changes to `@molgpu/dynamics` are recorded here. See
 - Add pure normal-mode displacement, validation and WGSL for precomputed modes.
 - Add bounded CPU GNM/ANM contact construction and eigenmodes with residual
   checks.
+- `solveElasticModes` takes `options` and solves systems above the dense limit
+  with sparse Lanczos (full reorthogonalisation, exact translation deflation).
+  Both paths match ProDy 2.6.1 ANM and GNM modes on 1crn and 1tqn.
+- Add `residueGuideMap` and `normalModeFromElastic`, which turn an ANM mode into
+  `<NormalMode>` input.
+- Add `superposeWgsl` and `SUPERPOSE_FIT_BYTES`: a live GPU Kabsch fit in three
+  ordered stages, checked against `fitKabsch`.
+- Add `unwrapWgsl` (nearest-image links, pointer jumping, centering, placement
+  and ring checks), `UNWRAP_LINK_BYTES`, `UNWRAP_PARAMS_BYTES`, and
+  `periodicBox` / `PeriodicBox` for the live unwrap.

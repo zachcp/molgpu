@@ -39,7 +39,14 @@ deno add jsr:@molgpu/dynamics
 | `CellListBoundsReadback` | experimental | Compact 32-byte GPU bounds result tagged with source generation.                         |
 | `fitKabsch`              | experimental | CPU proper rigid fit over corresponding atom rows.                                       |
 | `KabschFit`              | experimental | Column-major rigid transform, fitted RMSD, and row count.                                |
+| `superposeWgsl`          | experimental | WGSL for a live Kabsch fit: centroid, covariance and rotation solve, then apply.         |
+| `SUPERPOSE_FIT_BYTES`    | experimental | Size of the fit state buffer `superposeWgsl` reads and writes (144 bytes).               |
 | `minimumImage`           | experimental | Exact nearest Cartesian lattice displacement for a periodic box.                         |
+| `periodicBox`            | experimental | Validate and invert a column-major 3×3 box, as the unwrap kernels take it.               |
+| `PeriodicBox`            | experimental | Box vectors, row-major inverse and inverse norm.                                         |
+| `unwrapWgsl`             | experimental | WGSL for the live unwrap: image links, pointer jumping, centering, placement, rings.     |
+| `UNWRAP_LINK_BYTES`      | experimental | Bytes per row of each unwrap link buffer (16).                                           |
+| `UNWRAP_PARAMS_BYTES`    | experimental | Bytes of the unwrap uniform (128).                                                       |
 | `createUnwrapForest`     | experimental | Deterministic covalent spanning forest from typed bonds.                                 |
 | `unwrapFrame`            | experimental | Make each component whole for one frame and optionally center it.                        |
 | `PbcSearchLimitError`    | experimental | Named error for an excessive exact-image search.                                         |
@@ -48,12 +55,15 @@ deno add jsr:@molgpu/dynamics
 | `NormalModeData`         | experimental | Precomputed guide-node displacements and atom mapping.                                   |
 | `validateNormalMode`     | experimental | Validate mode vectors, mapping and structural version.                                   |
 | `applyNormalMode`        | experimental | Pure sinusoidal mode addition to upstream positions.                                     |
+| `residueGuideMap`        | experimental | Map each atom to its residue's guide node (normally CA), altloc-aware.                   |
+| `normalModeFromElastic`  | experimental | Wrap an ANM mode and atom map as `NormalModeData`.                                       |
 | `normalModeWgsl`         | experimental | WGSL for additive guide-node displacement.                                               |
 | `buildElasticNetwork`    | experimental | Exact-cutoff guide contacts through `table.spatialGrid`.                                 |
-| `solveElasticModes`      | experimental | Bounded dense CPU GNM/ANM eigensolver with residual checks.                              |
+| `solveElasticModes`      | experimental | CPU GNM/ANM eigenmodes: dense Jacobi or sparse Lanczos, with residual checks.            |
+| `ElasticSolveOptions`    | experimental | Solver choice (`auto`, `dense`, `lanczos`) and Lanczos basis cap.                        |
 | `ElasticNetwork`         | experimental | Sparse contact pairs and ANM directions.                                                 |
 | `ElasticMode`            | experimental | Eigenvalue, vector, residual and GNM/ANM kind.                                           |
-| `MAX_ELASTIC_DIM`        | experimental | Dense eigensolver dimension limit (192).                                                 |
+| `MAX_ELASTIC_DIM`        | experimental | Largest dimension solved densely (192); `auto` uses Lanczos above it.                    |
 | `templateCharges`        | experimental | Assign AMBER/PDB2PQR residue-template and monatomic-ion charges.                         |
 | `residueNetCharge`       | experimental | Sum a charge column over active atoms into residue rows.                                 |
 | `TemplateChargeOptions`  | experimental | Histidine and residue-specific template overrides.                                       |
@@ -119,7 +129,28 @@ rejects collinear or nearly collinear fit points, including degenerate input
 with fewer than three rows. The returned matrix applies to **all** output rows;
 `rows` selects only the fit. The default also aligns centroids; with `translate`
 false the source rotates about its own centroid, which stays put. This CPU
-result is the oracle for the planned live `<Superpose>` GPU provider.
+result is the oracle for the live `<Superpose>` viewer provider.
+
+`superposeWgsl` is that fit on the GPU, as three entry points run in order on
+one upstream generation. `centroid` and `covariance` each run as one workgroup
+of 128 lanes and sum in a fixed order, so a fit is deterministic. Coordinates
+are taken relative to the first fit row, so a large common offset does not swamp
+small shape differences in f32. `covariance` then solves Horn's quaternion with
+4×4 Jacobi rotations on lane 0, and `apply` moves every row by
+`R (p - c_source) + c_target`. A nearly collinear live frame writes no rotation
+and passes through. The bindings, in order, are:
+
+| Binding | Buffer                                                        |
+| ------: | ------------------------------------------------------------- |
+|       0 | upstream packed xyz `f32`                                     |
+|       1 | fit rows `u32` (read only when `selected`)                    |
+|       2 | reference packed xyz `f32` for the fit rows, in fit order     |
+|       3 | 144-byte read-write fit state                                 |
+|       4 | uniform `(fitCount, selected, translate, atomCount)` as `u32` |
+|       5 | packed xyz `f32` output                                       |
+
+`centroid` and `covariance` use bindings 0–4, and `apply` uses 0 and 3–5. In the
+viewer tests the GPU RMSD matches `fitKabsch` within 1e-5 Å at a 1000 Å offset.
 
 ## Periodic reference
 
@@ -131,7 +162,27 @@ locations. Build this forest once per topology version. `unwrapFrame` traverses
 it for each displayed frame, makes each molecule whole, checks non-tree ring
 edges for closure, and can move each selected component's centroid into the
 primary box. Missing or invalid boxes pass positions through with an explicit
-status. This CPU path is the reference for the planned live unwrap provider.
+status. This CPU path is the reference for the live `<Unwrap>` viewer provider.
+
+`unwrapWgsl` is that traversal on the GPU, in five entry points run in order on
+one upstream generation:
+
+1. `link` stores each row's exact nearest image from its forest parent. It uses
+   the same bounded lattice search as `minimumImage`, capped at `maxCandidates`
+   and counted in `status[1]` where the CPU throws.
+2. `jump` is pointer jumping, run `ceil(log2(depth))` times, so every row ends
+   relative to its component root in a logarithmic number of dispatches. It
+   never assumes rows unwrap independently.
+3. `centerSums` computes, per centered component, the lattice shift that moves
+   its center rows' centroid into the primary cell.
+4. `place` writes each row as its root position plus its displacement, minus
+   that shift.
+5. `rings` counts non-tree covalent edges that do not close within 1e-3 Å.
+
+Displacements travel as f32 bits in `vec4<u32>` links, so no GPU flushes a
+denormal pointer. The binding table and uniform layout are documented on
+`unwrapWgsl`. Use `periodicBox(box)` to validate a box and get the inverse the
+kernels take.
 
 ## Mode application
 
@@ -210,9 +261,27 @@ Cieplak and Kollman (2000), and Dolinsky et al. (2004).
 `buildElasticNetwork(positions, guideRows, cutoff)` uses `table.spatialGrid` to
 find exact guide-node contacts.
 `solveElasticModes(network, "gnm" | "anm",
-count)` builds the Kirchhoff matrix
-or ANM Hessian, skips zero modes, fixes each mode's sign, and checks its
-eigenpair residual. The dense CPU reference is limited to 192 scalar dimensions
-(up to 64 ANM nodes) to bound memory and work; larger production systems still
-need a sparse iterative solver. An ANM mode's packed xyz vector can be supplied
-to `<NormalMode>` with an atom-to-guide map.
+count, options)` returns the first
+`count` nontrivial modes in ascending eigenvalue order. It skips zero modes
+(rigid-body and floppy), makes each vector's largest entry positive, and checks
+every eigenpair's relative residual (at most 1e-6).
+
+Up to 192 scalar dimensions (64 ANM nodes) it diagonalises the Kirchhoff matrix
+or Hessian densely by Jacobi rotations. Above that it runs Lanczos with full
+reorthogonalisation on a matrix-free product over the contacts. Each connected
+component's translations are projected out exactly, and repeated eigenvalues
+restart the Krylov space orthogonally. The basis is capped at about 320 MB of
+f64 vectors (`maxIterations` overrides it), and running out throws instead of
+returning unconverged modes. On an Apple M1, the first five ANM modes of 1tqn
+(468 CA, 1,404 dimensions) take about 0.2 s, and ten modes of 1a4y (1,166 CA,
+3,498 dimensions) about 2 s. Run large systems in a worker.
+
+Both paths match ProDy 2.6.1 (`gamma = 1`, ANM 15 Å, GNM 7.3 Å) on the corpus CA
+atoms of 1crn and 1tqn: eigenvalues within 1e-6 relative and vector overlaps
+within 1e-5 of 1. The fixture and its script are in `test/fixtures`.
+
+`residueGuideMap(topology, guideRows)` maps every atom to its residue's guide
+node, preferring a guide with the same altloc, so side chains follow their CA.
+`normalModeFromElastic(mode, atomToNode, version)` turns an ANM mode into the
+`NormalModeData` that `<NormalMode>` animates. GNM modes are scalar fluctuations
+and are rejected.

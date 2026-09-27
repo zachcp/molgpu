@@ -20,6 +20,8 @@ ElasticMode
   export interface ElasticMode { readonly kind: "gnm" | "anm"; readonly eigenvalue: number; /** Scalar per node for GNM; packed xyz per node for ANM. */ readonly vector: Float32Array; readonly residual: number }
 ElasticNetwork
   export interface ElasticNetwork { readonly rows: Uint32Array; readonly pairs: Uint32Array; readonly directions: Float32Array }
+ElasticSolveOptions
+  export interface ElasticSolveOptions { /** * `"dense"` is exact Jacobi and limited to `MAX_ELASTIC_DIM`; `"lanczos"` is * sparse and matrix-free. `"auto"` (the default) picks dense up to the * limit and Lanczos above it. */ readonly method?: "auto" | "dense" | "lanczos"; /** Lanczos basis vectors kept (default: about 320 MB of f64 basis). */ readonly maxIterations?: number }
 GasteigerOptions
   export interface GasteigerOptions { /** Exclude already assigned atoms; defaults to the AMBER template mask. */ readonly exclude?: Uint8Array; /** RDKit's default is 12 iterations. */ readonly iterations?: number }
 GasteigerRefusal
@@ -36,10 +38,18 @@ NormalModeData
   export interface NormalModeData { /** Owned xyz displacement per guide node, in node order. */ readonly vectors: Float32Array; /** Atom row to guide node, or 0xffffffff for no displacement. */ readonly atomToNode: Uint32Array; /** Increment when vectors or mapping are replaced. */ readonly version: number }
 PbcSearchLimitError
   export class PbcSearchLimitError extends RangeError { constructor(candidates: number, limit: number) }
+PeriodicBox
+  export interface PeriodicBox { /** Column-major 3×3 box vectors (a, b, c as columns). */ readonly matrix: readonly number[]; /** Row-major inverse: fractional = inverse · Cartesian. */ readonly inverse: readonly number[]; /** Frobenius norm of the inverse, which bounds the exact image search. */ readonly inverseNorm: number }
+SUPERPOSE_FIT_BYTES
+  export const SUPERPOSE_FIT_BYTES = 144;
 TemplateChargeOptions
   export interface TemplateChargeOptions { readonly his?: "HID" | "HIE" | "HIP"; /** Template names keyed by `residueKey(data, residueRow)`. */ readonly residues?: Readonly<Record<string, string>> }
 TemplateChargeReport
   export interface TemplateChargeReport { readonly assigned: number; readonly netCharge: number; readonly unmatched: readonly ChargeUnmatched[]; /** Template heavy atoms absent from an observed residue, so its net may be fractional. */ readonly incomplete: readonly { residue: string; template: string; missing: readonly string[] }[]; readonly gaps: readonly { before: string; after: string; distance: number | null }[]; readonly ions: readonly { residue: string; charge: number; source: string }[] }
+UNWRAP_LINK_BYTES
+  export const UNWRAP_LINK_BYTES = 16;
+UNWRAP_PARAMS_BYTES
+  export const UNWRAP_PARAMS_BYTES = 128;
 UnwrapForest
   export interface UnwrapForest { readonly atomCount: number; /** -1 for component roots. */ readonly parent: Int32Array; readonly order: Uint32Array; readonly component: Uint32Array; readonly roots: Uint32Array; /** Flat pairs of non-tree covalent edges. */ readonly ringEdges: Uint32Array }
 UnwrapResult
@@ -68,18 +78,28 @@ isIdentityAffine
   export function isIdentityAffine(matrix: AffineMatrix): boolean;
 minimumImage
   export function minimumImage(delta: ArrayLike<number>, box: ArrayLike<number>, maxCandidates?: number): readonly [number, number, number];
+normalModeFromElastic
+  export function normalModeFromElastic(mode: ElasticMode, atomToNode: Uint32Array, version: number): NormalModeData;
 normalModeWgsl
   export const normalModeWgsl: string;
+periodicBox
+  export function periodicBox(box: ArrayLike<number>): PeriodicBox;
 planCellList
   export function planCellList(readback: CellListBoundsReadback, expectedGeneration: number, atomCount: number, cellSize: number, maxStorageBufferBindingSize: number, maxCells?: number): CellListPlan | null;
+residueGuideMap
+  export function residueGuideMap(topology: Topology, guideRows: ArrayLike<number>): Uint32Array;
 residueNetCharge
   export function residueNetCharge(data: StructureData, column?: string): Float32Array;
 solveElasticModes
-  export function solveElasticModes(network: ElasticNetwork, kind: "gnm" | "anm", count: number): readonly ElasticMode[];
+  export function solveElasticModes(network: ElasticNetwork, kind: "gnm" | "anm", count: number, options?: ElasticSolveOptions): readonly ElasticMode[];
+superposeWgsl
+  export const superposeWgsl: string;
 templateCharges
   export function templateCharges(data: StructureData, options?: TemplateChargeOptions): ChargeAssignment<TemplateChargeReport>;
 unwrapFrame
   export function unwrapFrame(positions: Float32Array, forest: UnwrapForest, box: ArrayLike<number> | null | undefined, centerRows?: ArrayLike<number> | null, maxCandidates?: number): UnwrapResult;
+unwrapWgsl
+  export const unwrapWgsl: string;
 validateAffine
   export function validateAffine(matrix: AffineMatrix): void;
 validateNormalMode

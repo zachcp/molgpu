@@ -9,9 +9,25 @@ All notable changes to `@molgpu/viewer` are recorded here. The format follows
 - Add experimental `<Transform matrix select>` with a CPU reference in
   `@molgpu/dynamics`. Matrix curves update the GPU output without re-uploading
   structure positions; selection masks stay in topology atom order.
+- Add experimental `<Superpose to select translate>`. It fits the nearest
+  coordinates onto a fixed array, a `StructureData`, or frame 0 of the nearest
+  `<Trajectory>` (`to="first"`), and moves every atom by the fitted proper
+  rotation. The fit runs on the GPU in the same submission as the upstream frame
+  it moves, so there is no readback and no stale fit. Fit RMSD matches the CPU
+  `fitKabsch` oracle within 1e-5 Å while scrubbing. A nearly collinear frame
+  passes through.
+- Add experimental `<Unwrap box center onStatus>`. It makes each covalent
+  component whole on the displayed frame of a periodic system, with exact
+  nearest images in triclinic cells. A spanning forest is built once per
+  topology, and the frame is traversed by GPU pointer jumping in the same
+  submission as the upstream frame. `box` defaults to the nearest
+  `<Trajectory>`'s displayed box. `center` moves components into the primary
+  cell. `onStatus` reports ring edges that do not close, and a missing or
+  invalid box, where positions pass through.
 - Add experimental `<NormalMode mode amplitude frequency phase>` for precomputed
   guide-node modes. Its animation changes a uniform and composes with
-  Trajectory.
+  Trajectory. Only a zero `amplitude` passes through; an animated scale that
+  lands on zero keeps the kernel and its mode buffers mounted (9g3.10).
 - `<Ribbon secondaryStructure="dssp">` runs DSSP on each coordinate snapshot it
   draws, so codes always come from the displayed coordinates (under a
   `<Trajectory>` or any coordinate provider). DSSP covers every model the drawn

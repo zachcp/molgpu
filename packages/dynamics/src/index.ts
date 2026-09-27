@@ -19,23 +19,34 @@ export {
   planCellList,
 } from "./cell-list-plan.ts";
 export { fitKabsch, type KabschFit } from "./kabsch.ts";
+export { SUPERPOSE_FIT_BYTES, superposeWgsl } from "./superpose-wgsl.ts";
+export {
+  UNWRAP_LINK_BYTES,
+  UNWRAP_PARAMS_BYTES,
+  unwrapWgsl,
+} from "./unwrap-wgsl.ts";
 export {
   buildElasticNetwork,
   type ElasticMode,
   type ElasticNetwork,
+  type ElasticSolveOptions,
   MAX_ELASTIC_DIM,
   solveElasticModes,
 } from "./elastic-network.ts";
 export {
   applyNormalMode,
   type NormalModeData,
+  normalModeFromElastic,
   normalModeWgsl,
+  residueGuideMap,
   validateNormalMode,
 } from "./normal-mode.ts";
 export {
   createUnwrapForest,
   minimumImage,
   PbcSearchLimitError,
+  type PeriodicBox,
+  periodicBox,
   type UnwrapForest,
   unwrapFrame,
   type UnwrapResult,
