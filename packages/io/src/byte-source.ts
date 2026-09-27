@@ -5,18 +5,11 @@ import {
   type TrajectoryData,
   type TrajectoryInput,
 } from "@molgpu/table";
-import type { ByteSource, TrajectoryErrorCode } from "./types.ts";
+import type { ByteSource } from "./types.ts";
+import { errorFor } from "./error.ts";
 
-/** A machine-readable failure reading a trajectory. */
-export class TrajectoryParseError extends Error {
-  override readonly name: "TrajectoryParseError";
-  readonly code: TrajectoryErrorCode;
-  constructor(message: string, code: TrajectoryErrorCode, cause?: unknown) {
-    super(message, cause === undefined ? undefined : { cause });
-    this.name = "TrajectoryParseError";
-    this.code = code;
-  }
-}
+/** Failures from the trajectory readers. */
+export const trajectoryError = errorFor("trajectory");
 
 /** Default ceiling for downloading a whole file when a server ignores Range. */
 export const MAX_FULL_DOWNLOAD: number = 256 * 1024 * 1024;
@@ -79,7 +72,7 @@ export function byteSource(input: Uint8Array | Blob | ByteSource): ByteSource {
     Number.isSafeInteger((input as ByteSource).size) &&
     typeof (input as ByteSource).read === "function"
   ) return input as ByteSource;
-  throw new TrajectoryParseError(
+  throw trajectoryError(
     "expected a Uint8Array, a Blob or a ByteSource",
     "INVALID_INPUT",
   );
@@ -107,7 +100,7 @@ export async function urlByteSource(
       response = await get(url, { headers, signal: sig });
     } catch (error) {
       if ((error as Error)?.name === "AbortError") throw error;
-      throw new TrajectoryParseError(
+      throw trajectoryError(
         `Unable to fetch ${url}`,
         "FETCH_FAILED",
         error,
@@ -115,7 +108,7 @@ export async function urlByteSource(
     }
     if (!response.ok) {
       await response.body?.cancel();
-      throw new TrajectoryParseError(
+      throw trajectoryError(
         `Unable to fetch ${url} (${response.status})`,
         "FETCH_FAILED",
       );
@@ -128,7 +121,7 @@ export async function urlByteSource(
     await probe.body?.cancel();
     const size = Number(/\/(\d+)\s*$/.exec(range)?.[1]);
     if (!Number.isSafeInteger(size)) {
-      throw new TrajectoryParseError(
+      throw trajectoryError(
         `${url}: a 206 response without a total size in Content-Range`,
         "FETCH_FAILED",
       );
@@ -144,7 +137,7 @@ export async function urlByteSource(
         );
         const bytes = new Uint8Array(await response.arrayBuffer());
         if (response.status !== 206 || bytes.byteLength !== end - start) {
-          throw new TrajectoryParseError(
+          throw trajectoryError(
             `${url}: expected ${
               end - start
             } bytes from ${start}, got ${bytes.byteLength}`,
@@ -158,7 +151,7 @@ export async function urlByteSource(
   const declared = Number(probe.headers.get("content-length"));
   if (Number.isFinite(declared) && declared > maxDownload) {
     await probe.body?.cancel();
-    throw new TrajectoryParseError(
+    throw trajectoryError(
       `${url} is ${declared} bytes and the server ignores Range requests; ` +
         `pass a larger maxDownload (now ${maxDownload}) to download it whole`,
       "TRAJECTORY_TOO_LARGE",
@@ -177,7 +170,7 @@ export async function urlByteSource(
         length += value.byteLength;
         if (length > maxDownload) {
           await reader.cancel();
-          throw new TrajectoryParseError(
+          throw trajectoryError(
             `${url} exceeds maxDownload ${maxDownload}`,
             "TRAJECTORY_TOO_LARGE",
           );
@@ -238,7 +231,7 @@ export class BlockReader {
   async view(offset: number, length: number, what: string): Promise<DataView> {
     const bytes = await this.bytes(offset, length);
     if (bytes.byteLength < length) {
-      throw new TrajectoryParseError(
+      throw trajectoryError(
         `${what}: the file ends at byte ${this.size}, inside ${length} bytes from ${offset}`,
         "TRUNCATED_TRAJECTORY",
       );
@@ -255,7 +248,7 @@ export function parsedTrajectory(
   try {
     return createTrajectory(input);
   } catch (error) {
-    throw new TrajectoryParseError(
+    throw trajectoryError(
       `${format}: ${(error as Error).message}`,
       "INVALID_TRAJECTORY",
       error,
@@ -273,7 +266,7 @@ export async function readExactly(
 ): Promise<Uint8Array> {
   const bytes = await source.read(offset, length, signal);
   if (bytes.byteLength !== length) {
-    throw new TrajectoryParseError(
+    throw trajectoryError(
       `${what}: expected ${length} bytes from ${offset}, got ${bytes.byteLength}`,
       "TRUNCATED_TRAJECTORY",
     );

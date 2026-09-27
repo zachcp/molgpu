@@ -13,7 +13,7 @@ import { parsePDB } from "molstar/lib/mol-io/reader/pdb/parser.js";
 import { pdbToMmCif } from "molstar/lib/mol-model-formats/structure/pdb/to-cif.js";
 import {
   applyPqr,
-  PqrParseError,
+  IoError,
   structureFromBcif,
   structureFromPqr,
 } from "../src/index.ts";
@@ -114,17 +114,17 @@ Deno.test("structureFromPqr tokenises wide, chain-labelled PDB2PQR records", asy
 Deno.test("structureFromPqr rejects malformed input by code", async () => {
   await assertRejects(
     () => structureFromPqr("REMARK nothing\n"),
-    PqrParseError,
+    IoError,
     "no ATOM",
   );
   await assertRejects(
     () => structureFromPqr("ATOM 1 N ALA 1 0.0 0.0 0.0 0.1\n"),
-    PqrParseError,
+    IoError,
     "line 1",
   );
   await assertRejects(
     () => structureFromPqr(42 as unknown as string),
-    PqrParseError,
+    IoError,
     "expected a string",
   );
 });
@@ -218,7 +218,7 @@ Deno.test("applyPqr refuses chain-less records that match several chains", () =>
   const pqr = "ATOM 1 N ALA 1 0.000 0.000 0.000 -0.4157 1.8240\n";
   assertThrows(
     () => applyPqr(createStructure(hand(true)), pqr),
-    PqrParseError,
+    IoError,
     "no chain IDs",
   );
 });
@@ -362,7 +362,7 @@ Deno.test("applyPqr checks chain-less ambiguity only for residues in the PQR", (
   assertEquals(report.matched, 1);
   assertThrows(
     () => applyPqr(input, "ATOM 1 CA ALA 1 0.000 0.000 0.000 0.25 1.9\n"),
-    PqrParseError,
+    IoError,
     "no chain IDs",
   );
 });

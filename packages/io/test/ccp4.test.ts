@@ -6,7 +6,7 @@ import {
   assertStrictEquals,
 } from "@std/assert";
 import { volumeIndexToWorld } from "@molgpu/table";
-import { volumeFromCcp4, VolumeParseError } from "../src/index.ts";
+import { IoError, volumeFromCcp4 } from "../src/index.ts";
 import { type Ccp4Fixture, fixtureWorld, writeCcp4 } from "./ccp4-fixture.ts";
 import { parse } from "molstar/lib/mol-io/reader/ccp4/parser.js";
 import { volumeFromCcp4 as molstarVolume } from "molstar/lib/mol-model-formats/volume/ccp4.js";
@@ -113,12 +113,13 @@ Deno.test("malformed, unsupported and oversize maps fail with stable codes", asy
   const code = async (input: unknown, expected: string, options = {}) => {
     const error = await assertRejects(
       () => volumeFromCcp4(input as Uint8Array, options),
-      VolumeParseError,
+      IoError,
     );
-    assertStrictEquals((error as VolumeParseError).code, expected);
+    assertStrictEquals((error as IoError).code, expected);
   };
   const good = writeCcp4(EM);
-  await code("nope", "INVALID_INPUT");
+  await code(42, "INVALID_INPUT");
+  await code("file:///nonexistent/molgpu.map", "FETCH_FAILED");
   await code(good.subarray(0, 500), "INVALID_MAP");
   await code(good.subarray(0, good.length - 1), "INVALID_MAP");
   const noMarker = good.slice();
@@ -134,4 +135,20 @@ Deno.test("malformed, unsupported and oversize maps fail with stable codes", asy
     5,
     4,
   ]);
+});
+
+Deno.test("reads a Blob and a file URL like the bytes", async () => {
+  const bytes = writeCcp4(EM);
+  const expected = await volumeFromCcp4(bytes);
+  const fromBlob = await volumeFromCcp4(new Blob([bytes as BlobPart]));
+  assertEquals([...fromBlob.dims], [...expected.dims]);
+  assertEquals(fromBlob.values, expected.values);
+  const path = await Deno.makeTempFile({ suffix: ".map" });
+  try {
+    await Deno.writeFile(path, bytes);
+    const fromUrl = await volumeFromCcp4(new URL(`file://${path}`));
+    assertEquals(fromUrl.values, expected.values);
+  } finally {
+    await Deno.remove(path);
+  }
 });

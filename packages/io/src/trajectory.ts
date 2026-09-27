@@ -1,18 +1,14 @@
 // One entry point over the trajectory readers: bytes, Blobs/Files, ByteSources
 // and URLs, with the format taken from an option or the file name.
 import type { TrajectoryData } from "@molgpu/table";
-import {
-  byteSource,
-  TrajectoryParseError,
-  urlByteSource,
-} from "./byte-source.ts";
+import { byteSource, trajectoryError, urlByteSource } from "./byte-source.ts";
 import { trajectoryFromDcd } from "./dcd.ts";
 import { trajectoryFromTrr } from "./trr.ts";
 import { trajectoryFromXtc } from "./xtc.ts";
 import type {
   ByteSource,
+  OpenTrajectoryOptions,
   TrajectoryFormat,
-  TrajectoryReadOptions,
 } from "./types.ts";
 
 const readers = {
@@ -32,15 +28,12 @@ export function trajectoryFormat(name: string): TrajectoryFormat | null {
 
 /**
  * Open a trajectory for streaming from bytes, a `Blob`/`File`, a `ByteSource`
- * or a URL (read with HTTP Range requests; see `urlByteSource`). The format is
+ * or a URL (read with HTTP Range requests). The format is
  * `options.format`, else the file name's extension (`.dcd`, `.xtc`, `.trr`).
  */
 export async function openTrajectory(
   input: Uint8Array | Blob | ByteSource | string | URL,
-  options: TrajectoryReadOptions & {
-    format?: TrajectoryFormat;
-    maxDownload?: number;
-  } = {},
+  options: OpenTrajectoryOptions = {},
 ): Promise<TrajectoryData> {
   const name = typeof input === "string" || input instanceof URL
     ? String(input)
@@ -49,7 +42,7 @@ export async function openTrajectory(
     : "";
   const format = options.format ?? trajectoryFormat(name);
   if (!format || !(format in readers)) {
-    throw new TrajectoryParseError(
+    throw trajectoryError(
       options.format
         ? `unknown trajectory format ${options.format}`
         : `cannot tell the trajectory format of ${

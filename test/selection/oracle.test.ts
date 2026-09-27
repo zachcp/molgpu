@@ -31,9 +31,9 @@ import {
 } from "@molgpu/table";
 import { DefaultDSSPComputationProps } from "molstar/lib/mol-model-props/computed/secondary-structure/dssp.js";
 import {
+  IoError,
   parseSelection,
   type SelectionLanguage,
-  SelectionParseError,
   structureFromBcif,
 } from "../../packages/io/src/index.ts";
 import {
@@ -255,7 +255,7 @@ Deno.test("selections match Mol*'s evaluator atom for atom", async () => {
         symbols: supportedSymbols,
       });
     } catch (error) {
-      if (!(error instanceof SelectionParseError)) throw error;
+      if (!(error instanceof IoError)) throw error;
       (error.message.includes("is not supported") ? unsupported : molstarFails)
         .push(label);
       continue;
@@ -314,7 +314,7 @@ Deno.test("secondary-structure selections match Mol* with DSSP on both sides", a
           symbols: supportedSymbols,
         });
       } catch (error) {
-        if (error instanceof SelectionParseError) continue;
+        if (error instanceof IoError) continue;
         throw error;
       }
       const expected = molstarRows(language, text, mol);

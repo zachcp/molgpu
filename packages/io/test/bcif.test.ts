@@ -1,6 +1,6 @@
 import { assert, assertRejects, assertStrictEquals } from "@std/assert";
 import { BOND_FLAGS, type Topology } from "@molgpu/table";
-import { BcifParseError, structureFromBcif } from "../src/index.ts";
+import { IoError, structureFromBcif } from "../src/index.ts";
 
 Deno.test("lowers public 1TQN BinaryCIF into owned table domains", async () => {
   const data = await structureFromBcif(
@@ -18,7 +18,7 @@ Deno.test("lowers public 1TQN BinaryCIF into owned table domains", async () => {
 Deno.test("reports malformed BCIF through a structured boundary error", async () => {
   const error = await assertRejects(
     () => structureFromBcif(new Uint8Array([0, 1, 2])),
-    BcifParseError,
+    IoError,
   );
   assertStrictEquals(error.code, "INVALID_BCIF");
 });
@@ -103,4 +103,28 @@ Deno.test("links carry typed bonds from chem_comp_bond and struct_conn", async (
       assertStrictEquals(tqn.flags[r] & BOND_FLAGS.covalent, 0);
     }
   }
+});
+
+Deno.test("reads a file URL, a Blob and an unreachable URL through one input", async () => {
+  const url = new URL("./fixtures/1crn.bcif", import.meta.url);
+  const fromUrl = await structureFromBcif(url);
+  const fromString = await structureFromBcif(url.href);
+  const fromBlob = await structureFromBcif(
+    new Blob([await Deno.readFile(url)]),
+  );
+  assertStrictEquals(fromUrl.topology.atoms.count, 327);
+  assertStrictEquals(fromString.topology.atoms.count, 327);
+  assertStrictEquals(fromBlob.topology.atoms.count, 327);
+  const missing = await assertRejects(
+    () => structureFromBcif(new URL("./fixtures/missing.bcif", url)),
+    IoError,
+  );
+  assertStrictEquals(missing.format, "bcif");
+  assertStrictEquals(missing.code, "FETCH_FAILED");
+  const invalid = await assertRejects(
+    // @ts-expect-error: not a supported input
+    () => structureFromBcif(42),
+    IoError,
+  );
+  assertStrictEquals(invalid.code, "INVALID_INPUT");
 });

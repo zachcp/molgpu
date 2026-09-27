@@ -6,6 +6,9 @@ All notable changes to `@molgpu/viewer` are recorded here. The format follows
 
 ## [Unreleased]
 
+- `<Structure src>` and `<Volume src>` default loaders pass the URL to
+  `@molgpu/io`, so a failed fetch surfaces as an `IoError` (`FETCH_FAILED`).
+
 - **Changed (advanced):** `./advanced` exposes hooks and one provider-authoring
   component, not raw contexts.
   - Added: `CoordinateKernel` and `CoordinateKernelProps`, the supported way to

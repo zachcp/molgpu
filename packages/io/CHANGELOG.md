@@ -6,6 +6,23 @@ All notable changes to `@molgpu/io` are recorded here. The format follows
 
 ## [Unreleased]
 
+- **Changed (stable):** one error type. `IoError` (with `format` and `code`,
+  plus `IoErrorCode` and `IoFormat`) replaces `BcifParseError`, `PqrParseError`,
+  `VolumeParseError`, `TrajectoryParseError`, `SurfaceFieldError`,
+  `SelectionParseError` and the five `*ErrorCode` unions. Existing code strings
+  are unchanged. Selection failures use codes `INVALID_SELECTION` and
+  `UNSUPPORTED_SYMBOL` and no longer carry `language`/`text` properties (both
+  are in the message).
+- **Changed:** `structureFromBcif` and `volumeFromCcp4` take a `FileInput`:
+  bytes, a `Blob`/`File`, or a URL fetched once. A failed fetch is
+  `FETCH_FAILED`; a string input is now a URL.
+- **Changed (experimental):** `openTrajectory` is the one trajectory entry, with
+  `OpenTrajectoryOptions`. No longer exported: `trajectoryFromDcd`,
+  `trajectoryFromXtc`, `trajectoryFromTrr`, `trajectoryFormat`, `byteSource`,
+  `urlByteSource`, `MAX_FULL_DOWNLOAD`, `AKMA_PS`, `TrajectoryFormat`,
+  `TrajectoryReadOptions` and `ParseSelectionOptions` (now inline in the
+  `parseSelection` signature). Types are exported by name (no `export type *`).
+
 - Imported secondary structure keeps its finer types (Phase 15, efv.4):
   `pdbx_PDB_helix_class` 5 → G (3-10) and 3 → I (pi), then `conf_type_id` (3-10
   and pi helix types, `TURN_*` → T, `STRN` → B, `BEND` → S), with sheet ranges

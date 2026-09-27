@@ -6,9 +6,9 @@ import {
 } from "@std/assert";
 import { activeAtoms, validateVolume } from "@molgpu/table";
 import {
+  IoError,
   molecularSurfaceField,
   structureFromBcif,
-  SurfaceFieldError,
 } from "../src/index.ts";
 
 async function loadAtoms(id: string) {
@@ -93,7 +93,7 @@ Deno.test("rejects malformed or empty atom input before touching Mol*", async ()
         radius: new Float32Array(1),
         count: 2,
       }),
-    SurfaceFieldError,
+    IoError,
   );
   await assertRejects(
     () =>

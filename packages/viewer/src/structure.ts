@@ -8,16 +8,8 @@ import { StructureProvider } from "./structure-context.ts";
 import { live, viewer } from "./internal/elements.ts";
 
 const defaultLoader: StructureLoader = async (src, cancelled) => {
-  const response = await fetch(src);
-  if (!response.ok) {
-    throw new Error(
-      `Unable to load structure (${response.status} ${response.statusText})`,
-    );
-  }
-  const bytes = new Uint8Array(await response.arrayBuffer());
-  if (cancelled()) return null;
   const { structureFromBcif } = await import("@molgpu/io");
-  const data = await structureFromBcif(bytes);
+  const data = await structureFromBcif(src);
   return cancelled() ? null : data;
 };
 

@@ -7,14 +7,14 @@ import {
   byteSource,
   parsedTrajectory,
   readExactly,
-  TrajectoryParseError,
+  trajectoryError,
 } from "./byte-source.ts";
 import type { ByteSource, TrajectoryReadOptions } from "./types.ts";
 
 const MAGIC = 1993;
 
 const invalid = (message: string): never => {
-  throw new TrajectoryParseError(`TRR: ${message}`, "INVALID_TRAJECTORY");
+  throw trajectoryError(`TRR: ${message}`, "INVALID_TRAJECTORY");
 };
 
 interface FrameHeader {
@@ -61,7 +61,7 @@ async function readHeader(
     invalid(`frame ${frame}: negative block size`);
   }
   if (ir || e || top || sym) {
-    throw new TrajectoryParseError(
+    throw trajectoryError(
       `TRR: frame ${frame} carries input-record/energy/topology blocks`,
       "UNSUPPORTED_TRAJECTORY",
     );
@@ -141,7 +141,7 @@ function decode(
  * 4 MiB blocks; frames without positions (velocity- or force-only) are
  * skipped. Positions and boxes are Å, times picoseconds; with
  * `velocities: true`, frames that store velocities carry them in Å/ps. A
- * trailing partial frame is ignored. Fails with `TrajectoryParseError`.
+ * trailing partial frame is ignored. Fails with an `IoError` (format `trajectory`).
  */
 export async function trajectoryFromTrr(
   input: Uint8Array | Blob | ByteSource,
@@ -164,7 +164,7 @@ export async function trajectoryFromTrr(
     at += header.length;
   }
   if (!frames.length) {
-    throw new TrajectoryParseError(
+    throw trajectoryError(
       "TRR: the file holds no complete frame with positions",
       "TRUNCATED_TRAJECTORY",
     );

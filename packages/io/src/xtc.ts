@@ -8,7 +8,7 @@ import {
   byteSource,
   parsedTrajectory,
   readExactly,
-  TrajectoryParseError,
+  trajectoryError,
 } from "./byte-source.ts";
 import type { ByteSource, TrajectoryReadOptions } from "./types.ts";
 
@@ -17,7 +17,7 @@ const MAGIC = 1995;
 const HEADER = 52;
 
 const invalid = (message: string): never => {
-  throw new TrajectoryParseError(`XTC: ${message}`, "INVALID_TRAJECTORY");
+  throw trajectoryError(`XTC: ${message}`, "INVALID_TRAJECTORY");
 };
 
 type ParseXtc =
@@ -28,7 +28,7 @@ const loadDecoder = (): Promise<ParseXtc> =>
     (module) => module.parseXtc,
     (error) => {
       decoder = undefined;
-      throw new TrajectoryParseError(
+      throw trajectoryError(
         "Unable to load the optional Mol* XTC decoder",
         "PARSER_UNAVAILABLE",
         error,
@@ -83,7 +83,7 @@ async function indexFrames(reader: BlockReader): Promise<Index> {
     at += length;
   }
   if (!index.offsets.length) {
-    throw new TrajectoryParseError(
+    throw trajectoryError(
       "XTC: the file holds no complete frame",
       "TRUNCATED_TRAJECTORY",
     );
@@ -95,7 +95,7 @@ async function indexFrames(reader: BlockReader): Promise<Index> {
  * Open a GROMACS XTC trajectory for streaming. Opening reads frame headers in
  * 4 MiB blocks; `source.read(i)` fetches one frame and decodes it with Mol*.
  * Positions and boxes are converted from nm to Å; times are picoseconds. A
- * trailing partial frame is ignored. Fails with `TrajectoryParseError`.
+ * trailing partial frame is ignored. Fails with an `IoError` (format `trajectory`).
  */
 export async function trajectoryFromXtc(
   input: Uint8Array | Blob | ByteSource,
@@ -128,7 +128,7 @@ export async function trajectoryFromXtc(
         ]);
         const parsed = await parseXtc(frame).run();
         if (parsed.isError || parsed.result.frames.length !== 1) {
-          throw new TrajectoryParseError(
+          throw trajectoryError(
             `XTC: Mol* could not decode frame ${i}`,
             "INVALID_TRAJECTORY",
             parsed.isError ? parsed.message : undefined,
