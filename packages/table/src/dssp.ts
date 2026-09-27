@@ -19,9 +19,10 @@
 // CA through the unit-list index instead of the residue, so Mol* only assigns S
 // in a model's first unit; this port reads the residue's CA. Mol*'s dihedral
 // angles are computed but unused and are not ported.
-import type { StructureData } from "./types.ts";
+import type { StructureData } from "./structure-types.ts";
 import { spatialGrid } from "./spatial-grid.ts";
-import { activeAtoms, attributeColumn, withAttributes } from "./structure.ts";
+import { attributeColumn, withAttributes } from "./attributes.ts";
+import { activeAtoms } from "./structure-view.ts";
 
 // Mol*'s DSSPType flags.
 const F_H = 1, F_B = 2, F_E = 4, F_G = 8, F_I = 16, F_S = 32, F_T = 64;

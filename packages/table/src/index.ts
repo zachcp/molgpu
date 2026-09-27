@@ -30,20 +30,19 @@ export type {
   VolumeLevel,
   VolumeStats,
 } from "./types.ts";
+export { activeAtoms, coordinateBounds, residueKey } from "./structure-view.ts";
 export {
-  activeAtoms,
   atomRadii,
-  attributeColumn,
-  attributeNames,
   BOND_FLAGS,
   bondTopology,
-  coordinateBounds,
-  createStructure,
   elementRadius,
-  residueKey,
+} from "./bond-topology.ts";
+export {
+  attributeColumn,
+  attributeNames,
   withAttributes,
-  withPositions,
-} from "./structure.ts";
+} from "./attributes.ts";
+export { createStructure, withPositions } from "./structure.ts";
 export { traceTable } from "./trace.ts";
 export { secondaryStructureTrace } from "./secondary-structure.ts";
 export { SS_CODES, ssKind } from "./ss-codes.ts";

@@ -1,11 +1,13 @@
 // Per-frame secondary structure for a file trajectory (efv.8): CPU DSSP on
 // integer frames read from TrajectoryData.source, cached with a byte cap. The
 // same cache serves the cartoon of a paused frame and SS-vs-time plots.
-import type { StructureData, TrajectoryData } from "./types.ts";
-import { activeAtoms, withPositions } from "./structure.ts";
+import type { StructureData } from "./structure-types.ts";
+import type { TrajectoryData } from "./trajectory-types.ts";
+import { activeAtoms } from "./structure-view.ts";
+import { withPositions } from "./structure.ts";
 import { dssp } from "./dssp.ts";
 
-/** Per-frame `ssCode` values over one structure and trajectory. */
+/** @internal Per-frame `ssCode` values for trajectory-aware consumers. */
 export interface FrameSecondaryStructure {
   /** `ssCode` values per residue for integer frame `index`, computed once. */
   frame(index: number, signal?: AbortSignal): Promise<Uint8Array>;
@@ -16,7 +18,8 @@ export interface FrameSecondaryStructure {
   ): Promise<Uint8Array[]>;
 }
 
-/**
+/** @internal Deep-module utility; the package entrypoint exposes DSSP instead.
+ *
  * DSSP of `trajectory`'s frames over `data`'s topology. A frame's positions
  * replace `data`'s rows (through `atomMap` when the trajectory covers a subset)
  * and `dssp` reads `rows` (default: the active model and altlocs). At most

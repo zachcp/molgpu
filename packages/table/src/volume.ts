@@ -6,7 +6,7 @@ import type {
   VolumeInput,
   VolumeLevel,
   VolumeStats,
-} from "./types.ts";
+} from "./volume-types.ts";
 
 /** Default `createVolume` ceiling: 256³ samples (64 MiB of scalar f32). */
 export const MAX_VOLUME_SAMPLES = 256 ** 3;
@@ -23,10 +23,7 @@ const determinant3 = (m: ArrayLike<number>): number =>
   m[4] * (m[1] * m[10] - m[9] * m[2]) +
   m[8] * (m[1] * m[6] - m[5] * m[2]);
 
-/**
- * Throw a `TypeError` naming the offending field if `input` is malformed, or a
- * `RangeError` if it holds more than `maxSamples` samples. Returns the input.
- */
+/** @internal createVolume and createVolumeGrid validate inputs themselves. */
 export function validateVolume<T extends VolumeInput>(
   input: T,
   options: { maxSamples?: number } = {},

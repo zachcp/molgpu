@@ -2,11 +2,11 @@
 // topology. See docs/findings/2026-09-26-trajectory-plan.md.
 import type {
   FrameSource,
-  StructureData,
   TrajectoryData,
   TrajectoryFrame,
   TrajectoryInput,
-} from "./types.ts";
+} from "./trajectory-types.ts";
+import type { StructureData } from "./structure-types.ts";
 
 const fail = (path: string, message: string): never => {
   throw new TypeError(`${path}: ${message}`);
@@ -32,11 +32,7 @@ const finiteArray = (values: ArrayLike<number>, path: string): void => {
 const abortError = (): Error =>
   new DOMException("frame read aborted", "AbortError");
 
-/**
- * Throw a `TypeError` naming the offending field if `frame` does not hold
- * `atomCount` finite positions (and, when present, a finite 3×3 box and
- * velocities of the same shape). Returns the frame.
- */
+/** @internal Frame validation is part of createTrajectory's public contract. */
 export function validateTrajectoryFrame(
   frame: TrajectoryFrame,
   atomCount: number,
@@ -210,11 +206,7 @@ export function validateTrajectory(
   return trajectory;
 }
 
-/**
- * Fractional frame index at trajectory time `t` (in `trajectory.timeUnit`),
- * interpolating linearly between the frames around it and clamping outside
- * the first and last frame. Repeated times resolve to the first such frame.
- */
+/** @internal Timeline interpolation helper; not part of the package entrypoint. */
 export function frameAtTime(trajectory: TrajectoryData, t: number): number {
   if (!Number.isFinite(t)) fail("time", "expected finite number");
   const time = trajectory.time;
@@ -230,7 +222,8 @@ export function frameAtTime(trajectory: TrajectoryData, t: number): number {
   return lo + (t - time[lo]) / (time[hi] - time[lo]);
 }
 
-/**
+/** @internal Convert an NMR multi-model structure into its trajectory view.
+ *
  * A multi-model structure (an NMR ensemble) as a trajectory over the same
  * structure: frame `k` holds model `k`'s coordinates, in the order models are
  * first encountered, and `atomMap` points at the rows of the first model — the

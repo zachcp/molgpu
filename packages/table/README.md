@@ -147,6 +147,18 @@ selection; `secondaryStructureTrace` adds per-sample direction vectors and
 helix/sheet/coil labels over that trace. Both are inputs to the viewer's tube
 and ribbon geometry.
 
+## Source modules
+
+`structure.ts` owns validation, copies, identity and revisions. `attributes.ts`
+owns derived and built-in columns; `structure-view.ts` owns atom views, residue
+keys and coordinate bounds; `bond-topology.ts` owns radii and inferred bonds.
+`trace.ts`, `secondary-structure.ts`, `volume.ts` and `trajectory.ts` each own
+their matching derivation or value model. Domain types live alongside those
+responsibilities in `structure-types.ts`, `trace-types.ts`, `volume-types.ts`
+and `trajectory-types.ts`; `types.ts` only re-exports them for internal import
+compatibility. The package entrypoint remains the curated public API. Helpers
+needed only by focused tests are marked `@internal` and are not re-exported.
+
 ## API
 
 | Export                    | Stability    | Description                                                                                                                           |

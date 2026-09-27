@@ -9,7 +9,8 @@
 // (central-difference tangent, Gram-Schmidt normal against a carried
 // reference) is this project's own — the chemistry-informed frames from
 // secondary structure are 0sj.2's job, not this one's.
-import type { StructureData, Trace } from "./types.ts";
+import type { StructureData } from "./structure-types.ts";
+import type { Trace } from "./trace-types.ts";
 
 type Vec3 = [number, number, number];
 type TraceKind = Trace["runKind"][number];
