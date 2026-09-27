@@ -13,8 +13,231 @@ import { extname, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 import { build } from "vite";
 import { chromium } from "playwright";
+import { cellListWgsl, createCellList } from "@molgpu/dynamics";
 import { writeXtc } from "../../io/test/trajectory-fixture.ts";
 import { interpolatePositions } from "../src/internal/frame-window.ts";
+
+async function runGpuCellList(page, positions, cutoff) {
+  const cpu = createCellList(Float32Array.from(positions), cutoff, {
+    maxCells: 1_000_000,
+    maxCandidates: 20_000,
+  });
+  const gpu = await page.evaluate(
+    async ({ shaders, positions, cutoff, origin, dims }) => {
+      const device = window.__trajectory.device;
+      const S = GPUBufferUsage.STORAGE,
+        R = GPUBufferUsage.COPY_SRC,
+        W = GPUBufferUsage.COPY_DST;
+      const all = [];
+      const make = (bytes, usage = S | R | W, data = null) => {
+        const buffer = device.createBuffer({ size: Math.max(4, bytes), usage });
+        all.push(buffer);
+        if (data) device.queue.writeBuffer(buffer, 0, data);
+        return buffer;
+      };
+      const pipeline = async (code) => {
+        const module = device.createShaderModule({ code });
+        const info = await module.getCompilationInfo();
+        const errors = info.messages.filter((message) =>
+          message.type === "error"
+        );
+        if (errors.length) {
+          throw new Error(errors.map((e) => e.message).join("\n"));
+        }
+        return device.createComputePipelineAsync({
+          layout: "auto",
+          compute: { module, entryPoint: "main" },
+        });
+      };
+      const dispatch = (encoder, pipe, bindings, groups) => {
+        const pass = encoder.beginComputePass();
+        pass.setPipeline(pipe);
+        pass.setBindGroup(
+          0,
+          device.createBindGroup({
+            layout: pipe.getBindGroupLayout(0),
+            entries: bindings.map(([binding, buffer]) => ({
+              binding,
+              resource: { buffer },
+            })),
+          }),
+        );
+        pass.dispatchWorkgroups(groups);
+        pass.end();
+      };
+      const n = positions.length / 3;
+      const cells = dims[0] * dims[1] * dims[2];
+      const source = make(
+        positions.length * 4,
+        S | W,
+        Float32Array.from(positions),
+      );
+      const dummy = make(4, S | W, new Uint32Array(1));
+      const ids = make(n * 4);
+      const counts = make(cells * 4, S | R | W, new Uint32Array(cells));
+      const sorted = make(n * 4);
+      const paramsBytes = new ArrayBuffer(64);
+      const u = new Uint32Array(paramsBytes), f = new Float32Array(paramsBytes);
+      u.set([n, 0, 20_000, 1_000_000, ...dims, cells]);
+      f.set(
+        [...origin, 0, 1 / (cutoff * (1 + 1e-6)), cutoff * cutoff, 0, 0],
+        8,
+      );
+      const params = make(64, GPUBufferUsage.UNIFORM | W, paramsBytes);
+      const scanParams = (count) =>
+        make(16, GPUBufferUsage.UNIFORM | W, Uint32Array.of(count, 0, 0, 0));
+      const boundsPipe = await pipeline(shaders.bounds);
+      const mergeBoundsPipe = await pipeline(shaders.mergeBounds);
+      const countPipe = await pipeline(shaders.count);
+      const scanCountsPipe = await pipeline(shaders.scanCounts);
+      const scanValuesPipe = await pipeline(shaders.scanValues);
+      const addPipe = await pipeline(shaders.addOffsets);
+      const scatterPipe = await pipeline(shaders.scatter);
+      const pairsPipe = await pipeline(shaders.pairs);
+      const encoder = device.createCommandEncoder();
+      let boundCount = n;
+      let boundInput = source;
+      let boundOutput;
+      let first = true;
+      while (true) {
+        const blocks = Math.ceil(boundCount / 64);
+        boundOutput = make(blocks * 32);
+        dispatch(
+          encoder,
+          first ? boundsPipe : mergeBoundsPipe,
+          first
+            ? [[0, boundInput], [1, dummy], [2, boundOutput], [
+              3,
+              scanParams(boundCount),
+            ]]
+            : [[0, boundInput], [2, boundOutput], [
+              3,
+              scanParams(boundCount),
+            ]],
+          blocks,
+        );
+        if (blocks === 1) break;
+        boundInput = boundOutput;
+        boundCount = blocks;
+        first = false;
+      }
+      dispatch(encoder, countPipe, [
+        [0, source],
+        [1, dummy],
+        [2, ids],
+        [3, counts],
+        [4, params],
+      ], Math.ceil(n / 64));
+      const levels = [];
+      let levelCount = cells;
+      let input = counts;
+      while (true) {
+        const blocks = Math.ceil(levelCount / 256);
+        const offsets = make(levelCount * 4);
+        const sums = make(blocks * 4);
+        dispatch(
+          encoder,
+          levels.length ? scanValuesPipe : scanCountsPipe,
+          [[0, input], [1, offsets], [2, sums], [3, scanParams(levelCount)]],
+          blocks,
+        );
+        levels.push({ offsets, count: levelCount });
+        if (blocks === 1) break;
+        input = sums;
+        levelCount = blocks;
+      }
+      for (let level = levels.length - 2; level >= 0; level--) {
+        dispatch(encoder, addPipe, [
+          [0, levels[level].offsets],
+          [1, levels[level + 1].offsets],
+          [2, scanParams(levels[level].count)],
+        ], Math.ceil(levels[level].count / 64));
+      }
+      const offsets = levels[0].offsets;
+      const cursor = make(cells * 4);
+      encoder.copyBufferToBuffer(offsets, 0, cursor, 0, cells * 4);
+      dispatch(encoder, scatterPipe, [
+        [0, dummy],
+        [1, ids],
+        [2, cursor],
+        [3, sorted],
+        [4, params],
+      ], Math.ceil(n / 64));
+      const pairCapacity = 1_000_000;
+      const pairs = make(pairCapacity * 8);
+      const state = make(8, S | R | W, new Uint32Array(2));
+      dispatch(encoder, pairsPipe, [
+        [0, source],
+        [1, dummy],
+        [2, counts],
+        [3, offsets],
+        [4, params],
+        [5, sorted],
+        [6, pairs],
+        [7, state],
+      ], Math.ceil(n / 64));
+      device.queue.submit([encoder.finish()]);
+      const sizes = [32, cells * 4, cells * 4, n * 4, 8, pairCapacity * 8];
+      const sources = [boundOutput, counts, offsets, sorted, state, pairs];
+      const start = [];
+      let total = 0;
+      for (const size of sizes) {
+        start.push(total);
+        total += size;
+      }
+      const staging = make(
+        total,
+        GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+      );
+      const readEncoder = device.createCommandEncoder();
+      sources.forEach((buffer, i) =>
+        readEncoder.copyBufferToBuffer(buffer, 0, staging, start[i], sizes[i])
+      );
+      device.queue.submit([readEncoder.finish()]);
+      await staging.mapAsync(GPUMapMode.READ);
+      const copy = staging.getMappedRange().slice(0);
+      const readU32 = (part) =>
+        Array.from(new Uint32Array(copy, start[part], sizes[part] / 4));
+      const bounds = Array.from(new Float32Array(copy, start[0], 8));
+      const status = readU32(4);
+      const pairWords = readU32(5).slice(0, status[0] * 2);
+      const pairRows = [];
+      for (let i = 0; i < pairWords.length; i += 2) {
+        pairRows.push([pairWords[i], pairWords[i + 1]]);
+      }
+      pairRows.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+      staging.unmap();
+      all.forEach((buffer) => buffer.destroy());
+      return {
+        bounds,
+        counts: readU32(1),
+        offsets: readU32(2),
+        rows: readU32(3),
+        overflow: status[1],
+        pairs: pairRows.flat(),
+        errors: window.__trajectory.errors.slice(),
+      };
+    },
+    {
+      shaders: cellListWgsl,
+      positions,
+      cutoff,
+      origin: cpu.origin,
+      dims: cpu.dims,
+    },
+  );
+  assert.deepEqual(gpu.errors, []);
+  assert.deepEqual(gpu.counts, [...cpu.counts]);
+  assert.deepEqual(gpu.offsets, [...cpu.offsets.slice(0, -1)]);
+  assert.deepEqual(
+    gpu.rows.slice().sort((a, b) => a - b),
+    [...cpu.rows].sort((a, b) => a - b),
+  );
+  assert.equal(gpu.overflow, 0);
+  assert.deepEqual(gpu.pairs, [...cpu.pairsWithin(cutoff)]);
+  assert.deepEqual(gpu.bounds.slice(0, 3), [...cpu.origin]);
+  return { cells: cpu.counts.length, pairs: gpu.pairs.length / 2 };
+}
 
 Deno.test("trajectory components", async () => {
   const root = fileURLToPath(new URL("../../../", import.meta.url));
@@ -408,6 +631,93 @@ Deno.test("trajectory components", async () => {
     assert.ok(ranges.length >= 3, `range requests: ${ranges.length}`);
     report.rangeRequests = ranges.length;
     await update({ mode: "none" });
+
+    // 11. Phase 13 affine provider: GPU output agrees with its CPU transform,
+    // subset masks pass other rows through, and matrix/selection changes do
+    // not upload the structure positions again.
+    const identity = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+    const shift = (x, y = 0) => [
+      ...identity.slice(0, 12),
+      x,
+      y,
+      0,
+      1,
+    ];
+    const shifted = (positions, x, y = 0, only = null) =>
+      positions.map((v, i) => {
+        if (only !== null && Math.floor(i / 3) !== only) return v;
+        return v + (i % 3 === 0 ? x : i % 3 === 1 ? y : 0);
+      });
+    await update({ mode: "transform", matrix: shift(2, 3) });
+    await expectRead(shifted(rootPositions, 2, 3), "affine all");
+    const uploaded =
+      (await counters()).detail["uploadBytes:structure:positions"] ?? 0;
+    await update({ matrix: shift(-4, 1) });
+    await expectRead(shifted(rootPositions, -4, 1), "affine changed matrix");
+    assert.equal(
+      (await counters()).detail["uploadBytes:structure:positions"] ?? 0,
+      uploaded,
+      "matrix change does not re-upload structure positions",
+    );
+    await update({
+      mode: "transform-selected",
+      matrix: shift(5),
+      selectedRow: 0,
+    });
+    await expectRead(shifted(rootPositions, 5, 0, 0), "affine row 0");
+    await update({ selectedRow: 2 });
+    await expectRead(shifted(rootPositions, 5, 0, 2), "affine row 2");
+    await update({ mode: "transform-curve", time: 0.5 });
+    await expectRead(shifted(rootPositions, 1), "affine curve t=0.5");
+    await update({ time: 1 });
+    await expectRead(shifted(rootPositions, 2), "affine curve t=1");
+    await update({ mode: "none" });
+
+    // 12. Normal-mode displacement is additive to the trajectory, reversible
+    // under scrubbing, and a fixed-time mode swap refreshes structural inputs.
+    const modal = (base, version, scale) =>
+      base.map((v, i) => {
+        const row = Math.floor(i / 3), axis = i % 3;
+        const one = [[1, 0, 0], [1, 0, 0], [0, 2, 0]];
+        const two = [[0, 0, 3], [0, 0, 3], [0, -1, 0]];
+        return v + scale * (version === 1 ? one : two)[row][axis];
+      });
+    await update({
+      mode: "normal-mode",
+      frame: 1,
+      time: 0.25,
+      amplitude: 2,
+      modeVersion: 1,
+    });
+    await displayed({ a: 1, b: 1, t: 0 });
+    await expectRead(modal(pageFrames[1], 1, 2), "normal mode forward");
+    const modeUpload =
+      (await counters()).detail["uploadBytes:structure:positions"] ?? 0;
+    await update({ time: 0.75 });
+    await expectRead(modal(pageFrames[1], 1, -2), "normal mode reverse");
+    await update({ time: 0.25, modeVersion: 2 });
+    await expectRead(modal(pageFrames[1], 2, 2), "normal mode swap");
+    await update({ amplitude: 0 });
+    await expectRead(pageFrames[1], "normal mode zero amplitude");
+    assert.equal(
+      (await counters()).detail["uploadBytes:structure:positions"] ?? 0,
+      modeUpload,
+      "normal-mode animation does not re-upload root positions",
+    );
+    await update({ mode: "none" });
+
+    // 13. The shared GPU cell list agrees with the CPU counting-sort oracle.
+    // The second case crosses a 256-cell scan block boundary.
+    report.cellList = [];
+    const smallPoints = [-2, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0];
+    for (const cutoff of [1, 2]) {
+      report.cellList.push(await runGpuCellList(page, smallPoints, cutoff));
+    }
+    const longChain = Array.from(
+      { length: 512 * 3 },
+      (_, i) => i % 3 === 0 ? i / 3 : 0,
+    );
+    report.cellList.push(await runGpuCellList(page, longChain, 1));
 
     now = await counters();
     for (const [label, bytes] of Object.entries(now.ownedBuffers.bytes)) {

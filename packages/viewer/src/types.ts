@@ -4,6 +4,7 @@
 import type { StructureData, TrajectoryData, VolumeData } from "@molgpu/table";
 import type { Curve } from "@molgpu/timeline";
 import type { SelectionQuery } from "@molgpu/select";
+import type { NormalModeData } from "@molgpu/dynamics";
 
 // --- Owned element, component and value types -------------------------------
 
@@ -178,6 +179,25 @@ export interface LoadedTrajectoryProps extends TrajectoryPlayback {
 }
 /** `data` and `src` are mutually exclusive, and exactly one is required. */
 export type TrajectoryProps = PreloadedTrajectoryProps | LoadedTrajectoryProps;
+
+/** Apply a column-major 4x4 affine to all atoms or an atom selection. */
+export interface TransformProps {
+  children?: ViewerElement;
+  matrix: ArrayLike<number> | Curve<readonly number[]>;
+  /** Unlike Superpose, this selects output rows. Other rows pass through. */
+  select?: SelectionQuery;
+}
+
+/** Add a precomputed normal mode to upstream coordinates. */
+export interface NormalModeProps {
+  children?: ViewerElement;
+  mode: NormalModeData;
+  amplitude: number;
+  /** Cycles per second; a nonzero value requires a TimelineProvider. */
+  frequency?: number;
+  /** Radians at time zero. */
+  phase?: number;
+}
 
 /** What the nearest `<Trajectory>` shows, from `useTrajectoryFrame()`. */
 export interface TrajectoryFrameState {

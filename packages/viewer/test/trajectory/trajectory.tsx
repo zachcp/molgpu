@@ -20,13 +20,16 @@ import {
   type TrajectoryData,
   type TrajectoryFrame,
 } from "@molgpu/table";
-import { frameCurve } from "@molgpu/timeline";
+import { createCurve, frameCurve } from "@molgpu/timeline";
+import { where } from "@molgpu/select";
 import {
+  NormalMode,
   Spacefill,
   Structure,
   TimelineProvider,
   Trajectory,
   type TrajectoryFrameState,
+  Transform,
   UnitCell,
   useCoordinateSnapshot,
   useTrajectoryFrame,
@@ -123,6 +126,28 @@ const BOXED = createTrajectory({
     box: Float32Array.of(10 + 2 * k, 0, 0, 0, 10, 0, 0, 0, 10),
   })),
 });
+const IDENTITY = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+const SHIFT = [...IDENTITY.slice(0, 12), 2, 0, 0, 1];
+const MATRIX_CURVE = createCurve([
+  { time: 0, value: IDENTITY },
+  { time: 1, value: SHIFT },
+]);
+const SELECT_ROWS = [0, 1, 2].map((wanted) =>
+  where("atom", `row=${wanted}`, (_data, row) => row === wanted)
+);
+const MODE_MAP = Uint32Array.of(0, 0, 1);
+const MODES = [
+  {
+    atomToNode: MODE_MAP,
+    vectors: Float32Array.of(1, 0, 0, 0, 2, 0),
+    version: 1,
+  },
+  {
+    atomToNode: MODE_MAP,
+    vectors: Float32Array.of(0, 0, 3, 0, -1, 0),
+    version: 2,
+  },
+];
 // A source that answers after `delay` ms, for streaming states.
 const slow = (delay: number): TrajectoryData =>
   createTrajectory({
@@ -150,7 +175,11 @@ type Mode =
   | "cell"
   | "slow"
   | "snapshot"
-  | "src";
+  | "src"
+  | "transform"
+  | "transform-selected"
+  | "transform-curve"
+  | "normal-mode";
 interface State {
   mode: Mode;
   frame: number;
@@ -159,6 +188,10 @@ interface State {
   time: number;
   src: string;
   latency: number;
+  matrix: number[];
+  selectedRow: number;
+  modeVersion: number;
+  amplitude: number;
 }
 
 interface Probe {
@@ -284,6 +317,49 @@ const Scene = ({ state }: { state: State }): LiveElement => {
           </Trajectory>
         </Structure>
       );
+    case "transform":
+    case "transform-selected":
+      return (
+        <Structure data={STRUCTURE}>
+          <Transform
+            matrix={state.matrix}
+            select={state.mode === "transform-selected"
+              ? SELECT_ROWS[state.selectedRow]
+              : undefined}
+          >
+            <Spacefill />
+            <Probe />
+          </Transform>
+        </Structure>
+      );
+    case "transform-curve":
+      return (
+        <TimelineProvider time={state.time}>
+          <Structure data={STRUCTURE}>
+            <Transform matrix={MATRIX_CURVE}>
+              <Spacefill />
+              <Probe />
+            </Transform>
+          </Structure>
+        </TimelineProvider>
+      );
+    case "normal-mode":
+      return (
+        <TimelineProvider time={state.time}>
+          <Structure data={STRUCTURE}>
+            <Trajectory data={WHOLE} frame={state.frame}>
+              <NormalMode
+                mode={MODES[state.modeVersion - 1]}
+                amplitude={state.amplitude}
+                frequency={1}
+              >
+                <Spacefill />
+                <Probe />
+              </NormalMode>
+            </Trajectory>
+          </Structure>
+        </TimelineProvider>
+      );
   }
 };
 
@@ -296,6 +372,10 @@ const App = (): LiveElement => {
     time: 0,
     src: "",
     latency: 0,
+    matrix: IDENTITY,
+    selectedRow: 0,
+    modeVersion: 1,
+    amplitude: 0,
   });
   probe.update = (patch) => setState((previous) => ({ ...previous, ...patch }));
   probe.mounted = true;

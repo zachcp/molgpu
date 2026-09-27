@@ -93,7 +93,9 @@ export const CoordinateKernel: LC<{
   const generation = useMemo(() => ++next.current, [
     upstream.source,
     upstream.generation,
+    shader,
     parameterKey,
+    ...sources,
   ]);
   const output = () => {
     return use(Compute, {
