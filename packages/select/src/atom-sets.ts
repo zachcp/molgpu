@@ -95,6 +95,26 @@ export function subtractRows(a: Uint32Array, b: Uint32Array): Uint32Array {
   return Uint32Array.from(out);
 }
 
+/** Membership bitmap for a sorted selection, indexed by atom row. */
+export function rowMembership(rows: Uint32Array, count: number): Uint8Array {
+  const membership = new Uint8Array(count);
+  for (const row of rows) membership[row] = 1;
+  return membership;
+}
+
+/** Filter a set against a membership bitmap in one pass over the set. */
+export function filterRows(
+  rows: Uint32Array,
+  membership: Uint8Array,
+  keep: boolean,
+): Uint32Array {
+  const out: number[] = [];
+  for (const row of rows) {
+    if ((membership[row] !== 0) === keep) out.push(row);
+  }
+  return Uint32Array.from(out);
+}
+
 const sameRows = (a: Uint32Array, b: Uint32Array): boolean => {
   if (a.length !== b.length) return false;
   for (let k = 0; k < a.length; k++) if (a[k] !== b[k]) return false;

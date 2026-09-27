@@ -22,9 +22,10 @@ import {
 import {
   type AtomSets,
   EMPTY,
+  filterRows,
   flatten,
   forEachSet,
-  intersectRows,
+  rowMembership,
   SetBuilder,
   setCount,
   singletons,
@@ -633,9 +634,10 @@ const SPECS: Readonly<Record<string, Spec>> = {
         if (setCount(sel) === 0) return sel;
         const bySel = by(ctx);
         if (setCount(bySel) === 0) return EMPTY;
-        const n = ctx.data.topology.atoms.count, keep = flatten(bySel, n);
+        const n = ctx.data.topology.atoms.count;
+        const keep = rowMembership(flatten(bySel, n), n);
         const out = new SetBuilder(n);
-        forEachSet(sel, (s) => out.add(intersectRows(s, keep)));
+        forEachSet(sel, (s) => out.add(filterRows(s, keep, true)));
         return out.selection();
       };
     },
@@ -650,9 +652,10 @@ const SPECS: Readonly<Record<string, Spec>> = {
         if (setCount(sel) === 0) return sel;
         const bySel = by(ctx);
         if (setCount(bySel) === 0) return sel;
-        const n = ctx.data.topology.atoms.count, drop = flatten(bySel, n);
+        const n = ctx.data.topology.atoms.count;
+        const drop = rowMembership(flatten(bySel, n), n);
         const out = new SetBuilder(n);
-        forEachSet(sel, (s) => out.add(subtractRows(s, drop)));
+        forEachSet(sel, (s) => out.add(filterRows(s, drop, false)));
         return out.selection();
       };
     },

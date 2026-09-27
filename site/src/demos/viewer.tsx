@@ -22,6 +22,22 @@ import {
 
 export type Scene = (data: StructureData) => unknown;
 
+type ViewerOptions = {
+  worldLight?: boolean;
+  oit?: boolean;
+  time?: number;
+  postprocess?: boolean;
+  coordinates?: boolean;
+};
+
+type ViewerState = {
+  host: string;
+  data: StructureData;
+  scene: Scene;
+  camera: { radius: number; target: [number, number, number] };
+  options: ViewerOptions;
+};
+
 const clamp = (value: number, lower: number, upper: number) =>
   Math.max(lower, Math.min(upper, value));
 const ALL_ATOMS = all("atom");
@@ -99,8 +115,93 @@ const StreamOrbitControls = (
 // unmounts it first so canvases and devices never accumulate.
 const roots = new Map<
   string,
-  { key: string; fiber: ReturnType<typeof render> }
+  {
+    key: string;
+    fiber: ReturnType<typeof render>;
+  }
 >();
+const updates = new Map<string, (state: ViewerState) => void>();
+
+const ViewerRoot = (initial: ViewerState) => {
+  const [state, update] = useState(initial);
+  updates.set(initial.host, update);
+  const { host, data, scene, camera, options } = state;
+  return use(WebGPU, {
+    fallback: (error: unknown) => {
+      const status = document.querySelector<HTMLElement>(
+        "[data-webgpu-error]",
+      );
+      if (status) {
+        status.textContent = `WebGPU is unavailable: ${
+          error instanceof Error ? error.message : String(error)
+        }`;
+      }
+      return null;
+    },
+    children: use(AutoCanvas, {
+      selector: host,
+      samples: 4,
+      backgroundColor: [0.035, 0.055, 0.09, 1],
+      children: (() => {
+        const pass = (insideStructure: boolean) =>
+          use(Pass, {
+            lights: true,
+            oit: options.oit,
+            ...(options.postprocess
+              ? {
+                ssao: 0.35,
+                outline: {
+                  outer: 1.5,
+                  inner: 0,
+                  color: [0.02, 0.03, 0.05, 0.6],
+                },
+              }
+              : {}),
+            children: [
+              use(AmbientLight, {
+                color: [0.7, 0.8, 1],
+                intensity: options.worldLight ? 0.1 : 0.35,
+              }),
+              use(DirectionalLight, {
+                direction: [-1, -2, -1.5],
+                color: [1, 0.95, 0.88],
+                intensity: options.worldLight ? 1.8 : 1.25,
+              }),
+              use(TimelineProvider, {
+                time: options.time ?? 0,
+                children: insideStructure
+                  ? scene(data) as never
+                  : use(Structure, {
+                    data,
+                    children: scene(data) as never,
+                  }),
+              }),
+            ],
+          });
+        const controls = {
+          host,
+          ...camera,
+          bearing: 0.6,
+          pitch: 0.28,
+        };
+        return options.coordinates
+          ? use(Structure, {
+            data,
+            children: use(WobbleCoordinates, {
+              phase: options.time ?? 0,
+              children: use(IdentityCoordinates, {
+                children: use(StreamOrbitControls, {
+                  ...controls,
+                  children: pass(true),
+                }),
+              }),
+            }),
+          })
+          : use(OrbitControls, { ...controls, children: pass(false) });
+      })(),
+    }),
+  });
+};
 
 export const mountViewer = (
   key: string,
@@ -108,93 +209,15 @@ export const mountViewer = (
   data: StructureData,
   scene: Scene,
   camera: { radius: number; target: [number, number, number] },
-  options: {
-    worldLight?: boolean;
-    oit?: boolean;
-    time?: number;
-    postprocess?: boolean;
-    coordinates?: boolean;
-  } = {},
+  options: ViewerOptions = {},
 ) => {
+  const next = { host, data, scene, camera, options };
   const previous = roots.get(host);
-  if (previous && previous.key !== key) unmount(previous.fiber);
-  const fiber = render(
-    use(WebGPU, {
-      fallback: (error: unknown) => {
-        const status = document.querySelector<HTMLElement>(
-          "[data-webgpu-error]",
-        );
-        if (status) {
-          status.textContent = `WebGPU is unavailable: ${
-            error instanceof Error ? error.message : String(error)
-          }`;
-        }
-        return null;
-      },
-      children: use(AutoCanvas, {
-        selector: host,
-        samples: 4,
-        backgroundColor: [0.035, 0.055, 0.09, 1],
-        children: (() => {
-          const pass = (insideStructure: boolean) =>
-            use(Pass, {
-              lights: true,
-              oit: options.oit,
-              ...(options.postprocess
-                ? {
-                  ssao: 0.35,
-                  outline: {
-                    outer: 1.5,
-                    inner: 0,
-                    color: [0.02, 0.03, 0.05, 0.6],
-                  },
-                }
-                : {}),
-              children: [
-                use(AmbientLight, {
-                  color: [0.7, 0.8, 1],
-                  intensity: options.worldLight ? 0.1 : 0.35,
-                }),
-                use(DirectionalLight, {
-                  direction: [-1, -2, -1.5],
-                  color: [1, 0.95, 0.88],
-                  intensity: options.worldLight ? 1.8 : 1.25,
-                }),
-                use(TimelineProvider, {
-                  time: options.time ?? 0,
-                  children: insideStructure
-                    ? scene(data) as never
-                    : use(Structure, {
-                      data,
-                      children: scene(data) as never,
-                    }),
-                }),
-              ],
-            });
-          const controls = {
-            host,
-            ...camera,
-            bearing: 0.6,
-            pitch: 0.28,
-          };
-          return options.coordinates
-            ? use(Structure, {
-              data,
-              children: use(WobbleCoordinates, {
-                phase: options.time ?? 0,
-                children: use(IdentityCoordinates, {
-                  children: use(StreamOrbitControls, {
-                    ...controls,
-                    children: pass(true),
-                  }),
-                }),
-              }),
-            })
-            : use(OrbitControls, { ...controls, children: pass(false) });
-        })(),
-      }),
-    }),
-    previous?.key === key ? previous.fiber : undefined,
-  );
+  if (previous && previous.key === key) {
+    updates.get(host)?.(next);
+    return;
+  }
+  if (previous) unmount(previous.fiber);
+  const fiber = render(use(ViewerRoot, next));
   roots.set(host, { key, fiber });
 };
