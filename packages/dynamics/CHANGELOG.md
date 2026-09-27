@@ -18,3 +18,8 @@ All notable changes to `@molgpu/dynamics` are recorded here. See
 - Add pure normal-mode displacement, validation and WGSL for precomputed modes.
 - Add bounded CPU GNM/ANM contact construction and eigenmodes with residual
   checks.
+- `solveElasticModes` takes `options` and solves systems above the dense limit
+  with sparse Lanczos (full reorthogonalisation, exact translation deflation).
+  Both paths match ProDy 2.6.1 ANM and GNM modes on 1crn and 1tqn.
+- Add `residueGuideMap` and `normalModeFromElastic`, which turn an ANM mode into
+  `<NormalMode>` input.

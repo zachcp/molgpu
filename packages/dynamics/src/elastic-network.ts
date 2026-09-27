@@ -1,4 +1,5 @@
 import { spatialGrid } from "@molgpu/table";
+import { lanczosModes } from "./lanczos.ts";
 
 /** Sparse guide-node contacts shared by GNM and ANM. */
 export interface ElasticNetwork {
@@ -15,8 +16,20 @@ export interface ElasticMode {
   readonly residual: number;
 }
 
-/** Explicit cap on the dense CPU reference eigensolver dimension. */
+/** Largest dimension `solveElasticModes` solves densely by default. */
 export const MAX_ELASTIC_DIM = 192;
+
+/** How `solveElasticModes` diagonalises the Hessian or Kirchhoff matrix. */
+export interface ElasticSolveOptions {
+  /**
+   * `"dense"` is exact Jacobi and limited to `MAX_ELASTIC_DIM`; `"lanczos"` is
+   * sparse and matrix-free. `"auto"` (the default) picks dense up to the
+   * limit and Lanczos above it.
+   */
+  readonly method?: "auto" | "dense" | "lanczos";
+  /** Lanczos basis vectors kept (default: about 320 MB of f64 basis). */
+  readonly maxIterations?: number;
+}
 
 /** Build exact-cutoff CA/guide contacts using table.spatialGrid. */
 export function buildElasticNetwork(
@@ -114,11 +127,61 @@ function hessian(network: ElasticNetwork, kind: "gnm" | "anm"): Float64Array {
   return matrix;
 }
 
-/** Worker-safe dense CPU reference for the first nontrivial elastic modes. */
+/** y += H x for the GNM Kirchhoff or ANM Hessian, without forming it. */
+function multiplier(
+  network: ElasticNetwork,
+  kind: "gnm" | "anm",
+): (x: Float64Array, y: Float64Array) => void {
+  const { pairs, directions } = network;
+  if (kind === "gnm") {
+    return (x, y) => {
+      for (let k = 0; k < pairs.length; k += 2) {
+        const a = pairs[k], b = pairs[k + 1], diff = x[a] - x[b];
+        y[a] += diff;
+        y[b] -= diff;
+      }
+    };
+  }
+  return (x, y) => {
+    for (let edge = 0; edge < pairs.length / 2; edge++) {
+      const a = 3 * pairs[2 * edge], b = 3 * pairs[2 * edge + 1];
+      const ux = directions[3 * edge],
+        uy = directions[3 * edge + 1],
+        uz = directions[3 * edge + 2];
+      const s = ux * (x[a] - x[b]) + uy * (x[a + 1] - x[b + 1]) +
+        uz * (x[a + 2] - x[b + 2]);
+      y[a] += s * ux;
+      y[a + 1] += s * uy;
+      y[a + 2] += s * uz;
+      y[b] -= s * ux;
+      y[b + 1] -= s * uy;
+      y[b + 2] -= s * uz;
+    }
+  };
+}
+
+/** Flip a vector so its largest-magnitude entry is positive. */
+function orient(vector: Float64Array | Float32Array): void {
+  let pivot = 0;
+  for (let i = 1; i < vector.length; i++) {
+    if (Math.abs(vector[i]) > Math.abs(vector[pivot])) pivot = i;
+  }
+  if (vector[pivot] < 0) {
+    for (let i = 0; i < vector.length; i++) vector[i] = -vector[i];
+  }
+}
+
+/**
+ * Worker-safe CPU solver for the first nontrivial elastic modes, in ascending
+ * eigenvalue order with the largest-magnitude entry of each vector positive.
+ * Zero modes (rigid-body and floppy) are skipped. Every returned mode has a
+ * relative residual of at most 1e-6.
+ */
 export function solveElasticModes(
   network: ElasticNetwork,
   kind: "gnm" | "anm",
   count: number,
+  options: ElasticSolveOptions = {},
 ): readonly ElasticMode[] {
   if (kind !== "gnm" && kind !== "anm") {
     throw new TypeError("elastic kind must be gnm or anm");
@@ -126,8 +189,21 @@ export function solveElasticModes(
   if (!Number.isSafeInteger(count) || count < 1) {
     throw new TypeError("mode count must be a positive safe integer");
   }
+  const method = options.method ?? "auto";
+  if (!["auto", "dense", "lanczos"].includes(method)) {
+    throw new TypeError("elastic method must be auto, dense or lanczos");
+  }
+  const { maxIterations } = options;
+  if (
+    maxIterations !== undefined &&
+    (!Number.isSafeInteger(maxIterations) || maxIterations < 1)
+  ) {
+    throw new TypeError("maxIterations must be a positive safe integer");
+  }
   const d = (kind === "gnm" ? 1 : 3) * network.rows.length;
-  if (d > MAX_ELASTIC_DIM) {
+  const dense = method === "dense" ||
+    (method === "auto" && d <= MAX_ELASTIC_DIM);
+  if (dense && d > MAX_ELASTIC_DIM) {
     throw new RangeError(
       `elastic dimension ${d} exceeds dense limit ${MAX_ELASTIC_DIM}`,
     );
@@ -148,6 +224,22 @@ export function solveElasticModes(
         throw new TypeError("elastic contact direction is not finite");
       }
     }
+  }
+  if (!dense) {
+    const found = lanczosModes(
+      kind,
+      network.rows.length,
+      network.pairs,
+      multiplier(network, kind),
+      count,
+      { maxIterations },
+    );
+    return found.map(({ eigenvalue, vector, residual }) => {
+      orient(vector);
+      const compact = Float32Array.from(vector);
+      orient(compact);
+      return Object.freeze({ kind, eigenvalue, vector: compact, residual });
+    });
   }
   const original = hessian(network, kind), a = original.slice();
   const vectors = new Float64Array(d * d);

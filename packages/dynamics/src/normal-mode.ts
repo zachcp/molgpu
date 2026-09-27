@@ -1,3 +1,6 @@
+import type { Topology } from "@molgpu/table";
+import type { ElasticMode } from "./elastic-network.ts";
+
 /** One precomputed mode at residue-guide (normally CA) resolution. */
 export interface NormalModeData {
   /** Owned xyz displacement per guide node, in node order. */
@@ -29,10 +32,67 @@ export function validateNormalMode(
     }
   }
   for (const node of mode.atomToNode) {
-    if (node !== 0xffffffff && node >= nodes) {
+    if (node !== ABSENT && node >= nodes) {
       throw new TypeError("normal mode atom mapping is out of range");
     }
   }
+}
+
+const ABSENT = 0xffffffff;
+
+/**
+ * Map every atom to the guide node (normally the CA) of its residue, so the
+ * residue's atoms follow its guide displacement. `guideRows` are the sorted,
+ * unique atom rows of the guide nodes, in node order, as passed to
+ * `buildElasticNetwork`. An atom follows the guide with its own altloc, else
+ * one without an altloc, else the residue's first guide. Atoms of residues
+ * without a guide map to 0xffffffff and do not move.
+ */
+export function residueGuideMap(
+  topology: Topology,
+  guideRows: ArrayLike<number>,
+): Uint32Array {
+  const { atoms } = topology;
+  const byResidue = new Map<number, number[]>();
+  let previous = -1;
+  for (let node = 0; node < guideRows.length; node++) {
+    const row = guideRows[node];
+    if (!Number.isSafeInteger(row) || row <= previous || row >= atoms.count) {
+      throw new TypeError("guide rows must be sorted, unique atom indices");
+    }
+    previous = row;
+    const residue = atoms.residue[row];
+    const nodes = byResidue.get(residue);
+    if (nodes) nodes.push(node);
+    else byResidue.set(residue, [node]);
+  }
+  const map = new Uint32Array(atoms.count).fill(ABSENT);
+  for (let i = 0; i < atoms.count; i++) {
+    const nodes = byResidue.get(atoms.residue[i]);
+    if (!nodes) continue;
+    const altloc = (node: number) => atoms.altloc[guideRows[node]];
+    map[i] = nodes.find((node) => altloc(node) === atoms.altloc[i]) ??
+      nodes.find((node) => altloc(node) === "") ?? nodes[0];
+  }
+  return map;
+}
+
+/** Wrap an ANM mode from `solveElasticModes` as `<NormalMode>` input. */
+export function normalModeFromElastic(
+  mode: ElasticMode,
+  atomToNode: Uint32Array,
+  version: number,
+): NormalModeData {
+  if (mode.kind !== "anm") {
+    throw new TypeError("only ANM modes displace atoms; GNM is scalar");
+  }
+  const data = Object.freeze({
+    vectors: mode.vector.slice(),
+    atomToNode,
+    version,
+  });
+  validateNormalMode(data, atomToNode.length);
+  return data;
 }
 
 /** Add a sinusoidal mode to upstream packed xyz without changing the input. */

@@ -48,12 +48,15 @@ deno add jsr:@molgpu/dynamics
 | `NormalModeData`         | experimental | Precomputed guide-node displacements and atom mapping.                                   |
 | `validateNormalMode`     | experimental | Validate mode vectors, mapping and structural version.                                   |
 | `applyNormalMode`        | experimental | Pure sinusoidal mode addition to upstream positions.                                     |
+| `residueGuideMap`        | experimental | Map each atom to its residue's guide node (normally CA), altloc-aware.                   |
+| `normalModeFromElastic`  | experimental | Wrap an ANM mode and atom map as `NormalModeData`.                                       |
 | `normalModeWgsl`         | experimental | WGSL for additive guide-node displacement.                                               |
 | `buildElasticNetwork`    | experimental | Exact-cutoff guide contacts through `table.spatialGrid`.                                 |
-| `solveElasticModes`      | experimental | Bounded dense CPU GNM/ANM eigensolver with residual checks.                              |
+| `solveElasticModes`      | experimental | CPU GNM/ANM eigenmodes: dense Jacobi or sparse Lanczos, with residual checks.            |
+| `ElasticSolveOptions`    | experimental | Solver choice (`auto`, `dense`, `lanczos`) and Lanczos basis cap.                        |
 | `ElasticNetwork`         | experimental | Sparse contact pairs and ANM directions.                                                 |
 | `ElasticMode`            | experimental | Eigenvalue, vector, residual and GNM/ANM kind.                                           |
-| `MAX_ELASTIC_DIM`        | experimental | Dense eigensolver dimension limit (192).                                                 |
+| `MAX_ELASTIC_DIM`        | experimental | Largest dimension solved densely (192); `auto` uses Lanczos above it.                    |
 | `templateCharges`        | experimental | Assign AMBER/PDB2PQR residue-template and monatomic-ion charges.                         |
 | `residueNetCharge`       | experimental | Sum a charge column over active atoms into residue rows.                                 |
 | `TemplateChargeOptions`  | experimental | Histidine and residue-specific template overrides.                                       |
@@ -210,9 +213,27 @@ Cieplak and Kollman (2000), and Dolinsky et al. (2004).
 `buildElasticNetwork(positions, guideRows, cutoff)` uses `table.spatialGrid` to
 find exact guide-node contacts.
 `solveElasticModes(network, "gnm" | "anm",
-count)` builds the Kirchhoff matrix
-or ANM Hessian, skips zero modes, fixes each mode's sign, and checks its
-eigenpair residual. The dense CPU reference is limited to 192 scalar dimensions
-(up to 64 ANM nodes) to bound memory and work; larger production systems still
-need a sparse iterative solver. An ANM mode's packed xyz vector can be supplied
-to `<NormalMode>` with an atom-to-guide map.
+count, options)` returns the first
+`count` nontrivial modes in ascending eigenvalue order. It skips zero modes
+(rigid-body and floppy), makes each vector's largest entry positive, and checks
+every eigenpair's relative residual (at most 1e-6).
+
+Up to 192 scalar dimensions (64 ANM nodes) it diagonalises the Kirchhoff matrix
+or Hessian densely by Jacobi rotations. Above that it runs Lanczos with full
+reorthogonalisation on a matrix-free product over the contacts. Each connected
+component's translations are projected out exactly, and repeated eigenvalues
+restart the Krylov space orthogonally. The basis is capped at about 320 MB of
+f64 vectors (`maxIterations` overrides it), and running out throws instead of
+returning unconverged modes. On an Apple M1, the first five ANM modes of 1tqn
+(468 CA, 1,404 dimensions) take about 0.2 s, and ten modes of 1a4y (1,166 CA,
+3,498 dimensions) about 2 s. Run large systems in a worker.
+
+Both paths match ProDy 2.6.1 (`gamma = 1`, ANM 15 Å, GNM 7.3 Å) on the corpus CA
+atoms of 1crn and 1tqn: eigenvalues within 1e-6 relative and vector overlaps
+within 1e-5 of 1. The fixture and its script are in `test/fixtures`.
+
+`residueGuideMap(topology, guideRows)` maps every atom to its residue's guide
+node, preferring a guide with the same altloc, so side chains follow their CA.
+`normalModeFromElastic(mode, atomToNode, version)` turns an ANM mode into the
+`NormalModeData` that `<NormalMode>` animates. GNM modes are scalar fluctuations
+and are rejected.

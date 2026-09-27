@@ -23,13 +23,16 @@ export {
   buildElasticNetwork,
   type ElasticMode,
   type ElasticNetwork,
+  type ElasticSolveOptions,
   MAX_ELASTIC_DIM,
   solveElasticModes,
 } from "./elastic-network.ts";
 export {
   applyNormalMode,
   type NormalModeData,
+  normalModeFromElastic,
   normalModeWgsl,
+  residueGuideMap,
   validateNormalMode,
 } from "./normal-mode.ts";
 export {
