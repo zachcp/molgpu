@@ -144,6 +144,10 @@ TrajectoryPlayback
   export interface TrajectoryPlayback { children?: ViewerElement; /** * Fractional frame index, or a curve from timeline seconds to frames (see * `frameCurve` in @molgpu/timeline). Clamped to `[0, frameCount - 1]`. */ frame: number | Curve<number>; /** `"linear"` (default) blends neighbouring frames; `"nearest"` rounds. */ interpolate?: "linear" | "nearest"; /** * `"minimum-image"` interpolates each atom along the shortest periodic * displacement when both frames carry a box, so atoms that wrap do not * cross the box on screen. Default `"none"`. */ pbc?: "none" | "minimum-image" }
 TrajectoryProps
   export type TrajectoryProps = PreloadedTrajectoryProps | LoadedTrajectoryProps;
+Transform
+  export const Transform: ViewerComponent<TransformProps>;
+TransformProps
+  export interface TransformProps { children?: ViewerElement; matrix: ArrayLike<number> | Curve<readonly number[]>; /** Unlike Superpose, this selects output rows. Other rows pass through. */ select?: SelectionQuery }
 Translucency
   export interface Translucency { /** 0–1, multiplied into the colour's alpha. A uniform: changing it (a fade, * a timeline curve) never rebuilds or re-uploads geometry. Defaults to 1. */ opacity?: number; /** Draw mode override. By default it is 'transparent' whenever the effective * alpha (colour alpha × opacity) is below 1, else the layer's opaque mode. * Pair translucent representations with <Pass oit>. */ mode?: DrawMode }
 Tube

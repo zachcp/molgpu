@@ -357,6 +357,7 @@ function checkPackage(dir, { update = false } = {}) {
   m.peerDependencies = {};
   const name = m.name ?? relative(ROOT, dir);
   const isViewer = name === VIEWER;
+  const isDynamics = name === "@molgpu/dynamics";
   const src = join(dir, "src");
   const sources = walk(src, SOURCE).filter((f) => !f.endsWith(".d.ts"));
   const declared = { ...m.dependencies, ...m.peerDependencies };
@@ -400,6 +401,9 @@ function checkPackage(dir, { update = false } = {}) {
   }
   for (const u of undeclared) fail("H1", `undeclared import ${u}`);
   for (const [dep, range] of Object.entries(declared)) {
+    if (isDynamics && dep.startsWith("@use-gpu/")) {
+      fail("H4", `${name} declares ${dep}; dynamics must be renderer-free`);
+    }
     if (
       dep.startsWith("@use-gpu/") &&
       !new RegExp(`^npm:${dep.replace("/", "\\/")}@\\d+\\.\\d+\\.\\d+$`).test(
@@ -501,6 +505,10 @@ function checkPackage(dir, { update = false } = {}) {
     const internal = rel.startsWith(join("src", "internal"));
     for (const spec of specifiers(file)) {
       if (!isBare(spec)) continue;
+      if (isDynamics && spec.startsWith("@use-gpu/")) {
+        fail("H4", `${rel} imports "${spec}"; dynamics must be renderer-free`);
+        continue;
+      }
       if (spec.startsWith("molstar") && name !== "@molgpu/io") {
         fail("H4", `${rel} imports Mol* ("${spec}"); only @molgpu/io may`);
       }

@@ -179,6 +179,14 @@ export interface LoadedTrajectoryProps extends TrajectoryPlayback {
 /** `data` and `src` are mutually exclusive, and exactly one is required. */
 export type TrajectoryProps = PreloadedTrajectoryProps | LoadedTrajectoryProps;
 
+/** Apply a column-major 4x4 affine to all atoms or an atom selection. */
+export interface TransformProps {
+  children?: ViewerElement;
+  matrix: ArrayLike<number> | Curve<readonly number[]>;
+  /** Unlike Superpose, this selects output rows. Other rows pass through. */
+  select?: SelectionQuery;
+}
+
 /** What the nearest `<Trajectory>` shows, from `useTrajectoryFrame()`. */
 export interface TrajectoryFrameState {
   readonly trajectory: TrajectoryData;

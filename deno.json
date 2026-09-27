@@ -5,6 +5,7 @@
     "./packages/timeline",
     "./packages/select",
     "./packages/fields",
+    "./packages/dynamics",
     "./packages/io",
     "./packages/viewer"
   ],

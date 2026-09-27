@@ -6,6 +6,9 @@ All notable changes to `@molgpu/viewer` are recorded here. The format follows
 
 ## [Unreleased]
 
+- Add experimental `<Transform matrix select>` with a CPU reference in
+  `@molgpu/dynamics`. Matrix curves update the GPU output without re-uploading
+  structure positions; selection masks stay in topology atom order.
 - Derived attribute channels (Phase 10): shared GPU column uploads across
   representations, an advanced `AttributeProducer` for kernel-written columns,
   and demand-driven `useAttributeSnapshot` CPU readback. `byChain()` now reads
