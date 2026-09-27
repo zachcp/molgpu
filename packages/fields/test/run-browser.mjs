@@ -5,6 +5,7 @@
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import { chromium } from "playwright";
+import { webgpuBrowserArgs } from "../../viewer/test/webgpu-browser-args.mjs";
 import {
   annotation,
   attribute,
@@ -260,7 +261,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
   const browser = await chromium.launch({
     channel: "chrome",
     headless: true,
-    args: ["--enable-unsafe-webgpu"],
+    args: webgpuBrowserArgs,
   });
   try {
     const page = await browser.newPage();

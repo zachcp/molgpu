@@ -27,9 +27,16 @@ jobs:
         with:
           deno-version: v2.x
       - run: deno run -A npm:playwright@1.62.1 install --with-deps chrome
-      - run: deno task test:components
-      - name: Viewer WebGPU browser suites
+      - name: WebGPU browser suites
         run: |
-          for suite in packages/viewer/test/run-*.mjs; do
-            deno test -A "$suite"
+          failed=()
+          for suite in packages/viewer/test/run-*.mjs \
+            packages/fields/test/run-browser.mjs; do
+            echo "::group::$suite"
+            deno test -A "$suite" || failed+=("$suite")
+            echo "::endgroup::"
           done
+          if ((${#failed[@]})); then
+            printf '::error::failed: %s\n' "${failed[@]}"
+            exit 1
+          fi
