@@ -4,6 +4,7 @@
 import {
   assert,
   assertEquals,
+  assertRejects,
   assertStrictEquals,
   assertThrows,
 } from "@std/assert";
@@ -20,7 +21,9 @@ import {
   attributeColumn,
   createStructure,
   dssp,
+  frameSecondaryStructure,
   SS_CODES,
+  trajectoryFromModels,
   withAttributes,
   withSecondaryStructure,
 } from "@molgpu/table";
@@ -163,4 +166,37 @@ Deno.test("withSecondaryStructure follows Mol*'s auto, dssp and model modes", as
     TypeError,
     "mode",
   );
+});
+
+Deno.test("per-frame DSSP of an NMR ensemble equals DSSP of each model", async () => {
+  const data = await load("2k39");
+  const trajectory = trajectoryFromModels(data);
+  const perFrame = frameSecondaryStructure(data, trajectory);
+  const whole = dssp(data); // every model at once
+  const { residues, chains } = data.topology;
+  const modelOf = (r: number) => chains.model[residues.chain[r]];
+  const models = [
+    ...new Set(Array.from({ length: residues.count }, (_, r) => modelOf(r))),
+  ];
+  const residuesOf = (model: number) =>
+    Array.from({ length: residues.count }, (_, r) => r).filter((r) =>
+      modelOf(r) === model
+    );
+  const first = residuesOf(models[0]);
+  const frames = [0, 1, 57, trajectory.frameCount - 1];
+  const timeline = await perFrame.timeline(frames);
+  frames.forEach((f, k) => {
+    const expected = residuesOf(models[f]).map((r) => whole[r]);
+    assertEquals(first.map((r) => timeline[k][r]), expected, `frame ${f}`);
+  });
+  // Cached: the same frame resolves to the same array.
+  assertStrictEquals(await perFrame.frame(57), timeline[2]);
+  // A one-frame cache recomputes an evicted frame.
+  const tiny = frameSecondaryStructure(data, trajectory, { maxBytes: 1 });
+  const a = await tiny.frame(3);
+  await tiny.frame(4);
+  const b = await tiny.frame(3);
+  assert(a !== b);
+  assertEquals([...a], [...b]);
+  await assertRejects(() => perFrame.frame(trajectory.frameCount), RangeError);
 });

@@ -707,6 +707,32 @@ const MATRIX = {
       to: { props: { color: GREY }, dataKey: "ssSame" },
       expect: attributesOnly(["ribbon:ss"]),
     },
+    // DSSP per snapshot: a coordinate edit recomputes codes from the new
+    // coordinates, and toggling DSSP is an SS input, never a trace rebuild.
+    "dssp, coordinates": {
+      from: { props: { color: GREY, secondaryStructure: "dssp" } },
+      to: {
+        props: { color: GREY, secondaryStructure: "dssp" },
+        dataKey: "moved",
+      },
+      expect: coordinatesOnly([
+        "geometryBuilds:ribbon:dssp",
+        "geometryBuilds:ribbon:ss",
+      ]),
+    },
+    "dssp on": {
+      from: { props: { color: GREY } },
+      to: { props: { color: GREY, secondaryStructure: "dssp" } },
+      expect: Object.assign((s) => {
+        assert.equal(s.detail["geometryBuilds:ribbon:dssp"], 1, brief(s));
+        assert.equal(
+          s.detail["geometryBuilds:ribbon:trace"],
+          undefined,
+          brief(s),
+        );
+        assert.equal(s.topologyBuilds, 0, brief(s));
+      }, { rebuilds: true }),
+    },
     "ssCode, new projection": {
       from: { props: { color: GREY } },
       to: { props: { color: GREY }, dataKey: "ssCoil" },

@@ -6,6 +6,9 @@ All notable changes to `@molgpu/table` are recorded here. The format follows
 
 ## [Unreleased]
 
+- `frameSecondaryStructure(data, trajectory, { rows, maxBytes })` runs DSSP on
+  integer trajectory frames read from `TrajectoryData.source`, cached with a
+  byte cap; `timeline(frames)` returns an SS-vs-time matrix (Phase 15, efv.8).
 - DSSP (Phase 15, efv.5). `dssp(data, { rows })` ports Mol* 5.11's DSSP (per
   chain and model, Mol*'s default options) and returns `ssCode` values per
   residue. `withSecondaryStructure(data, { mode })` sets `ssCode` with

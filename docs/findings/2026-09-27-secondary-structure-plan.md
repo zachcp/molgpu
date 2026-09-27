@@ -413,3 +413,23 @@ verdicts; accepted ones are folded into the body above.
   residues) in 516 ms. That is about 4 µs per residue. On 4c7r itself, Mol*
   takes 2.7 µs per residue and the port 4.2 µs. The gap is small allocations in
   the H-bond loop, and closing it is not needed for Phase 15.
+
+## Results: per-frame secondary structure (efv.8)
+
+- **File trajectories:** `frameSecondaryStructure(data, trajectory)` in
+  `@molgpu/table` runs CPU DSSP on integer frames read from the source, with a
+  byte-capped LRU cache (in-flight frames are shared; failed or aborted frames
+  are not cached). `timeline(frames)` gives SS-vs-time. On 2k39 as a trajectory
+  (`trajectoryFromModels`), frame k's codes equal DSSP of model k.
+- **Displayed cartoon:** `<Ribbon secondaryStructure="dssp">` computes DSSP on
+  the coordinate snapshot it draws, as a `withSecondaryStructure` of that
+  snapshot's own `StructureData`. Codes and coordinates therefore share one
+  generation by construction, and no root data is replaced, so the ribbon does
+  not blank. The invalidation matrix checks that a coordinate edit reruns DSSP
+  and the SS trace, and that turning DSSP on never rebuilds the trace. A browser
+  test with a deliberately held readback was not written, because pairing does
+  not depend on readback timing: the codes are derived from the snapshot object
+  the ribbon already holds.
+- **GPU DSSP (efv.7):** not started. At about 4 µs per residue, CPU DSSP costs
+  about 50 ms per 100k-atom frame, which the snapshot throttle absorbs. The
+  Phase 13 cell list it needs is not on `main` yet.

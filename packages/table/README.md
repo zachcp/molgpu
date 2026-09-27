@@ -181,6 +181,8 @@ and ribbon geometry.
 | `dssp`                    | experimental | Mol*-ported DSSP: `ssCode` values per residue, per chain and model, over the given atom rows.                                         |
 | `DsspOptions`             | experimental | `rows`: atom rows to read (default every model, primary altlocs).                                                                     |
 | `withSecondaryStructure`  | experimental | Set `ssCode` by Mol*'s `auto`, `dssp` or `model` mode; computed codes carry `computed:dssp`.                                          |
+| `frameSecondaryStructure` | experimental | Cached per-frame DSSP over a `TrajectoryData`; `frame(i)` and an SS-vs-time `timeline(frames)`.                                       |
+| `FrameSecondaryStructure` | experimental | Return type of `frameSecondaryStructure`.                                                                                             |
 | `StructureInput`          | experimental | Unvalidated `{ topology, positions }` input to `createStructure`.                                                                     |
 | `Topology`                | experimental | The five column domains of a structure.                                                                                               |
 | `Atoms`                   | experimental | Per-atom columns (names, altloc, residue FK, element, occupancy, B-factor, optional radius).                                          |

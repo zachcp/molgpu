@@ -8,11 +8,13 @@ import type {
 import { use, useMemo, useRef } from "@use-gpu/live";
 import { FaceLayer } from "@use-gpu/workbench";
 import {
+  activeAtoms,
   attributeColumn,
   type SecondaryStructureTrace,
   secondaryStructureTrace,
   type Trace,
   traceTable,
+  withSecondaryStructure,
 } from "@molgpu/table";
 import { useStructure } from "./structure-context.ts";
 import { useCoordinateSnapshot } from "./coordinate-snapshot.ts";
@@ -77,11 +79,18 @@ export const Ribbon: ViewerComponent<
     color?: VectorLike;
     /** Wraps the shaded ribbon layer; without one, the ambient scene material. */
     material?: MaterialSpec;
+    /**
+     * `"model"` (default) draws the structure's `ssCode`. `"dssp"` runs DSSP
+     * on each coordinate snapshot the ribbon draws (active model and
+     * altlocs), so codes always come from the displayed coordinates.
+     */
+    secondaryStructure?: "model" | "dssp";
   } & Translucency
 > = (
   {
     select,
     smooth = 8,
+    secondaryStructure = "model",
     color = [0.85, 0.55, 0.35, 1],
     opacity = 1,
     mode,
@@ -98,7 +107,23 @@ export const Ribbon: ViewerComponent<
   ]);
   const drawMode = modeProps(mode, flatAlpha(color, false) * opacity);
   const { resource } = useStructure();
-  const data = useCoordinateSnapshot()?.data;
+  const snapshot = useCoordinateSnapshot()?.data;
+  if (secondaryStructure !== "model" && secondaryStructure !== "dssp") {
+    throw new TypeError("Ribbon secondaryStructure must be model or dssp");
+  }
+  // DSSP rides on the snapshot object itself: its codes and the coordinates
+  // the ribbon draws share one generation, and nothing replaces root data.
+  const data = useMemo(
+    () =>
+      snapshot && secondaryStructure === "dssp"
+        ? (count("geometryBuilds", "ribbon:dssp"),
+          withSecondaryStructure(snapshot, {
+            mode: "dssp",
+            rows: activeAtoms(snapshot),
+          }))
+        : snapshot,
+    [snapshot, secondaryStructure],
+  );
 
   const indices = useActiveRows(resource, select, "Ribbon");
   const trace = useMemo(

@@ -12,6 +12,10 @@ All notable changes to `@molgpu/viewer` are recorded here. The format follows
 - Add experimental `<NormalMode mode amplitude frequency phase>` for precomputed
   guide-node modes. Its animation changes a uniform and composes with
   Trajectory.
+- `<Ribbon secondaryStructure="dssp">` runs DSSP on each coordinate snapshot it
+  draws, so codes always come from the displayed coordinates (under a
+  `<Trajectory>` or any coordinate provider). The default, `"model"`, draws the
+  structure's `ssCode` (Phase 15, efv.8).
 - `<Ribbon>` and `<Tube>` key their trace on topology and coordinates only, so
   an attribute edit (charges, a new `ssCode`) no longer rebuilds it. `<Ribbon>`
   rebuilds its mesh only when the cartoon projection of `ssCode` changes.
