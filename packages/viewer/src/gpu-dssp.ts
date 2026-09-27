@@ -394,7 +394,7 @@ export async function gpuDssp(
     device.queue.writeBuffer(state, 0, new Uint32Array(4));
     const flagsA = make(m * 4, STORAGE | COPY_SRC, "flags-a");
     const flagsB = make(m * 4, STORAGE, "flags-b");
-    const bridges = make(maxBridges * 16, STORAGE | COPY_SRC, "bridges");
+    const bridges = make(maxBridges * 24, STORAGE | COPY_SRC, "bridges");
     const stages = encoder.beginComputePass();
     dispatch(stages, "hbonds", [
       [0, positions],
@@ -458,15 +458,17 @@ export async function gpuDssp(
     if (status[3]) return await frameFallback("cell candidates");
     const bridgeCount = status[0];
     const bridgeData = bridgeCount
-      ? new Uint32Array(await read(bridges, bridgeCount * 16))
+      ? new Uint32Array(await read(bridges, bridgeCount * 24))
       : new Uint32Array(0);
     const bridgeList: DsspBridge[] = [];
     for (let i = 0; i < bridgeCount; i++) {
       bridgeList.push({
-        partner1: bridgeData[i * 4],
-        partner2: bridgeData[i * 4 + 1],
-        type: bridgeData[i * 4 + 2],
-        order: bridgeData[i * 4 + 3],
+        partner1: bridgeData[i * 6],
+        partner2: bridgeData[i * 6 + 1],
+        type: bridgeData[i * 6 + 2],
+        acceptor: bridgeData[i * 6 + 3],
+        donor: bridgeData[i * 6 + 4],
+        pattern: bridgeData[i * 6 + 5],
       });
     }
     const flags = new Uint32Array(flagData);

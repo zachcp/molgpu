@@ -445,8 +445,8 @@ verdicts; accepted ones are folded into the body above.
 
   |     Atoms | Residues | CPU DSSP | GPU DSSP incl. readbacks | Temporary GPU allocation | Readback | Code differences |
   | --------: | -------: | -------: | -----------------------: | -----------------------: | -------: | ---------------: |
-  |   100,062 |   14,076 |  44.2 ms |                  22.1 ms |                  2.94 MB |  66.1 KB |                0 |
-  | 1,000,293 |  140,714 | 475.2 ms |                 212.0 ms |                  29.3 MB | 660.8 KB |                0 |
+  |   100,062 |   14,076 |  41.4 ms |                  20.1 ms |                  3.39 MB |  71.0 KB |                0 |
+  | 1,000,293 |  140,714 | 429.8 ms |                 182.8 ms |                  33.9 MB | 709.7 KB |                0 |
 
   These are one browser run on this host, including allocation and mapping,
   excluding the input coordinate buffer and returned `ssCode` buffer. Run

@@ -276,10 +276,11 @@ producer generation.
 structure from the nearest GPU coordinate stream. Put it below the coordinate
 provider. It publishes `ssCode` to descendant fields and a CPU copy to ribbons
 only for the matching coordinate generation. `model` selects one model (the
-first by default). The default `overflow="frame"` reads one full coordinate
-frame and reruns CPU DSSP when a bounded GPU list overflows; use
-`overflow="static"` to raise `GpuDsspOverflowError` instead. `onStatus` reports
-the bridge count, near-threshold residue count and whether fallback ran.
+first by default). An overflow on a live coordinate stream reads one full frame
+and reruns CPU DSSP; an overflow on a static `<Structure>` raises
+`GpuDsspOverflowError`. Set `overflow` explicitly to override this policy.
+`onStatus` reports the bridge count, near-threshold residue count and whether
+fallback ran.
 
 ## Coordinate consumers
 

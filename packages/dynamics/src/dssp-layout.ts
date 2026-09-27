@@ -94,8 +94,10 @@ export interface DsspBridge {
   readonly partner1: number;
   readonly partner2: number;
   readonly type: number;
-  /** k * 32 + donor slot * 4 + pattern, restoring the CPU's generation order. */
-  readonly order: number;
+  /** Generating H-bond edge and bridge test, restoring CPU generation order. */
+  readonly acceptor: number;
+  readonly donor: number;
+  readonly pattern: number;
 }
 
 interface Ladder {
@@ -118,7 +120,8 @@ export function finishDssp(
   if (gpuFlags.length < m) throw new RangeError("GPU DSSP flags are truncated");
   const flags = gpuFlags.slice(0, m);
   const ordered = [...bridges].sort((a, b) =>
-    a.partner1 - b.partner1 || a.order - b.order
+    a.partner1 - b.partner1 || a.acceptor - b.acceptor ||
+    a.donor - b.donor || a.pattern - b.pattern
   );
   const starts = layout.unitStarts;
   for (let unit = 0; unit + 1 < starts.length; unit++) {

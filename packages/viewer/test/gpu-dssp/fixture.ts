@@ -2,6 +2,7 @@ import { activeAtoms, createStructure, dssp } from "@molgpu/table";
 import { prepareDsspLayout } from "@molgpu/dynamics";
 import { structureFromBcif } from "@molgpu/io";
 import { gpuDssp, GpuDsspOverflowError } from "../../src/gpu-dssp.ts";
+import { dsspOverflowMode } from "../../src/gpu-dssp-provider.ts";
 
 declare global {
   interface Window {
@@ -16,6 +17,7 @@ declare global {
       fallback: boolean;
     }>;
     runDenseDsspOverflow: () => Promise<{ named: boolean; equal: boolean }>;
+    runDsspOverflowPolicy: () => [string, string, string];
     runGpuDssp: (id: string, model?: "first" | number) => Promise<{
       mismatch: [number, number, number][];
       near: number;
@@ -25,6 +27,16 @@ declare global {
     }>;
   }
 }
+
+window.runDsspOverflowPolicy = () => {
+  const root = {} as GPUBuffer;
+  const live = {} as GPUBuffer;
+  return [
+    dsspOverflowMode(undefined, root, 1, root, 1),
+    dsspOverflowMode(undefined, live, 2, root, 1),
+    dsspOverflowMode("frame", root, 1, root, 1),
+  ];
+};
 
 window.benchmarkGpuDssp = async (copies: number) => {
   const response = await fetch("/1crn.bcif");

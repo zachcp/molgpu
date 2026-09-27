@@ -238,12 +238,21 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
 }`;
 
 const BRIDGES = `${BOND_COMMON}
-@group(0) @binding(2) var<storage, read_write> output: array<vec4<u32>>;
+struct BridgeEntry {
+  partner1: u32,
+  partner2: u32,
+  kind: u32,
+  acceptor: u32,
+  donor: u32,
+  pattern: u32,
+};
+@group(0) @binding(2) var<storage, read_write> output: array<BridgeEntry>;
 @group(0) @binding(3) var<storage, read_write> state: array<atomic<u32>>;
-fn emit(a: i32, b: i32, kind: u32, order: u32) {
+fn emit(a: i32, b: i32, kind: u32, acceptor: u32, donor: u32, pattern: u32) {
   let slot = atomicAdd(&state[0], 1u);
   if (slot >= params.maxBridges) { atomicStore(&state[2], 1u); return; }
-  output[slot] = vec4<u32>(u32(min(a, b)), u32(max(a, b)), kind, order);
+  output[slot] = BridgeEntry(u32(min(a, b)), u32(max(a, b)),
+    kind, acceptor, donor, pattern);
 }
 @compute @workgroup_size(64)
 fn main(@builtin(global_invocation_id) id: vec3<u32>) {
@@ -255,17 +264,16 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
   for (var slot = 0u; slot < count; slot++) {
     let l = i32(bonds[base + slot + 1u]);
     if (k > l) { continue; }
-    let order = id.x * 32u + slot * 4u;
     var i = k + 1;
     var j = l;
-    if (i != j && i < d.unit.y && has(j, i + 1)) { emit(i, j, 0u, order); }
+    if (i != j && i < d.unit.y && has(j, i + 1)) { emit(i, j, 0u, id.x, u32(l), 0u); }
     i = k; j = l - 1;
-    if (i != j && j >= d.unit.x && has(j - 1, i)) { emit(i, j, 0u, order + 1u); }
+    if (i != j && j >= d.unit.x && has(j - 1, i)) { emit(i, j, 0u, id.x, u32(l), 1u); }
     i = k; j = l;
-    if (i != j && has(j, i)) { emit(i, j, 1u, order + 2u); }
+    if (i != j && has(j, i)) { emit(i, j, 1u, id.x, u32(l), 2u); }
     i = k + 1; j = l - 1;
     if (i != j && i < d.unit.y && j >= d.unit.x && has(j - 1, i + 1)) {
-      emit(i, j, 1u, order + 3u);
+      emit(i, j, 1u, id.x, u32(l), 3u);
     }
   }
 }`;

@@ -47,6 +47,11 @@ Deno.test("GPU DSSP agrees with CPU on the pinned protein corpus", async () => {
     });
     await page.goto(`http://127.0.0.1:${address.port}/`);
     await page.waitForFunction(() => typeof window.runGpuDssp === "function");
+    assert.deepEqual(
+      await page.evaluate(() => window.runDsspOverflowPolicy()),
+      ["static", "frame", "frame"],
+      "component overflow defaults must distinguish a static root from live coordinates",
+    );
     for (const id of ["1crn", "1ejg", "1tqn", "1a4y", "4c7r", "1bna"]) {
       const result = await page.evaluate(
         (entry) => window.runGpuDssp(entry),

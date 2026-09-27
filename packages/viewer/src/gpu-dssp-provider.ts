@@ -15,6 +15,7 @@ import { activeAtoms, withAttributes } from "@molgpu/table";
 import { AttributeSnapshotContext } from "./attribute-snapshot.ts";
 import { AttributesContext } from "./attributes-context.ts";
 import { useCoordinates } from "./coordinates-context.ts";
+import { StructureContext } from "./structure-context.ts";
 import { gpuDssp, type GpuDsspResult } from "./gpu-dssp.ts";
 import { live, viewer } from "./internal/elements.ts";
 import {
@@ -46,15 +47,41 @@ interface Publication {
   readonly identity: object;
 }
 
+/** Resolve the component's overflow policy from its nearest coordinate stream. */
+export function dsspOverflowMode(
+  override: GpuDsspProps["overflow"],
+  source: object | null,
+  generation: number | null,
+  rootSource: object | null,
+  rootGeneration: number | null,
+): "static" | "frame" {
+  return override ??
+    (source !== null && source === rootSource &&
+        generation === rootGeneration
+      ? "static"
+      : "frame");
+}
+
 const Provider: LC<GpuDsspProps & { children: LiveElement }> = ({
   model = "first",
-  overflow = "frame",
+  overflow,
   onStatus,
   children,
 }) => {
   const coordinates = useCoordinates();
+  const structure = useContext(StructureContext);
   const device = useDeviceContext();
   const root = coordinates?.resource;
+  // A root <Structure> source is immutable for this generation. A downstream
+  // coordinate provider can publish a fresh frame, where exact CPU recovery
+  // is preferable to interrupting playback on a bounded-list overflow.
+  const overflowPolicy = dsspOverflowMode(
+    overflow,
+    coordinates?.source ?? null,
+    coordinates?.generation ?? null,
+    structure?.sources?.positions ?? null,
+    structure?.resource.positionsRevision ?? null,
+  );
   const upstreamAttributes = useContext(AttributesContext) ?? {};
   const upstreamSnapshots = useContext(AttributeSnapshotContext) ?? {};
   const rows = useMemo(
@@ -86,7 +113,7 @@ const Provider: LC<GpuDsspProps & { children: LiveElement }> = ({
         rows,
         layout,
         generation: coordinates.generation,
-        overflow,
+        overflow: overflowPolicy,
       }).then((result) => {
         if (!alive) {
           result.codeBuffer.destroy();
@@ -125,7 +152,7 @@ const Provider: LC<GpuDsspProps & { children: LiveElement }> = ({
     root?.identity,
     rows,
     layout,
-    overflow,
+    overflowPolicy,
   ]);
   useResource((dispose) => {
     if (!published) return;
