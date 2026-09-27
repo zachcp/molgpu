@@ -5,6 +5,11 @@ All notable changes to `@molgpu/dynamics` are recorded here. See
 
 ## [Unreleased]
 
+- Add Coulomb electrostatics: `electrostatics()` (vacuum, ε = D·r and
+  Debye–Hückel, kT/e or kcal/mol/e), f64 `coulombPotential` / `coulombField` /
+  `coulombGrid` references with closed-form fields, `packCharges`, and
+  `coulombWgsl` (`packAtoms`, `sumGrid`, `sumPoints`) with `coulombParams`.
+
 - Add AMBER/PDB2PQR residue-template charge assignment, ion charges and active
   residue net charge, with pinned upstream data and BSD-3-Clause notice.
 - Add Gasteiger-Marsili charges for non-polymer components with explicit refusal

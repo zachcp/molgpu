@@ -73,3 +73,27 @@ export {
   type GasteigerRefusalReason,
   type GasteigerReport,
 } from "./gasteiger.ts";
+export {
+  COULOMB_CONSTANT,
+  coulombField,
+  type CoulombGrid,
+  coulombGrid,
+  coulombPotential,
+  debyeKappa,
+  type DielectricModel,
+  type Electrostatics,
+  electrostatics,
+  type ElectrostaticsOptions,
+  GAS_CONSTANT_KCAL,
+  gridPoints,
+  packCharges,
+  type PotentialUnit,
+} from "./electrostatics.ts";
+export {
+  COULOMB_MODEL_CODE,
+  COULOMB_PARAMS_BYTES,
+  COULOMB_WORKGROUP,
+  type CoulombDispatch,
+  coulombParams,
+  coulombWgsl,
+} from "./electrostatics-wgsl.ts";
