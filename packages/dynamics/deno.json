@@ -1,13 +1,14 @@
 {
   "name": "@molgpu/dynamics",
   "version": "0.1.0",
-  "license": "MIT",
+  "license": "MIT AND BSD-3-Clause",
   "exports": "./src/index.ts",
   "publish": {
     "include": [
       "src",
       "README.md",
       "LICENSE",
+      "LICENSE-PDB2PQR",
       "CHANGELOG.md"
     ]
   }

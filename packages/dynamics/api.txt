@@ -12,10 +12,22 @@ CellListOptions
   export interface CellListOptions { /** Sorted, unique topology rows to index; omitted indexes every row. */ readonly rows?: ArrayLike<number> | null; /** Maximum dense cells; defaults to four per indexed atom. */ readonly maxCells?: number; /** Maximum candidate rows one query may inspect; defaults to 4096. */ readonly maxCandidates?: number }
 CellListPlan
   export interface CellListPlan { readonly atomCount: number; readonly origin: readonly [number, number, number]; readonly dims: readonly [number, number, number]; readonly cellCount: number; readonly cellWidth: number; /** Cell IDs, counts, offsets and sorted rows, excluding existing positions. */ readonly persistentBytes: number; /** Cursor, bounds and scan scratch; pair output is caller-sized. */ readonly scratchBytes: number; /** Lower bound for coordinate reads in bounds and count passes. */ readonly coordinateReadBytes: number }
+ChargeAssignment
+  export interface ChargeAssignment<R> { readonly values: Float32Array; readonly assigned: Uint8Array; readonly report: R }
+ChargeUnmatched
+  export interface ChargeUnmatched { readonly comp: string; readonly name: string; readonly count: number; readonly residues: readonly string[] }
 ElasticMode
   export interface ElasticMode { readonly kind: "gnm" | "anm"; readonly eigenvalue: number; /** Scalar per node for GNM; packed xyz per node for ANM. */ readonly vector: Float32Array; readonly residual: number }
 ElasticNetwork
   export interface ElasticNetwork { readonly rows: Uint32Array; readonly pairs: Uint32Array; readonly directions: Float32Array }
+GasteigerOptions
+  export interface GasteigerOptions { /** Exclude already assigned atoms; defaults to the AMBER template mask. */ readonly exclude?: Uint8Array; /** RDKit's default is 12 iterations. */ readonly iterations?: number }
+GasteigerRefusal
+  export interface GasteigerRefusal { readonly residues: readonly string[]; readonly reason: GasteigerRefusalReason; readonly detail: string }
+GasteigerRefusalReason
+  export type GasteigerRefusalReason = "template-covered" | "polymer-linked" | "modified-polymer" | "unknown-bond-order" | "missing-parameters" | "unsupported-valence";
+GasteigerReport
+  export interface GasteigerReport { readonly assigned: number; readonly refused: readonly GasteigerRefusal[] }
 KabschFit
   export interface KabschFit { /** Column-major proper rigid transform mapping source into reference. */ readonly matrix: AffineMatrix; /** RMSD of selected rows after applying `matrix`. */ readonly rmsd: number; readonly count: number }
 MAX_ELASTIC_DIM
@@ -24,6 +36,10 @@ NormalModeData
   export interface NormalModeData { /** Owned xyz displacement per guide node, in node order. */ readonly vectors: Float32Array; /** Atom row to guide node, or 0xffffffff for no displacement. */ readonly atomToNode: Uint32Array; /** Increment when vectors or mapping are replaced. */ readonly version: number }
 PbcSearchLimitError
   export class PbcSearchLimitError extends RangeError { constructor(candidates: number, limit: number) }
+TemplateChargeOptions
+  export interface TemplateChargeOptions { readonly his?: "HID" | "HIE" | "HIP"; /** Template names keyed by `residueKey(data, residueRow)`. */ readonly residues?: Readonly<Record<string, string>> }
+TemplateChargeReport
+  export interface TemplateChargeReport { readonly assigned: number; readonly netCharge: number; readonly unmatched: readonly ChargeUnmatched[]; /** Template heavy atoms absent from an observed residue, so its net may be fractional. */ readonly incomplete: readonly { residue: string; template: string; missing: readonly string[] }[]; readonly gaps: readonly { before: string; after: string; distance: number | null }[]; readonly ions: readonly { residue: string; charge: number; source: string }[] }
 UnwrapForest
   export interface UnwrapForest { readonly atomCount: number; /** -1 for component roots. */ readonly parent: Int32Array; readonly order: Uint32Array; readonly component: Uint32Array; readonly roots: Uint32Array; /** Flat pairs of non-tree covalent edges. */ readonly ringEdges: Uint32Array }
 UnwrapResult
@@ -46,6 +62,8 @@ createUnwrapForest
   export function createUnwrapForest(topology: Topology): UnwrapForest;
 fitKabsch
   export function fitKabsch(source: Float32Array, reference: Float32Array, rows?: ArrayLike<number> | null, translate?: boolean): KabschFit;
+gasteigerCharges
+  export function gasteigerCharges(data: StructureData, options?: GasteigerOptions): ChargeAssignment<GasteigerReport>;
 isIdentityAffine
   export function isIdentityAffine(matrix: AffineMatrix): boolean;
 minimumImage
@@ -54,8 +72,12 @@ normalModeWgsl
   export const normalModeWgsl: string;
 planCellList
   export function planCellList(readback: CellListBoundsReadback, expectedGeneration: number, atomCount: number, cellSize: number, maxStorageBufferBindingSize: number, maxCells?: number): CellListPlan | null;
+residueNetCharge
+  export function residueNetCharge(data: StructureData, column?: string): Float32Array;
 solveElasticModes
   export function solveElasticModes(network: ElasticNetwork, kind: "gnm" | "anm", count: number): readonly ElasticMode[];
+templateCharges
+  export function templateCharges(data: StructureData, options?: TemplateChargeOptions): ChargeAssignment<TemplateChargeReport>;
 unwrapFrame
   export function unwrapFrame(positions: Float32Array, forest: UnwrapForest, box: ArrayLike<number> | null | undefined, centerRows?: ArrayLike<number> | null, maxCandidates?: number): UnwrapResult;
 validateAffine

@@ -245,9 +245,13 @@ transforms `f(coords, t)` ship first as coordinate providers: `<Transform>`,
 
 ## Phase 14 — Per-atom charge
 
-`partialCharge` columns with provenance from PQR import, residue templates and
-Gasteiger for het groups, reconciled with the imported `formalCharge` column
-from Phase 8. Missing hydrogens and protonation states are a stated limit.
+`partialCharge` columns with provenance from PQR import, AMBER/PDB2PQR residue
+templates and Gasteiger for het groups, reconciled with imported `formalCharge`.
+Templates fold missing hydrogen charges per heavy atom and use terminal,
+histidine and disulfide variants; Gasteiger requires known bond orders and
+reports refused components. Net charge sums use the active model and conformer.
+Protonation states remain a caller choice. The GPU EEM/QEq solver (1to.8) is
+deferred until a coordinate-dependent charge use case needs it.
 
 ## Phase 15 — Secondary structure codes and DSSP
 
