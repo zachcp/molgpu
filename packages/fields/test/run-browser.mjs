@@ -9,6 +9,7 @@ import {
   annotation,
   attribute,
   byCharge,
+  bySecondaryStructure,
   categorical,
   COLOR,
   colormap,
@@ -80,6 +81,7 @@ Deno.test("fields GPU parity", async () => {
       domain: "atom",
     },
     byCharge: { field: byCharge(), domain: "atom" },
+    bySecondaryStructure: { field: bySecondaryStructure(), domain: "atom" },
     liftedCustomResidueNet: {
       field: byCharge({ column: "charge:residueNet", lift: true }),
       domain: "atom",

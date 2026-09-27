@@ -947,7 +947,14 @@ function bakeAnnotation(
 export { sampleVolumeWgsl } from "./volume.ts";
 
 // Built-in colour presets composed from the primitives above.
-export { byBfactor, byChain, byCharge, byElement, bySeq } from "./builtins.ts";
+export {
+  byBfactor,
+  byChain,
+  byCharge,
+  byElement,
+  bySecondaryStructure,
+  bySeq,
+} from "./builtins.ts";
 
 // Identity-keyed annotation joins that produce annotation fields.
 export {

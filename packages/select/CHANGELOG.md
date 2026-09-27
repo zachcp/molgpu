@@ -6,6 +6,11 @@ All notable changes to `@molgpu/select` are recorded here. The format follows
 
 ## [Unreleased]
 
+- Fine secondary-structure flags (Phase 15, efv.6; closes 922.16). Each `ssCode`
+  maps to Mol*'s flags for its DSSP letter: alpha, 3-10 and pi helices, sheet
+  and bridge strands, turns and bends. VMD `structure` letters and PyMOL `ss`
+  lists match Mol* on imported and DSSP-computed secondary structure. An
+  imported helix whose class Mol* flags without alpha still carries alpha here.
 - `secondary-structure-flags` reads the `ssCode` attribute (through
   `attributeColumn`) with an `attributes` dependency, so a new secondary-
   structure assignment re-resolves selections.

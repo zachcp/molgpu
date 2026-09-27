@@ -216,13 +216,21 @@ const ssFlag = (name: string): number => {
       return 0;
   }
 };
-// Residue annotation -> flags. Coil carries no bits, as in Mol*'s model
-// secondary structure (so has-any(flags, 0) is false for it).
-const RESIDUE_SS: Readonly<Record<string, number>> = {
-  helix: SS.Helix,
-  sheet: SS.Beta | SS.BetaSheet,
-  coil: 0,
-};
+// ssCode (table's SS_CODES order: -, H, B, E, G, I, T, S, P) -> Mol*'s
+// SecondaryStructureType flags for its DSSP letters. Coil carries no bits, as
+// in Mol* (so has-any(flags, 0) is false for it). An imported helix of a class
+// Mol* flags without alpha still reads H here (plan efv.6).
+const CODE_SS: readonly number[] = [
+  0,
+  SS.Helix | SS.HelixAlpha,
+  SS.Beta | SS.BetaStrand,
+  SS.Beta | SS.BetaSheet,
+  SS.Helix | SS.Helix3Ten,
+  SS.Helix | SS.HelixPi,
+  SS.Turn,
+  SS.Bend,
+  0,
+];
 
 // Mol*'s runtime only knows its BondType names (metal-coordination,
 // hydrogen-bond, ...), so the MolQL symbol table's own names (metallic,
@@ -554,7 +562,7 @@ const SPECS: Readonly<Record<string, Spec>> = {
     if (!ss) {
       fail("secondary-structure-flags needs an ssCode column on the structure");
     }
-    return RESIDUE_SS[ssKind(ss![residueOf(ctx, i)])] ?? 0;
+    return CODE_SS[ss![residueOf(ctx, i)]] ?? 0;
   }, "attributes"),
 
   // ---- structure-query: bond properties (inside a bond-test) ----

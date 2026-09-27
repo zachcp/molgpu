@@ -23,7 +23,13 @@ import { Script } from "molstar/lib/mol-script/script.js";
 import { examples as pymolExamples } from "molstar/lib/mol-script/transpilers/pymol/examples.js";
 import { examples as vmdExamples } from "molstar/lib/mol-script/transpilers/vmd/examples.js";
 import { examples as jmolExamples } from "molstar/lib/mol-script/transpilers/jmol/examples.js";
-import type { StructureData } from "@molgpu/table";
+import {
+  activeAtoms,
+  attributeColumn,
+  type StructureData,
+  withSecondaryStructure,
+} from "@molgpu/table";
+import { DefaultDSSPComputationProps } from "molstar/lib/mol-model-props/computed/secondary-structure/dssp.js";
 import {
   parseSelection,
   type SelectionLanguage,
@@ -183,21 +189,35 @@ const STRUCTURES = ["1crn", "1tqn", "1bna", "1ejg", "4c7r"] as const;
 
 async function load(
   id: string,
+  ss: "model" | "dssp" = "model",
 ): Promise<{ ours: StructureData; mol: Structure }> {
   const bytes = await Deno.readFile(
     new URL(`../../packages/io/test/fixtures/${id}.bcif`, import.meta.url),
   );
-  const ours = await structureFromBcif(bytes);
+  const imported = await structureFromBcif(bytes);
+  // In dssp mode both sides compute: ours from every altloc, so the first
+  // conformer in file order is read, as Mol* does.
+  const ours = ss === "dssp"
+    ? withSecondaryStructure(imported, {
+      mode: "dssp",
+      rows: activeAtoms(imported, { model: "all", altloc: "all" }),
+    })
+    : imported;
   const parsed = await CIF.parseBinary(bytes).run();
   if (parsed.isError) throw new Error(String(parsed));
   const trajectory = await trajectoryFromMmCIF(parsed.result.blocks[0]).run();
   const model = await Task.resolveInContext(trajectory.getFrameAtIndex(0));
   const mol = Structure.ofModel(model);
-  // Secondary structure from the file's own annotation, as @molgpu/io reads it.
+  // Secondary structure from the file's own annotation, as @molgpu/io reads
+  // it, or Mol*'s DSSP with its default options.
   await SecondaryStructureProvider.attach(
     { runtime: SyncRuntimeContext, assetManager: new AssetManager() },
     mol,
-    { type: { name: "model", params: {} } },
+    {
+      type: ss === "dssp"
+        ? { name: "dssp", params: DefaultDSSPComputationProps }
+        : { name: "model", params: {} },
+    },
   );
   return { ours, mol };
 }
@@ -267,4 +287,60 @@ Deno.test("selections match Mol*'s evaluator atom for atom", async () => {
   for (const u of unsupported) console.log(`  unsupported  ${u}`);
   for (const f of molstarFails) console.log(`  mol* fails   ${f}`);
   assertEquals(mismatches.sort(), Object.keys(KNOWN_DIFFERENCES).sort());
+});
+
+// Every DSSP letter through the VMD and PyMOL front ends, with both sides
+// computing DSSP (efv.6). The only allowed difference is Mol*'s bend bug
+// (efv.5): atoms of residues we assign S that Mol* leaves unflagged, which
+// the "none"-style letters see.
+const SS_CASES: readonly Case[] = [
+  ...CASES.filter(([, text]) => /\b(ss|structure|substructure)\b/.test(text)),
+  ...["H", "G", "I", "E", "B", "T", "C", "H E"].map((l) =>
+    ["vmd", `structure ${l}`] as const
+  ),
+  ["pymol", "ss h+s"],
+  ["pymol", "ss l"],
+];
+
+Deno.test("secondary-structure selections match Mol* with DSSP on both sides", async () => {
+  let compared = 0, selected = 0;
+  const mismatches: string[] = [], bendBug = new Set<string>();
+  for (const id of STRUCTURES) {
+    const { ours, mol } = await load(id, "dssp");
+    for (const [language, text] of SS_CASES) {
+      let expr;
+      try {
+        expr = await parseSelection(language, text, {
+          symbols: supportedSymbols,
+        });
+      } catch (error) {
+        if (error instanceof SelectionParseError) continue;
+        throw error;
+      }
+      const expected = molstarRows(language, text, mol);
+      const actual = [...resolve(compile(expr), ours).indices];
+      compared++;
+      selected += actual.length;
+      const inOurs = new Set(actual), inMol = new Set(expected);
+      const differing = [
+        ...actual.filter((x) => !inMol.has(x)),
+        ...expected.filter((x) => !inOurs.has(x)),
+      ];
+      const codes = attributeColumn(ours, "ssCode")!.values;
+      const bend = differing.filter((row) =>
+        codes[ours.topology.atoms.residue[row]] === 7
+      );
+      if (bend.length) bendBug.add(`${language}: ${text} [${id}]`);
+      if (bend.length !== differing.length) {
+        mismatches.push(
+          `${language}: ${text} [${id}] ours ${actual.length}, Mol* ${expected.length}`,
+        );
+      }
+    }
+  }
+  console.log(`compared ${compared} DSSP (selection, structure) pairs`);
+  assertEquals(mismatches, []);
+  // Mol*'s bend bug is in 4c7r's chains B and C only (1a4y is not loaded here).
+  assertEquals([...bendBug].every((c) => c.endsWith("[4c7r]")), true);
+  assertEquals(compared > 0 && selected > 0, true);
 });
