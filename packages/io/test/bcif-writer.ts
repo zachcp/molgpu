@@ -14,10 +14,21 @@ export interface AtomRow {
   readonly charge?: number | null;
 }
 
-/** Encode `rows` as BCIF; `charge: false` omits pdbx_formal_charge. */
+/** Extra string-valued categories, e.g. struct_conf rows. */
+export type ExtraCategories = Readonly<
+  Record<string, readonly Readonly<Record<string, string | number>>[]>
+>;
+
+/**
+ * Encode `rows` as BCIF; `charge: false` omits pdbx_formal_charge, and
+ * `categories` adds more categories (every field written as a string).
+ */
 export function atomSiteBcif(
   rows: readonly AtomRow[],
-  options: { readonly charge?: boolean } = {},
+  options: {
+    readonly charge?: boolean;
+    readonly categories?: ExtraCategories;
+  } = {},
 ): Uint8Array {
   const F = CifWriter.fields<number, readonly AtomRow[]>()
     .int("id", (i) => i + 1)
@@ -49,6 +60,21 @@ export function atomSiteBcif(
     instance: () =>
       CifWriter.categoryInstance(fields, { data: rows, rowCount: rows.length }),
   });
+  for (const [name, catRows] of Object.entries(options.categories ?? {})) {
+    const builder = CifWriter.fields<number, typeof catRows>();
+    for (const field of Object.keys(catRows[0] ?? {})) {
+      builder.str(field, (i, d) => String(d[i][field]));
+    }
+    const catFields = builder.getFields();
+    encoder.writeCategory({
+      name,
+      instance: () =>
+        CifWriter.categoryInstance(catFields, {
+          data: catRows,
+          rowCount: catRows.length,
+        }),
+    });
+  }
   encoder.encode();
   return encoder.getData() as Uint8Array;
 }

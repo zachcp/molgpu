@@ -51,7 +51,6 @@ interface CifCategory {
 }
 type Categories = Readonly<Record<string, CifCategory | undefined>>;
 type PolymerKind = "protein" | "rna" | "dna" | "other";
-type SecondaryStructure = "helix" | "sheet" | "coil";
 interface ResidueRow {
   chain: number;
   seq: number;
@@ -259,28 +258,46 @@ export async function molecularSurfaceField(
  * residues.labelSeq — no auth/insertion-code ambiguity to resolve here).
  */
 function markSecondaryStructure(
-  secondaryStructure: SecondaryStructure[],
+  codes: Uint8Array,
   residues: readonly ResidueRow[],
   chains: readonly ChainRow[],
   chainLabel: string,
   begSeq: number,
   endSeq: number,
-  kind: SecondaryStructure,
+  code: number,
 ): void {
   for (let r = 0; r < residues.length; r++) {
     if (chains[residues[r].chain].labelId !== chainLabel) continue;
     if (residues[r].seq < begSeq || residues[r].seq > endSeq) continue;
-    secondaryStructure[r] = kind;
+    codes[r] = code;
   }
 }
 
+// ssCode values (table's SS_CODES order).
+const SS_H = 1, SS_B = 2, SS_E = 3, SS_G = 4, SS_I = 5, SS_T = 6, SS_S = 7;
+
 /**
- * Imported secondary-structure annotation from mmCIF struct_conf (helices)
- * and struct_sheet_range (beta strands), by label_seq_id range per chain.
- * Every residue defaults to 'coil': this project does not (yet) compute
- * secondary structure from geometry when a file carries no annotation —
- * see molgpu-sept-0sj.2's notes for that documented scope boundary.
+ * The ssCode of one struct_conf row, in Mol*'s order: pdbx_PDB_helix_class
+ * when present (5 is 3-10, 3 is pi, every other class alpha-like H), else
+ * conf_type_id. Nucleic-acid helices and unknown types are 0 (not marked).
  */
+function structConfCode(conf: CifCategory, i: number): number {
+  const helixClass = str(conf, "pdbx_PDB_helix_class", i);
+  if (helixClass) {
+    const c = Number(helixClass);
+    return c === 5 ? SS_G : c === 3 ? SS_I : SS_H;
+  }
+  const type = str(conf, "conf_type_id", i).toUpperCase();
+  if (type.endsWith("_N") || type.startsWith("OTHER")) return 0;
+  if (type === "HELX_RH_3T_P" || type === "HELX_LH_3T_P") return SS_G;
+  if (type === "HELX_RH_PI_P" || type === "HELX_LH_PI_P") return SS_I;
+  if (type.startsWith("HELX")) return SS_H;
+  if (type.startsWith("TURN")) return SS_T;
+  if (type === "STRN") return SS_B;
+  if (type === "BEND") return SS_S;
+  return 0;
+}
+
 /**
  * Source-declared bonds, typed the way Mol* types them
  * (mol-model-formats/structure/property/bonds): chem_comp_bond templates applied
@@ -480,41 +497,45 @@ async function readEntitySubtypes(
   return out;
 }
 
+/**
+ * Imported secondary structure as ssCode values, from mmCIF struct_conf rows
+ * (helix classes, turns, strands, bends; see structConfCode) and then
+ * struct_sheet_range (E), by label_seq_id range per chain. Sheets are applied
+ * last and win on overlap, as in Mol*. Unmarked residues are 0 (coil).
+ */
 function readSecondaryStructure(
   categories: Categories,
   residues: readonly ResidueRow[],
   chains: readonly ChainRow[],
-): SecondaryStructure[] {
-  const secondaryStructure = new Array<SecondaryStructure>(residues.length)
-    .fill("coil");
+): Uint8Array {
+  const codes = new Uint8Array(residues.length);
   const conf = categories.struct_conf;
   for (let i = 0; conf && i < conf.rowCount; i++) {
-    if (!str(conf, "conf_type_id", i).toUpperCase().startsWith("HELX")) {
-      continue;
-    }
+    const code = structConfCode(conf, i);
+    if (!code) continue;
     markSecondaryStructure(
-      secondaryStructure,
+      codes,
       residues,
       chains,
       str(conf, "beg_label_asym_id", i),
       Math.trunc(num(conf, "beg_label_seq_id", i, NaN)),
       Math.trunc(num(conf, "end_label_seq_id", i, NaN)),
-      "helix",
+      code,
     );
   }
   const sheet = categories.struct_sheet_range;
   for (let i = 0; sheet && i < sheet.rowCount; i++) {
     markSecondaryStructure(
-      secondaryStructure,
+      codes,
       residues,
       chains,
       str(sheet, "beg_label_asym_id", i),
       Math.trunc(num(sheet, "beg_label_seq_id", i, NaN)),
       Math.trunc(num(sheet, "end_label_seq_id", i, NaN)),
-      "sheet",
+      SS_E,
     );
   }
-  return secondaryStructure;
+  return codes;
 }
 
 /** Lower a BinaryCIF mmCIF block to renderer-independent owned table columns. */
@@ -715,11 +736,7 @@ export async function structureFromBcif(
     ssCode: {
       domain: "residue",
       kind: "code",
-      // ssCode codes: helix H (1), sheet E (3), coil 0.
-      values: Uint8Array.from(
-        secondaryStructure,
-        (k) => k === "helix" ? 1 : k === "sheet" ? 3 : 0,
-      ),
+      values: secondaryStructure,
       provenance: ssAnnotated ? "imported:mmcif" : "default",
     },
   });
