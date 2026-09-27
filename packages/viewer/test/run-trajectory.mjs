@@ -496,6 +496,28 @@ Deno.test("trajectory components", async () => {
     near(box, [10.5, 0, 0, 0, 10, 0, 0, 0, 10], "interpolated box");
     await update({ mode: "none", pbc: "none" });
 
+    // Fractional rounding picks a longer path in this skew triclinic cell.
+    await update({ mode: "skew", frame: 0.5, pbc: "minimum-image" });
+    await displayed({ a: 0, b: 1, t: 0.5 });
+    const cpuSkew = interpolatePositions(
+      Float32Array.of(0, 0, 0, 2, 2, 2, 3, 3, 3),
+      Float32Array.of(9.31, 0.49, 0, 2, 2, 2, 3, 3, 3),
+      0.5,
+      Float32Array.of(10, 0, 0, 9, 1, 0, 0, 0, 10),
+    );
+    near(
+      Array.from(cpuSkew),
+      [0.155, -0.255, 0, 2, 2, 2, 3, 3, 3],
+      "CPU exact triclinic image",
+      1e-5,
+    );
+    await expectRead(
+      Array.from(cpuSkew),
+      "exact triclinic minimum image",
+      2e-4,
+    );
+    await update({ mode: "none", pbc: "none" });
+
     // 6. The timeline: frameCurve at 1 fps seeks frame t.
     for (
       const [time, want] of [[1.5, { a: 1, b: 2, t: 0.5 }], [0.25, {
@@ -795,6 +817,9 @@ Deno.test("trajectory components", async () => {
       return Math.sqrt(sum / list.length);
     };
     report.superpose = [];
+    await page.evaluate(() =>
+      window.__trajectory.superpose.statuses.length = 0
+    );
     const checkFit = async (frame, options = {}) => {
       const want = oracle(frame, options);
       const what = `superpose ${JSON.stringify({ frame, ...options })}`;
@@ -816,6 +841,14 @@ Deno.test("trajectory components", async () => {
     });
     await displayed({ a: 0, b: 0, t: 0 });
     await checkFit(0);
+    await page.waitForFunction(() =>
+      window.__trajectory.superpose.statuses.some((s) => s.status === "solved")
+    );
+    const initialFitStatus = await page.evaluate(() =>
+      window.__trajectory.superpose.statuses.slice(-1)[0]
+    );
+    assert.equal(initialFitStatus.status, "solved");
+    assert.ok(Math.abs(initialFitStatus.rmsd) <= 1e-3);
     const referenceUploads = async () =>
       (await counters()).detail["uploadBytes:coords:superpose:reference"] ?? 0;
     const supUploads = await referenceUploads();
@@ -850,17 +883,98 @@ Deno.test("trajectory components", async () => {
       "scrubbing does not re-upload structure positions",
     );
     // A collinear frame has no unique rotation: it passes through.
+    await page.evaluate(() =>
+      window.__trajectory.superpose.statuses.length = 0
+    );
     await update({ frame: 4 });
     await displayed({ a: 4, b: 4, t: 0 });
     await expectRead(Array.from(supFrame(4)), "superpose collinear", 0);
+    await page.waitForFunction(() =>
+      window.__trajectory.superpose.statuses.some((s) =>
+        s.status === "passthrough"
+      )
+    );
+    assert.equal(
+      (await page.evaluate(() =>
+        window.__trajectory.superpose.statuses.slice(-1)[0]
+      )).rmsd,
+      null,
+    );
     // Fit rows, then translate=false, then a fixed reference.
     await update({ frame: 2, supSelect: true });
     await displayed({ a: 2, b: 2, t: 0 });
     await checkFit(2, { rows: fitRows });
     await update({ supSelect: false, supTranslate: false });
     await checkFit(2, { translate: false });
+    await page.evaluate(() =>
+      window.__trajectory.superpose.statuses.length = 0
+    );
     await update({ supTranslate: true, supTo: "fixed" });
     await checkFit(2, { to: "fixed" });
+    await page.waitForFunction(() =>
+      window.__trajectory.superpose.statuses.some((s) => s.status === "solved")
+    );
+    const fixedFitStatus = await page.evaluate(() =>
+      window.__trajectory.superpose.statuses.slice(-1)[0]
+    );
+    assert.ok(
+      Math.abs(fixedFitStatus.rmsd - oracle(2, { to: "fixed" }).rmsd) < 1e-4,
+      "reported fitted RMSD agrees with the CPU oracle",
+    );
+    await update({ mode: "none" });
+
+    // Hold an old fit readback while changing reference buffers. Its eventual
+    // completion must neither report a stale generation nor clear a new slot.
+    await page.evaluate(() => {
+      const original = GPUBuffer.prototype.mapAsync;
+      let release;
+      let pending = false;
+      GPUBuffer.prototype.mapAsync = function (...args) {
+        const mapped = original.apply(this, args);
+        if (!pending && this.label === "molgpu:coords:superpose:staging") {
+          pending = true;
+          return new Promise((resolve, reject) => {
+            release = () => mapped.then(resolve, reject);
+          });
+        }
+        return mapped;
+      };
+      window.__trajectory.heldFit = {
+        get pending() {
+          return pending;
+        },
+        release() {
+          GPUBuffer.prototype.mapAsync = original;
+          return release();
+        },
+      };
+    });
+    await update({ mode: "superpose", frame: 2, supTo: "fixed" });
+    await page.waitForFunction(() => window.__trajectory.heldFit.pending);
+    await page.evaluate(() =>
+      window.__trajectory.superpose.statuses.length = 0
+    );
+    await update({ supTo: "first" });
+    await page.waitForFunction(() =>
+      window.__trajectory.superpose.statuses.some((s) => s.status === "solved")
+    );
+    const freshStatuses = await page.evaluate(() =>
+      window.__trajectory.superpose.statuses.length
+    );
+    await page.evaluate(async () => {
+      await window.__trajectory.heldFit.release();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    assert.equal(
+      await page.evaluate(() => window.__trajectory.superpose.statuses.length),
+      freshStatuses,
+      "old fit readback does not report after reference buffers change",
+    );
+    await update({ frame: 3 });
+    await page.waitForFunction(
+      (previous) => window.__trajectory.superpose.statuses.length > previous,
+      freshStatuses,
+    );
     await update({ mode: "none" });
 
     // 15. <Unwrap>: each displayed frame agrees with the CPU unwrapFrame on a
@@ -989,6 +1103,32 @@ Deno.test("trajectory components", async () => {
     assert.equal((await unwrapStatuses()).status, "missing-box");
     await update({ mode: "none" });
 
+    // A near-degenerate but valid cell exceeds the bounded search. The GPU
+    // reports it and retains the best displacement found in the 27 seeds.
+    await update({ mode: "unwrap-limit" });
+    await expectRead(
+      [0, 0, 0, -4.99, -0.01, 0],
+      "unwrap search limit best image",
+      1e-4,
+    );
+    await page.waitForFunction(() =>
+      window.__trajectory.unwrap.statuses.slice(-1)[0]?.status ===
+        "search-limit"
+    );
+    assert.equal((await unwrapStatuses()).ambiguousRingEdges, 0);
+    await update({ mode: "none" });
+    // Depth 33 takes the logarithmic fallback and remains whole.
+    await update({ mode: "unwrap-deep" });
+    await expectRead(
+      Array.from(
+        { length: 34 * 3 },
+        (_, j) => j % 3 === 0 ? Math.floor(j / 3) * 1.5 : 0,
+      ),
+      "unwrap deep-chain fallback",
+      1e-4,
+    );
+    await update({ mode: "none" });
+
     // 16. Gate 13 budgets (opt-in: `deno task gate:dynamics`). The scene is
     // root + Trajectory (four slots) + Unwrap + Superpose (reference) +
     // NormalMode at 100k and 1M atoms, as ten-atom chains in a periodic box.
@@ -1018,6 +1158,7 @@ Deno.test("trajectory components", async () => {
           "coords:unwrap:staging",
           "coords:superpose:fit",
           "coords:superpose:params",
+          "coords:superpose:staging",
         ];
         let persistent = 0, scratch = 0;
         for (const [label, n] of Object.entries(bytes)) {
@@ -1100,10 +1241,10 @@ Deno.test("trajectory components", async () => {
           );
         }
         // Bytes each full generation reads and writes per atom: trajectory
-        // lerp 36; unwrap link 44 + 48 per jump round + place 60; superpose
-        // 72 (centroid, covariance, apply over all rows); normal mode 40.
-        const rounds = 4; // ten-atom chains: depth 9
-        const perAtom = 36 + 44 + 48 * rounds + 60 + 72 + 40;
+        // lerp 36; unwrap link 44 + one level accumulation (52 per
+        // non-root row) + place 60; superpose 72 (centroid, covariance,
+        // apply over all rows); normal mode 40.
+        const perAtom = 36 + 44 + 52 * 0.9 + 60 + 72 + 40;
         report.gate.push({
           atoms,
           mountMs: Math.round(mountMs),

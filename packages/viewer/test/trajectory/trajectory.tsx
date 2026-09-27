@@ -27,6 +27,7 @@ import {
   Spacefill,
   Structure,
   Superpose,
+  type SuperposeStatus,
   TimelineProvider,
   Trajectory,
   type TrajectoryFrameState,
@@ -133,6 +134,17 @@ const BOXED = createTrajectory({
     positions: Float32Array.of(9.5 - 9 * k, 1, 1, 2, 2, 2, 3, 3, 3),
     box: Float32Array.of(10 + 2 * k, 0, 0, 0, 10, 0, 0, 0, 10),
   })),
+});
+const SKEW_BOX = Float32Array.of(10, 0, 0, 9, 1, 0, 0, 0, 10);
+const SKEW = createTrajectory({
+  atomCount: ATOMS,
+  frames: [
+    { positions: Float32Array.of(0, 0, 0, 2, 2, 2, 3, 3, 3), box: SKEW_BOX },
+    {
+      positions: Float32Array.of(9.31, 0.49, 0, 2, 2, 2, 3, 3, 3),
+      box: SKEW_BOX,
+    },
+  ],
 });
 const IDENTITY = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
 const SHIFT = [...IDENTITY.slice(0, 12), 2, 0, 0, 1];
@@ -300,6 +312,20 @@ const UNW_TRAJECTORY = createTrajectory({
 });
 const UNW_RING = where("atom", "ring", (_data, row) => row >= 14 && row < 20);
 const SINGULAR = [1, 0, 0, 2, 0, 0, 0, 0, 1];
+const LIMIT_BOX = [10, 0, 0, 9.99, 0.01, 0, 0, 0, 10];
+const LIMIT_STRUCTURE = atoms(
+  2,
+  Float32Array.of(0, 0, 0, 5, 0, 0),
+  [[0, 1]],
+);
+const DEEP_STRUCTURE = atoms(
+  34,
+  Float32Array.from(
+    { length: 34 * 3 },
+    (_, j) => j % 3 === 0 ? (Math.floor(j / 3) * 1.5) % 10 : 0,
+  ),
+  Array.from({ length: 33 }, (_, i) => [i, i + 1] as [number, number]),
+);
 const recordUnwrap = (status: UnwrapStatus) => {
   probe.unwrap.statuses.push(status);
 };
@@ -386,6 +412,7 @@ type Mode =
   | "whole"
   | "subset"
   | "boxed"
+  | "skew"
   | "timeline"
   | "cell"
   | "slow"
@@ -397,6 +424,8 @@ type Mode =
   | "normal-mode"
   | "superpose"
   | "unwrap"
+  | "unwrap-limit"
+  | "unwrap-deep"
   | "gate";
 interface State {
   mode: Mode;
@@ -429,7 +458,12 @@ interface Probe {
   frames: number[][];
   root: number[];
   gate: { generation: number; count: number } | null;
-  superpose: { frames: number[][]; root: number[]; fixed: number[] };
+  superpose: {
+    frames: number[][];
+    root: number[];
+    fixed: number[];
+    statuses: SuperposeStatus[];
+  };
   unwrap: {
     frames: number[][];
     boxes: number[][];
@@ -457,6 +491,7 @@ const probe: Probe = {
     frames: SUP_FRAMES.map((f) => Array.from(f)),
     root: Array.from(SUP_STRUCTURE.positions),
     fixed: Array.from(SUP_FIXED),
+    statuses: [],
   },
   unwrap: {
     frames: [],
@@ -547,6 +582,8 @@ const Scene = ({ state }: { state: State }): LiveElement => {
       return played(state, SUBSET);
     case "boxed":
       return played(state, BOXED);
+    case "skew":
+      return played(state, SKEW);
     case "slow":
       return played(state, SLOW);
     case "snapshot":
@@ -632,6 +669,7 @@ const Scene = ({ state }: { state: State }): LiveElement => {
               to={state.supTo === "first" ? "first" : SUP_FIXED}
               select={state.supSelect ? SUP_FIT : undefined}
               translate={state.supTranslate}
+              onStatus={(status) => probe.superpose.statuses.push(status)}
             >
               <Spacefill />
               <Probe />
@@ -680,6 +718,22 @@ const Scene = ({ state }: { state: State }): LiveElement => {
         </Structure>
       );
     }
+    case "unwrap-limit":
+      return (
+        <Structure data={LIMIT_STRUCTURE}>
+          <Unwrap box={LIMIT_BOX} onStatus={recordUnwrap}>
+            <Probe />
+          </Unwrap>
+        </Structure>
+      );
+    case "unwrap-deep":
+      return (
+        <Structure data={DEEP_STRUCTURE}>
+          <Unwrap box={[10, 0, 0, 0, 10, 0, 0, 0, 10]}>
+            <Probe />
+          </Unwrap>
+        </Structure>
+      );
   }
 };
 

@@ -8,6 +8,7 @@ import {
   use,
   useAwait,
   useMemo,
+  useRef,
   useResource,
 } from "@use-gpu/live";
 import { useDeviceContext } from "@use-gpu/workbench";
@@ -26,12 +27,18 @@ import {
 } from "./internal/instrumentation.ts";
 import { live, viewer } from "./internal/elements.ts";
 import { useTrajectoryFrame } from "./trajectory.ts";
-import type { SuperposeProps, ViewerComponent } from "./types.ts";
+import type {
+  SuperposeProps,
+  SuperposeStatus,
+  ViewerComponent,
+} from "./types.ts";
 import { useCoordinateSelection } from "./use-coordinate-selection.ts";
 
 const STORAGE = 0x0080;
 const UNIFORM = 0x0040;
 const COPY_DST = 0x0008;
+const COPY_SRC = 0x0004;
+const MAP_READ = 0x0001;
 const APPLY_GROUP = 64;
 
 const pipelines = new WeakMap<GPUDevice, {
@@ -100,8 +107,9 @@ const Fitted: LC<{
   rows: Uint32Array | null;
   rowsKey: string;
   translate: boolean;
+  onStatus?: (status: SuperposeStatus) => void;
   children: LiveElement;
-}> = ({ reference, rows, rowsKey, translate, children }) => {
+}> = ({ reference, rows, rowsKey, translate, onStatus, children }) => {
   const upstream = useCoordinates()!;
   const device = useDeviceContext();
   const fitCount = rows ? rows.length : upstream.count;
@@ -154,13 +162,44 @@ const Fitted: LC<{
     return {
       rows: rowBuffer,
       reference: referenceBuffer,
-      fit: make(SUPERPOSE_FIT_BYTES, STORAGE, "coords:superpose:fit"),
+      fit: make(
+        SUPERPOSE_FIT_BYTES,
+        STORAGE | COPY_SRC,
+        "coords:superpose:fit",
+      ),
       params: make(16, UNIFORM | COPY_DST, "coords:superpose:params"),
+      staging: [0, 1].map(() =>
+        make(
+          SUPERPOSE_FIT_BYTES,
+          MAP_READ | COPY_DST,
+          "coords:superpose:staging",
+        )
+      ),
     };
   }, [device, gathered, rows]);
+  const alive = useRef(true);
+  const busy = useRef([false, false]);
+  const epoch = useRef(0);
+  const report = useRef<((status: SuperposeStatus) => void) | undefined>(
+    onStatus,
+  );
+  report.current = onStatus;
   useResource((dispose) => {
+    epoch.current++;
+    alive.current = true;
+    busy.current = [false, false];
     dispose(() => {
-      for (const buffer of Object.values(buffers)) {
+      epoch.current++;
+      alive.current = false;
+      for (
+        const buffer of [
+          buffers.rows,
+          buffers.reference,
+          buffers.fit,
+          buffers.params,
+          ...buffers.staging,
+        ]
+      ) {
         releaseOwnedBuffer(buffer);
         buffer.destroy();
       }
@@ -170,6 +209,7 @@ const Fitted: LC<{
     encoder: GPUCommandEncoder,
     input: GPUBuffer,
     output: GPUBuffer,
+    generation: number,
   ) => {
     const pipes = superposePipelines(device);
     device.queue.writeBuffer(
@@ -216,6 +256,30 @@ const Fitted: LC<{
     );
     pass.dispatchWorkgroups(Math.ceil(upstream.count / APPLY_GROUP));
     pass.end();
+    const slot = busy.current.indexOf(false);
+    if (!report.current || slot < 0) return;
+    const staging = buffers.staging[slot];
+    const readEpoch = epoch.current;
+    busy.current[slot] = true;
+    encoder.copyBufferToBuffer(buffers.fit, 0, staging, 0, SUPERPOSE_FIT_BYTES);
+    return () => {
+      staging.mapAsync(MAP_READ).then(() => {
+        if (epoch.current !== readEpoch) return;
+        const values = new Float32Array(staging.getMappedRange().slice(0));
+        staging.unmap();
+        busy.current[slot] = false;
+        if (!alive.current) return;
+        const solved = values[19] !== 0;
+        report.current?.(Object.freeze({
+          status: solved ? "solved" : "passthrough",
+          rmsd: solved ? values[23] : null,
+          generation,
+        }));
+      }, () => {
+        if (epoch.current !== readEpoch) return;
+        busy.current[slot] = false;
+      });
+    };
   };
   return use(CoordinatePasses, {
     upstream,
@@ -231,8 +295,9 @@ const Resolve: LC<{
   rows: Uint32Array | null;
   rowsKey: string;
   translate: boolean;
+  onStatus?: (status: SuperposeStatus) => void;
   children: LiveElement;
-}> = ({ to, rows, rowsKey, translate, children }) => {
+}> = ({ to, rows, rowsKey, translate, onStatus, children }) => {
   const upstream = useCoordinates()!;
   const frame = useTrajectoryFrame();
   if (to === "first" && !frame) {
@@ -266,15 +331,23 @@ const Resolve: LC<{
   }
   // Pass upstream through until the reference has loaded.
   if (!reference) return children;
-  return use(Fitted, { reference, rows, rowsKey, translate, children });
+  return use(Fitted, {
+    reference,
+    rows,
+    rowsKey,
+    translate,
+    onStatus,
+    children,
+  });
 };
 
 const Select: LC<{
   to: SuperposeProps["to"];
   select: NonNullable<SuperposeProps["select"]>;
   translate: boolean;
+  onStatus?: (status: SuperposeStatus) => void;
   children: LiveElement;
-}> = ({ to, select, translate, children }) => {
+}> = ({ to, select, translate, onStatus, children }) => {
   const selection = useCoordinateSelection(select);
   if (selection && selection.domain !== "atom") {
     throw new TypeError("<Superpose> select must be an atom query");
@@ -290,6 +363,7 @@ const Select: LC<{
     rows: selection.indices,
     rowsKey: String(selection.id),
     translate,
+    onStatus,
     children,
   });
 };
@@ -298,15 +372,23 @@ const Provider: LC<{
   to: SuperposeProps["to"];
   select: SuperposeProps["select"];
   translate: boolean;
+  onStatus?: (status: SuperposeStatus) => void;
   children: LiveElement;
-}> = ({ to, select, translate, children }) => {
+}> = ({ to, select, translate, onStatus, children }) => {
   const upstream = useCoordinates();
   if (!upstream || !upstream.count) return children;
-  if (select) return use(Select, { to, select, translate, children });
+  if (select) return use(Select, { to, select, translate, onStatus, children });
   if (upstream.count < 3) {
     throw new RangeError("<Superpose> needs at least three fit atoms");
   }
-  return use(Resolve, { to, rows: null, rowsKey: "all", translate, children });
+  return use(Resolve, {
+    to,
+    rows: null,
+    rowsKey: "all",
+    translate,
+    onStatus,
+    children,
+  });
 };
 
 /**
@@ -320,7 +402,7 @@ const Provider: LC<{
  * throws.
  */
 export const Superpose: ViewerComponent<SuperposeProps> = (
-  { to, select, translate = true, children },
+  { to, select, translate = true, onStatus, children },
 ) => {
   if (
     to !== "first" && !(to instanceof Float32Array) &&
@@ -331,6 +413,12 @@ export const Superpose: ViewerComponent<SuperposeProps> = (
     );
   }
   return viewer(
-    use(Provider, { to, select, translate, children: live(children) }),
+    use(Provider, {
+      to,
+      select,
+      translate,
+      onStatus,
+      children: live(children),
+    }),
   );
 };

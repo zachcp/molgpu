@@ -170,9 +170,10 @@ one upstream generation:
 1. `link` stores each row's exact nearest image from its forest parent. It uses
    the same bounded lattice search as `minimumImage`, capped at `maxCandidates`
    and counted in `status[1]` where the CPU throws.
-2. `jump` is pointer jumping, run `ceil(log2(depth))` times, so every row ends
-   relative to its component root in a logarithmic number of dispatches. It
-   never assumes rows unwrap independently.
+2. For forests of depth at most 32, `propagate` visits one topology level per
+   dispatch. Each non-root link is accumulated once, in place, from a parent
+   already relative to its root. Deeper forests use `jump` pointer jumping in
+   `ceil(log2(depth))` rounds. Both preserve cross-row bond continuity.
 3. `centerSums` computes, per centered component, the lattice shift that moves
    its center rows' centroid into the primary cell.
 4. `place` writes each row as its root position plus its displacement, minus

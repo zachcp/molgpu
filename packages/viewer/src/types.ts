@@ -202,6 +202,16 @@ export interface SuperposeProps {
   select?: SelectionQuery;
   /** Align centroids (default). False rotates about the source centroid. */
   translate?: boolean;
+  /** Reports the GPU fit result asynchronously; busy readbacks may skip frames. */
+  onStatus?: (status: SuperposeStatus) => void;
+}
+
+/** Fit outcome for one published coordinate generation. */
+export interface SuperposeStatus {
+  readonly status: "solved" | "passthrough";
+  /** Fitted RMSD in Å, or null when a collinear frame passed through. */
+  readonly rmsd: number | null;
+  readonly generation: number;
 }
 
 /** What `<Unwrap>` found on one displayed frame. */

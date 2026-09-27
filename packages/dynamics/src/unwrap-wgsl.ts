@@ -6,9 +6,9 @@
  * 1. `link` (one row per invocation): each non-root row stores the exact
  *    nearest Cartesian image of its displacement from its forest parent, and
  *    a pointer to that parent. Roots store zero and point at themselves.
- * 2. `jump` (repeated `ceil(log2(depth + 1))` times, ping-ponging `linksIn`
- *    and `linksOut`): pointer jumping adds each pointer target's displacement
- *    and follows its pointer, so every row ends up relative to its root.
+ * 2. `propagate` visits each precomputed tree level in order and accumulates
+ *    parent displacements in place. Forests deeper than 32 use `jump`
+ *    pointer jumping in logarithmic rounds instead.
  * 3. `centerSums` (optional, one workgroup per centered component): the
  *    centroid of the component's center rows, then the lattice shift that
  *    moves it into the primary cell.
@@ -24,7 +24,8 @@
  * searches over `maxCandidates`); 7 `output` packed xyz f32; 8 `component`
  * u32 per row; 9 `shifts` vec4 per component (cleared by the caller); 10
  * `centerStarts` u32 per centered component plus one; 11 `centerRows` u32;
- * 12 `centerComponents` u32 per centered component.
+ * 12 `centerComponents` u32 per centered component; 13 `levelRows` and
+ * 14 `levelRange` provide the static level schedule.
  *
  * `params`: box columns `a`, `b`, `c` and inverse columns (fractional =
  * inverse · Cartesian) as vec4; then `atomCount`, `ringCount`,
@@ -62,6 +63,8 @@ struct Params {
 @group(0) @binding(10) var<storage, read> centerStarts: array<u32>;
 @group(0) @binding(11) var<storage, read> centerRows: array<u32>;
 @group(0) @binding(12) var<storage, read> centerComponents: array<u32>;
+@group(0) @binding(13) var<storage, read> levelRows: array<u32>;
+@group(0) @binding(14) var<uniform> levelRange: vec4<u32>;
 
 fn position(i: u32) -> vec3<f32> {
   return vec3<f32>(positions[i * 3u], positions[i * 3u + 1u],
@@ -148,6 +151,18 @@ fn jump(@builtin(global_invocation_id) id: vec3<u32>) {
   let mine = linksIn[i];
   let next = linksIn[mine.w];
   linksOut[i] = pack(offsetOf(mine) + offsetOf(next), next.w);
+}
+
+// Parent rows are complete before their children's level is dispatched.
+// Every edge is accumulated once, in place; the schedule depends only on the
+// forest and is uploaded once rather than rebuilt for each frame.
+@compute @workgroup_size(64)
+fn propagate(@builtin(global_invocation_id) id: vec3<u32>) {
+  if (id.x >= levelRange.y) { return; }
+  let i = levelRows[levelRange.x + id.x];
+  let mine = linksOut[i];
+  let up = linksOut[mine.w];
+  linksOut[i] = pack(offsetOf(mine) + offsetOf(up), up.w);
 }
 
 var<workgroup> partial: array<vec4<f32>, 64>;

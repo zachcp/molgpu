@@ -12,6 +12,7 @@ import {
   prefetchFrames,
   resolveDisplay,
   SlotTable,
+  TrajectoryImageBoxLimitError,
 } from "../src/internal/frame-window.ts";
 import { FrameCache } from "../src/internal/frame-cache.ts";
 
@@ -103,12 +104,32 @@ Deno.test("interpolatePositions: lerp, and minimum image across a wrap", () => {
     "minimum image moves 0.25 of +1 Å",
   );
   assertAlmostEquals(wrapped[0], 1.5, 1e-6);
-  // A triclinic box: the shortest image is found in fractional coordinates.
+  // A mildly skew box retains its shortest Cartesian image.
   const tri = Float32Array.of(10, 0, 0, 5, 8, 0, 0, 0, 10);
   const q0 = Float32Array.of(0.2, 0.2, 0), q1 = Float32Array.of(4.8, 7.8, 0);
   const t = interpolatePositions(q0, q1, 1, tri);
   assertAlmostEquals(t[0], 4.8 - 5, 1e-5);
   assertAlmostEquals(t[1], 7.8 - 8, 1e-5);
+  // Here fractional rounding instead chooses a longer Cartesian path.
+  const skew = Float32Array.of(10, 0, 0, 9, 1, 0, 0, 0, 10);
+  const exact = interpolatePositions(
+    Float32Array.of(0, 0, 0),
+    Float32Array.of(9.31, 0.49, 0),
+    0.5,
+    skew,
+  );
+  assertAlmostEquals(exact[0], 0.155, 1e-5);
+  assertAlmostEquals(exact[1], -0.255, 1e-5);
+  assertThrows(
+    () =>
+      interpolatePositions(
+        Float32Array.of(0, 0, 0),
+        Float32Array.of(5, 0, 0),
+        0.5,
+        Float32Array.of(10, 0, 0, 9.999, 0.001, 0, 0, 0, 10),
+      ),
+    TrajectoryImageBoxLimitError,
+  );
 });
 
 Deno.test("FrameScheduler never uploads over a displayed or wanted frame", () => {
