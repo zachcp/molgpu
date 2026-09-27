@@ -1,4 +1,9 @@
-import { activeAtoms, createStructure, dssp } from "@molgpu/table";
+import {
+  activeAtoms,
+  createStructure,
+  dssp,
+  withPositions,
+} from "@molgpu/table";
 import { prepareDsspLayout } from "@molgpu/dynamics";
 import { structureFromBcif } from "@molgpu/io";
 import { gpuDssp, GpuDsspOverflowError } from "../../src/gpu-dssp.ts";
@@ -16,7 +21,13 @@ declare global {
       mismatch: number;
       fallback: boolean;
     }>;
-    runDenseDsspOverflow: () => Promise<{ named: boolean; equal: boolean }>;
+    runDenseDsspOverflow: () => Promise<{
+      named: boolean;
+      equal: boolean;
+      sparseNamed: boolean;
+      sparseReason: boolean;
+      sparseEqual: boolean;
+    }>;
     runDsspOverflowPolicy: () => [string, string, string];
     runGpuDssp: (id: string, model?: "first" | number) => Promise<{
       mismatch: [number, number, number][];
@@ -25,6 +36,8 @@ declare global {
       residues: number;
       milliseconds: number;
       aborted?: boolean;
+      stableFrame?: boolean;
+      storageCopy?: boolean;
     }>;
   }
 }
@@ -287,9 +300,39 @@ window.runDenseDsspOverflow = async () => {
   const equal = result.fallback &&
     result.codes.every((v, i) => v === expected[i]);
   result.codeBuffer.destroy();
+  const sparsePositions = positions.slice();
+  for (let atom = 0; atom < count * 5; atom++) {
+    sparsePositions[atom * 3] += Math.floor(atom / 5) * 1000;
+  }
+  device.queue.writeBuffer(coordinates, 0, sparsePositions);
+  let sparseNamed = false;
+  try {
+    await gpuDssp(device, coordinates, {
+      data,
+      rows,
+      layout,
+      generation: 3,
+      overflow: "static",
+    });
+  } catch (error) {
+    sparseNamed = error instanceof GpuDsspOverflowError &&
+      error.message.includes("sparse cell grid");
+  }
+  const sparse = await gpuDssp(device, coordinates, {
+    data,
+    rows,
+    layout,
+    generation: 4,
+    overflow: "frame",
+  });
+  const sparseExpected = dssp(withPositions(data, sparsePositions), { rows });
+  const sparseReason = sparse.fallbackReason === "sparse cell grid";
+  const sparseEqual = sparse.fallback &&
+    sparse.codes.every((v, i) => v === sparseExpected[i]);
+  sparse.codeBuffer.destroy();
   coordinates.destroy();
   device.destroy();
-  return { named, equal };
+  return { named, equal, sparseNamed, sparseReason, sparseEqual };
 };
 
 window.runGpuDssp = async (id: string, model: "first" | number = "first") => {
@@ -327,6 +370,8 @@ window.runGpuDssp = async (id: string, model: "first" | number = "first") => {
     }
   }
   let aborted: boolean | undefined;
+  let stableFrame: boolean | undefined;
+  let storageCopy: boolean | undefined;
   if (id === "1crn") {
     const controller = new AbortController();
     const pending = gpuDssp(device, coordinates, {
@@ -344,16 +389,63 @@ window.runGpuDssp = async (id: string, model: "first" | number = "first") => {
     } catch (error) {
       aborted = error instanceof DOMException && error.name === "AbortError";
     }
+    // Mutate the live source after the bounds readback, before the second
+    // submission. All DSSP stages must still use the first frame's snapshot.
+    const originalMap = GPUBuffer.prototype.mapAsync;
+    let mutated = false;
+    GPUBuffer.prototype.mapAsync = function (...args) {
+      const mapped = originalMap.apply(this, args);
+      if (this.label !== "molgpu:dssp:bounds-readback") return mapped;
+      return mapped.then(async () => {
+        device.queue.writeBuffer(
+          coordinates,
+          0,
+          new Float32Array(data.positions.length),
+        );
+        await device.queue.onSubmittedWorkDone();
+        mutated = true;
+      });
+    };
+    try {
+      const stable = await gpuDssp(device, coordinates, {
+        data,
+        rows,
+        layout,
+        generation: 3,
+      });
+      stableFrame = mutated &&
+        stable.codes.every((code, i) => code === expected[i]);
+      stable.codeBuffer.destroy();
+    } finally {
+      GPUBuffer.prototype.mapAsync = originalMap;
+    }
+    // use.gpu RawData positions lack COPY_SRC: freeze them by storage copy.
+    const storageOnly = device.createBuffer({
+      size: data.positions.byteLength,
+      usage: 0x0080 | 0x0008,
+    });
+    device.queue.writeBuffer(storageOnly, 0, data.positions);
+    const copied = await gpuDssp(device, storageOnly, {
+      data,
+      rows,
+      layout,
+      generation: 4,
+    });
+    storageCopy = copied.codes.every((code, i) => code === expected[i]);
+    copied.codeBuffer.destroy();
+    storageOnly.destroy();
   }
   result.codeBuffer.destroy();
   coordinates.destroy();
   device.destroy();
   return {
     mismatch,
-    near: result.nearThresholdResidues,
+    near: result.nearThresholdCenters,
     bridges: result.bridgeCount,
     residues: layout.residueCount,
     milliseconds,
     aborted,
+    stableFrame,
+    storageCopy,
   };
 };

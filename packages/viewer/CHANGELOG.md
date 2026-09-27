@@ -6,6 +6,16 @@ All notable changes to `@molgpu/viewer` are recorded here. The format follows
 
 ## [Unreleased]
 
+- `<GpuDssp>` freezes each coordinate generation before its first GPU submit,
+  keeps one run in flight (latest generation wins) during playback, waits for a
+  kernel stream's first dispatch, and holds its last codes for up to 1 s while a
+  newer generation runs. `<Ribbon secondaryStructure="model">` draws those held
+  codes for the same dataset instead of flipping back to file codes.
+- **Changed (experimental):** `GpuDsspStatus` / `GpuDsspResult`
+  `nearThresholdResidues` is renamed `nearThresholdCenters` (acceptor and
+  bend-centre rows only, not dependent residues), and both gain `fallbackReason`
+  (`"cell list"` or `"sparse cell grid"`).
+
 - **Changed (advanced):** kernel-backed coordinate streams (`Trajectory`,
   `Transform`, `NormalMode`, `WobbleCoordinates`) now publish `ready: false`
   until their kernel's first dispatch lands, then advance `generation` again.

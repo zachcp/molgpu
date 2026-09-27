@@ -5,6 +5,7 @@
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import { chromium } from "playwright";
+import { webgpuBrowserArgs } from "../../viewer/test/webgpu-browser-args.mjs";
 import {
   annotation,
   attribute,
@@ -247,6 +248,9 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
         return sampleVolume(volume, x, y, z);
       }),
       relative: 1e-5,
+      // The sheared world-to-grid transform runs in f32; backends differ in
+      // FMA contraction (SwiftShader measured 1.9e-5 relative, Metal < 1e-5).
+      tolerance: 5e-5,
     });
   }
 
@@ -260,7 +264,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
   const browser = await chromium.launch({
     channel: "chrome",
     headless: true,
-    args: ["--enable-unsafe-webgpu"],
+    args: webgpuBrowserArgs,
   });
   try {
     const page = await browser.newPage();
@@ -353,22 +357,27 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
 
       assert.equal(out.error, undefined, `${job.name} WGSL: ${out.error}`);
       assert.equal(out.result.length, job.cpu.length, `${job.name} length`);
+      const tolerance = job.tolerance ?? 1e-5;
       let maxErr = 0;
       for (let i = 0; i < job.cpu.length; i++) {
         const err = Math.abs(out.result[i] - job.cpu[i]);
-        // Absolute 1e-5, or relative to the larger magnitude when a case sets it.
+        // Absolute tolerance (1e-5 unless a case sets it), or relative to the
+        // larger magnitude when a case sets `relative`.
         const scale = job.relative
           ? Math.max(1, Math.abs(out.result[i]), Math.abs(job.cpu[i]))
           : 1;
         maxErr = Math.max(maxErr, err / scale);
         if (job.relative) {
           assert.ok(
-            err <= 1e-5 * scale,
+            err <= tolerance * scale,
             `${job.name} row ${i}: GPU ${out.result[i]} vs CPU ${job.cpu[i]}`,
           );
         }
       }
-      assert.ok(maxErr <= 1e-5, `${job.name} CPU/GPU disagree by ${maxErr}`);
+      assert.ok(
+        maxErr <= tolerance,
+        `${job.name} CPU/GPU disagree by ${maxErr}`,
+      );
       if (job.name === "volumeSample") {
         assert.ok(job.cpu.some((v) => v === 0), "outside points return 0");
         assert.ok(

@@ -1,4 +1,12 @@
 /** Limits on a uniform-grid neighbour index over packed xyz positions. */
+/** Dense cell grid larger than the caller's cell limit (a sparse layout). */
+export class CellListLimitError extends RangeError {
+  constructor(readonly cells: number, readonly limit: number) {
+    super(`cell list needs ${cells} dense cells, limit ${limit}`);
+    this.name = "CellListLimitError";
+  }
+}
+
 export interface CellListOptions {
   /** Sorted, unique topology rows to index; omitted indexes every row. */
   readonly rows?: ArrayLike<number> | null;
@@ -96,9 +104,7 @@ export function createCellList(
     : [0, 0, 0];
   const cellCount = dims[0] * dims[1] * dims[2];
   if (!Number.isSafeInteger(cellCount) || cellCount > maxCells) {
-    throw new RangeError(
-      `cell list needs ${cellCount} dense cells, limit ${maxCells}`,
-    );
+    throw new CellListLimitError(cellCount, maxCells);
   }
   const cellOf = (
     x: number,

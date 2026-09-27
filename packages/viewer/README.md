@@ -246,14 +246,14 @@ may change before 0.1.0; _advanced_ — only from `@molgpu/viewer/advanced`.
 | `WorldSpacePointLayer`       | advanced     | PointLayer with GPU radii source and Ångström size conversion in a shader.                                                                                                                                              |
 | `useField`                   | advanced     | Lower a field to a use.gpu shader source.                                                                                                                                                                               |
 
-| Export                 | Stability    | Purpose                                                              |
-| ---------------------- | ------------ | -------------------------------------------------------------------- |
-| `GpuDsspProps`         | experimental | Model, overflow policy, status callback and children.                |
-| `GpuDsspStatus`        | experimental | Generation, near-threshold residue count, bridge count and fallback. |
-| `gpuDssp`              | advanced     | Compute DSSP from a packed GPU coordinate buffer.                    |
-| `GpuDsspOverflowError` | advanced     | Named static-path error for bounded GPU work.                        |
-| `GpuDsspOptions`       | advanced     | Layout, rows, generation and overflow policy.                        |
-| `GpuDsspResult`        | advanced     | Owned code buffer, CPU copy, memory counters and fallback.           |
+| Export                 | Stability    | Purpose                                                                      |
+| ---------------------- | ------------ | ---------------------------------------------------------------------------- |
+| `GpuDsspProps`         | experimental | Model, overflow policy, status callback and children.                        |
+| `GpuDsspStatus`        | experimental | Generation, directly flagged threshold centres, bridges and fallback reason. |
+| `gpuDssp`              | advanced     | Compute DSSP from a packed GPU coordinate buffer.                            |
+| `GpuDsspOverflowError` | advanced     | Named static-path error for bounded GPU work.                                |
+| `GpuDsspOptions`       | advanced     | Layout, rows, generation and overflow policy.                                |
+| `GpuDsspResult`        | advanced     | Owned code buffer, CPU copy, memory counters and fallback.                   |
 
 ## Volumes
 
@@ -319,13 +319,16 @@ producer generation.
 
 `<GpuDssp><Ribbon secondaryStructure="model" /></GpuDssp>` computes secondary
 structure from the nearest GPU coordinate stream. Put it below the coordinate
-provider. It publishes `ssCode` to descendant fields and a CPU copy to ribbons
-only for the matching coordinate generation. `model` selects one model (the
-first by default). An overflow on a live coordinate stream reads one full frame
+provider. It is opt-in and experimental; CPU DSSP on throttled snapshots remains
+the default. It publishes `ssCode` to descendant fields and a CPU copy to
+ribbons. During playback, the most recent GPU codes remain visible for up to one
+second while the next generation runs. Only one run is in flight, and a pending
+run uses the latest generation. `model` selects one model (the first by
+default). An overflow on a live coordinate stream reads one full frozen frame
 and reruns CPU DSSP; an overflow on a static `<Structure>` raises
 `GpuDsspOverflowError`. Set `overflow` explicitly to override this policy.
-`onStatus` reports the bridge count, near-threshold residue count and whether
-fallback ran.
+`onStatus` reports the bridge count, direct near-threshold acceptor and bend
+centres (excluding dependent residues), and the fallback reason if any.
 
 ## Coordinate consumers
 

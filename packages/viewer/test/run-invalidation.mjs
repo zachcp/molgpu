@@ -24,6 +24,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { createServer } from "vite";
 import { chromium } from "playwright";
+import { webgpuBrowserArgs } from "./webgpu-browser-args.mjs";
 import { workspaceAliases } from "../../../scripts/workspace-aliases.mjs";
 
 const root = fileURLToPath(new URL("../../../", import.meta.url));
@@ -77,7 +78,7 @@ async function setup() {
   browser = await chromium.launch({
     channel: "chrome",
     headless: true,
-    args: ["--enable-unsafe-webgpu"],
+    args: webgpuBrowserArgs,
   });
   page = await browser.newPage({ viewport: { width: 640, height: 480 } });
   const pageErrors = [];

@@ -124,11 +124,19 @@ export function finishDssp(
     a.donor - b.donor || a.pattern - b.pattern
   );
   const starts = layout.unitStarts;
+  let bridgeIndex = 0;
   for (let unit = 0; unit + 1 < starts.length; unit++) {
     const start = starts[unit], end = starts[unit + 1];
-    const local = ordered.filter((b) =>
-      b.partner1 >= start && b.partner1 < end
-    );
+    const local: DsspBridge[] = [];
+    while (
+      bridgeIndex < ordered.length && ordered[bridgeIndex].partner1 < end
+    ) {
+      const bridge = ordered[bridgeIndex++];
+      if (bridge.partner1 < start) {
+        throw new RangeError("GPU DSSP bridge falls outside a unit");
+      }
+      local.push(bridge);
+    }
     const ladders: Ladder[] = [];
     for (const b of local) {
       if (b.partner2 < start || b.partner2 >= end) {

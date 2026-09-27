@@ -1,3 +1,4 @@
+import { CellListLimitError } from "./cell-list.ts";
 /** The eight f32 values emitted by the final cellListWgsl bounds pass. */
 export interface CellListBoundsReadback {
   /** Generation of the coordinate source when the reduction was dispatched. */
@@ -81,9 +82,7 @@ export function planCellList(
     : [0, 0, 0] as [number, number, number];
   const cells = dims[0] * dims[1] * dims[2];
   if (!Number.isSafeInteger(cells) || cells > maxCells) {
-    throw new RangeError(
-      `cell list needs ${cells} dense cells, limit ${maxCells}`,
-    );
+    throw new CellListLimitError(cells, maxCells);
   }
   for (const bytes of [4 * atomCount, 4 * cells, 4 * (cells + 1)]) {
     if (bytes > maxStorageBufferBindingSize) {

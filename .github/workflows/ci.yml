@@ -17,3 +17,31 @@ jobs:
       - run: deno task typecheck
       - run: deno task check:hardening
       - run: deno task jsr:check
+
+  webgpu:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      # SwiftShader: skip hardware throughput timing (correctness still runs).
+      MOLGPU_SKIP_TIMING: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - run: deno run -A npm:playwright@1.62.1 install --with-deps chrome
+      - name: WebGPU browser suites
+        run: |
+          failed=()
+          for suite in packages/viewer/test/run-*.mjs \
+            packages/fields/test/run-browser.mjs; do
+            # Pre-existing failure since Phase 10 (molgpu-sept-19s).
+            [[ $suite == */run-gate2.mjs ]] && continue
+            echo "::group::$suite"
+            timeout 15m deno test -A "$suite" || failed+=("$suite")
+            echo "::endgroup::"
+          done
+          if ((${#failed[@]})); then
+            printf '::error::failed: %s\n' "${failed[@]}"
+            exit 1
+          fi

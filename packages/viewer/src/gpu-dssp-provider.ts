@@ -19,16 +19,23 @@ import { StructureContext } from "./structure-context.ts";
 import { gpuDssp, type GpuDsspResult } from "./gpu-dssp.ts";
 import { live, viewer } from "./internal/elements.ts";
 import {
+  count,
+  gauge,
   releaseOwnedBuffer,
   trackOwnedBuffer,
 } from "./internal/instrumentation.ts";
 import type { ViewerComponent, ViewerElement } from "./types.ts";
 
+/** How long codes from an older coordinate generation stay published. */
+const HOLD_MS = 1000;
+
 export interface GpuDsspStatus {
   readonly generation: number;
-  readonly nearThresholdResidues: number;
+  /** Directly flagged acceptor and bend-centre rows, excluding dependents. */
+  readonly nearThresholdCenters: number;
   readonly bridgeCount: number;
   readonly fallback: boolean;
+  readonly fallbackReason?: string;
 }
 
 export interface GpuDsspProps {
@@ -45,6 +52,19 @@ interface Publication {
   readonly result: GpuDsspResult;
   readonly source: GPUBuffer;
   readonly identity: object;
+  readonly layout: object;
+  readonly publishedAt: number;
+}
+
+interface RunRequest {
+  readonly device: GPUDevice;
+  readonly positions: GPUBuffer;
+  readonly generation: number;
+  readonly root: NonNullable<ReturnType<typeof useCoordinates>>["resource"];
+  readonly rows: ArrayLike<number>;
+  readonly layout: ReturnType<typeof prepareDsspLayout>;
+  readonly overflow: "static" | "frame";
+  readonly controller: AbortController;
 }
 
 /** Resolve the component's overflow policy from its nearest coordinate stream. */
@@ -95,6 +115,17 @@ const Provider: LC<GpuDsspProps & { children: LiveElement }> = ({
   const [published, setPublished] = useState<Publication | null>(null);
   const notify = useRef<typeof onStatus>(onStatus);
   notify.current = onStatus;
+  const latestCoordinates = useRef(coordinates);
+  latestCoordinates.current = coordinates;
+  const latestRoot = useRef(root ?? null);
+  latestRoot.current = root ?? null;
+  const latestLayout = useRef(layout);
+  latestLayout.current = layout;
+  const pending = useRef<RunRequest | null>(null);
+  const running = useRef<RunRequest | null>(null);
+  const inFlightCount = useRef(0);
+  const mounted = useRef(true);
+  const pump = useRef<() => void>(() => {});
   const [failure, setFailure] = useState<
     {
       error: Error;
@@ -102,56 +133,108 @@ const Provider: LC<GpuDsspProps & { children: LiveElement }> = ({
       generation: number;
     } | null
   >(null);
-  useResource((dispose) => {
-    if (!coordinates || !root || !rows || !layout) return;
-    let alive = true;
-    const controller = new AbortController();
-    // The upstream coordinate provider submits during rendering. Defer the
-    // read until its command buffer is queued for this generation.
-    const timer = setTimeout(() => {
-      gpuDssp(device, coordinates.source.buffer, {
-        data: root.data,
-        rows,
-        layout,
-        generation: coordinates.generation,
-        overflow: overflowPolicy,
-        signal: controller.signal,
-      }).then((result) => {
-        if (!alive) {
-          result.codeBuffer.destroy();
-          return;
-        }
-        setFailure(null);
-        setPublished({
-          result,
-          source: coordinates.source.buffer,
-          identity: root.identity,
-        });
-        notify.current?.(Object.freeze({
-          generation: result.generation,
-          nearThresholdResidues: result.nearThresholdResidues,
-          bridgeCount: result.bridgeCount,
-          fallback: result.fallback,
-        }));
-      }, (error: unknown) => {
-        if (alive) {
-          setFailure({
-            error: error instanceof Error ? error : new Error(String(error)),
-            source: coordinates.source.buffer,
-            generation: coordinates.generation,
-          });
-        }
+  pump.current = () => {
+    if (!mounted.current || running.current || !pending.current) return;
+    const request = pending.current;
+    pending.current = null;
+    running.current = request;
+    count("gathers", "dssp:dispatch");
+    gauge("dssp:in-flight", ++inFlightCount.current);
+    gpuDssp(request.device, request.positions, {
+      data: request.root.data,
+      rows: request.rows,
+      layout: request.layout,
+      generation: request.generation,
+      overflow: request.overflow,
+      signal: request.controller.signal,
+    }).then((result) => {
+      const liveCoordinates = latestCoordinates.current;
+      if (
+        !mounted.current ||
+        liveCoordinates?.source.buffer !== request.positions ||
+        latestRoot.current?.identity !== request.root.identity ||
+        latestLayout.current !== request.layout
+      ) {
+        result.codeBuffer.destroy();
+        return;
+      }
+      setFailure(null);
+      setPublished({
+        result,
+        source: request.positions,
+        identity: request.root.identity,
+        layout: request.layout,
+        publishedAt: performance.now(),
       });
-    }, 0);
+      notify.current?.(Object.freeze({
+        generation: result.generation,
+        nearThresholdCenters: result.nearThresholdCenters,
+        bridgeCount: result.bridgeCount,
+        fallback: result.fallback,
+        fallbackReason: result.fallbackReason,
+      }));
+    }, (error: unknown) => {
+      if (
+        mounted.current &&
+        latestCoordinates.current?.source.buffer === request.positions &&
+        latestCoordinates.current.generation === request.generation &&
+        !(error instanceof DOMException && error.name === "AbortError")
+      ) {
+        setFailure({
+          error: error instanceof Error ? error : new Error(String(error)),
+          source: request.positions,
+          generation: request.generation,
+        });
+      }
+    }).finally(() => {
+      inFlightCount.current--;
+      if (running.current === request) running.current = null;
+      if (mounted.current) pump.current();
+    });
+  };
+  useResource((dispose) => {
+    mounted.current = true;
     dispose(() => {
-      alive = false;
-      controller.abort();
+      mounted.current = false;
+      pending.current = null;
+      running.current?.controller.abort();
+    });
+  }, []);
+  useResource((dispose) => {
+    if (
+      !coordinates || !root || !rows || !layout || coordinates.ready === false
+    ) {
+      return;
+    }
+    const request: RunRequest = {
+      device,
+      positions: coordinates.source.buffer,
+      generation: coordinates.generation,
+      root,
+      rows,
+      layout,
+      overflow: overflowPolicy,
+      controller: new AbortController(),
+    };
+    if (
+      running.current &&
+      (running.current.positions !== request.positions ||
+        running.current.root.identity !== request.root.identity ||
+        running.current.layout !== request.layout)
+    ) running.current.controller.abort();
+    pending.current = request;
+    // A coordinate producer may submit later in this render. Its readiness
+    // signal starts this request after the first dispatch has landed.
+    const timer = setTimeout(() => pump.current(), 0);
+    dispose(() => {
       clearTimeout(timer);
+      if (pending.current === request) pending.current = null;
     });
   }, [
     device,
     coordinates?.source.buffer,
     coordinates?.generation,
+    coordinates?.ready,
     root?.identity,
     rows,
     layout,
@@ -166,6 +249,20 @@ const Provider: LC<GpuDsspProps & { children: LiveElement }> = ({
       buffer.destroy();
     });
   }, [published?.result.codeBuffer]);
+  // Codes from an older generation are held for at most HOLD_MS. Re-render
+  // when the hold ends so a stalled or failed newer run cannot pin them.
+  const [, setHoldExpired] = useState(0);
+  const holding = !!published && !!coordinates &&
+    published.result.generation !== coordinates.generation;
+  useResource((dispose) => {
+    if (!holding || !published) return;
+    const remaining = published.publishedAt + HOLD_MS - performance.now();
+    const timer = setTimeout(
+      () => setHoldExpired((n) => n + 1),
+      Math.max(0, remaining) + 1,
+    );
+    dispose(() => clearTimeout(timer));
+  }, [holding, published]);
   if (
     failure && failure.source === coordinates?.source.buffer &&
     failure.generation === coordinates.generation
@@ -173,7 +270,9 @@ const Provider: LC<GpuDsspProps & { children: LiveElement }> = ({
   const current = published && coordinates && root &&
       published.source === coordinates.source.buffer &&
       published.identity === root.identity &&
-      published.result.generation === coordinates.generation
+      published.layout === layout &&
+      (published.result.generation === coordinates.generation ||
+        performance.now() - published.publishedAt < HOLD_MS)
     ? published.result
     : null;
   const data = useMemo(() =>

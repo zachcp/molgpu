@@ -5,6 +5,12 @@ All notable changes to `@molgpu/dynamics` are recorded here. See
 
 ## [Unreleased]
 
+- Add `CellListLimitError` (a `RangeError` with `cells` and `limit`), thrown by
+  `createCellList` and `planCellList` when the dense grid exceeds `maxCells`.
+- `cellListWgsl` pairs and `dsspWgsl` hbonds clamp grid cells to the bounds, so
+  an atom on the upper bound no longer skips its neighbour cells.
+- `finishDssp` groups bridges by unit in one pass.
+
 - Add Coulomb electrostatics: `electrostatics()` (vacuum, ε = D·r and
   Debye–Hückel, kT/e or kcal/mol/e), f64 `coulombPotential` / `coulombField` /
   `coulombGrid` references with closed-form fields, `packCharges`, and

@@ -16,6 +16,7 @@ import { extname, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 import { build } from "vite";
 import { chromium } from "playwright";
+import { webgpuBrowserArgs } from "./webgpu-browser-args.mjs";
 
 Deno.test("viewer components", async () => {
   const root = fileURLToPath(new URL("../../../", import.meta.url));
@@ -79,7 +80,7 @@ Deno.test("viewer components", async () => {
     browser = await chromium.launch({
       channel: "chrome",
       headless: true,
-      args: ["--enable-unsafe-webgpu"],
+      args: webgpuBrowserArgs,
     });
     const page = await browser.newPage({
       viewport: { width: 800, height: 600 },

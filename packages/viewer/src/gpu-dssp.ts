@@ -1,4 +1,5 @@
 import {
+  CellListLimitError,
   cellListWgsl,
   type DsspBridge,
   type DsspLayout,
@@ -26,7 +27,23 @@ type PipelineName =
   | "cellScatter"
   | "alpha"
   | "threeTen"
-  | "pi";
+  | "pi"
+  | "copyPositions";
+const COPY_POSITIONS = `
+struct Params { count: u32, pad0: u32, pad1: u32, pad2: u32 };
+@group(0) @binding(0) var<storage, read> input: array<f32>;
+@group(0) @binding(1) var<storage, read_write> output: array<f32>;
+@group(0) @binding(2) var<uniform> params: Params;
+@compute @workgroup_size(64)
+fn main(
+  @builtin(global_invocation_id) id: vec3<u32>,
+  @builtin(num_workgroups) groups: vec3<u32>,
+) {
+  // Grid-stride: one dimension covers any atom count within the group limit.
+  for (var i = id.x; i < params.count; i += groups.x * 64u) {
+    output[i] = input[i];
+  }
+}`;
 const pipelines = new WeakMap<
   GPUDevice,
   Map<PipelineName, GPUComputePipeline>
@@ -38,7 +55,7 @@ function pipeline(device: GPUDevice, name: PipelineName): GPUComputePipeline {
   let result = cache.get(name);
   if (result) return result;
   const cell = name.startsWith("cell");
-  const code = cell
+  const code = name === "copyPositions" ? COPY_POSITIONS : cell
     ? cellListWgsl[
       (name.slice(4, 5).toLowerCase() +
         name.slice(5)) as keyof typeof cellListWgsl
@@ -78,9 +95,12 @@ export interface GpuDsspResult {
   /** f32 residue codes for AttributesContext GPU consumers; caller owns it. */
   readonly codeBuffer: GPUBuffer;
   readonly generation: number;
-  readonly nearThresholdResidues: number;
+  /** Acceptor and bend-centre rows with a direct near-threshold comparison. */
+  readonly nearThresholdCenters: number;
   readonly bridgeCount: number;
   readonly fallback: boolean;
+  /** Bounded stage that required CPU recovery, when fallback is true. */
+  readonly fallbackReason?: string;
   /** Peak temporary allocation owned by this call, excluding input and output. */
   readonly workingBytes: number;
   /** GPU-to-CPU bytes copied for this generation. */
@@ -191,20 +211,22 @@ export async function gpuDssp(
   const frameFallback = async (stage: string): Promise<GpuDsspResult> => {
     checkCurrent();
     if (options.overflow !== "frame") throw new GpuDsspOverflowError(stage);
-    const buffer = await read(positions, data.topology.atoms.count * 12);
+    const buffer = await read(framePositions, data.topology.atoms.count * 12);
     const snapshot = withPositions(data, new Float32Array(buffer));
     const codes = dssp(snapshot, { rows });
     return {
       codes,
       codeBuffer: uploadCodes(codes),
       generation,
-      nearThresholdResidues: 0,
+      nearThresholdCenters: 0,
       bridgeCount: 0,
       fallback: true,
+      fallbackReason: stage,
       workingBytes,
       readbackBytes,
     };
   };
+  let framePositions = positions;
   try {
     if (!m || !layout.caMap.length) {
       const codes = new Uint8Array(layout.totalResidues);
@@ -212,7 +234,7 @@ export async function gpuDssp(
         codes,
         codeBuffer: uploadCodes(codes),
         generation,
-        nearThresholdResidues: 0,
+        nearThresholdCenters: 0,
         bridgeCount: 0,
         fallback: false,
         workingBytes,
@@ -220,6 +242,13 @@ export async function gpuDssp(
       };
     }
     const caCount = layout.caMap.length;
+    // Freeze this generation before the first dispatch. A producer may write
+    // the live source while bounds are mapped between our two submissions.
+    framePositions = make(
+      data.topology.atoms.count * 12,
+      STORAGE | COPY_SRC | COPY_DST,
+      "frame-positions",
+    );
     const descriptors = make(
       layout.descriptors.byteLength,
       STORAGE | COPY_DST,
@@ -237,9 +266,42 @@ export async function gpuDssp(
     const params = make(64, UNIFORM | COPY_DST, "params");
     device.queue.writeBuffer(params, 0, Uint32Array.of(m, 0, 0, 0));
     const gather = device.createCommandEncoder();
+    if (positions.usage & COPY_SRC) {
+      gather.copyBufferToBuffer(
+        positions,
+        0,
+        framePositions,
+        0,
+        data.topology.atoms.count * 12,
+      );
+    } else {
+      // use.gpu RawData allocates STORAGE|COPY_DST. Its packed positions can
+      // still be frozen by a storage copy in the same first submission.
+      const copyParams = make(
+        16,
+        UNIFORM | COPY_DST,
+        "copy-params",
+        Uint32Array.of(data.topology.atoms.count * 3, 0, 0, 0),
+      );
+      const copy = gather.beginComputePass();
+      dispatch(
+        copy,
+        "copyPositions",
+        [
+          [0, positions],
+          [1, framePositions],
+          [2, copyParams],
+        ],
+        Math.min(
+          Math.ceil(data.topology.atoms.count * 3 / GROUP),
+          device.limits.maxComputeWorkgroupsPerDimension,
+        ),
+      );
+      copy.end();
+    }
     const gatherPass = gather.beginComputePass();
     dispatch(gatherPass, "gather", [
-      [0, positions],
+      [0, framePositions],
       [1, descriptors],
       [2, ca],
       [3, h],
@@ -299,12 +361,14 @@ export async function gpuDssp(
         9,
         device.limits.maxStorageBufferBindingSize,
         Math.max(1, caCount * 8),
-      );
+      )!;
     } catch (error) {
+      if (error instanceof CellListLimitError) {
+        return await frameFallback("sparse cell grid");
+      }
       if (error instanceof RangeError) return await frameFallback("cell list");
       throw error;
     }
-    if (!plan) throw new Error("GPU DSSP bounds generation changed");
 
     const cells = plan.cellCount;
     const cellIds = make(caCount * 4, STORAGE, "cell-ids");
@@ -410,7 +474,7 @@ export async function gpuDssp(
     const bridges = make(maxBridges * 24, STORAGE | COPY_SRC, "bridges");
     const stages = encoder.beginComputePass();
     dispatch(stages, "hbonds", [
-      [0, positions],
+      [0, framePositions],
       [1, descriptors],
       [2, ca],
       [3, h],
@@ -445,7 +509,7 @@ export async function gpuDssp(
       [7, params],
     ], Math.ceil(m / GROUP));
     dispatch(stages, "bends", [
-      [0, positions],
+      [0, framePositions],
       [1, descriptors],
       [2, flagsB],
       [3, flagsA],
@@ -487,14 +551,14 @@ export async function gpuDssp(
       });
     }
     const flags = new Uint32Array(flagData);
-    let nearThresholdResidues = 0;
-    for (const flag of flags) if (flag & 0x80000000) nearThresholdResidues++;
+    let nearThresholdCenters = 0;
+    for (const flag of flags) if (flag & 0x80000000) nearThresholdCenters++;
     const codes = finishDssp(layout, flags, bridgeList);
     return {
       codes,
       codeBuffer: uploadCodes(codes),
       generation,
-      nearThresholdResidues,
+      nearThresholdCenters,
       bridgeCount,
       fallback: false,
       workingBytes,
