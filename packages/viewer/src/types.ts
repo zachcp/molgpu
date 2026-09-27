@@ -21,7 +21,9 @@ export type ViewerElement = object | null | undefined | false;
 
 /** A viewer component: a function of props that renders a scene element. Use
  *  it in JSX (`<Spacefill />`) or through the renderer's `use()`. */
-export type ViewerComponent<P = {}> = (props: P) => ViewerElement;
+export type ViewerComponent<P = object> = (
+  props: P,
+) => ViewerElement;
 
 /** A numeric vector, such as an RGBA colour: a plain array or a typed array. */
 export type VectorLike =

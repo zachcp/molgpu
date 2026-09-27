@@ -16,10 +16,6 @@ createCurveSegmentState
   export function createCurveSegmentState(linearSegments: number): CurveSegmentState;
 interpolateCurveSegment
   export function interpolateCurveSegment(state: CurveSegmentState, controls: CurveSegmentControls, tension: number, shift: number): void;
-interpolateNormals
-  export function interpolateNormals(state: CurveSegmentState, controls: Pick<CurveSegmentControls, "d12" | "d23">): void;
-interpolatePointsAndTangents
-  export function interpolatePointsAndTangents(state: CurveSegmentState, controls: CurveSegmentControls, tension: number, shift: number): void;
 interpolateSizes
   export function interpolateSizes(state: CurveSegmentState, w0: number, w1: number, w2: number, h0: number, h1: number, h2: number, shift: number): void;
 marchingCubes

@@ -5,13 +5,17 @@
 import { CubeEdges, EdgeTable, TriTable } from "./marching-cubes-tables.ts";
 import type { MarchingCubesInput, MarchingCubesMesh } from "./types.ts";
 
-export type * from "./types.ts";
+export type {
+  CurveSegmentControls,
+  CurveSegmentState,
+  MarchingCubesInput,
+  MarchingCubesMesh,
+  Vec3Like,
+} from "./types.ts";
 
 export {
   createCurveSegmentState,
   interpolateCurveSegment,
-  interpolateNormals,
-  interpolatePointsAndTangents,
   interpolateSizes,
 } from "./curve-segment.ts";
 

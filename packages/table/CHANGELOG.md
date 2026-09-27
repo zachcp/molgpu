@@ -6,6 +6,9 @@ All notable changes to `@molgpu/table` are recorded here. The format follows
 
 ## [Unreleased]
 
+- Remove test-only validators, frame conversion/lookup helpers, per-frame DSSP,
+  and `selectBonds` from the package entry. Constructors continue to validate;
+  tests import implementation helpers directly.
 - Add `VolumeGrid` and `createVolumeGrid` for volumes whose samples live on the
   GPU; the transform helpers accept a grid.
 - Add `sampleVolumeGradient` and `volumeGradientStep`: the world-space gradient

@@ -428,7 +428,7 @@ export const Trajectory: ViewerComponent<TrajectoryProps> = (
   }
   const [loaded, failure] = useAwait(
     data === undefined
-      ? async (cancelled: () => boolean) => loader(src!, cancelled)
+      ? async (cancelled: () => boolean) => await loader(src!, cancelled)
       : null,
     [src, loader],
   );

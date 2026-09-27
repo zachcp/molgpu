@@ -11,7 +11,6 @@ import {
   byCharge,
   bySecondaryStructure,
   categorical,
-  COLOR,
   colormap,
   compile,
   curve,
@@ -19,6 +18,7 @@ import {
   linear,
   volumeSample,
 } from "../src/index.ts";
+import { COLOR } from "../src/primitives.ts";
 import {
   createVolume,
   sampleVolume,

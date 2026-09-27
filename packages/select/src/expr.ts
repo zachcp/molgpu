@@ -17,7 +17,6 @@ import {
   attributeColumn,
   BOND_FLAGS,
   spatialGrid,
-  ssKind,
   type StructureData,
 } from "@molgpu/table";
 import {
@@ -38,7 +37,7 @@ import {
   ELEMENT_SYMBOL,
   ELEMENT_VDW_RADIUS,
 } from "./elements.ts";
-import type { RevisionStream } from "./index.ts";
+import type { RevisionStream } from "./internal/revision.ts";
 import { type BondGraph, bondGraph } from "./bond-graph.ts";
 import { type TopologyCache, topologyCache } from "./topology-cache.ts";
 

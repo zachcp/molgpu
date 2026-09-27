@@ -30,7 +30,6 @@ Deno.test("viewer gate 2", async () => {
         "@use-gpu/shader",
         "@use-gpu/shader/wgsl",
         "@use-gpu/wgsl",
-        "lodash",
       ],
     },
   });

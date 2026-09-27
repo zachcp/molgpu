@@ -109,7 +109,7 @@ UnwrapStatus
 VectorLike
   export type VectorLike = readonly number[] | Int8Array | Uint8Array | Uint8ClampedArray | Int16Array | Uint16Array | Int32Array | Uint32Array | Float32Array | Float64Array;
 ViewerComponent
-  export type ViewerComponent<P = {}> = (props: P) => ViewerElement;
+  export type ViewerComponent<P = object> = (props: P) => ViewerElement;
 ViewerElement
   export type ViewerElement = object | null | undefined | false;
 Volume

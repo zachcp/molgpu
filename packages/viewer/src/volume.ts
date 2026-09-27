@@ -73,7 +73,7 @@ export const Volume: ViewerComponent<VolumeProps> = (
   }
   const [loaded, failure, pending] = useAwait(
     data === undefined
-      ? async (cancelled: () => boolean) => loader(src!, cancelled)
+      ? async (cancelled: () => boolean) => await loader(src!, cancelled)
       : null,
     [src, loader],
   );

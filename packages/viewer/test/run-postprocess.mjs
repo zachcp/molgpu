@@ -35,7 +35,6 @@ Deno.test("viewer postprocess", async () => {
         "@use-gpu/shader",
         "@use-gpu/shader/wgsl",
         "@use-gpu/wgsl",
-        "lodash",
       ],
     },
   });

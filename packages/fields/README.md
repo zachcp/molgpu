@@ -166,10 +166,18 @@ compute pass, no use.gpu). Type-checked contract tests run under
 
 ## Built-ins and annotation joins
 
-`byElement`, `byBfactor`, `bySeq`, `byChain` and `byCharge` are a small closed
-set of colour presets composed from the primitives (no expression language);
-`columnRange(data,
-name)` auto-ranges a domain from a column's min/max.
+`byElement`, `byBfactor`, `bySeq`, `byChain`, `byCharge` and
+`bySecondaryStructure` are a small closed set of colour presets composed from
+the primitives (no expression language); choose an explicit domain when
+normalising a field over a selected range.
+
+```js
+import { byBfactor, bySecondaryStructure, bySeq } from "@molgpu/fields";
+
+const temperature = byBfactor({ domain: [10, 40] });
+const sequencePosition = bySeq({ domain: [0, 99] });
+const cartoonColor = bySecondaryStructure();
+```
 
 `joinAnnotation(data, records, options)` matches external per-residue or
 per-chain records onto the table by an explicit identity policy — a chain field
@@ -206,9 +214,6 @@ before 0.1.0. _advanced_: for renderer integrations (the viewer), not app code.
 | `Overflow`                 | experimental | `linear` overflow mode: `'clamp' \| 'wrap' \| 'fail'`.                                                        |
 | `Scalar`                   | experimental | Alias for `number` as a field value.                                                                          |
 | `ValueType`                | experimental | Field value type descriptor (kind, components, WGSL type name).                                               |
-| `SCALAR`                   | experimental | Scalar value type (for `annotation` / `JoinOptions.type`).                                                    |
-| `COLOR`                    | experimental | Colour value type (for `annotation` / `JoinOptions.type`).                                                    |
-| `STRING`                   | experimental | String value type (CPU-only fields).                                                                          |
 | `EvalContext`              | experimental | `evaluate` options: timeline `t` and broadcast `domain`.                                                      |
 | `byBfactor`                | experimental | B-factor on a cool-to-warm ramp.                                                                              |
 | `bySeq`                    | experimental | Residue index on a rainbow ramp.                                                                              |
@@ -216,14 +221,10 @@ before 0.1.0. _advanced_: for renderer integrations (the viewer), not app code.
 | `byCharge`                 | experimental | Charge on Mol*'s red-white-blue scale over `[-1, 1]` e; `column` and `lift` read other charge columns.        |
 | `byPotential`              | experimental | Electrostatic potential, red-white-blue over ±`range` (default 15), sampled from a volume or the nearest one. |
 | `bySecondaryStructure`     | experimental | Residue `ssCode` on Mol*'s secondary-structure colours (helix types, strand, turn, bend, white coil).         |
-| `columnRange`              | experimental | Min/max of a column, for auto-ranging a domain.                                                               |
 | `joinAnnotation`           | experimental | Join external records onto the table by identity; returns an annotation field.                                |
 | `JoinOptions`              | experimental | Options for `joinAnnotation` (identity fields, value, policies, lift).                                        |
 | `IdentityField`            | experimental | Name of an identity field usable as a join key.                                                               |
 | `ResidueIdentity`          | experimental | Full residue identity (model, chain ids, seq ids, insertion code, comp).                                      |
-| `ChainIdentity`            | experimental | Chain identity (model, label and auth chain ids).                                                             |
-| `residueIdentity`          | experimental | Read a residue row's identity from a structure.                                                               |
-| `chainIdentity`            | experimental | Read a chain row's identity from a structure.                                                                 |
 | `compile`                  | advanced     | Lower a numeric field to a WGSL string plus a plain-data binding schema.                                      |
 | `Compiled`                 | advanced     | Result of `compile`: value type, domain, entry, bindings, WGSL.                                               |
 | `Binding`                  | advanced     | One GPU input of a compiled field, with a pure `fill` function.                                               |

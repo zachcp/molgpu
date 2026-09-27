@@ -13,22 +13,32 @@
 // schema that the viewer lowers to GPU sources. Numeric/vector fields lower;
 // string fields are CPU-only. There is no arbitrary JS->WGSL and no user parser.
 
-export type * from "./types.ts";
+export type {
+  Binding,
+  Color,
+  Compiled,
+  Domain,
+  EvalContext,
+  Field,
+  IdentityField,
+  JoinOptions,
+  Overflow,
+  ResidueIdentity,
+  Scalar,
+  Target,
+  ValueType,
+} from "./types.ts";
 export {
   annotation,
   attribute,
   categorical,
-  COLOR,
   colormap,
-  columnRange,
   compile,
   constant,
   curve,
   evaluate,
   linear,
   readsNearestVolume,
-  SCALAR,
-  STRING,
   volumeSample,
 } from "./primitives.ts";
 export { sampleVolumeGradientWgsl, sampleVolumeWgsl } from "./volume.ts";
@@ -45,8 +55,4 @@ export {
 } from "./builtins.ts";
 
 // Identity-keyed annotation joins that produce annotation fields.
-export {
-  chainIdentity,
-  joinAnnotation,
-  residueIdentity,
-} from "./annotation-join.ts";
+export { joinAnnotation } from "./annotation-join.ts";

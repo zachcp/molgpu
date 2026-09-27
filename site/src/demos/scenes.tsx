@@ -1,3 +1,4 @@
+// deno-lint-ignore-file jsx-key
 /** @jsx LiveReact.createElement */
 import { React as LiveReact, useResource } from "@use-gpu/live";
 import type { StructureData } from "@molgpu/table";
@@ -83,7 +84,10 @@ export const renderDemoScene = (
       ];
     case "select":
       return [
-        <Spacefill scale={0.35} color={[0.3, 0.33, 0.4, 1]} />,
+        <Spacefill
+          scale={0.35}
+          color={[0.3, 0.33, 0.4, 1]}
+        />,
         <BallAndStick
           select={resolve(within(5, comp(["CYS"])), data)}
           ball={0.35}
@@ -95,7 +99,10 @@ export const renderDemoScene = (
       return <Spacefill scale={0.55} color={[0.82, 0.82, 0.82, 1]} />;
     case "timeline":
       return [
-        <Spacefill scale={0.55} color={timelineColor} />,
+        <Spacefill
+          scale={0.55}
+          color={timelineColor}
+        />,
         <BallAndStick
           select={toAtoms(resolve(comp(["CYS"]), data), data)}
           ball={0.26}
@@ -106,9 +113,18 @@ export const renderDemoScene = (
       return <Bonds width={0.32} />;
     case "coordinates":
       return [
-        <Spacefill scale={0.36} color={[0.42, 0.72, 0.95, 1]} />,
-        <Bonds width={0.18} color={[0.82, 0.85, 0.92, 1]} />,
-        <Ribbon color={[0.95, 0.5, 0.28, 1]} opacity={0.65} />,
+        <Spacefill
+          scale={0.36}
+          color={[0.42, 0.72, 0.95, 1]}
+        />,
+        <Bonds
+          width={0.18}
+          color={[0.82, 0.85, 0.92, 1]}
+        />,
+        <Ribbon
+          color={[0.95, 0.5, 0.28, 1]}
+          opacity={0.65}
+        />,
       ];
     case "trajectory":
       return (
@@ -137,7 +153,11 @@ export const renderDemoScene = (
         );
       }
       return [
-        <BallAndStick ball={0.22} stick={0.16} color={byElement()} />,
+        <BallAndStick
+          ball={0.22}
+          stick={0.16}
+          color={byElement()}
+        />,
         <Surface
           resolution={0.55}
           color={[0.55, 0.72, 0.98, 1]}

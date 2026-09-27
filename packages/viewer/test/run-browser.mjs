@@ -22,7 +22,6 @@ Deno.test("viewer GPU smoke", async () => {
         "@use-gpu/core",
         "@use-gpu/shader",
         "@use-gpu/wgsl",
-        "lodash",
       ],
     },
   });

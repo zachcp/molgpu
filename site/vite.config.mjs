@@ -29,7 +29,6 @@ export default {
       "@use-gpu/core",
       "@use-gpu/shader",
       "@use-gpu/wgsl",
-      "lodash",
     ],
     exclude: ["@use-gpu/glyph"],
   },

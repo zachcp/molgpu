@@ -10,12 +10,14 @@ import {
 import {
   createStructure,
   createTrajectory,
-  frameAtTime,
   type StructureInput,
-  trajectoryFromModels,
   validateTrajectory,
-  validateTrajectoryFrame,
 } from "@molgpu/table";
+import {
+  frameAtTime,
+  trajectoryFromModels,
+  validateTrajectoryFrame,
+} from "../src/trajectory.ts";
 import { fixture } from "./fixture.ts";
 
 const frame = (n: number, v: number) => ({

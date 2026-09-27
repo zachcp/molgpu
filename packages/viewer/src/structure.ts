@@ -42,7 +42,7 @@ export const Structure: ViewerComponent<StructureProps> = (
   // async, so a loader that throws synchronously still reaches the error prop.
   const [loaded, failure, pending] = useAwait(
     data === undefined
-      ? async (cancelled: () => boolean) => loader(src!, cancelled)
+      ? async (cancelled: () => boolean) => await loader(src!, cancelled)
       : null,
     [src, loader],
   );

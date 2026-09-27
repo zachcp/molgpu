@@ -24,8 +24,6 @@ Chains
   export interface Chains { readonly count: number; readonly model: Int32Array; readonly labelId: readonly string[]; readonly authId: readonly string[]; /** mmCIF label_entity_id. Absent when the source has none. */ readonly entityId?: readonly string[]; /** mmCIF _entity.type of the chain's entity, lower-cased ("polymer", "non-polymer", "water", "branched", ...); "" when unlisted. Absent with entityId. */ readonly entityType?: readonly string[]; /** Entity subtype as Mol* assigns it (entity_poly / pdbx_entity_branch type, else derived from the component: "polypeptide(L)", "oligosaccharide", "other", ...). Absent with entityId. */ readonly entitySubtype?: readonly string[] }
 DsspOptions
   export interface DsspOptions { /** * Atom rows to read, ascending (default: every model with primary altlocs, * `activeAtoms(data, { model: "all" })`). A residue's backbone atom is the * first row with that name, so `altloc: "all"` rows read the first conformer * in file order, as Mol* does. */ readonly rows?: ArrayLike<number> }
-FrameSecondaryStructure
-  export interface FrameSecondaryStructure { /** `ssCode` values per residue for integer frame `index`, computed once. */ frame(index: number, signal?: AbortSignal): Promise<Uint8Array>; /** Codes for each listed frame, in order: an SS-vs-time matrix. */ timeline(frames: ArrayLike<number>, signal?: AbortSignal): Promise<Uint8Array[]> }
 FrameSource
   export interface FrameSource { /** Decode frame `index`. Rejects with an `AbortError` when `signal` aborts. */ read(index: number, signal?: AbortSignal): Promise<TrajectoryFrame> }
 Instances
@@ -94,10 +92,6 @@ dssp
   export function dssp(data: StructureData, options?: DsspOptions): Uint8Array;
 elementRadius
   export function elementRadius(atomicNumber: number): number;
-frameAtTime
-  export function frameAtTime(trajectory: TrajectoryData, t: number): number;
-frameSecondaryStructure
-  export function frameSecondaryStructure(data: StructureData, trajectory: TrajectoryData, options?: { readonly rows?: ArrayLike<number>; readonly maxBytes?: number }): FrameSecondaryStructure;
 residueKey
   export function residueKey(data: StructureData, row: number): string;
 sampleVolume
@@ -106,24 +100,14 @@ sampleVolumeGradient
   export function sampleVolumeGradient(volume: VolumeData, x: number, y: number, z: number, h?: number): [number, number, number];
 secondaryStructureTrace
   export function secondaryStructureTrace(data: StructureData, atomIndices: Uint32Array, trace: Trace): SecondaryStructureTrace;
-selectBonds
-  export function selectBonds(data: StructureData, atomIndices: Uint32Array, options?: { readonly mode?: "both" | "either"; readonly policy?: BondPolicy }): Uint32Array;
 spatialGrid
   export function spatialGrid(positions: Float32Array, rows: ArrayLike<number> | null, cellSize: number, partition?: (row: number) => number): SpatialGrid;
 ssKind
   export function ssKind(code: number): "helix" | "sheet" | "coil";
 traceTable
   export function traceTable(data: StructureData, atomIndices: Uint32Array): Trace;
-trajectoryFromModels
-  export function trajectoryFromModels(data: StructureData): TrajectoryData;
-validateStructure
-  export function validateStructure<T extends StructureInput>(data: T): T;
 validateTrajectory
   export function validateTrajectory(structure: StructureData, trajectory: TrajectoryData): TrajectoryData;
-validateTrajectoryFrame
-  export function validateTrajectoryFrame(frame: TrajectoryFrame, atomCount: number, path?: string): TrajectoryFrame;
-validateVolume
-  export function validateVolume<T extends VolumeInput>(input: T, options?: { maxSamples?: number }): T;
 volumeComponent
   export function volumeComponent(volume: VolumeData, component: 0 | 1 | 2 | "magnitude"): VolumeData;
 volumeGradientStep

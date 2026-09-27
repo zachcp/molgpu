@@ -8,7 +8,6 @@ import {
 import {
   activeAtoms,
   type TrajectoryData,
-  trajectoryFromModels,
   validateTrajectory,
 } from "@molgpu/table";
 import { AKMA_PS, trajectoryFromDcd } from "../src/dcd.ts";
@@ -17,6 +16,7 @@ import { IoError, openTrajectory, structureFromBcif } from "../src/index.ts";
 import { trajectoryFormat } from "../src/trajectory.ts";
 import { trajectoryFromTrr } from "../src/trr.ts";
 import { trajectoryFromXtc } from "../src/xtc.ts";
+import { trajectoryFromModels } from "../../table/src/trajectory.ts";
 import type { ByteSource } from "../src/index.ts";
 import {
   proteinFrames,

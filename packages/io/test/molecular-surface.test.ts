@@ -4,7 +4,8 @@ import {
   assertRejects,
   assertStrictEquals,
 } from "@std/assert";
-import { activeAtoms, validateVolume } from "@molgpu/table";
+import { activeAtoms } from "@molgpu/table";
+import { validateVolume } from "../../table/src/volume.ts";
 import {
   IoError,
   molecularSurfaceField,

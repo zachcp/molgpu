@@ -11,13 +11,13 @@ import {
   MAX_VOLUME_SAMPLES,
   sampleVolume,
   sampleVolumeGradient,
-  validateVolume,
   volumeComponent,
   volumeGradientStep,
   volumeIndexToWorld,
   volumeLevel,
   volumeWorldToIndex,
 } from "@molgpu/table";
+import { validateVolume } from "../src/volume.ts";
 
 // A sheared, rotated, translated affine: columns are the grid's i, j, k steps.
 const SHEARED = Float32Array.from([

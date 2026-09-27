@@ -21,12 +21,12 @@ import {
   attributeColumn,
   createStructure,
   dssp,
-  frameSecondaryStructure,
   SS_CODES,
-  trajectoryFromModels,
   withAttributes,
   withSecondaryStructure,
 } from "@molgpu/table";
+import { frameSecondaryStructure } from "../../table/src/frame-ss.ts";
+import { trajectoryFromModels } from "../../table/src/trajectory.ts";
 import { structureFromBcif } from "../src/index.ts";
 import { corpus } from "./corpus.ts";
 

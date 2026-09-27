@@ -24,6 +24,7 @@ import {
   type SelectionExpr,
   SUPPORTED_SYMBOLS,
 } from "./expr.ts";
+import type { RevisionStream } from "./internal/revision.ts";
 
 export type { SelectionExpr };
 
@@ -31,7 +32,6 @@ export type { SelectionExpr };
 const MIN_CELL = 1;
 
 export type Domain = "atom" | "residue" | "bond";
-export type RevisionStream = "topology" | "positions" | "attributes";
 
 /**
  * A pure, dataset-independent recipe. Build once, resolve against many datasets.
@@ -46,17 +46,8 @@ export interface SelectionQuery {
   readonly type: string;
   readonly domain: Domain;
   readonly label: string;
-  readonly deps: readonly RevisionStream[];
+  readonly deps: readonly ("topology" | "positions" | "attributes")[];
 }
-
-/** Mapping from a converted selection's rows back to the source domain rows. */
-export type SourceMap =
-  | { readonly domain: "residue"; readonly rows: Uint32Array }
-  | {
-    readonly domain: "atom";
-    readonly a: Uint32Array;
-    readonly b: Uint32Array;
-  };
 
 /** A query resolved against one dataset: identity-, domain-, and revision-bound. */
 export interface Selection {
@@ -65,13 +56,30 @@ export interface Selection {
   readonly dataset: StructureData["identity"];
   readonly indices: Uint32Array;
   /** Revision of each stream the resolution read, for staleness and set-op checks. */
-  readonly deps: Readonly<Partial<Record<RevisionStream, number>>>;
+  readonly deps: Readonly<
+    Partial<Record<"topology" | "positions" | "attributes", number>>
+  >;
   /** Human label from the query; NOT the cache key. */
   readonly label: string;
   /** Library-owned identity derived from dataset, revisions, and membership. */
   readonly id: string;
-  readonly source: SourceMap | null;
+  readonly source:
+    | { readonly domain: "residue"; readonly rows: Uint32Array }
+    | {
+      readonly domain: "atom";
+      readonly a: Uint32Array;
+      readonly b: Uint32Array;
+    }
+    | null;
 }
+
+type SourceMap =
+  | { readonly domain: "residue"; readonly rows: Uint32Array }
+  | {
+    readonly domain: "atom";
+    readonly a: Uint32Array;
+    readonly b: Uint32Array;
+  };
 
 type Revisions = Readonly<Partial<Record<RevisionStream, number>>>;
 type Predicate = (data: StructureData, row: number) => boolean;
@@ -158,7 +166,10 @@ export function where(
   domain: Domain,
   label: string,
   test: (data: StructureData, row: number) => boolean,
-  deps: readonly RevisionStream[] = ["topology", "attributes"],
+  deps: readonly ("topology" | "positions" | "attributes")[] = [
+    "topology",
+    "attributes",
+  ],
 ): SelectionQuery {
   assertDomain(domain);
   if (typeof test !== "function") {
