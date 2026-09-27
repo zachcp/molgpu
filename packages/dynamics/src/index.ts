@@ -18,3 +18,12 @@ export {
   type CellListPlan,
   planCellList,
 } from "./cell-list-plan.ts";
+export { fitKabsch, type KabschFit } from "./kabsch.ts";
+export {
+  createUnwrapForest,
+  minimumImage,
+  PbcSearchLimitError,
+  type UnwrapForest,
+  unwrapFrame,
+  type UnwrapResult,
+} from "./pbc.ts";

@@ -36,6 +36,14 @@ deno add jsr:@molgpu/dynamics
 | `planCellList`           | experimental | Validate generation-tagged bounds and device limits before GPU allocation.               |
 | `CellListPlan`           | experimental | Grid dimensions and buffer budget returned by `planCellList`.                            |
 | `CellListBoundsReadback` | experimental | Compact 32-byte GPU bounds result tagged with source generation.                         |
+| `fitKabsch`              | experimental | CPU proper rigid fit over corresponding atom rows.                                       |
+| `KabschFit`              | experimental | Column-major rigid transform, fitted RMSD, and row count.                                |
+| `minimumImage`           | experimental | Exact nearest Cartesian lattice displacement for a periodic box.                         |
+| `createUnwrapForest`     | experimental | Deterministic covalent spanning forest from typed bonds.                                 |
+| `unwrapFrame`            | experimental | Make each component whole for one frame and optionally center it.                        |
+| `PbcSearchLimitError`    | experimental | Named error for an excessive exact-image search.                                         |
+| `UnwrapForest`           | experimental | Parent traversal, components and ring edges for one topology.                            |
+| `UnwrapResult`           | experimental | Per-frame positions and ambiguity or box status.                                         |
 
 The CPU function returns a new array. Unselected rows retain their exact input
 values. The viewer compiles the WGSL strings and owns every GPU resource.
@@ -81,3 +89,24 @@ output:
 
 These are buffer accounting results, not GPU timing measurements. Later stages
 also read and write grid indexes and pair output according to occupancy.
+
+## Kabsch reference
+
+`fitKabsch(source, reference, rows?, translate?)` fits corresponding topology
+rows in double precision and returns a proper rotation (determinant +1). It
+rejects collinear or nearly collinear fit points, including degenerate input
+with fewer than three rows. The returned matrix applies to **all** output rows;
+`rows` selects only the fit. The default also aligns centroids. This CPU result
+is the oracle for the planned live `<Superpose>` GPU provider.
+
+## Periodic reference
+
+`minimumImage(delta, box)` searches the exact nearest Cartesian image in a
+column-major 3×3 periodic box. It rejects near-singular boxes and uses a bounded
+candidate search. `createUnwrapForest(topology)` uses only bonds explicitly
+marked covalent, filtering different models and incompatible alternate
+locations. Build this forest once per topology version. `unwrapFrame` traverses
+it for each displayed frame, makes each molecule whole, checks non-tree ring
+edges for closure, and can move each selected component's centroid into the
+primary box. Missing or invalid boxes pass positions through with an explicit
+status. This CPU path is the reference for the planned live unwrap provider.

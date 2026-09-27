@@ -12,6 +12,14 @@ CellListOptions
   export interface CellListOptions { /** Sorted, unique topology rows to index; omitted indexes every row. */ readonly rows?: ArrayLike<number> | null; /** Maximum dense cells; defaults to four per indexed atom. */ readonly maxCells?: number; /** Maximum candidate rows one query may inspect; defaults to 4096. */ readonly maxCandidates?: number }
 CellListPlan
   export interface CellListPlan { readonly atomCount: number; readonly origin: readonly [number, number, number]; readonly dims: readonly [number, number, number]; readonly cellCount: number; readonly cellWidth: number; /** Cell IDs, counts, offsets and sorted rows, excluding existing positions. */ readonly persistentBytes: number; /** Cursor, bounds and scan scratch; pair output is caller-sized. */ readonly scratchBytes: number; /** Lower bound for coordinate reads in bounds and count passes. */ readonly coordinateReadBytes: number }
+KabschFit
+  export interface KabschFit { /** Column-major proper rigid transform mapping source into reference. */ readonly matrix: AffineMatrix; /** RMSD of selected rows after applying `matrix`. */ readonly rmsd: number; readonly count: number }
+PbcSearchLimitError
+  export class PbcSearchLimitError extends RangeError { constructor(candidates: number, limit: number) }
+UnwrapForest
+  export interface UnwrapForest { readonly atomCount: number; /** -1 for component roots. */ readonly parent: Int32Array; readonly order: Uint32Array; readonly component: Uint32Array; readonly roots: Uint32Array; /** Flat pairs of non-tree covalent edges. */ readonly ringEdges: Uint32Array }
+UnwrapResult
+  export interface UnwrapResult { readonly positions: Float32Array; readonly status: "ok" | "ambiguous" | "missing-box" | "invalid-box"; readonly ambiguousRingEdges: number }
 affineSelectedWgsl
   export const affineSelectedWgsl: string;
 affineWgsl
@@ -22,9 +30,17 @@ cellListWgsl
   export const cellListWgsl: Readonly<{ bounds: string; mergeBounds: string; count: string; scanCounts: string; scanValues: string; addOffsets: string; scatter: string; pairs: string; scanBlockSize: number; boundsBlockSize: number }>;
 createCellList
   export function createCellList(positions: Float32Array, cellSize: number, options?: CellListOptions): CellList;
+createUnwrapForest
+  export function createUnwrapForest(topology: Topology): UnwrapForest;
+fitKabsch
+  export function fitKabsch(source: Float32Array, reference: Float32Array, rows?: ArrayLike<number> | null, translate?: boolean): KabschFit;
 isIdentityAffine
   export function isIdentityAffine(matrix: AffineMatrix): boolean;
+minimumImage
+  export function minimumImage(delta: ArrayLike<number>, box: ArrayLike<number>, maxCandidates?: number): readonly [number, number, number];
 planCellList
   export function planCellList(readback: CellListBoundsReadback, expectedGeneration: number, atomCount: number, cellSize: number, maxStorageBufferBindingSize: number, maxCells?: number): CellListPlan | null;
+unwrapFrame
+  export function unwrapFrame(positions: Float32Array, forest: UnwrapForest, box: ArrayLike<number> | null | undefined, centerRows?: ArrayLike<number> | null, maxCandidates?: number): UnwrapResult;
 validateAffine
   export function validateAffine(matrix: AffineMatrix): void;
