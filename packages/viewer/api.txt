@@ -254,7 +254,7 @@ Attributes
 AttributesContext
   export const AttributesContext: LiveContext<Attributes | undefined>;
 Coordinates
-  export interface Coordinates { readonly source: StorageSource; readonly count: number; readonly generation: number; readonly resource: StructureResource; readonly mayStartUnfilled?: boolean }
+  export interface Coordinates { readonly source: StorageSource; readonly count: number; readonly generation: number; readonly resource: StructureResource; /** A kernel may fill this buffer after its first consumer render. */ readonly mayStartUnfilled?: boolean }
 CoordinatesContext
   export const CoordinatesContext: LiveContext<Coordinates | null | undefined>;
 FlatMaterial
