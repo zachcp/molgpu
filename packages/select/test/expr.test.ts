@@ -303,6 +303,24 @@ Deno.test("vdw, mass and :atom-radius", () => {
   assertEquals(rows(atoms(eq(prop("core.vdw"), 1.8))), [2, 4]);
   // Carbon is 12.011 (Mol*'s table has boron's 10.81; a deliberate fix).
   assertEquals(rows(atoms(eq(prop("core.mass"), 12.011))), [1, 3]);
+  // Radioactive elements use the mass number of their most stable isotope.
+  for (
+    const [atomicNumber, mass] of [
+      [84, 209], // Po
+      [85, 210], // At
+      [86, 222], // Rn
+      [87, 223], // Fr
+      [88, 226], // Ra
+      [89, 227], // Ac
+    ]
+  ) {
+    const heavy = createStructure(fixture({ firstElement: atomicNumber }));
+    assertEquals(
+      rows(atoms(eq(prop("core.mass"), mass)), heavy),
+      [0],
+      `atomic number ${atomicNumber}`,
+    );
+  }
   const vdwR = prop("core.vdw");
   // With :min-radius the gap is dist - r(i) - r(j): atom 3 (C, x=3) to atom 0
   // (N, x=0) is 3 - 1.7 - 1.55 < 0.5; atom 4 (x=10) is not.
