@@ -44,7 +44,14 @@ const MAX_GROUPS = 65535;
 /** Lattice candidates per exact image search before it reports a limit. */
 const MAX_CANDIDATES = 4096;
 
-const ENTRIES = ["link", "jump", "centerSums", "place", "rings"] as const;
+const ENTRIES = [
+  "link",
+  "jump",
+  "propagate",
+  "centerSums",
+  "place",
+  "rings",
+] as const;
 type Entry = typeof ENTRIES[number];
 const pipelines = new WeakMap<GPUDevice, Record<Entry, GPUComputePipeline>>();
 
@@ -68,8 +75,15 @@ function unwrapPipelines(device: GPUDevice) {
   return cached;
 }
 
-/** Forest plus the pointer-jumping rounds its deepest path needs. */
-type Graph = { forest: UnwrapForest; rounds: number; id: number };
+/** Forest plus a one-time level schedule (or deep-chain jump fallback). */
+type Graph = {
+  forest: UnwrapForest;
+  rounds: number;
+  levelRows: Uint32Array;
+  levelStarts: Uint32Array;
+  layered: boolean;
+  id: number;
+};
 let nextGraph = 0;
 const graphs = new WeakMap<Topology, Graph>();
 
@@ -85,11 +99,33 @@ function graphOf(topology: Topology): Graph {
       depth[row] = depth[parent] + 1;
       deepest = Math.max(deepest, depth[row]);
     }
+    const layered = deepest <= 32;
+    let starts = new Uint32Array(0), levelRows = new Uint32Array(0);
+    if (layered) {
+      const counts = new Uint32Array(deepest + 1);
+      for (const row of forest.order) counts[depth[row]]++;
+      starts = new Uint32Array(deepest + 2);
+      for (let k = 0; k < counts.length; k++) {
+        starts[k + 1] = starts[k] + counts[k];
+      }
+      const cursors = starts.slice();
+      levelRows = new Uint32Array(forest.atomCount);
+      for (const row of forest.order) levelRows[cursors[depth[row]]++] = row;
+    }
     // After r rounds a pointer has climbed 2^r ancestors (the link stage
     // already points one up).
     let rounds = 0;
     while (2 ** rounds < deepest) rounds++;
-    graph = Object.freeze({ forest, rounds, id: ++nextGraph });
+    // Extremely deep chains would need too many serial dispatches; keep the
+    // logarithmic fallback for them. Gate scenes have depth nine.
+    graph = Object.freeze({
+      forest,
+      rounds,
+      levelRows,
+      levelStarts: starts,
+      layered,
+      id: ++nextGraph,
+    });
     graphs.set(topology, graph);
   }
   return graph;
@@ -161,6 +197,26 @@ const Unwrapped: LC<{
       parent: graphData(forest.parent, "coords:unwrap:graph"),
       component: graphData(forest.component, "coords:unwrap:graph"),
       ringEdges: graphData(forest.ringEdges, "coords:unwrap:graph"),
+      levelRows: graph.layered
+        ? graphData(graph.levelRows, "coords:unwrap:graph")
+        : null,
+      levelRanges: graph.layered
+        ? Array.from(
+          { length: graph.levelStarts.length - 2 },
+          (_, level) =>
+            make(
+              16,
+              UNIFORM | COPY_DST,
+              "coords:unwrap:levels",
+              Uint32Array.of(
+                graph.levelStarts[level + 1],
+                graph.levelStarts[level + 2] - graph.levelStarts[level + 1],
+                0,
+                0,
+              ),
+            ),
+        )
+        : [],
       centerStarts: graphData(layout.starts, "coords:unwrap:center"),
       centerRows: graphData(layout.rows, "coords:unwrap:center"),
       centerComponents: graphData(layout.components, "coords:unwrap:center"),
@@ -169,8 +225,9 @@ const Unwrapped: LC<{
         STORAGE | COPY_DST,
         "coords:unwrap:shifts",
       ),
-      links: [0, 1].map(() =>
-        make(n * UNWRAP_LINK_BYTES, STORAGE, "coords:unwrap:links")
+      links: Array.from(
+        { length: graph.layered ? 1 : 2 },
+        () => make(n * UNWRAP_LINK_BYTES, STORAGE, "coords:unwrap:links"),
       ),
       status: make(16, STORAGE | COPY_SRC | COPY_DST, "coords:unwrap:status"),
       params: make(
@@ -182,7 +239,7 @@ const Unwrapped: LC<{
         make(16, MAP_READ | COPY_DST, "coords:unwrap:staging")
       ),
     };
-  }, [device, forest, centerKey, n]);
+  }, [device, forest, graph, centerKey, n]);
   const alive = useRef(true);
   const busy = useRef([false, false]);
   const report = useRef<((status: UnwrapStatus) => void) | undefined>(
@@ -253,9 +310,22 @@ const Unwrapped: LC<{
       [6, buffers.status],
     ], rows);
     let current = a, spare = b;
-    for (let round = 0; round < graph.rounds; round++) {
-      run("jump", [[2, buffers.params], [3, current], [4, spare]], rows);
-      [current, spare] = [spare, current];
+    if (graph.layered) {
+      for (let level = 0; level < buffers.levelRanges.length; level++) {
+        const count = graph.levelStarts[level + 2] -
+          graph.levelStarts[level + 1];
+        if (!count) continue;
+        run("propagate", [
+          [4, current],
+          [13, buffers.levelRows!],
+          [14, buffers.levelRanges[level]],
+        ], Math.ceil(count / GROUP));
+      }
+    } else {
+      for (let round = 0; round < graph.rounds; round++) {
+        run("jump", [[2, buffers.params], [3, current], [4, spare]], rows);
+        [current, spare] = [spare, current];
+      }
     }
     if (buffers.centered) {
       run(

@@ -22,6 +22,7 @@ import { wgsl } from "@use-gpu/shader/wgsl";
 import { LoopContext, useDeviceContext } from "@use-gpu/workbench";
 import { type TrajectoryData, validateTrajectory } from "@molgpu/table";
 import { type Curve, sample } from "@molgpu/timeline";
+import type { PeriodicBox } from "@molgpu/dynamics";
 import type {
   TrajectoryFrameState,
   TrajectoryLoader,
@@ -35,7 +36,8 @@ import { FrameCache } from "./internal/frame-cache.ts";
 import {
   type FramePair,
   FrameScheduler,
-  invert3,
+  trajectoryImageBox,
+  TrajectoryImageBoxLimitError,
   WINDOW_SLOTS,
 } from "./internal/frame-window.ts";
 import {
@@ -67,6 +69,7 @@ const HEAD = `
 @link fn getInv0() -> vec3<f32>;
 @link fn getInv1() -> vec3<f32>;
 @link fn getInv2() -> vec3<f32>;
+@link fn getInvNorm() -> f32;
 @link fn getWindow(i: u32) -> f32;
 `;
 const BODY = `
@@ -78,14 +81,53 @@ fn frameAt(slot: u32, j: u32) -> vec3<f32> {
   return vec3<f32>(getWindow(k), getWindow(k + 1u), getWindow(k + 2u));
 }
 
+struct Best { residual: vec3<f32>, shift: vec3<f32>, squared: f32 };
+fn trial(delta: vec3<f32>, candidate: vec3<f32>, best: ptr<function, Best>) {
+  let residual = delta -
+    mat3x3<f32>(getBox0(), getBox1(), getBox2()) * candidate;
+  let squared = dot(residual, residual);
+  let eps = 1e-6 * max(max((*best).squared, squared), 1e-30);
+  let tie = abs(squared - (*best).squared) <= eps;
+  let smaller = candidate.x < (*best).shift.x ||
+    (candidate.x == (*best).shift.x && (candidate.y < (*best).shift.y ||
+      (candidate.y == (*best).shift.y && candidate.z < (*best).shift.z)));
+  if (squared < (*best).squared - eps || (tie && smaller)) {
+    (*best).residual = residual;
+    (*best).shift = candidate;
+    (*best).squared = squared;
+  }
+}
+fn nearest(delta: vec3<f32>) -> vec3<f32> {
+  let fractional =
+    mat3x3<f32>(getInv0(), getInv1(), getInv2()) * delta;
+  let seed = round(fractional);
+  var best = Best(delta, seed, 3.0e38);
+  for (var x = -1.0; x <= 1.0; x += 1.0) {
+    for (var y = -1.0; y <= 1.0; y += 1.0) {
+      for (var z = -1.0; z <= 1.0; z += 1.0) {
+        trial(delta, seed + vec3<f32>(x, y, z), &best);
+      }
+    }
+  }
+  let radius = sqrt(best.squared) * getInvNorm() + 1e-4;
+  let low = ceil(fractional - vec3<f32>(radius));
+  let high = floor(fractional + vec3<f32>(radius));
+  for (var x = low.x; x <= high.x; x += 1.0) {
+    for (var y = low.y; y <= high.y; y += 1.0) {
+      for (var z = low.z; z <= high.z; z += 1.0) {
+        trial(delta, vec3<f32>(x, y, z), &best);
+      }
+    }
+  }
+  return best.residual;
+}
+
 fn blend(j: u32) -> vec3<f32> {
   let p0 = frameAt(u32(getSlotA()), j);
   let p1 = frameAt(u32(getSlotB()), j);
   var d = p1 - p0;
   if (u32(getMode()) == 2u) {
-    var s = mat3x3<f32>(getInv0(), getInv1(), getInv2()) * d;
-    s = s - floor(s + vec3<f32>(0.5));
-    d = mat3x3<f32>(getBox0(), getBox1(), getBox2()) * s;
+    d = nearest(d);
   }
   return p0 + getMix() * d;
 }
@@ -285,8 +327,18 @@ const TrajectoryPlayer: LC<PlayerProps> = (
   const box = player.box(display);
   const a = display ? player.cache.get(display.a)?.box : undefined;
   const minimumImage = pbc === "minimum-image" && box && a ? a : null;
-  const inverse = minimumImage ? invert3(minimumImage) : null;
-  const mode = !display ? 0 : inverse ? 2 : 1;
+  let prepared: PeriodicBox | null = null;
+  if (minimumImage) {
+    try {
+      prepared = trajectoryImageBox(minimumImage);
+    } catch (error) {
+      if (!(error instanceof RangeError)) throw error;
+      // A singular box has no periodic image; a valid box over the bounded
+      // search convention fails loudly instead of displaying a wrong path.
+      if (error instanceof TrajectoryImageBoxLimitError) throw error;
+    }
+  }
+  const mode = !display ? 0 : prepared ? 2 : 1;
   const slotA = display ? player.scheduler.slots.slotOf(display.a) : 0;
   const slotB = display ? player.scheduler.slots.slotOf(display.b) : 0;
   const column = (m: ArrayLike<number> | null, c: number) =>
@@ -300,9 +352,16 @@ const TrajectoryPlayer: LC<PlayerProps> = (
     column(minimumImage, 0),
     column(minimumImage, 1),
     column(minimumImage, 2),
-    column(inverse, 0),
-    column(inverse, 1),
-    column(inverse, 2),
+    prepared
+      ? [prepared.inverse[0], prepared.inverse[3], prepared.inverse[6]]
+      : ZERO3,
+    prepared
+      ? [prepared.inverse[1], prepared.inverse[4], prepared.inverse[7]]
+      : ZERO3,
+    prepared
+      ? [prepared.inverse[2], prepared.inverse[5], prepared.inverse[8]]
+      : ZERO3,
+    prepared?.inverseNorm ?? 0,
   ];
   const key = display
     ? `${player.id}:${mode}:${display.a}@${slotA}:${display.b}@${slotB}:${display.t}`

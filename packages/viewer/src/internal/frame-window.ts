@@ -2,6 +2,7 @@
 // what to show while they load, which GPU slot a frame goes to, and a CPU
 // reference for the interpolation kernel. See the trajectory plan, section 3.
 import type { TrajectoryFrame } from "@molgpu/table";
+import { minimumImage, type PeriodicBox, periodicBox } from "@molgpu/dynamics";
 
 /** Frames interpolated on screen: `a + t * (b - a)` per atom. */
 export interface FramePair {
@@ -15,6 +16,30 @@ export const FRAME_SNAP = 1e-6;
 
 /** GPU slots in the frame window: the displayed pair plus two prefetches. */
 export const WINDOW_SLOTS = 4;
+
+export class TrajectoryImageBoxLimitError extends RangeError {
+  constructor() {
+    super("trajectory minimum-image box exceeds the exact search limit");
+    this.name = "TrajectoryImageBoxLimitError";
+  }
+}
+
+/** Conservative box-only bound for the shader's exhaustive image search. */
+export function trajectoryImageBox(box: ArrayLike<number>): PeriodicBox {
+  const prepared = periodicBox(box);
+  const m = prepared.matrix;
+  const maxSeedLength = (
+    Math.hypot(m[0], m[1], m[2]) +
+    Math.hypot(m[3], m[4], m[5]) +
+    Math.hypot(m[6], m[7], m[8])
+  ) / 2;
+  const radius = maxSeedLength * prepared.inverseNorm + 1e-3;
+  const width = Math.ceil(2 * radius + 2);
+  if (width ** 3 > 1_000_000) {
+    throw new TrajectoryImageBoxLimitError();
+  }
+  return prepared;
+}
 
 /**
  * The pair a fractional `frame` needs, clamped to `[0, frameCount - 1]`.
@@ -225,8 +250,8 @@ export function invert3(m: ArrayLike<number>): Float64Array | null {
 
 /**
  * CPU reference for the interpolation kernel: `p0 + t (p1 - p0)` per atom, or
- * with `box` the minimum-image displacement in that box's fractional
- * coordinates. The WGSL kernel implements the same arithmetic.
+ * with `box` the nearest Cartesian image in that box. The WGSL kernel
+ * implements the same bounded search.
  */
 export function interpolatePositions(
   p0: Float32Array,
@@ -235,18 +260,18 @@ export function interpolatePositions(
   box?: ArrayLike<number>,
 ): Float32Array {
   const out = new Float32Array(p0.length);
-  const inv = box ? invert3(box) : null;
+  let prepared: PeriodicBox | null = null;
+  if (box) {
+    try {
+      prepared = trajectoryImageBox(box);
+    } catch (error) {
+      if (!(error instanceof RangeError)) throw error;
+      if (error instanceof TrajectoryImageBoxLimitError) throw error;
+    }
+  }
   for (let i = 0; i < p0.length; i += 3) {
     let d = [p1[i] - p0[i], p1[i + 1] - p0[i + 1], p1[i + 2] - p0[i + 2]];
-    if (box && inv) {
-      const s = [0, 1, 2].map((r) => {
-        const v = inv[r] * d[0] + inv[3 + r] * d[1] + inv[6 + r] * d[2];
-        return v - Math.round(v);
-      });
-      d = [0, 1, 2].map((r) =>
-        box[r] * s[0] + box[3 + r] * s[1] + box[6 + r] * s[2]
-      );
-    }
+    if (prepared) d = [...minimumImage(d, prepared.matrix, 1_000_000)];
     out[i] = p0[i] + t * d[0];
     out[i + 1] = p0[i + 1] + t * d[1];
     out[i + 2] = p0[i + 2] + t * d[2];

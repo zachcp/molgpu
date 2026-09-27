@@ -20,7 +20,8 @@
  * uniform `(fitCount, selected, translate, atomCount)`; 5 `output` packed xyz
  * f32. Reductions sum in a fixed order, so a fit is deterministic. The fit's
  * f32 rotation is accurate to about 1e-6, which the CPU `fitKabsch` oracle
- * checks in the viewer tests.
+ * checks in the viewer tests. `col0.w` marks solved vs passthrough and
+ * `col1.w` holds fitted RMSD when solved for asynchronous status readback.
  */
 export const superposeWgsl: string = `
 struct Params { fitCount: u32, selected: u32, translate: u32, atomCount: u32 };
@@ -106,6 +107,7 @@ fn covariance(@builtin(local_invocation_index) lane: u32) {
   var cov = mat3x3<f32>(vec3<f32>(0.0), vec3<f32>(0.0), vec3<f32>(0.0));
   var diag = vec3<f32>(0.0);
   var off = vec3<f32>(0.0);
+  var refSquared = 0.0;
   for (var k = lane; k < params.fitCount; k += LANES) {
     let s = (sourceAt(k) - fit.baseS.xyz) - fit.meanS.xyz;
     let r = (referenceAt(k) - fit.baseR.xyz) - fit.meanR.xyz;
@@ -113,9 +115,10 @@ fn covariance(@builtin(local_invocation_index) lane: u32) {
     cov += mat3x3<f32>(s * r.x, s * r.y, s * r.z);
     diag += s * s;
     off += vec3<f32>(s.x * s.y, s.x * s.z, s.y * s.z);
+    refSquared += dot(r, r);
   }
   covSums[lane] = cov;
-  diagSums[lane] = vec4<f32>(diag, 0.0);
+  diagSums[lane] = vec4<f32>(diag, refSquared);
   offSums[lane] = vec4<f32>(off, 0.0);
   workgroupBarrier();
   for (var stride = LANES / 2u; stride > 0u; stride /= 2u) {
@@ -132,7 +135,7 @@ fn covariance(@builtin(local_invocation_index) lane: u32) {
   // A collinear source frame has no unique rotation: pass it through.
   if (nearlyCollinear(d, offSums[0].xyz)) {
     fit.col0 = vec4<f32>(1.0, 0.0, 0.0, 0.0);
-    fit.col1 = vec4<f32>(0.0, 1.0, 0.0, 0.0);
+    fit.col1 = vec4<f32>(0.0, 1.0, 0.0, -1.0);
     fit.col2 = vec4<f32>(0.0, 0.0, 1.0, 0.0);
     fit.targetBase = vec4<f32>(fit.baseS.xyz, 0.0);
     fit.targetMean = vec4<f32>(fit.meanS.xyz, 0.0);
@@ -195,6 +198,14 @@ fn covariance(@builtin(local_invocation_index) lane: u32) {
     2.0 * (y * z + w * x), 0.0);
   fit.col2 = vec4<f32>(2.0 * (x * z + w * y), 2.0 * (y * z - w * x),
     1.0 - 2.0 * (x * x + y * y), 0.0);
+  // Centered fit error = |S|² + |R|² - 2 trace(R C). The fourth lane of
+  // col1 is unused by apply and rides in the same small readback as the flag.
+  let cross = dot(fit.col0.xyz, vec3<f32>(c[0][0], c[1][0], c[2][0])) +
+    dot(fit.col1.xyz, vec3<f32>(c[0][1], c[1][1], c[2][1])) +
+    dot(fit.col2.xyz, vec3<f32>(c[0][2], c[1][2], c[2][2]));
+  fit.col1.w = sqrt(max(0.0,
+    (d.x + d.y + d.z + diagSums[0].w - 2.0 * cross) /
+    f32(params.fitCount)));
   if (params.translate != 0u) {
     fit.targetBase = vec4<f32>(fit.baseR.xyz, 0.0);
     fit.targetMean = vec4<f32>(fit.meanR.xyz, 0.0);
