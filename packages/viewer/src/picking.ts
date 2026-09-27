@@ -31,8 +31,6 @@ interface PickingRegistry {
 }
 import { tooltipFields } from "./internal/tooltip.ts";
 
-export { tooltipFields };
-
 /**
  * Molecular picking. A pickable representation draws itself into @use-gpu's
  * picking buffer under a unique object id and registers, against that id, which

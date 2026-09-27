@@ -6,6 +6,23 @@ All notable changes to `@molgpu/viewer` are recorded here. The format follows
 
 ## [Unreleased]
 
+- **Changed (experimental):** the `.` entry holds components and the hooks an
+  application composes with, listed explicitly (no `export type *`).
+  - Moved to `./advanced`: `useCoordinateSnapshot`, `CoordinateSnapshot`,
+    `useVolumeSnapshot`, `useCoordinateSelection`, `useCoordinateBounds`,
+    `CoordinateBounds`, `StructureResource`, `StructureBounds`,
+    `useStructureResource`, `createStructureResource`, `useTimelineTime`.
+    `useAttributeSnapshot` and `AttributeSnapshot` are now only on `./advanced`.
+  - Moved to `.`: `GpuDsspOverflowError`, which `<GpuDssp>` can throw.
+  - Removed: `useTimelineSample` (use `sample(curve, time)` from
+    `@molgpu/timeline`), `centroid`, `tooltipFields`, `useAnnotation` (load the
+    records yourself and use `joinAnnotation` from `@molgpu/fields`),
+    `focusSelection` (use `useCoordinateFocus`), `createCameraCurve`,
+    `sampleCamera`, `ColorLike`, `TypedArray`, `PreloadedStructureProps`,
+    `LoadedStructureProps`, `PreloadedTrajectoryProps`, `LoadedTrajectoryProps`
+    and `TrajectoryPlayback` (`StructureProps` and `TrajectoryProps` keep both
+    forms).
+
 - **Removed (experimental):** the scene-level wrappers over
   `@use-gpu/workbench`. Build the pass, lights and camera from workbench
   directly (`<Pass lights>`, `AmbientLight`, `DirectionalLight`, …), as the site

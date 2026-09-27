@@ -23,7 +23,7 @@ import {
 import { structureFromBcif } from "@molgpu/io";
 import { resolve, type Selection, where } from "@molgpu/select";
 import { coordinateBounds, createVolume, sampleVolume } from "@molgpu/table";
-import { createStructureResource } from "@molgpu/viewer";
+
 import { buildSurfaceGeometry } from "../../src/internal/surface-geometry.ts";
 import {
   coulombGrid,
@@ -43,7 +43,11 @@ import {
   Trajectory,
   VolumeSlice,
 } from "@molgpu/viewer";
-import { useVolume, WobbleCoordinates } from "@molgpu/viewer/advanced";
+import {
+  createStructureResource,
+  useVolume,
+  WobbleCoordinates,
+} from "@molgpu/viewer/advanced";
 import {
   enableInstrumentation,
   snapshotCounters,

@@ -110,9 +110,9 @@ One concept replaces MVS's entire `color` / `color_from_uri` /
 sort-order matrix. Fields compile to WGSL and bind as `ShaderSource`, which
 upstream supports directly (see findings).
 
-Annotations are **joins that produce fields**: `useAnnotation(uri, schema)`
-joins external per-residue or per-chain data onto the table and returns
-something indistinguishable from any other field.
+Annotations are **joins that produce fields**: `joinAnnotation` in
+`@molgpu/fields` joins caller-loaded per-residue or per-chain records onto the
+table and returns something indistinguishable from any other field.
 
 ### 4. One global timeline
 

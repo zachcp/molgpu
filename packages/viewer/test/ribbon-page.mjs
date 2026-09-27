@@ -18,18 +18,13 @@ import {
   withPositions,
 } from "@molgpu/table";
 import { structureFromBcif } from "@molgpu/io";
-import {
-  GpuDssp,
-  Ribbon,
-  Structure,
-  Transform,
-  useAttributeSnapshot,
-} from "../src/index.ts";
+import { GpuDssp, Ribbon, Structure, Transform } from "../src/index.ts";
 import { WobbleCoordinates } from "../src/wobble-coordinates.ts";
 import {
   enableInstrumentation,
   snapshotCounters,
 } from "../src/internal/instrumentation.ts";
+import { useAttributeSnapshot } from "../src/advanced.ts";
 
 enableInstrumentation();
 

@@ -18,14 +18,11 @@ import {
   useDeviceContext,
 } from "@use-gpu/workbench";
 import { attribute, categorical, colormap, curve } from "@molgpu/fields";
-import { createCurve, createTimeline } from "@molgpu/timeline";
+import { createCurve, createTimeline, sample } from "@molgpu/timeline";
 import { ColumnSource } from "../src/internal/column-source.ts";
 import { WorldSpacePointLayer } from "../src/world-space-points.ts";
 import { useField } from "../src/use-field.ts";
-import {
-  TimelineProvider,
-  useTimelineSample,
-} from "../src/timeline-context.ts";
+import { TimelineProvider, useTimelineTime } from "../src/timeline-context.ts";
 
 const probe = window.__probe = {
   storage: 0,
@@ -133,8 +130,9 @@ const Points = ({ positions, radiusSource, elementSource, scale, palette }) => {
 };
 
 const Scene = ({ state }) => {
-  const radius = useTimelineSample(cameraRadius);
-  const bearing = useTimelineSample(cameraBearing);
+  const time = useTimelineTime();
+  const radius = sample(cameraRadius, time);
+  const bearing = sample(cameraBearing, time);
   probe.camera = { radius, bearing };
   return use(ColumnSource, {
     data: positions,

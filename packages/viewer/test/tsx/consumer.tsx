@@ -25,17 +25,17 @@ import {
   Bonds,
   Spacefill,
   Structure,
-  useAttributeSnapshot,
-  useCoordinateBounds,
   useCoordinateFocus,
-  useCoordinateSnapshot,
-  useStructureResource,
 } from "@molgpu/viewer";
 import type { StructureLoader, StructureProps } from "@molgpu/viewer";
 import {
   IdentityCoordinates,
+  useAttributeSnapshot,
+  useCoordinateBounds,
   useCoordinates,
+  useCoordinateSnapshot,
   useStructure,
+  useStructureResource,
 } from "@molgpu/viewer/advanced";
 import { OffsetCoordinates } from "./offset-coordinates.ts";
 import { TestAttributeProducer } from "./test-attribute-producer.ts";

@@ -2,8 +2,6 @@
 
 ## .
 
-AttributeSnapshot
-  export interface AttributeSnapshot { readonly data: StructureData; readonly generation: number }
 BallAndStick
   export const BallAndStick: ViewerComponent<{ select?: Selection | null; /** A flat colour or a @molgpu/fields Field, applied to balls and sticks. */ color?: VectorLike | Field; /** Ball radius scale; defaults to 0.3. */ ball?: number; /** Stick width; defaults to 0.28. */ stick?: number; endpoints?: "both" | "either"; /** Forwarded to both balls and sticks, so they share one shading model. */ material?: MaterialSpec } & Translucency>;
 BlendMode
@@ -16,12 +14,6 @@ CameraFrame
   export interface CameraFrame extends CameraPose { readonly time: number; readonly ease?: "linear" | "cosine" | "hold" | "bezier"; readonly bezier?: readonly [number, number, number, number] }
 CameraPose
   export interface CameraPose { readonly target: readonly number[]; readonly radius: number; readonly bearing: number; readonly pitch: number }
-ColorLike
-  export type ColorLike = number | VectorLike | { rgb: VectorLike } | { rgba: VectorLike } | string;
-CoordinateBounds
-  export interface CoordinateBounds { readonly min: readonly [number, number, number]; readonly max: readonly [number, number, number]; readonly centroid: readonly [number, number, number]; readonly count: number; readonly generation: number }
-CoordinateSnapshot
-  export interface CoordinateSnapshot { readonly data: StructureData; readonly generation: number; readonly resource: StructureResource }
 Distance
   export const Distance: ViewerComponent<{ a: Selection; b: Selection; color?: VectorLike; width?: number; size?: number; labelColor?: VectorLike; /** 0–1, fades the line and label together. */ opacity?: number; /** Customise the label text; receives the distance in Ångström. */ format?: (distance: number) => string }>;
 DrawMode
@@ -42,6 +34,8 @@ FocusResult
   export interface FocusResult { readonly target: readonly number[]; readonly radius: number; readonly bounds: StructureBounds | null }
 GpuDssp
   export const GpuDssp: ViewerComponent<GpuDsspProps>;
+GpuDsspOverflowError
+  export class GpuDsspOverflowError extends RangeError { constructor(stage: string) }
 GpuDsspProps
   export interface GpuDsspProps { /** Active primary-altloc atoms from this model; defaults to the first model. */ readonly model?: "first" | number; /** On bounded-list overflow, a live frame reads its coordinates and reruns CPU DSSP. */ readonly overflow?: "static" | "frame"; readonly onStatus?: (status: GpuDsspStatus) => void; readonly children?: ViewerElement }
 GpuDsspStatus
@@ -50,10 +44,6 @@ Isosurface
   export const Isosurface: ViewerComponent<{ /** Absolute isovalue, or `{ sigma: k }`. Defaults to `{ sigma: 1 }`. */ level?: VolumeLevel; color?: VectorLike; /** Wraps the shaded face layer; without one, the ambient scene material. */ material?: MaterialSpec; loading?: ViewerElement | (() => ViewerElement); error?: ViewerElement | ((failure: unknown) => ViewerElement) } & Translucency>;
 Label
   export const Label: ViewerComponent<{ select?: Selection | null; /** Explicit [x, y, z] anchor, overriding the selection centroid. */ at?: readonly number[]; text?: string; size?: number; color?: VectorLike; offset?: readonly number[]; family?: string; /** 0–1, multiplied into the text colour's alpha (text always blends). */ opacity?: number }>;
-LoadedStructureProps
-  export interface LoadedStructureProps { children?: ViewerElement; src: string; data?: undefined; /** Defaults to fetch + BCIF lowering through @molgpu/io. Its identity is a * reload dependency alongside `src`, so pass a stable or memoized function. */ loader?: StructureLoader; loading?: ViewerElement | (() => ViewerElement); error?: ViewerElement | ((failure: unknown) => ViewerElement) }
-LoadedTrajectoryProps
-  export interface LoadedTrajectoryProps extends TrajectoryPlayback { src: string; data?: undefined; /** Defaults to `openTrajectory(src)` (HTTP Range reads). Pass a stable function. */ loader?: TrajectoryLoader }
 MaterialSpec
   export type MaterialSpec = ({ type?: MaterialType } & Record<string, unknown>) | ((children: ViewerElement) => ViewerElement);
 MaterialType
@@ -68,10 +58,6 @@ PickingProvider
   export const PickingProvider: ViewerComponent<{ children?: ViewerElement }>;
 PointLayerOptions
   export interface PointLayerOptions { shape?: "circle" | "diamond" | "square" | "up" | "down" | "left" | "right"; hard?: boolean; hollow?: boolean; outline?: number; shaded?: boolean; depth?: number; zBias?: number; blend?: BlendMode | null; shadow?: boolean; depthTest?: boolean; depthWrite?: boolean; alphaToCoverage?: boolean; alphaToDiscard?: boolean }
-PreloadedStructureProps
-  export interface PreloadedStructureProps { children?: ViewerElement; data: StructureData; src?: undefined; loader?: undefined; loading?: undefined; error?: undefined }
-PreloadedTrajectoryProps
-  export interface PreloadedTrajectoryProps extends TrajectoryPlayback { data: TrajectoryData; src?: undefined; loader?: undefined }
 Ribbon
   export const Ribbon: ViewerComponent<{ /** A @molgpu/select atom Selection; without one, active model/primary-altloc atoms are used. */ select?: Selection | null; /** Samples per guide segment; defaults to 8. */ smooth?: number; color?: VectorLike; /** Wraps the shaded ribbon layer; without one, the ambient scene material. */ material?: MaterialSpec; /** * `"model"` (default) draws the structure's `ssCode`. `"dssp"` runs DSSP * on each coordinate snapshot the ribbon draws, over the primary-altloc * atoms of every model the drawn atoms belong to, so codes always come * from the displayed coordinates of the displayed models. */ secondaryStructure?: "model" | "dssp" } & Translucency>;
 SlicePlane
@@ -82,14 +68,10 @@ Spacefill
   export const Spacefill: ViewerComponent<{ /** Multiplies each atom's Ångström radius; defaults to 1. */ scale?: number; /** A @molgpu/select atom Selection for this structure; restricts the draw. */ select?: Selection | null; /** A flat colour, or a @molgpu/fields Field composed shader-side per atom. */ color?: VectorLike | Field; /** Wraps the shaded point layer; without one, the ambient scene material. */ material?: MaterialSpec; /** Draw the atoms into the picking buffer so usePicking() can resolve them * (needs a <PickingProvider> and a <Pass picking>). Defaults to false. */ pickable?: boolean } & Translucency & PointLayerOptions>;
 Structure
   export const Structure: ViewerComponent<StructureProps>;
-StructureBounds
-  export interface StructureBounds { readonly min: number[]; readonly max: number[]; readonly center: number[] }
 StructureLoader
   export type StructureLoader = (src: string, cancelled: () => boolean) => StructureData | null | Promise<StructureData | null>;
 StructureProps
-  export type StructureProps = PreloadedStructureProps | LoadedStructureProps;
-StructureResource
-  export interface StructureResource { readonly data: StructureData; readonly identity: StructureData["identity"]; readonly topologyRevision: number; readonly positionsRevision: number; readonly attributesRevision: number; /** Lazily computed and cached; throws once the resource is disposed. */ readonly bounds: StructureBounds | null; dispose(): void }
+  export type StructureProps = { children?: ViewerElement; data: StructureData; src?: undefined; loader?: undefined; loading?: undefined; error?: undefined } | { children?: ViewerElement; src: string; data?: undefined; /** Defaults to fetch + BCIF lowering through @molgpu/io. Its identity is a * reload dependency alongside `src`, so pass a stable or memoized function. */ loader?: StructureLoader; loading?: ViewerElement | (() => ViewerElement); error?: ViewerElement | ((failure: unknown) => ViewerElement) };
 Superpose
   export const Superpose: ViewerComponent<SuperposeProps>;
 SuperposeProps
@@ -106,10 +88,8 @@ TrajectoryFrameState
   export interface TrajectoryFrameState { readonly trajectory: TrajectoryData; /** The clamped frame asked for (after sampling a curve). */ readonly requested: number; /** * Frames on screen, `a + t (b - a)`. It trails `requested` while frames * load, and is null before the first frame lands (upstream coordinates show). */ readonly displayed: { readonly a: number; readonly b: number; readonly t: number } | null; /** `a + t (b - a)` of `displayed`, or null. */ readonly frame: number | null; /** Interpolated column-major box of the displayed frames, if both have one. */ readonly box: Float32Array | null }
 TrajectoryLoader
   export type TrajectoryLoader = (src: string, cancelled: () => boolean) => TrajectoryData | null | Promise<TrajectoryData | null>;
-TrajectoryPlayback
-  export interface TrajectoryPlayback { children?: ViewerElement; /** * Fractional frame index, or a curve from timeline seconds to frames (see * `frameCurve` in @molgpu/timeline). Clamped to `[0, frameCount - 1]`. */ frame: number | Curve<number>; /** `"linear"` (default) blends neighbouring frames; `"nearest"` rounds. */ interpolate?: "linear" | "nearest"; /** * `"minimum-image"` interpolates each atom along the shortest periodic * displacement when both frames carry a box, so atoms that wrap do not * cross the box on screen. Default `"none"`. */ pbc?: "none" | "minimum-image" }
 TrajectoryProps
-  export type TrajectoryProps = PreloadedTrajectoryProps | LoadedTrajectoryProps;
+  export type TrajectoryProps = { children?: ViewerElement; /** * Fractional frame index, or a curve from timeline seconds to frames (see * `frameCurve` in @molgpu/timeline). Clamped to `[0, frameCount - 1]`. */ frame: number | Curve<number>; /** `"linear"` (default) blends neighbouring frames; `"nearest"` rounds. */ interpolate?: "linear" | "nearest"; /** * `"minimum-image"` interpolates each atom along the shortest periodic * displacement when both frames carry a box, so atoms that wrap do not * cross the box on screen. Default `"none"`. */ pbc?: "none" | "minimum-image" } & ({ data: TrajectoryData; src?: undefined; loader?: undefined } | { src: string; data?: undefined; /** Defaults to `openTrajectory(src)` (HTTP Range reads). Pass a stable function. */ loader?: TrajectoryLoader });
 Transform
   export const Transform: ViewerComponent<TransformProps>;
 TransformProps
@@ -118,8 +98,6 @@ Translucency
   export interface Translucency { /** 0–1, multiplied into the colour's alpha. A uniform: changing it (a fade, * a timeline curve) never rebuilds or re-uploads geometry. Defaults to 1. */ opacity?: number; /** Draw mode override. By default it is 'transparent' whenever the effective * alpha (colour alpha × opacity) is below 1, else the layer's opaque mode. * Pair translucent representations with <Pass oit>. */ mode?: DrawMode }
 Tube
   export const Tube: ViewerComponent<{ /** A @molgpu/select atom Selection; without one, active model/primary-altloc atoms are used. */ select?: Selection | null; /** Ångström tube radius; defaults to 0.3. */ radius?: number; /** Samples per guide segment; defaults to 6. */ smooth?: number; color?: VectorLike; sides?: number; join?: "tangent" | "bevel" | "miter" | "round"; /** Wraps the shaded tube layer; without one, the ambient scene material. */ material?: MaterialSpec } & Translucency>;
-TypedArray
-  export type TypedArray = Int8Array | Uint8Array | Uint8ClampedArray | Int16Array | Uint16Array | Int32Array | Uint32Array | Float32Array | Float64Array;
 UnitCell
   export const UnitCell: ViewerComponent<{ color?: VectorLike; width?: number; opacity?: number }>;
 Unwrap
@@ -129,7 +107,7 @@ UnwrapProps
 UnwrapStatus
   export interface UnwrapStatus { /** * `ok`; `ambiguous` when some covalent ring edge does not close; `search-limit` * when an exact image search exceeded its candidate bound (that bond keeps * its best image so far); `missing-box` or `invalid-box` when positions * passed through. */ readonly status: "ok" | "ambiguous" | "search-limit" | "missing-box" | "invalid-box"; readonly ambiguousRingEdges: number; /** The provider generation (or, when passing through, the upstream one). */ readonly generation: number }
 VectorLike
-  export type VectorLike = readonly number[] | TypedArray;
+  export type VectorLike = readonly number[] | Int8Array | Uint8Array | Uint8ClampedArray | Int16Array | Uint16Array | Int32Array | Uint32Array | Float32Array | Float64Array;
 ViewerComponent
   export type ViewerComponent<P = {}> = (props: P) => ViewerElement;
 ViewerElement
@@ -142,44 +120,14 @@ VolumeProps
   export type VolumeProps = { children?: ViewerElement; data: VolumeData; src?: undefined; loader?: undefined; loading?: undefined; error?: undefined } | { children?: ViewerElement; src: string; data?: undefined; /** Its identity is a reload dependency alongside `src`. */ loader?: VolumeLoader; loading?: ViewerElement | (() => ViewerElement); error?: ViewerElement | ((failure: unknown) => ViewerElement) };
 VolumeSlice
   export const VolumeSlice: ViewerComponent<{ /** Defaults to the middle k (third-axis) grid plane. */ plane?: SlicePlane; /** Value interval mapped to 0–1. Defaults to the volume's min and max. */ range?: readonly [number, number]; /** Colour stops over 0–1. Defaults to black → white. */ stops?: SliceStops; /** Multiplied into every fragment's colour. Defaults to white. */ color?: VectorLike } & Translucency>;
-centroid
-  export function centroid(data: StructureData, select?: Selection | null): [number, number, number];
-createCameraCurve
-  export function createCameraCurve(frames: CameraCurve): CameraCurve;
-createStructureResource
-  export function createStructureResource(data: StructureData): StructureResource;
-focusSelection
-  export function focusSelection(resource: StructureResource, query: SelectionQuery, options?: FocusOptions): FocusResult | null;
-sampleCamera
-  export function sampleCamera(curve: CameraCurve, time: number, resource: StructureResource, options?: FocusOptions): CameraPose;
-tooltipFields
-  export function tooltipFields(fields: Record<string, Field>, data: StructureData, atom: number, options?: { t?: number }): Record<string, number | number[] | string>;
-useAnnotation
-  export function useAnnotation<R = unknown>(input: { records?: readonly R[]; src?: string; loader?: (src: string, cancelled: () => boolean) => unknown; domain?: "residue" | "chain"; fields: readonly string[]; value?: (record: R) => number | readonly number[]; type?: unknown; policy?: "fallback" | "fail"; fallback?: number | readonly number[]; duplicate?: "error" | "first" | "last"; lift?: boolean }): { field: Field | null; pending: boolean; error: unknown };
-useAttributeSnapshot
-  export function useAttributeSnapshot(name: string, options?: { maxHz?: number; onPause?: boolean; enabled?: boolean }): AttributeSnapshot | null;
 useCameraCurve
   export function useCameraCurve(curve: CameraCurve, resource: StructureResource, options?: FocusOptions): CameraPose;
-useCoordinateBounds
-  export function useCoordinateBounds(selection?: Selection | null): CoordinateBounds | null;
 useCoordinateFocus
   export function useCoordinateFocus(query: SelectionQuery, options?: FocusOptions): FocusResult | null;
-useCoordinateSelection
-  export function useCoordinateSelection(query: SelectionQuery): Selection | null;
-useCoordinateSnapshot
-  export function useCoordinateSnapshot(options?: { maxHz?: number; onPause?: boolean; enabled?: boolean }): CoordinateSnapshot | null;
 usePicking
   export function usePicking(options?: { onHover?: (hit: PickHit | null) => void; onPick?: (hit: PickHit | null) => void }): { hover: PickHit | null; pick: PickHit | null };
-useStructureResource
-  export function useStructureResource(): StructureResource;
-useTimelineSample
-  export function useTimelineSample<T extends CurveValue>(curve: Curve<T>): T;
-useTimelineTime
-  export function useTimelineTime(): number;
 useTrajectoryFrame
   export function useTrajectoryFrame(): TrajectoryFrameState | null;
-useVolumeSnapshot
-  export function useVolumeSnapshot(options?: { maxHz?: number; onPause?: boolean }): VolumeData | null;
 
 ## ./advanced
 
@@ -191,24 +139,30 @@ Attributes
   export type Attributes = Readonly<Record<string, ProducedAttribute>>;
 AttributesContext
   export const AttributesContext: LiveContext<Attributes | undefined>;
+CoordinateBounds
+  export interface CoordinateBounds { readonly min: readonly [number, number, number]; readonly max: readonly [number, number, number]; readonly centroid: readonly [number, number, number]; readonly count: number; readonly generation: number }
+CoordinateSnapshot
+  export interface CoordinateSnapshot { readonly data: StructureData; readonly generation: number; readonly resource: StructureResource }
 Coordinates
   export interface Coordinates { readonly source: StorageSource; readonly count: number; readonly generation: number; /** False until an asynchronous coordinate kernel has dispatched its first output. */ readonly ready?: boolean; readonly resource: StructureResource }
 CoordinatesContext
   export const CoordinatesContext: LiveContext<Coordinates | null | undefined>;
 GpuDsspOptions
   export interface GpuDsspOptions { readonly generation: number; readonly data: StructureData; readonly rows: ArrayLike<number>; readonly layout: DsspLayout; /** Static calculations throw by name; live frames read one full frame on overflow. */ readonly overflow?: "static" | "frame"; readonly maxBridges?: number; /** Cancels a superseded coordinate generation before another GPU pass. */ readonly signal?: AbortSignal }
-GpuDsspOverflowError
-  export class GpuDsspOverflowError extends RangeError { constructor(stage: string) }
 GpuDsspResult
   export interface GpuDsspResult { readonly codes: Uint8Array; /** f32 residue codes for AttributesContext GPU consumers; caller owns it. */ readonly codeBuffer: GPUBuffer; readonly generation: number; /** Acceptor and bend-centre rows with a direct near-threshold comparison. */ readonly nearThresholdCenters: number; readonly bridgeCount: number; readonly fallback: boolean; /** Bounded stage that required CPU recovery, when fallback is true. */ readonly fallbackReason?: string; /** Peak temporary allocation owned by this call, excluding input and output. */ readonly workingBytes: number; /** GPU-to-CPU bytes copied for this generation. */ readonly readbackBytes: number }
 IdentityCoordinates
   export const IdentityCoordinates: LC<{ children?: LiveElement }>;
 ProducedAttribute
   export interface ProducedAttribute { readonly source: StorageSource; readonly domain: AttributeDomain; readonly kind: "scalar" | "code"; readonly generation: number; readonly provenance: AttributeProvenance }
+StructureBounds
+  export interface StructureBounds { readonly min: number[]; readonly max: number[]; readonly center: number[] }
 StructureContext
   export const StructureContext: LiveContext<StructureContextValue | undefined>;
 StructureContextValue
   export interface StructureContextValue { readonly resource: StructureResource; /** Null for an empty structure, which owns no GPU source. */ readonly sources: StructureSources | null }
+StructureResource
+  export interface StructureResource { readonly data: StructureData; readonly identity: StructureData["identity"]; readonly topologyRevision: number; readonly positionsRevision: number; readonly attributesRevision: number; /** Lazily computed and cached; throws once the resource is disposed. */ readonly bounds: StructureBounds | null; dispose(): void }
 StructureSources
   export interface StructureSources { /** @deprecated Read the nearest stream with useCoordinates().source. */ readonly positions: ShaderSource; readonly radii: ShaderSource }
 TimelineContext
@@ -223,15 +177,29 @@ WobbleCoordinates
   export const WobbleCoordinates: LC<{ phase: number; amplitude?: number; children?: LiveElement }>;
 WorldSpacePointLayer
   export const WorldSpacePointLayer: LC<{ positions: ShaderSource; colors?: ShaderSource; radii: ShaderSource; count: number; scale?: number } & Omit<PointLayerProps, "positions" | "colors" | "sizes" | "count" | "depth">>;
+createStructureResource
+  export function createStructureResource(data: StructureData): StructureResource;
 gpuDssp
   export function gpuDssp(device: GPUDevice, positions: GPUBuffer, options: GpuDsspOptions): Promise<GpuDsspResult>;
 useAttributeSnapshot
   export function useAttributeSnapshot(name: string, options?: { maxHz?: number; onPause?: boolean; enabled?: boolean }): AttributeSnapshot | null;
+useCoordinateBounds
+  export function useCoordinateBounds(selection?: Selection | null): CoordinateBounds | null;
+useCoordinateSelection
+  export function useCoordinateSelection(query: SelectionQuery): Selection | null;
+useCoordinateSnapshot
+  export function useCoordinateSnapshot(options?: { maxHz?: number; onPause?: boolean; enabled?: boolean }): CoordinateSnapshot | null;
 useCoordinates
   export function useCoordinates(): Coordinates | null;
 useField
   export function useField(field: Field, inputs?: Record<string, ShaderSource | number | { current: number }>, options?: { domain?: "atom" | "residue" }): ShaderSource;
 useStructure
   export function useStructure(): StructureContextValue;
+useStructureResource
+  export function useStructureResource(): StructureResource;
+useTimelineTime
+  export function useTimelineTime(): number;
 useVolume
   export function useVolume(): VolumeContextValue;
+useVolumeSnapshot
+  export function useVolumeSnapshot(options?: { maxHz?: number; onPause?: boolean }): VolumeData | null;

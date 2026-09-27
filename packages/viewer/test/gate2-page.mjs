@@ -17,13 +17,13 @@ import { attribute, categorical } from "@molgpu/fields";
 import {
   BallAndStick,
   Bonds,
-  createCameraCurve,
-  createStructureResource,
   Spacefill,
   Structure,
   TimelineProvider,
   useCameraCurve,
 } from "../src/index.ts";
+import { createStructureResource } from "../src/advanced.ts";
+import { createCameraCurve } from "../src/camera-curve.ts";
 
 const probe = window.__probe = {
   storage: [],

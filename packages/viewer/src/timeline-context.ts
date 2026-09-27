@@ -5,7 +5,6 @@ import {
   provide,
   useContext,
 } from "@use-gpu/live";
-import { type Curve, type CurveValue, sample } from "@molgpu/timeline";
 import { live, viewer } from "./internal/elements.ts";
 
 /** The caller owns time; rendering never advances it from a wall clock. */
@@ -31,6 +30,3 @@ export function useTimelineTime(): number {
 }
 
 /** Sample the same global time used by time-dependent fields. */
-export function useTimelineSample<T extends CurveValue>(curve: Curve<T>): T {
-  return sample(curve, useTimelineTime());
-}

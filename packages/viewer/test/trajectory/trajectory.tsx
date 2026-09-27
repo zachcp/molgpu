@@ -35,10 +35,13 @@ import {
   UnitCell,
   Unwrap,
   type UnwrapStatus,
-  useCoordinateSnapshot,
   useTrajectoryFrame,
 } from "@molgpu/viewer";
-import { useCoordinates, WobbleCoordinates } from "@molgpu/viewer/advanced";
+import {
+  useCoordinates,
+  useCoordinateSnapshot,
+  WobbleCoordinates,
+} from "@molgpu/viewer/advanced";
 import {
   enableInstrumentation,
   instrumentDevice,
