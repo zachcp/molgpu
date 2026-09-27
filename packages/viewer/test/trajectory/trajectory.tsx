@@ -303,6 +303,66 @@ const SINGULAR = [1, 0, 0, 2, 0, 0, 0, 0, 1];
 const recordUnwrap = (status: UnwrapStatus) => {
   probe.unwrap.statuses.push(status);
 };
+// Gate 13 scene at N atoms: 10-atom covalent chains in a periodic box, a
+// four-frame trajectory drifting across the box, and one mode node per chain.
+type GateScene = {
+  structure: StructureData;
+  trajectory: TrajectoryData;
+  mode: { atomToNode: Uint32Array; vectors: Float32Array; version: number };
+  box: number[];
+  frame0: Float32Array;
+};
+const gates = new Map<number, GateScene>();
+function gateScene(n: number): GateScene {
+  let scene = gates.get(n);
+  if (scene) return scene;
+  const chains = Math.ceil(n / 10), side = Math.ceil(Math.cbrt(chains));
+  const box = [16 * side, 0, 0, 0, 4 * side, 0, 0, 0, 4 * side];
+  const whole = new Float32Array(n * 3);
+  const bonds: [number, number][] = [];
+  for (let i = 0; i < n; i++) {
+    const chain = Math.floor(i / 10), k = i % 10;
+    whole[3 * i] = 16 * (chain % side) + 1.5 * k;
+    whole[3 * i + 1] = 4 * (Math.floor(chain / side) % side) + 0.5 * (k % 2);
+    whole[3 * i + 2] = 4 * Math.floor(chain / (side * side));
+    if (k && i) bonds.push([i - 1, i]);
+  }
+  const frames = [0, 1, 2, 3].map((k) => {
+    const positions = new Float32Array(n * 3);
+    for (let j = 0; j < n * 3; j++) {
+      const axis = j % 3, length = box[4 * axis];
+      const v = whole[j] + (axis === 0 ? 5.3 * k : 0.1 * k);
+      positions[j] = v - length * Math.floor(v / length);
+    }
+    return { positions, box: Float32Array.from(box) };
+  });
+  const nodes = chains;
+  scene = {
+    structure: atoms(n, whole, bonds),
+    trajectory: createTrajectory({ atomCount: n, frames }),
+    mode: {
+      atomToNode: Uint32Array.from({ length: n }, (_, i) => Math.floor(i / 10)),
+      vectors: Float32Array.from(
+        { length: nodes * 3 },
+        (_, i) => 0.3 * Math.sin(i),
+      ),
+      version: 1,
+    },
+    box,
+    frame0: frames[0].positions,
+  };
+  gates.set(n, scene);
+  return scene;
+}
+const GateProbe = (): null => {
+  const coordinates = useCoordinates();
+  probe.gate = coordinates
+    ? { generation: coordinates.generation, count: coordinates.count }
+    : null;
+  probe.source = coordinates?.source ?? null;
+  probe.state = useTrajectoryFrame();
+  return null;
+};
 // A source that answers after `delay` ms, for streaming states.
 const slow = (delay: number): TrajectoryData =>
   createTrajectory({
@@ -336,7 +396,8 @@ type Mode =
   | "transform-curve"
   | "normal-mode"
   | "superpose"
-  | "unwrap";
+  | "unwrap"
+  | "gate";
 interface State {
   mode: Mode;
   frame: number;
@@ -354,6 +415,7 @@ interface State {
   supTranslate: boolean;
   unwrapBox: "trajectory" | "none" | "singular";
   unwrapCenter: boolean;
+  gateAtoms: number;
 }
 
 interface Probe {
@@ -366,6 +428,7 @@ interface Probe {
   errors: string[];
   frames: number[][];
   root: number[];
+  gate: { generation: number; count: number } | null;
   superpose: { frames: number[][]; root: number[]; fixed: number[] };
   unwrap: {
     frames: number[][];
@@ -375,6 +438,8 @@ interface Probe {
     statuses: UnwrapStatus[];
   };
   counters: typeof snapshotCounters;
+  /** Frame 0 bounds of the gate scene, as the cell-list bounds pass reports. */
+  gateBounds(n: number): number[];
   update(patch: Partial<State>): void;
 }
 const probe: Probe = {
@@ -387,6 +452,7 @@ const probe: Probe = {
   errors: [],
   frames: FRAMES.map((f) => Array.from(f.positions)),
   root: Array.from(STRUCTURE.positions),
+  gate: null,
   superpose: {
     frames: SUP_FRAMES.map((f) => Array.from(f)),
     root: Array.from(SUP_STRUCTURE.positions),
@@ -400,6 +466,16 @@ const probe: Probe = {
     statuses: [],
   },
   counters: snapshotCounters,
+  gateBounds: (n) => {
+    const positions = gateScene(n).frame0;
+    const lo = [Infinity, Infinity, Infinity],
+      hi = [-Infinity, -Infinity, -Infinity];
+    for (let i = 0; i < positions.length; i++) {
+      lo[i % 3] = Math.min(lo[i % 3], positions[i]);
+      hi[i % 3] = Math.max(hi[i % 3], positions[i]);
+    }
+    return [...lo, 0, ...hi, n];
+  },
   update: () => {},
 };
 (globalThis as unknown as { __trajectory: Probe }).__trajectory = probe;
@@ -563,6 +639,24 @@ const Scene = ({ state }: { state: State }): LiveElement => {
           </Trajectory>
         </Structure>
       );
+    case "gate": {
+      const g = gateScene(state.gateAtoms);
+      return (
+        <TimelineProvider time={state.time}>
+          <Structure data={g.structure}>
+            <Trajectory data={g.trajectory} frame={state.frame}>
+              <Unwrap>
+                <Superpose to="first">
+                  <NormalMode mode={g.mode} amplitude={1} frequency={1}>
+                    <GateProbe />
+                  </NormalMode>
+                </Superpose>
+              </Unwrap>
+            </Trajectory>
+          </Structure>
+        </TimelineProvider>
+      );
+    }
     case "unwrap": {
       const unwrapped = (
         <Unwrap
@@ -607,6 +701,7 @@ const App = (): LiveElement => {
     supTranslate: true,
     unwrapBox: "trajectory",
     unwrapCenter: false,
+    gateAtoms: 0,
   });
   probe.update = (patch) => setState((previous) => ({ ...previous, ...patch }));
   probe.mounted = true;

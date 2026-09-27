@@ -63,6 +63,7 @@
     "test:viewer:picking": "deno test -A packages/viewer/test/run-picking.mjs",
     "test:viewer:annotations": "deno test -A packages/viewer/test/run-annotations.mjs",
     "test:viewer:invalidation": "deno test -A packages/viewer/test/run-invalidation.mjs",
+    "gate:dynamics": "MOLGPU_DYNAMICS_GATE=1 deno test -A packages/viewer/test/run-trajectory.mjs",
     "test:components": "deno test -A packages/viewer/test/run-components.mjs packages/viewer/test/run-volume.mjs packages/viewer/test/run-trajectory.mjs",
     "test:site": "deno test -A site/test/run-browser.mjs"
   }

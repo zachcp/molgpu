@@ -243,6 +243,28 @@ implementations plus WGSL source strings, never importing `@use-gpu/*`. Pure
 transforms `f(coords, t)` ship first as coordinate providers: `<Transform>`,
 `<Superpose>`, PBC unwrap and `<NormalMode>`. A shared GPU cell list lands here.
 
+Gate 13 passed on 2026-09-27. Coordinate providers:
+
+- `<Transform>` applies an affine to all or selected rows.
+- `<Superpose>` runs its Kabsch fit on the GPU in the same submission as the
+  frame it moves. RMSD matches the CPU oracle within 1e-5 Å.
+- `<NormalMode>` animates through a uniform only.
+- `<Unwrap>` makes covalent components whole in triclinic cells by GPU pointer
+  jumping, with centering and ring-closure status.
+
+The package also has:
+
+- A GPU cell list matching the CPU grid, which matches `table.spatialGrid` on
+  the corpus.
+- ANM/GNM modes, dense or sparse Lanczos, matching ProDy 2.6.1.
+
+At 1M atoms, a root + four-slot trajectory + Unwrap + Superpose + NormalMode
+scene holds 147 MB persistent (budget 224) and 33 MB within a generation (budget
+96), and a changed generation publishes on the next frame. A full frame reads
+and writes about 444 B/atom, above the 96 B four-pass baseline, mostly in unwrap
+pointer jumping (9g3.11). See the
+[gate record](findings/2026-09-27-phase-13-gate.md).
+
 ## Phase 14 — Per-atom charge
 
 `partialCharge` columns with provenance from PQR import, AMBER/PDB2PQR residue

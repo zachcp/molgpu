@@ -19,9 +19,11 @@ import {
   createCellList,
   createUnwrapForest,
   fitKabsch,
+  planCellList,
   unwrapFrame,
 } from "@molgpu/dynamics";
 import { writeXtc } from "../../io/test/trajectory-fixture.ts";
+import { structureFromBcif } from "@molgpu/io";
 import { interpolatePositions } from "../src/internal/frame-window.ts";
 
 async function runGpuCellList(page, positions, cutoff) {
@@ -739,6 +741,16 @@ Deno.test("trajectory components", async () => {
       (_, i) => i % 3 === 0 ? i / 3 : 0,
     );
     report.cellList.push(await runGpuCellList(page, longChain, 1));
+    // A corpus structure at two cutoffs (the CPU reference is itself checked
+    // against table.spatialGrid on the corpus in dynamics' unit tests).
+    const crn = await structureFromBcif(
+      await readFile(`${root}packages/io/test/fixtures/1crn.bcif`),
+    );
+    for (const cutoff of [4, 8]) {
+      report.cellList.push(
+        await runGpuCellList(page, Array.from(crn.positions), cutoff),
+      );
+    }
 
     // 14. <Superpose>: the GPU fit of each displayed frame agrees with the CPU
     // Kabsch oracle, at a ~1000 Å offset, through a mirror image (still a
@@ -976,6 +988,152 @@ Deno.test("trajectory components", async () => {
     );
     assert.equal((await unwrapStatuses()).status, "missing-box");
     await update({ mode: "none" });
+
+    // 16. Gate 13 budgets (opt-in: `deno task gate:dynamics`). The scene is
+    // root + Trajectory (four slots) + Unwrap + Superpose (reference) +
+    // NormalMode at 100k and 1M atoms, as ten-atom chains in a periodic box.
+    if (Deno.env.get("MOLGPU_DYNAMICS_GATE")) {
+      report.gate = [];
+      const MB = 1e6;
+      for (const atoms of [100_000, 1_000_000]) {
+        const mountStart = performance.now();
+        await update({ mode: "gate", gateAtoms: atoms, frame: 0, time: 0.1 });
+        await page.waitForFunction(
+          (n) => {
+            const t = window.__trajectory;
+            return t.gate?.count === n && t.state?.displayed?.a === 0;
+          },
+          atoms,
+          { timeout: 180000 },
+        );
+        await settle();
+        const mountMs = performance.now() - mountStart;
+        const snap = await counters();
+        const bytes = snap.ownedBuffers.bytes;
+        // Buffers only used inside one generation's passes (held for reuse).
+        const within = [
+          "coords:unwrap:links",
+          "coords:unwrap:params",
+          "coords:unwrap:status",
+          "coords:unwrap:staging",
+          "coords:superpose:fit",
+          "coords:superpose:params",
+        ];
+        let persistent = 0, scratch = 0;
+        for (const [label, n] of Object.entries(bytes)) {
+          if (within.includes(label)) scratch += n;
+          else persistent += n;
+        }
+        // The shared cell list is not mounted in this scene: add its planned
+        // grid for an 8 Å cutoff over frame 0's bounds.
+        const cell = await page.evaluate((n) => {
+          const t = window.__trajectory;
+          return {
+            bounds: t.gateBounds(n),
+            limit: t.device.limits.maxStorageBufferBindingSize,
+          };
+        }, atoms);
+        const plan = planCellList(
+          { generation: 1, values: Float32Array.from(cell.bounds) },
+          1,
+          atoms,
+          8,
+          cell.limit,
+        );
+        // Warm every pipeline, then time a changed generation: a timeline
+        // tick (NormalMode only) and a resident trajectory frame (all four).
+        const change = (patch) =>
+          page.evaluate(async (patch) => {
+            const t = window.__trajectory;
+            const before = t.gate.generation;
+            const start = performance.now();
+            t.update(patch);
+            let frames = 0;
+            while (t.gate.generation === before && frames < 120) {
+              await new Promise(requestAnimationFrame);
+              frames++;
+            }
+            const published = performance.now() - start;
+            await t.device.queue.onSubmittedWorkDone();
+            return {
+              frames,
+              publishedMs: published,
+              gpuDoneMs: performance.now() - start,
+            };
+          }, patch);
+        for (const frame of [1, 2, 3, 0]) {
+          await update({ frame });
+          await page.waitForFunction(
+            (f) => window.__trajectory.state?.displayed?.a === f,
+            frame,
+            { timeout: 60000 },
+          );
+        }
+        const dispatches = async () => {
+          const d = (await counters()).detail;
+          return {
+            unwrap: d["gathers:coords:unwrap:dispatch"] ?? 0,
+            superpose: d["gathers:coords:superpose:dispatch"] ?? 0,
+          };
+        };
+        const ticks = [];
+        let before = await dispatches();
+        for (const time of [0.15, 0.2, 0.25]) {
+          ticks.push(await change({ time }));
+        }
+        const afterTicks = await dispatches();
+        assert.deepEqual(
+          afterTicks,
+          before,
+          "a timeline tick re-runs only NormalMode",
+        );
+        const frames = [];
+        for (const frame of [1, 2, 3]) frames.push(await change({ frame }));
+        const afterFrames = await dispatches();
+        assert.equal(afterFrames.unwrap - afterTicks.unwrap, 3);
+        assert.equal(afterFrames.superpose - afterTicks.superpose, 3);
+        const worst = Math.max(...ticks.map((t) => t.frames));
+        if (atoms === 100_000) {
+          assert.ok(
+            worst <= 3,
+            `100k: a warmed transform shows within 3 frames (${worst})`,
+          );
+        }
+        // Bytes each full generation reads and writes per atom: trajectory
+        // lerp 36; unwrap link 44 + 48 per jump round + place 60; superpose
+        // 72 (centroid, covariance, apply over all rows); normal mode 40.
+        const rounds = 4; // ten-atom chains: depth 9
+        const perAtom = 36 + 44 + 48 * rounds + 60 + 72 + 40;
+        report.gate.push({
+          atoms,
+          mountMs: Math.round(mountMs),
+          ownedBytes: bytes,
+          persistentMB: +(persistent / MB).toFixed(2),
+          withinGenerationMB: +(scratch / MB).toFixed(2),
+          cellList: {
+            cells: plan.cellCount,
+            persistentMB: +(plan.persistentBytes / MB).toFixed(2),
+            scratchMB: +(plan.scratchBytes / MB).toFixed(2),
+          },
+          totalPersistentMB: +((persistent + plan.persistentBytes) / MB)
+            .toFixed(2),
+          totalScratchMB: +((scratch + plan.scratchBytes) / MB).toFixed(2),
+          trafficPerGenerationMB: {
+            fullFrame: +(perAtom * atoms / MB).toFixed(1),
+            timelineTick: +(40 * atoms / MB).toFixed(1),
+            fourPlainPasses: +(4 * 24 * atoms / MB).toFixed(1),
+          },
+          timelineTick: ticks,
+          residentFrame: frames,
+        });
+        await update({ mode: "none" });
+      }
+      console.log(JSON.stringify(report.gate, null, 2));
+      await writeFile(
+        `${out}/dynamics-gate.json`,
+        JSON.stringify(report.gate, null, 2),
+      );
+    }
 
     now = await counters();
     for (const [label, bytes] of Object.entries(now.ownedBuffers.bytes)) {
