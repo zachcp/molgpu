@@ -13,7 +13,12 @@ import { extname, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 import { build } from "vite";
 import { chromium } from "playwright";
-import { cellListWgsl, createCellList } from "@molgpu/dynamics";
+import {
+  applyAffine,
+  cellListWgsl,
+  createCellList,
+  fitKabsch,
+} from "@molgpu/dynamics";
 import { writeXtc } from "../../io/test/trajectory-fixture.ts";
 import { interpolatePositions } from "../src/internal/frame-window.ts";
 
@@ -732,6 +737,117 @@ Deno.test("trajectory components", async () => {
       (_, i) => i % 3 === 0 ? i / 3 : 0,
     );
     report.cellList.push(await runGpuCellList(page, longChain, 1));
+
+    // 14. <Superpose>: the GPU fit of each displayed frame agrees with the CPU
+    // Kabsch oracle, at a ~1000 Å offset, through a mirror image (still a
+    // proper rotation), for fit subsets and translate=false. Scrubbing moves
+    // no reference or structure bytes. A collinear frame passes through.
+    const sup = await page.evaluate(() => window.__trajectory.superpose);
+    const supFrame = (frame) => {
+      const a = Math.floor(frame), t = frame - a;
+      const b = Math.min(a + 1, sup.frames.length - 1);
+      return Float32Array.from(
+        t
+          ? interpolatePositions(
+            Float32Array.from(sup.frames[a]),
+            Float32Array.from(sup.frames[b]),
+            t,
+          )
+          : sup.frames[a],
+      );
+    };
+    const fitRows = [0, 1, 2, 3, 4, 5];
+    const oracle = (frame, { to = "first", rows = null, translate = true }) => {
+      const upstream = supFrame(frame);
+      const reference = Float32Array.from(
+        to === "first" ? sup.frames[0] : sup.fixed,
+      );
+      const fit = fitKabsch(upstream, reference, rows, translate);
+      return {
+        positions: Array.from(applyAffine(upstream, fit.matrix)),
+        rmsd: fit.rmsd,
+        reference,
+      };
+    };
+    const rmsdOf = (values, reference, rows) => {
+      const list = rows ?? values.map((_, i) => i).filter((i) => i % 3 === 0)
+        .map((i) => i / 3);
+      let sum = 0;
+      for (const row of list) {
+        for (let a = 0; a < 3; a++) {
+          sum += (values[3 * row + a] - reference[3 * row + a]) ** 2;
+        }
+      }
+      return Math.sqrt(sum / list.length);
+    };
+    report.superpose = [];
+    const checkFit = async (frame, options = {}) => {
+      const want = oracle(frame, options);
+      const what = `superpose ${JSON.stringify({ frame, ...options })}`;
+      // f32 positions near 1000 Å carry ~6e-5 Å of rounding.
+      const got = await expectRead(want.positions, what, 2e-3);
+      const rmsd = rmsdOf(got, want.reference, options.rows ?? null);
+      assert.ok(
+        Math.abs(rmsd - want.rmsd) <= 1e-4,
+        `${what}: rmsd ${rmsd} vs ${want.rmsd}`,
+      );
+      report.superpose.push({ frame, ...options, rmsd, oracle: want.rmsd });
+    };
+    await update({
+      mode: "superpose",
+      frame: 0,
+      supTo: "first",
+      supSelect: false,
+      supTranslate: true,
+    });
+    await displayed({ a: 0, b: 0, t: 0 });
+    await checkFit(0);
+    const referenceUploads = async () =>
+      (await counters()).detail["uploadBytes:coords:superpose:reference"] ?? 0;
+    const supUploads = await referenceUploads();
+    const rootUploads =
+      (await counters()).detail["uploadBytes:structure:positions"] ?? 0;
+    for (const frame of [1, 2, 3, 2.5]) {
+      await update({ frame });
+      await displayed({
+        a: Math.floor(frame),
+        b: Math.ceil(frame),
+        t: frame % 1,
+      });
+      await checkFit(frame);
+    }
+    // Rapid backward scrub: one displayed frame per animation frame.
+    await page.evaluate(async () => {
+      for (const frame of [3, 2.75, 2.5, 2, 1.5, 1.25]) {
+        window.__trajectory.update({ frame });
+        await new Promise(requestAnimationFrame);
+      }
+    });
+    await displayed({ a: 1, b: 2, t: 0.25 });
+    await checkFit(1.25);
+    assert.equal(
+      await referenceUploads(),
+      supUploads,
+      "scrubbing does not re-upload the reference",
+    );
+    assert.equal(
+      (await counters()).detail["uploadBytes:structure:positions"] ?? 0,
+      rootUploads,
+      "scrubbing does not re-upload structure positions",
+    );
+    // A collinear frame has no unique rotation: it passes through.
+    await update({ frame: 4 });
+    await displayed({ a: 4, b: 4, t: 0 });
+    await expectRead(Array.from(supFrame(4)), "superpose collinear", 0);
+    // Fit rows, then translate=false, then a fixed reference.
+    await update({ frame: 2, supSelect: true });
+    await displayed({ a: 2, b: 2, t: 0 });
+    await checkFit(2, { rows: fitRows });
+    await update({ supSelect: false, supTranslate: false });
+    await checkFit(2, { translate: false });
+    await update({ supTranslate: true, supTo: "fixed" });
+    await checkFit(2, { to: "fixed" });
+    await update({ mode: "none" });
 
     now = await counters();
     for (const [label, bytes] of Object.entries(now.ownedBuffers.bytes)) {

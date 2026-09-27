@@ -39,6 +39,8 @@ deno add jsr:@molgpu/dynamics
 | `CellListBoundsReadback` | experimental | Compact 32-byte GPU bounds result tagged with source generation.                         |
 | `fitKabsch`              | experimental | CPU proper rigid fit over corresponding atom rows.                                       |
 | `KabschFit`              | experimental | Column-major rigid transform, fitted RMSD, and row count.                                |
+| `superposeWgsl`          | experimental | WGSL for a live Kabsch fit: centroid, covariance and rotation solve, then apply.         |
+| `SUPERPOSE_FIT_BYTES`    | experimental | Size of the fit state buffer `superposeWgsl` reads and writes (144 bytes).               |
 | `minimumImage`           | experimental | Exact nearest Cartesian lattice displacement for a periodic box.                         |
 | `createUnwrapForest`     | experimental | Deterministic covalent spanning forest from typed bonds.                                 |
 | `unwrapFrame`            | experimental | Make each component whole for one frame and optionally center it.                        |
@@ -122,7 +124,28 @@ rejects collinear or nearly collinear fit points, including degenerate input
 with fewer than three rows. The returned matrix applies to **all** output rows;
 `rows` selects only the fit. The default also aligns centroids; with `translate`
 false the source rotates about its own centroid, which stays put. This CPU
-result is the oracle for the planned live `<Superpose>` GPU provider.
+result is the oracle for the live `<Superpose>` viewer provider.
+
+`superposeWgsl` is that fit on the GPU, as three entry points run in order on
+one upstream generation. `centroid` and `covariance` each run as one workgroup
+of 128 lanes and sum in a fixed order, so a fit is deterministic. Coordinates
+are taken relative to the first fit row, so a large common offset does not swamp
+small shape differences in f32. `covariance` then solves Horn's quaternion with
+4×4 Jacobi rotations on lane 0, and `apply` moves every row by
+`R (p - c_source) + c_target`. A nearly collinear live frame writes no rotation
+and passes through. The bindings, in order, are:
+
+| Binding | Buffer                                                        |
+| ------: | ------------------------------------------------------------- |
+|       0 | upstream packed xyz `f32`                                     |
+|       1 | fit rows `u32` (read only when `selected`)                    |
+|       2 | reference packed xyz `f32` for the fit rows, in fit order     |
+|       3 | 144-byte read-write fit state                                 |
+|       4 | uniform `(fitCount, selected, translate, atomCount)` as `u32` |
+|       5 | packed xyz `f32` output                                       |
+
+`centroid` and `covariance` use bindings 0–4, and `apply` uses 0 and 3–5. In the
+viewer tests the GPU RMSD matches `fitKabsch` within 1e-5 Å at a 1000 Å offset.
 
 ## Periodic reference
 

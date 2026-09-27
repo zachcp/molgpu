@@ -188,6 +188,22 @@ export interface TransformProps {
   select?: SelectionQuery;
 }
 
+/** Rigidly fit upstream coordinates onto a reference. */
+export interface SuperposeProps {
+  children?: ViewerElement;
+  /**
+   * Reference positions in topology row order: packed xyz, a `StructureData`
+   * with the same atoms, or `"first"` for frame 0 of the nearest
+   * `<Trajectory>` (upstream passes through while it loads).
+   */
+  to: Float32Array | StructureData | "first";
+  /** Fit atoms (at least three, not collinear). Unlike Transform, every
+   * output atom moves. Omitted means all atoms. */
+  select?: SelectionQuery;
+  /** Align centroids (default). False rotates about the source centroid. */
+  translate?: boolean;
+}
+
 /** Add a precomputed normal mode to upstream coordinates. */
 export interface NormalModeProps {
   children?: ViewerElement;

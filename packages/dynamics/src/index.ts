@@ -19,6 +19,7 @@ export {
   planCellList,
 } from "./cell-list-plan.ts";
 export { fitKabsch, type KabschFit } from "./kabsch.ts";
+export { SUPERPOSE_FIT_BYTES, superposeWgsl } from "./superpose-wgsl.ts";
 export {
   buildElasticNetwork,
   type ElasticMode,

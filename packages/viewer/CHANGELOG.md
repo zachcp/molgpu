@@ -9,6 +9,13 @@ All notable changes to `@molgpu/viewer` are recorded here. The format follows
 - Add experimental `<Transform matrix select>` with a CPU reference in
   `@molgpu/dynamics`. Matrix curves update the GPU output without re-uploading
   structure positions; selection masks stay in topology atom order.
+- Add experimental `<Superpose to select translate>`. It fits the nearest
+  coordinates onto a fixed array, a `StructureData`, or frame 0 of the nearest
+  `<Trajectory>` (`to="first"`), and moves every atom by the fitted proper
+  rotation. The fit runs on the GPU in the same submission as the upstream frame
+  it moves, so there is no readback and no stale fit. Fit RMSD matches the CPU
+  `fitKabsch` oracle within 1e-5 Å while scrubbing. A nearly collinear frame
+  passes through.
 - Add experimental `<NormalMode mode amplitude frequency phase>` for precomputed
   guide-node modes. Its animation changes a uniform and composes with
   Trajectory. Only a zero `amplitude` passes through; an animated scale that

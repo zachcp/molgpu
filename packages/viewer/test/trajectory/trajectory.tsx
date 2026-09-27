@@ -26,6 +26,7 @@ import {
   NormalMode,
   Spacefill,
   Structure,
+  Superpose,
   TimelineProvider,
   Trajectory,
   type TrajectoryFrameState,
@@ -44,11 +45,13 @@ import {
 enableInstrumentation();
 
 const ATOMS = 3;
-function atoms(n: number): StructureData {
-  const positions = Float32Array.from(
+function atoms(
+  n: number,
+  positions = Float32Array.from(
     { length: n * 3 },
     (_, i) => i % 3 === 0 ? (i / 3) * 4 - 4 : 0,
-  );
+  ),
+): StructureData {
   return createStructure({
     positions,
     topology: {
@@ -148,6 +151,68 @@ const MODES = [
     version: 2,
   },
 ];
+// Superpose: 12 non-planar atoms. Frame 0 (the reference) sits ~1000 Å from
+// the origin; frame 1 is a small rigid motion with 0.05 Å noise; frame 2 a
+// large rotation with 0.3 Å noise; frame 3 the mirror image (the fit stays a
+// proper rotation); frame 4 is collinear and passes through.
+const SUP_BASE = [
+  [0, 0, 0],
+  [1.5, 0, 0],
+  [2.2, 1.3, 0],
+  [3.6, 1.4, 0.6],
+  [4.1, 2.8, 1.1],
+  [5.5, 3.0, 0.4],
+  [6.0, 4.2, 1.5],
+  [7.4, 4.5, 1.0],
+  [1.0, -1.2, 0.9],
+  [2.5, -0.8, 2.0],
+  [3.9, 0.2, -1.1],
+  [5.0, -1.6, 0.3],
+];
+const SUP_ATOMS = SUP_BASE.length;
+function rotate(axis: number[], angle: number, p: number[]): number[] {
+  const n = Math.hypot(...axis), [x, y, z] = axis.map((v) => v / n);
+  const c = Math.cos(angle), s = Math.sin(angle), t = 1 - c;
+  return [
+    (t * x * x + c) * p[0] + (t * x * y - s * z) * p[1] +
+    (t * x * z + s * y) * p[2],
+    (t * x * y + s * z) * p[0] + (t * y * y + c) * p[1] +
+    (t * y * z - s * x) * p[2],
+    (t * x * z - s * y) * p[0] + (t * y * z + s * x) * p[1] +
+    (t * z * z + c) * p[2],
+  ];
+}
+const noise = (i: number, scale: number) =>
+  [1, 2, 3].map((k) => scale * Math.sin(12.9898 * (i + 1) * k));
+const packed = (points: number[][], offset: number[]) =>
+  Float32Array.from(points.flatMap((p) => p.map((v, a) => v + offset[a])));
+const SUP_FRAMES: Float32Array[] = [
+  packed(SUP_BASE, [1000, -500, 250]),
+  packed(
+    SUP_BASE.map((p, i) =>
+      rotate([1, 2, 0.5], 0.7, p.map((v, a) => v + noise(i, 0.05)[a]))
+    ),
+    [1003, -498, 251],
+  ),
+  packed(
+    SUP_BASE.map((p, i) =>
+      rotate([-0.3, 1, 2], 2.5, p.map((v, a) => v + noise(i, 0.3)[a]))
+    ),
+    [997, -505, 249],
+  ),
+  packed(SUP_BASE.map(([x, y, z]) => [-x, y, z]), [1000, -500, 250]),
+  packed(SUP_BASE.map((_, i) => [i, 2 * i, 3 * i]), [1000, -500, 250]),
+];
+const SUP_STRUCTURE = atoms(SUP_ATOMS, packed(SUP_BASE, [0, 0, 0]));
+const SUP_TRAJECTORY = createTrajectory({
+  atomCount: SUP_ATOMS,
+  frames: SUP_FRAMES.map((positions) => ({ positions })),
+});
+const SUP_FIXED = packed(
+  SUP_BASE.map((p) => rotate([0.2, -1, 0.4], 1.1, p)),
+  [-20, 40, 7],
+);
+const SUP_FIT = where("atom", "row<6", (_data, row) => row < 6);
 // A source that answers after `delay` ms, for streaming states.
 const slow = (delay: number): TrajectoryData =>
   createTrajectory({
@@ -179,7 +244,8 @@ type Mode =
   | "transform"
   | "transform-selected"
   | "transform-curve"
-  | "normal-mode";
+  | "normal-mode"
+  | "superpose";
 interface State {
   mode: Mode;
   frame: number;
@@ -192,6 +258,9 @@ interface State {
   selectedRow: number;
   modeVersion: number;
   amplitude: number;
+  supTo: "first" | "fixed";
+  supSelect: boolean;
+  supTranslate: boolean;
 }
 
 interface Probe {
@@ -204,6 +273,7 @@ interface Probe {
   errors: string[];
   frames: number[][];
   root: number[];
+  superpose: { frames: number[][]; root: number[]; fixed: number[] };
   counters: typeof snapshotCounters;
   update(patch: Partial<State>): void;
 }
@@ -217,6 +287,11 @@ const probe: Probe = {
   errors: [],
   frames: FRAMES.map((f) => Array.from(f.positions)),
   root: Array.from(STRUCTURE.positions),
+  superpose: {
+    frames: SUP_FRAMES.map((f) => Array.from(f)),
+    root: Array.from(SUP_STRUCTURE.positions),
+    fixed: Array.from(SUP_FIXED),
+  },
   counters: snapshotCounters,
   update: () => {},
 };
@@ -360,6 +435,21 @@ const Scene = ({ state }: { state: State }): LiveElement => {
           </Structure>
         </TimelineProvider>
       );
+    case "superpose":
+      return (
+        <Structure data={SUP_STRUCTURE}>
+          <Trajectory data={SUP_TRAJECTORY} frame={state.frame}>
+            <Superpose
+              to={state.supTo === "first" ? "first" : SUP_FIXED}
+              select={state.supSelect ? SUP_FIT : undefined}
+              translate={state.supTranslate}
+            >
+              <Spacefill />
+              <Probe />
+            </Superpose>
+          </Trajectory>
+        </Structure>
+      );
   }
 };
 
@@ -376,6 +466,9 @@ const App = (): LiveElement => {
     selectedRow: 0,
     modeVersion: 1,
     amplitude: 0,
+    supTo: "first",
+    supSelect: false,
+    supTranslate: true,
   });
   probe.update = (patch) => setState((previous) => ({ ...previous, ...patch }));
   probe.mounted = true;

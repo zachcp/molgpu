@@ -29,9 +29,11 @@ import {
 
 const NONE: readonly StorageSource[] = [];
 
-const Published: LC<{
+/** Publish a provider's packed output buffer, which it now owns and destroys
+ * on unmount, as the nearest coordinates for `children`. */
+export const Published: LC<{
   upstream: Coordinates;
-  source: StorageTarget;
+  source: Pick<StorageTarget, "buffer">;
   generation: number;
   children: LiveElement;
 }> = ({ upstream, source, generation, children }) => {

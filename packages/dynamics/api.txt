@@ -38,6 +38,8 @@ NormalModeData
   export interface NormalModeData { /** Owned xyz displacement per guide node, in node order. */ readonly vectors: Float32Array; /** Atom row to guide node, or 0xffffffff for no displacement. */ readonly atomToNode: Uint32Array; /** Increment when vectors or mapping are replaced. */ readonly version: number }
 PbcSearchLimitError
   export class PbcSearchLimitError extends RangeError { constructor(candidates: number, limit: number) }
+SUPERPOSE_FIT_BYTES
+  export const SUPERPOSE_FIT_BYTES = 144;
 TemplateChargeOptions
   export interface TemplateChargeOptions { readonly his?: "HID" | "HIE" | "HIP"; /** Template names keyed by `residueKey(data, residueRow)`. */ readonly residues?: Readonly<Record<string, string>> }
 TemplateChargeReport
@@ -82,6 +84,8 @@ residueNetCharge
   export function residueNetCharge(data: StructureData, column?: string): Float32Array;
 solveElasticModes
   export function solveElasticModes(network: ElasticNetwork, kind: "gnm" | "anm", count: number, options?: ElasticSolveOptions): readonly ElasticMode[];
+superposeWgsl
+  export const superposeWgsl: string;
 templateCharges
   export function templateCharges(data: StructureData, options?: TemplateChargeOptions): ChargeAssignment<TemplateChargeReport>;
 unwrapFrame

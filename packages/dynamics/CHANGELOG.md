@@ -23,3 +23,5 @@ All notable changes to `@molgpu/dynamics` are recorded here. See
   Both paths match ProDy 2.6.1 ANM and GNM modes on 1crn and 1tqn.
 - Add `residueGuideMap` and `normalModeFromElastic`, which turn an ANM mode into
   `<NormalMode>` input.
+- Add `superposeWgsl` and `SUPERPOSE_FIT_BYTES`: a live GPU Kabsch fit in three
+  ordered stages, checked against `fitKabsch`.

@@ -134,6 +134,10 @@ StructureProps
   export type StructureProps = PreloadedStructureProps | LoadedStructureProps;
 StructureResource
   export interface StructureResource { readonly data: StructureData; readonly identity: StructureData["identity"]; readonly topologyRevision: number; readonly positionsRevision: number; readonly attributesRevision: number; /** Lazily computed and cached; throws once the resource is disposed. */ readonly bounds: StructureBounds | null; dispose(): void }
+Superpose
+  export const Superpose: ViewerComponent<SuperposeProps>;
+SuperposeProps
+  export interface SuperposeProps { children?: ViewerElement; /** * Reference positions in topology row order: packed xyz, a `StructureData` * with the same atoms, or `"first"` for frame 0 of the nearest * `<Trajectory>` (upstream passes through while it loads). */ to: Float32Array | StructureData | "first"; /** Fit atoms (at least three, not collinear). Unlike Transform, every * output atom moves. Omitted means all atoms. */ select?: SelectionQuery; /** Align centroids (default). False rotates about the source centroid. */ translate?: boolean }
 Surface
   export const Surface: ViewerComponent<{ /** A @molgpu/select atom Selection; without one, active model/primary-altloc atoms are used. */ select?: Selection | null; /** Ångström probe radius; defaults to 1.4 (water). */ probeRadius?: number; /** Grid spacing in Ångströms; defaults to 0.5. Smaller is finer and slower. */ resolution?: number; /** Grid byte budget override; defaults to 256 MiB. */ maxBytes?: number; color?: VectorLike; /** Wraps the shaded face layer; without one, the ambient scene material. */ material?: MaterialSpec; loading?: ViewerElement | (() => ViewerElement); error?: ViewerElement | ((failure: unknown) => ViewerElement) } & Translucency>;
 TimelineProvider
