@@ -5,6 +5,7 @@ import {
   elementRadius,
   type Links,
   type StructureData,
+  withAttributes,
 } from "@molgpu/table";
 import type {
   BcifErrorCode,
@@ -39,7 +40,12 @@ interface CifCategory {
   readonly rowCount: number;
   getField(
     name: string,
-  ): { str(row: number): string; float(row: number): number } | undefined;
+  ): {
+    str(row: number): string;
+    float(row: number): number;
+    /** Mol* Column.ValueKind: 0 present, 1 not present ('.'), 2 unknown ('?'). */
+    valueKind(row: number): number;
+  } | undefined;
 }
 type Categories = Readonly<Record<string, CifCategory | undefined>>;
 type PolymerKind = "protein" | "rna" | "dna" | "other";
@@ -728,8 +734,11 @@ export async function structureFromBcif(
     atomComp: string[] = [];
   let microheterogeneous = false;
   // Optional columns are only emitted when the file carries their source field.
-  const hasCharge = !!field(atom, "pdbx_formal_charge"),
-    hasGroup = !!field(atom, "group_PDB"),
+  const charge = field(atom, "pdbx_formal_charge");
+  // Mol* reads '?' and '.' as 0; the column only counts as imported when at
+  // least one row carries a value.
+  let chargeImported = false;
+  const hasGroup = !!field(atom, "group_PDB"),
     hasEntity = !!field(atom, "label_entity_id");
   const residueRows = new Map<string, number>(),
     residues: ResidueRow[] = [],
@@ -789,7 +798,10 @@ export async function structureFromBcif(
     positions[i * 3 + 2] = num(atom, "Cartn_z", i);
     occupancy[i] = num(atom, "occupancy", i, 1);
     bfactor[i] = num(atom, "B_iso_or_equiv", i, 0);
-    formalCharge[i] = Math.trunc(num(atom, "pdbx_formal_charge", i, 0));
+    if (charge && charge.valueKind(i) === 0) {
+      formalCharge[i] = Math.trunc(charge.float(i));
+      chargeImported = true;
+    }
   }
   const residueCount = residues.length, chainCount = chains.length;
   const links = readLinks(
@@ -816,7 +828,7 @@ export async function structureFromBcif(
     residues,
     chains,
   );
-  return createStructure({
+  const data = createStructure({
     positions,
     topology: {
       atoms: {
@@ -829,7 +841,6 @@ export async function structureFromBcif(
         occupancy,
         bfactor,
         radius,
-        ...(hasCharge ? { formalCharge } : {}),
         ...(microheterogeneous ? { comp: atomComp } : {}),
       },
       residues: {
@@ -878,6 +889,16 @@ export async function structureFromBcif(
               : 0,
         ),
       },
+    },
+  });
+  // Every io structure resolves formalCharge, as in Mol*: imported values, or
+  // zeros marked 'default' when the file has none.
+  return withAttributes(data, {
+    formalCharge: {
+      domain: "atom",
+      kind: "code",
+      values: formalCharge,
+      provenance: chargeImported ? "imported:mmcif" : "default",
     },
   });
 }

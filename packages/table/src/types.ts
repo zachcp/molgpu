@@ -13,7 +13,11 @@ export interface Atoms {
   readonly radius?: Float32Array;
   /** Per-atom chemical component, present only when some residue mixes components (microheterogeneity); residues.comp is then the residue's first atom's. */
   readonly comp?: readonly string[];
-  /** mmCIF pdbx_formal_charge; a missing value reads 0. Absent when the source has no charges. */
+  /**
+   * Formal charge on hand-built structures; resolves as `formalCharge` with
+   * provenance `legacy`. @deprecated Set the derived `formalCharge` attribute
+   * with `withAttributes`; `@molgpu/io` no longer writes this column.
+   */
   readonly formalCharge?: Int8Array;
 }
 export interface Residues {

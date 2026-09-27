@@ -6,6 +6,15 @@ All notable changes to `@molgpu/io` are recorded here. The format follows
 
 ## [Unreleased]
 
+- **Changed:** `structureFromBcif` no longer writes
+  `topology.atoms.formalCharge`. Formal charge is now the derived `formalCharge`
+  attribute (read it with `attributeColumn(data,
+  "formalCharge")`). Its
+  provenance is `imported:mmcif` when at least one `pdbx_formal_charge` row has
+  a value, and otherwise it holds zeros with provenance `default`. Every
+  structure from io therefore resolves `formalCharge`, and
+  `pdbx_formal_charge = 0` selects uncharged atoms instead of throwing, as Mol*
+  does (Phase 14, 1to.3).
 - Trajectories (Phase 12). New experimental `openTrajectory`,
   `trajectoryFromDcd`, `trajectoryFromXtc`, `trajectoryFromTrr`,
   `trajectoryFormat`, `byteSource`, `urlByteSource`, `MAX_FULL_DOWNLOAD`,
