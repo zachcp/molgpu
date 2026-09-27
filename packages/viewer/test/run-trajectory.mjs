@@ -397,6 +397,62 @@ Deno.test("trajectory components", async () => {
           t,
         ),
       );
+    const unw = await page.evaluate(() => {
+      const { statuses: _, ...rest } = window.__trajectory.unwrap;
+      return rest;
+    });
+    const unwrapTopology = {
+      atoms: {
+        count: unw.root.length / 3,
+        residue: new Uint32Array(unw.root.length / 3),
+        altloc: new Array(unw.root.length / 3).fill(""),
+      },
+      residues: { chain: new Uint32Array(1) },
+      chains: { model: Int32Array.of(1) },
+      bonds: {
+        count: unw.bonds.length,
+        a: Uint32Array.from(unw.bonds, (bond) => bond[0]),
+        b: Uint32Array.from(unw.bonds, (bond) => bond[1]),
+        flags: new Uint8Array(unw.bonds.length).fill(1),
+      },
+    };
+    const forest = createUnwrapForest(unwrapTopology);
+
+    // 0. First-dispatch race (molgpu-sept-usx). A CoordinatePasses provider
+    // under a static kernel provider must not keep an output computed from the
+    // kernel's zero-filled buffer: nothing upstream changes after the kernel's
+    // pipeline compiles, so only the kernel's own first-dispatch signal can
+    // trigger the re-run. Each case starts on a fresh page so the kernel
+    // pipeline compiles asynchronously.
+    const fresh = async () => {
+      await page.reload();
+      await page.waitForFunction(() => window.__trajectory?.mounted, null, {
+        timeout: 30000,
+      });
+    };
+    {
+      const sup = await page.evaluate(() => window.__trajectory.superpose);
+      const upstream = Float32Array.from(sup.frames[2]);
+      const fit = fitKabsch(upstream, Float32Array.from(sup.fixed), null, true);
+      await update({ mode: "static-superpose" });
+      await expectRead(
+        Array.from(applyAffine(upstream, fit.matrix)),
+        "superpose under static Wobble",
+        2e-3,
+      );
+      await fresh();
+      await update({ mode: "static-unwrap" });
+      await expectRead(
+        Array.from(
+          unwrapFrame(Float32Array.from(unw.frames[0]), forest, unw.boxes[0])
+            .positions,
+        ),
+        "unwrap under static Wobble",
+        1e-4,
+      );
+      await fresh();
+    }
+
     const baseline = await counters();
     const report = {};
 
@@ -981,26 +1037,6 @@ Deno.test("trajectory components", async () => {
     // skew triclinic cell, bonds come back whole, the box follows frames,
     // centering moves the ring into the primary cell, ring ambiguity is
     // reported, and a missing or singular box passes through.
-    const unw = await page.evaluate(() => {
-      const { statuses: _, ...rest } = window.__trajectory.unwrap;
-      return rest;
-    });
-    const unwrapTopology = {
-      atoms: {
-        count: unw.root.length / 3,
-        residue: new Uint32Array(unw.root.length / 3),
-        altloc: new Array(unw.root.length / 3).fill(""),
-      },
-      residues: { chain: new Uint32Array(1) },
-      chains: { model: Int32Array.of(1) },
-      bonds: {
-        count: unw.bonds.length,
-        a: Uint32Array.from(unw.bonds, (bond) => bond[0]),
-        b: Uint32Array.from(unw.bonds, (bond) => bond[1]),
-        flags: new Uint8Array(unw.bonds.length).fill(1),
-      },
-    };
-    const forest = createUnwrapForest(unwrapTopology);
     const ringRows = [14, 15, 16, 17, 18, 19];
     const cpuUnwrap = (frame, center = null) =>
       unwrapFrame(

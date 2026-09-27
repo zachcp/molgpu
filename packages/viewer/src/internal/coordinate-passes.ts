@@ -26,7 +26,8 @@ export type EncodePasses = (
  * output. Once per content generation, during render, it encodes every stage
  * into one command buffer and submits it. The submit lands after the upstream
  * provider's dispatch and before any descendant's, so all stages read the same
- * upstream generation, in order, with no CPU readback.
+ * upstream generation, in order, with no CPU readback. It waits for an
+ * upstream kernel's first dispatch (`ready`) and forwards readiness.
  */
 export const CoordinatePasses: LC<{
   upstream: Coordinates;
@@ -46,14 +47,26 @@ export const CoordinatePasses: LC<{
       }),
     [device, upstream.count],
   );
+  // An upstream kernel that has not dispatched yet holds zeros. Wait for its
+  // ready generation instead of encoding from it: keep the previous output
+  // (still ready) or, for a new output buffer, publish generation 0, not ready.
   const next = useRef(0);
-  const generation = useMemo(() => ++next.current, [
+  const filled = useRef<GPUBuffer | null>(null);
+  const generation = useMemo(() => {
+    if (upstream.ready === false) {
+      return filled.current === output ? next.current : 0;
+    }
+    filled.current = output;
+    return ++next.current;
+  }, [
     upstream.source.buffer,
     upstream.generation,
+    upstream.ready,
     parameterKey,
     output,
   ]);
   useMemo(() => {
+    if (!generation) return;
     const encoder = device.createCommandEncoder({ label: `molgpu:${label}` });
     const after = encode(encoder, upstream.source.buffer, output, generation);
     device.queue.submit([encoder.finish()]);
@@ -64,6 +77,7 @@ export const CoordinatePasses: LC<{
     upstream,
     source: { buffer: output },
     generation,
+    ready: generation > 0,
     children,
   });
 };

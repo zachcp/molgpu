@@ -6,6 +6,14 @@ All notable changes to `@molgpu/viewer` are recorded here. The format follows
 
 ## [Unreleased]
 
+- **Changed (advanced):** kernel-backed coordinate streams (`Trajectory`,
+  `Transform`, `NormalMode`, `WobbleCoordinates`) now publish `ready: false`
+  until their kernel's first dispatch lands, then advance `generation` again.
+  `generation` is an opaque, increasing content counter: do not map it to a
+  frame index. `<Superpose>`, `<Unwrap>` and `<EField>` wait for `ready` instead
+  of computing from a zero-filled buffer; `Coordinates.mayStartUnfilled` and
+  EField's settling timers are removed.
+
 - Add experimental `<EField>`: the Coulomb potential of the nearest coordinates
   and a charge column (default `partialCharge`), summed exactly on the GPU onto
   a locked grid and provided as a live Volume in kT/e. Vacuum, ε = 4r (default)
