@@ -8,7 +8,6 @@ import type {
 import { use, useMemo, useRef } from "@use-gpu/live";
 import { FaceLayer } from "@use-gpu/workbench";
 import {
-  activeAtoms,
   attributeColumn,
   type SecondaryStructureTrace,
   secondaryStructureTrace,
@@ -31,6 +30,7 @@ import {
 } from "./internal/opacity.ts";
 import { withMaterial } from "./materials.ts";
 import { buildRibbonGeometry } from "./internal/ribbon-geometry.ts";
+import { ribbonDsspRows } from "./internal/ribbon-dssp.ts";
 import { useRepaint } from "./internal/use-repaint.ts";
 import { count } from "./internal/instrumentation.ts";
 import { useBindingProbe } from "./internal/use-binding-probe.ts";
@@ -81,8 +81,9 @@ export const Ribbon: ViewerComponent<
     material?: MaterialSpec;
     /**
      * `"model"` (default) draws the structure's `ssCode`. `"dssp"` runs DSSP
-     * on each coordinate snapshot the ribbon draws (active model and
-     * altlocs), so codes always come from the displayed coordinates.
+     * on each coordinate snapshot the ribbon draws, over the primary-altloc
+     * atoms of every model the drawn atoms belong to, so codes always come
+     * from the displayed coordinates of the displayed models.
      */
     secondaryStructure?: "model" | "dssp";
   } & Translucency
@@ -111,21 +112,27 @@ export const Ribbon: ViewerComponent<
   if (secondaryStructure !== "model" && secondaryStructure !== "dssp") {
     throw new TypeError("Ribbon secondaryStructure must be model or dssp");
   }
+  const indices = useActiveRows(resource, select, "Ribbon");
+  // DSSP covers the whole of each model the ribbon draws (efv.10), not only
+  // the first model: a selection of model 2 gets model 2's codes.
+  const dsspRows = useMemo(
+    () =>
+      secondaryStructure === "dssp"
+        ? ribbonDsspRows(resource.data, indices)
+        : null,
+    [indices, secondaryStructure, resource.identity, resource.topologyRevision],
+  );
   // DSSP rides on the snapshot object itself: its codes and the coordinates
   // the ribbon draws share one generation, and nothing replaces root data.
   const data = useMemo(
     () =>
-      snapshot && secondaryStructure === "dssp"
+      snapshot && dsspRows
         ? (count("geometryBuilds", "ribbon:dssp"),
-          withSecondaryStructure(snapshot, {
-            mode: "dssp",
-            rows: activeAtoms(snapshot),
-          }))
+          withSecondaryStructure(snapshot, { mode: "dssp", rows: dsspRows }))
         : snapshot,
-    [snapshot, secondaryStructure],
+    [snapshot, dsspRows],
   );
 
-  const indices = useActiveRows(resource, select, "Ribbon");
   const trace = useMemo(
     () =>
       data
