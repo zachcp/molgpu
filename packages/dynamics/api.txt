@@ -16,6 +16,10 @@ ChargeAssignment
   export interface ChargeAssignment<R> { readonly values: Float32Array; readonly assigned: Uint8Array; readonly report: R }
 ChargeUnmatched
   export interface ChargeUnmatched { readonly comp: string; readonly name: string; readonly count: number; readonly residues: readonly string[] }
+DsspBridge
+  export interface DsspBridge { readonly partner1: number; readonly partner2: number; readonly type: number; /** k * 32 + donor slot * 4 + pattern, restoring the CPU's generation order. */ readonly order: number }
+DsspLayout
+  export interface DsspLayout { readonly descriptors: Int32Array; readonly caMap: Uint32Array; readonly residues: Uint32Array; readonly unitStarts: Uint32Array; readonly residueCount: number; readonly atomCount: number; readonly totalResidues: number }
 ElasticMode
   export interface ElasticMode { readonly kind: "gnm" | "anm"; readonly eigenvalue: number; /** Scalar per node for GNM; packed xyz per node for ANM. */ readonly vector: Float32Array; readonly residual: number }
 ElasticNetwork
@@ -70,6 +74,10 @@ createCellList
   export function createCellList(positions: Float32Array, cellSize: number, options?: CellListOptions): CellList;
 createUnwrapForest
   export function createUnwrapForest(topology: Topology): UnwrapForest;
+dsspWgsl
+  export const dsspWgsl: Readonly<{ gather: string; hbonds: string; turns: string; helix: string; bends: string; bridges: string }>;
+finishDssp
+  export function finishDssp(layout: DsspLayout, gpuFlags: Uint32Array, bridges: readonly DsspBridge[]): Uint8Array;
 fitKabsch
   export function fitKabsch(source: Float32Array, reference: Float32Array, rows?: ArrayLike<number> | null, translate?: boolean): KabschFit;
 gasteigerCharges
@@ -86,6 +94,8 @@ periodicBox
   export function periodicBox(box: ArrayLike<number>): PeriodicBox;
 planCellList
   export function planCellList(readback: CellListBoundsReadback, expectedGeneration: number, atomCount: number, cellSize: number, maxStorageBufferBindingSize: number, maxCells?: number): CellListPlan | null;
+prepareDsspLayout
+  export function prepareDsspLayout(data: StructureData, rows: ArrayLike<number>): DsspLayout;
 residueGuideMap
   export function residueGuideMap(topology: Topology, guideRows: ArrayLike<number>): Uint32Array;
 residueNetCharge

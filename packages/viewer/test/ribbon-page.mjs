@@ -13,7 +13,13 @@ import {
 import { resolve, where } from "@molgpu/select";
 import { coordinateBounds } from "@molgpu/table";
 import { structureFromBcif } from "@molgpu/io";
-import { Ribbon, Structure } from "../src/index.ts";
+import {
+  GpuDssp,
+  Ribbon,
+  Structure,
+  Transform,
+  useAttributeSnapshot,
+} from "../src/index.ts";
 
 const probe = window.__probe = {
   storage: [],
@@ -21,6 +27,9 @@ const probe = window.__probe = {
   storageWrites: [],
   errors: [],
   mounted: false,
+  dsspStatus: null,
+  dsspSnapshot: null,
+  dsspRuns: 0,
 };
 const storageInfo = new WeakMap();
 const make = GPUDevice.prototype.createBuffer;
@@ -74,16 +83,59 @@ const nothing = resolve(where("atom", "none", () => false), data);
 const bounds = coordinateBounds(data);
 const extent = Math.max(...bounds.max.map((v, i) => v - bounds.min[i]));
 
+const DsspSnapshotProbe = () => {
+  const snapshot = useAttributeSnapshot("ssCode");
+  probe.dsspSnapshot = snapshot && {
+    generation: snapshot.generation,
+    provenance: snapshot.data.attributes?.ssCode?.provenance,
+  };
+  return null;
+};
+
 // The edited state lives BELOW a stable <Pass>, as in a real app, so a style
 // edit must repaint on its own (molgpu-sept-jrr).
 const RibbonProbe = () => {
   const [mode, setMode] = useState("ribbon");
   const [color, setColor] = useState([0.85, 0.55, 0.35, 1]);
+  const [shift, setShift] = useState(0);
   probe.setMode = setMode;
   probe.setColor = setColor;
+  probe.setShift = setShift;
   probe.mounted = true;
   const props = mode === "empty" ? { select: nothing, color } : { color };
-  return use(Structure, { data, children: use(Ribbon, props) });
+  const ribbon = use(Ribbon, props);
+  return use(Structure, {
+    data,
+    children: mode === "gpu"
+      ? use(Transform, {
+        matrix: [
+          1,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          shift,
+          0,
+          0,
+          1,
+        ],
+        children: use(GpuDssp, {
+          onStatus: (status) => {
+            probe.dsspStatus = status;
+            probe.dsspRuns++;
+          },
+          children: [ribbon, use(DsspSnapshotProbe, {})],
+        }),
+      })
+      : ribbon,
+  });
 };
 
 const App = () => {

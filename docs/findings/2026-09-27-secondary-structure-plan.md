@@ -430,6 +430,25 @@ verdicts; accepted ones are folded into the body above.
   test with a deliberately held readback was not written, because pairing does
   not depend on readback timing: the codes are derived from the snapshot object
   the ribbon already holds.
-- **GPU DSSP (efv.7):** not started. At about 4 µs per residue, CPU DSSP costs
-  about 50 ms per 100k-atom frame, which the snapshot throttle absorbs. The
-  Phase 13 cell list it needs is not on `main` yet.
+- **GPU DSSP (efv.7):** implemented in `@molgpu/dynamics` WGSL stages and
+  `@molgpu/viewer` orchestration. `<GpuDssp>` publishes a generation-tagged
+  `ssCode` GPU source and CPU copy through the attribute contexts; `<Ribbon>`
+  consumes that copy only with a matching coordinate snapshot. A compact CA
+  bounds readback sizes the Phase 13 cell list. H-bond lists hold eight sorted
+  donors per acceptor, and bridge entries carry the generating edge and pattern
+  so CPU ladder completion restores canonical order. Static overflow raises
+  `GpuDsspOverflowError`; a live frame recomputes from a full coordinate
+  snapshot. The pinned protein corpus (1crn, 1ejg, 1tqn, 1a4y, 4c7r and three
+  2k39 models) matched CPU codes exactly; 1a4y had two residues near a threshold
+  and zero mismatches. A synthetic dense case exercised donor-cap overflow and
+  exact frame fallback. Browser runs on 2026-09-27, replicated 1crn chains:
+
+  |     Atoms | Residues | CPU DSSP | GPU DSSP incl. readbacks | Temporary GPU allocation | Readback | Code differences |
+  | --------: | -------: | -------: | -----------------------: | -----------------------: | -------: | ---------------: |
+  |   100,062 |   14,076 |  44.2 ms |                  22.1 ms |                  2.94 MB |  66.1 KB |                0 |
+  | 1,000,293 |  140,714 | 475.2 ms |                 212.0 ms |                  29.3 MB | 660.8 KB |                0 |
+
+  These are one browser run on this host, including allocation and mapping,
+  excluding the input coordinate buffer and returned `ssCode` buffer. Run
+  `MOLGPU_DSSP_BENCH=1 deno test -A packages/viewer/test/run-gpu-dssp.mjs` to
+  repeat it.

@@ -116,6 +116,7 @@ may change before 0.1.0; _advanced_ — only from `@molgpu/viewer/advanced`.
 | `BallAndStick`               | stable       | Spacefill balls plus Bonds sticks over one selection.                                                                                                                                                                   |
 | `Tube`                       | stable       | Backbone as a GPU-extruded tube.                                                                                                                                                                                        |
 | `Ribbon`                     | stable       | Backbone as an oriented ribbon mesh.                                                                                                                                                                                    |
+| `GpuDssp`                    | experimental | Computes DSSP from the nearest GPU coordinate stream for one model and publishes generation-tagged `ssCode` to descendant fields and ribbons.                                                                           |
 | `Surface`                    | stable       | Molecular (solvent-excluded) surface.                                                                                                                                                                                   |
 | `Volume`                     | experimental | Own one scalar volume (`data` or CCP4/MRC `src`); one shared GPU copy per volume identity.                                                                                                                              |
 | `VolumeProps`                | experimental | `<Volume>` props: `data` or `src`, with `loader`/`loading`/`error`.                                                                                                                                                     |
@@ -240,6 +241,15 @@ may change before 0.1.0; _advanced_ — only from `@molgpu/viewer/advanced`.
 | `WorldSpacePointLayer`       | advanced     | PointLayer with GPU radii source and Ångström size conversion in a shader.                                                                                                                                              |
 | `useField`                   | advanced     | Lower a field to a use.gpu shader source.                                                                                                                                                                               |
 
+| Export                 | Stability    | Purpose                                                              |
+| ---------------------- | ------------ | -------------------------------------------------------------------- |
+| `GpuDsspProps`         | experimental | Model, overflow policy, status callback and children.                |
+| `GpuDsspStatus`        | experimental | Generation, near-threshold residue count, bridge count and fallback. |
+| `gpuDssp`              | advanced     | Compute DSSP from a packed GPU coordinate buffer.                    |
+| `GpuDsspOverflowError` | advanced     | Named static-path error for bounded GPU work.                        |
+| `GpuDsspOptions`       | advanced     | Layout, rows, generation and overflow policy.                        |
+| `GpuDsspResult`        | advanced     | Owned code buffer, CPU copy, memory counters and fallback.           |
+
 ## Volumes
 
 `<Volume>` sits beside `<Structure>`, not inside it: a structure never owns a
@@ -261,6 +271,15 @@ so its generation advances. `useAttributeSnapshot(name)` subscribes to a
 throttled CPU copy for a tooltip or analysis; it returns `null` until the first
 readback. The snapshot contains a revised table with the produced column and the
 producer generation.
+
+`<GpuDssp><Ribbon secondaryStructure="model" /></GpuDssp>` computes secondary
+structure from the nearest GPU coordinate stream. Put it below the coordinate
+provider. It publishes `ssCode` to descendant fields and a CPU copy to ribbons
+only for the matching coordinate generation. `model` selects one model (the
+first by default). The default `overflow="frame"` reads one full coordinate
+frame and reruns CPU DSSP when a bounded GPU list overflows; use
+`overflow="static"` to raise `GpuDsspOverflowError` instead. `onStatus` reports
+the bridge count, near-threshold residue count and whether fallback ran.
 
 ## Coordinate consumers
 

@@ -17,6 +17,8 @@ export { Bonds } from "./bonds.ts";
 export { BallAndStick } from "./ball-and-stick.ts";
 export { Tube } from "./tube.ts";
 export { Ribbon } from "./ribbon.ts";
+export { GpuDssp } from "./gpu-dssp-provider.ts";
+export type { GpuDsspProps, GpuDsspStatus } from "./gpu-dssp-provider.ts";
 export { Surface } from "./surface.ts";
 export { Volume } from "./volume.ts";
 export { Isosurface } from "./isosurface.ts";

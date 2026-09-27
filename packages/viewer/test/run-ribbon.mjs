@@ -156,6 +156,60 @@ Deno.test("viewer ribbon", async () => {
       "empty selection must allocate no new ribbon geometry buffers",
     );
 
+    await page.evaluate(() => window.__probe.setMode("gpu"));
+    await page.waitForFunction(() => window.__probe.dsspStatus !== null)
+      .catch(async (failure) => {
+        throw new Error(
+          `GPU DSSP did not publish: ${
+            JSON.stringify({
+              errors,
+              probe: await page.evaluate(() => ({
+                status: window.__probe.dsspStatus,
+                gpuErrors: window.__probe.errors,
+              })),
+            })
+          }`,
+          { cause: failure },
+        );
+      });
+    await settle();
+    assert.deepEqual(
+      (await snap()).errors,
+      [],
+      "GPU DSSP ribbon produced WebGPU errors",
+    );
+    const status = await page.evaluate(() => window.__probe.dsspStatus);
+    assert.equal(status.fallback, false);
+    assert.ok(status.bridgeCount > 0);
+    const snapshot = await page.evaluate(() => window.__probe.dsspSnapshot);
+    assert.deepEqual(snapshot, {
+      generation: status.generation,
+      provenance: "gpu:dssp",
+    });
+    const gpuBuffers = (await snap()).storageLabels;
+    await page.evaluate(() => window.__probe.setColor([0.7, 0.3, 0.5, 1]));
+    await settle();
+    const afterGpuStyle = await snap();
+    assert.deepEqual(afterGpuStyle.errors, []);
+    assert.equal(await page.evaluate(() => window.__probe.dsspRuns), 1);
+    assert.deepEqual(
+      afterGpuStyle.storageLabels.slice(gpuBuffers.length).filter((label) =>
+        ["molgpu:positions", "molgpu:normals", "molgpu:indices"].includes(label)
+      ),
+      [],
+      "GPU DSSP ribbon style edit must not rebuild geometry",
+    );
+    await page.evaluate(() => window.__probe.setShift(2));
+    await page.waitForFunction(
+      (previous) => window.__probe.dsspStatus?.generation > previous,
+      status.generation,
+    );
+    await page.waitForFunction(() =>
+      window.__probe.dsspSnapshot?.generation ===
+        window.__probe.dsspStatus?.generation
+    );
+    assert.deepEqual((await snap()).errors, []);
+
     console.log(
       JSON.stringify({
         status: "passed",

@@ -58,13 +58,14 @@
     "test:viewer:tube": "deno test -A packages/viewer/test/run-tube.mjs",
     "test:viewer:surface": "deno test -A packages/viewer/test/run-surface.mjs",
     "test:viewer:ribbon": "deno test -A packages/viewer/test/run-ribbon.mjs",
+    "test:viewer:dssp": "deno test -A packages/viewer/test/run-gpu-dssp.mjs",
     "test:viewer:materials": "deno test -A packages/viewer/test/run-materials.mjs",
     "test:viewer:postprocess": "deno test -A packages/viewer/test/run-postprocess.mjs",
     "test:viewer:picking": "deno test -A packages/viewer/test/run-picking.mjs",
     "test:viewer:annotations": "deno test -A packages/viewer/test/run-annotations.mjs",
     "test:viewer:invalidation": "deno test -A packages/viewer/test/run-invalidation.mjs",
     "gate:dynamics": "MOLGPU_DYNAMICS_GATE=1 deno test -A packages/viewer/test/run-trajectory.mjs",
-    "test:components": "deno test -A packages/viewer/test/run-components.mjs packages/viewer/test/run-volume.mjs packages/viewer/test/run-trajectory.mjs",
+    "test:components": "deno test -A packages/viewer/test/run-components.mjs packages/viewer/test/run-volume.mjs packages/viewer/test/run-trajectory.mjs packages/viewer/test/run-gpu-dssp.mjs",
     "test:site": "deno test -A site/test/run-browser.mjs"
   }
 }
