@@ -23,13 +23,10 @@ import {
 import { structureFromBcif } from "@molgpu/io";
 import { resolve, type Selection, where } from "@molgpu/select";
 import { coordinateBounds, createVolume, sampleVolume } from "@molgpu/table";
-import { createStructureResource } from "@molgpu/viewer";
+
 import { buildSurfaceGeometry } from "../../src/internal/surface-geometry.ts";
-import {
-  coulombGrid,
-  type ElectrostaticsOptions,
-  templateCharges,
-} from "@molgpu/dynamics";
+import { coulombGrid } from "../../../dynamics/src/electrostatics.ts";
+import { type ElectrostaticsOptions, templateCharges } from "@molgpu/dynamics";
 import { byPotential } from "@molgpu/fields";
 import {
   EField,
@@ -43,7 +40,7 @@ import {
   Trajectory,
   VolumeSlice,
 } from "@molgpu/viewer";
-import { useVolume, WobbleCoordinates } from "@molgpu/viewer/advanced";
+import { createStructureResource, useVolume } from "@molgpu/viewer/advanced";
 import {
   enableInstrumentation,
   snapshotCounters,
@@ -52,6 +49,7 @@ import { efieldTesting } from "../../src/efield.ts";
 import { fieldLinesTesting } from "../../src/field-lines.ts";
 import { positionsWgsl } from "../../src/field-arrows.ts";
 import { slicePlaneFrame } from "../../src/internal/slice-plane.ts";
+import { WobbleCoordinates } from "../fixtures/wobble-coordinates.ts";
 
 enableInstrumentation();
 

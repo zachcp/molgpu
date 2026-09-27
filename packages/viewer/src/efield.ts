@@ -25,9 +25,8 @@ import {
   COULOMB_WORKGROUP,
   coulombParams,
   coulombWgsl,
-  type Electrostatics,
-  electrostatics,
-} from "@molgpu/dynamics";
+} from "@molgpu/dynamics/wgsl";
+import { type Electrostatics, electrostatics } from "@molgpu/dynamics";
 import { type Coordinates, useCoordinates } from "./coordinates-context.ts";
 import { AttributesContext } from "./attributes-context.ts";
 import {
@@ -46,9 +45,9 @@ import {
 } from "./internal/instrumentation.ts";
 import { live, viewer } from "./internal/elements.ts";
 import {
+  type NearestVolume,
   useStableGrid,
   VolumeContext,
-  type VolumeContextValue,
 } from "./volume-context.ts";
 import type { EFieldProps, ViewerComponent } from "./types.ts";
 
@@ -364,7 +363,7 @@ const EFieldCompute: LC<{
   const snapshot = published?.grid === grid ? published.volume : null;
   const demand = [...requests.values()];
 
-  const value = useMemo<VolumeContextValue>(() =>
+  const value = useMemo<NearestVolume>(() =>
     Object.freeze({
       grid,
       source,

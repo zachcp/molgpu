@@ -9,11 +9,8 @@ import {
 import type { StorageSource } from "@use-gpu/core";
 import { wgsl } from "@use-gpu/shader/wgsl";
 import { useDeviceContext } from "@use-gpu/workbench";
-import {
-  type NormalModeData,
-  normalModeWgsl,
-  validateNormalMode,
-} from "@molgpu/dynamics";
+import type { NormalModeData } from "@molgpu/dynamics";
+import { normalModeWgsl, validateNormalMode } from "@molgpu/dynamics/wgsl";
 import { useCoordinates } from "./coordinates-context.ts";
 import { CoordinateKernel } from "./internal/coordinate-kernel.ts";
 import {

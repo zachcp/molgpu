@@ -82,17 +82,36 @@ export const Published: LC<{
   );
 };
 
-/** Own one packed output and publish it after one generation-gated dispatch. */
-export const CoordinateKernel: LC<{
+/** `<CoordinateKernel>` props. */
+export interface CoordinateKernelProps {
+  /** The coordinates to transform: `useCoordinates()` of the nearest provider. */
   upstream: Coordinates;
+  /**
+   * A WGSL compute module run once per atom (`@workgroup_size(64)`). It links
+   * `getSize()`, then one getter per `args` entry, one per `sources` entry, and
+   * `getInput(i) -> vec3<f32>` for the upstream position, and writes
+   * `output[i * 3u + k]` for k = 0, 1, 2.
+   */
   shader: ShaderModule;
+  /** Uniform values linked in order after `getSize`. */
   args?: unknown[];
   /** Extra storage inputs, linked after `args` and before the upstream source.
    * Memoized by element identity so the kernel does not re-link per render. */
   sources?: readonly StorageSource[];
+  /** Change it whenever `args` or `sources` change the output, so the
+   * published generation advances and snapshots refresh. */
   parameterKey: string;
   children: LiveElement;
-}> = (
+}
+
+/**
+ * Write a GPU coordinate transform: run `shader` over the upstream positions
+ * into one packed buffer this component owns (destroyed on unmount) and publish
+ * it as the nearest coordinates for `children`, with a generation that advances
+ * per dispatch and CPU snapshots below it. Until the first dispatch lands,
+ * descendants see `ready: false`.
+ */
+export const CoordinateKernel: LC<CoordinateKernelProps> = (
   { upstream, shader, args = [], sources = NONE, parameterKey, children },
 ) => {
   const linked = useMemo(() => [...sources], [...sources]);

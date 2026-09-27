@@ -21,7 +21,7 @@ import {
   flatAlpha,
   modeProps,
 } from "./internal/opacity.ts";
-import { withMaterial } from "./materials.ts";
+import { withMaterial } from "./internal/with-material.ts";
 import { buildTubeGeometry } from "./internal/tube-geometry.ts";
 import { lineWidthForRadius } from "./internal/line-size.ts";
 import { useRepaint } from "./internal/use-repaint.ts";

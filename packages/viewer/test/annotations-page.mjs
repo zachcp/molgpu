@@ -5,6 +5,8 @@
 import { render, use, useState } from "@use-gpu/live";
 import { AutoCanvas, WebGPU } from "@use-gpu/webgpu";
 import {
+  AmbientLight,
+  DirectionalLight,
   FontLoader,
   OrbitCamera,
   Pass,
@@ -13,15 +15,8 @@ import {
 } from "@use-gpu/workbench";
 import { createStructure } from "@molgpu/table";
 import { resolve, where } from "@molgpu/select";
-import {
-  AmbientLight,
-  centroid,
-  DirectionalLight,
-  Distance,
-  Label,
-  Spacefill,
-  Structure,
-} from "../src/index.ts";
+import { Distance, Label, Spacefill, Structure } from "../src/index.ts";
+import { centroidOf } from "../src/internal/centroid.ts";
 
 const probe = window.__probe = {
   storage: 0,
@@ -124,9 +119,11 @@ const data = createStructure({
 });
 const selA = resolve(where("atom", "a", (d, i) => i < 2), data); // rows 0,1
 const selB = resolve(where("atom", "b", (d, i) => i >= 2), data); // rows 2,3
-probe.centroidA = centroid(data, selA);
+probe.centroidA = centroidOf(data, selA.indices);
 probe.distance = Math.hypot(
-  ...centroid(data, selA).map((v, i) => v - centroid(data, selB)[i]),
+  ...centroidOf(data, selA.indices).map((v, i) =>
+    v - centroidOf(data, selB.indices)[i]
+  ),
 );
 
 const Scene = ({ labelSel }) =>
@@ -136,8 +133,8 @@ const Scene = ({ labelSel }) =>
     children: use(Pass, {
       lights: true,
       children: [
-        use(AmbientLight, {}),
-        use(DirectionalLight, {}),
+        use(AmbientLight, { intensity: 0.3 }),
+        use(DirectionalLight, { direction: [-1, -2, -1.5], intensity: 1 }),
         use(Structure, {
           data,
           children: [

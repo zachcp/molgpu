@@ -1,7 +1,7 @@
-import { fileURLToPath } from "node:url";
+import { fromFileUrl } from "@std/path";
 import { workspaceAliases } from "../scripts/workspace-aliases.mjs";
 
-const here = (p) => fileURLToPath(new URL(p, import.meta.url));
+const here = (p) => fromFileUrl(new URL(p, import.meta.url));
 
 export default {
   root: here("."),
@@ -29,7 +29,6 @@ export default {
       "@use-gpu/core",
       "@use-gpu/shader",
       "@use-gpu/wgsl",
-      "lodash",
     ],
     exclude: ["@use-gpu/glyph"],
   },

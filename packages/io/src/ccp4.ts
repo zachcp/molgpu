@@ -5,18 +5,10 @@ import {
   MAX_VOLUME_SAMPLES,
   type VolumeData,
 } from "@molgpu/table";
-import type { VolumeErrorCode } from "./types.ts";
+import { errorFor } from "./error.ts";
+import { type FileInput, readInput } from "./input.ts";
 
-/** A machine-readable failure reading a volume file. */
-export class VolumeParseError extends Error {
-  override readonly name: "VolumeParseError";
-  readonly code: VolumeErrorCode;
-  constructor(message: string, code: VolumeErrorCode, cause?: unknown) {
-    super(message, cause === undefined ? undefined : { cause });
-    this.name = "VolumeParseError";
-    this.code = code;
-  }
-}
+const volumeError = errorFor("ccp4");
 
 const HEADER_BYTES = 1024;
 /** Bytes per sample for the modes Mol* reads. */
@@ -58,7 +50,7 @@ function toLittleEndian(bytes: Uint8Array, p: Preflight): Uint8Array {
 /** Read just enough of the header to reject bad or oversize input cheaply. */
 function preflight(bytes: Uint8Array, maxSamples: number): Preflight {
   if (bytes.length < HEADER_BYTES) {
-    throw new VolumeParseError(
+    throw volumeError(
       `CCP4/MRC input is ${bytes.length} bytes, shorter than the 1024-byte header`,
       "INVALID_MAP",
     );
@@ -66,7 +58,7 @@ function preflight(bytes: Uint8Array, maxSamples: number): Preflight {
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   const map = String.fromCharCode(...bytes.subarray(208, 211));
   if (map !== "MAP") {
-    throw new VolumeParseError(
+    throw volumeError(
       'CCP4/MRC header lacks the "MAP " marker',
       "INVALID_MAP",
     );
@@ -79,14 +71,14 @@ function preflight(bytes: Uint8Array, maxSamples: number): Preflight {
   const int = (word: number) => view.getInt32(word * 4, little);
   const [nc, nr, ns, mode] = [int(0), int(1), int(2), int(3)];
   if (![nc, nr, ns].every((n) => n > 0)) {
-    throw new VolumeParseError(
+    throw volumeError(
       `CCP4/MRC dimensions ${nc}×${nr}×${ns} must be positive`,
       "INVALID_MAP",
     );
   }
   const axes = [int(16), int(17), int(18)].sort().join();
   if (axes !== "1,2,3") {
-    throw new VolumeParseError(
+    throw volumeError(
       "CCP4/MRC MAPC/MAPR/MAPS must be a permutation of 1, 2, 3",
       "INVALID_MAP",
     );
@@ -94,14 +86,14 @@ function preflight(bytes: Uint8Array, maxSamples: number): Preflight {
   const userFlags = int(39) === -128 && int(40) === 127;
   const elementBytes = MODE_BYTES[mode];
   if (elementBytes === undefined) {
-    throw new VolumeParseError(
+    throw volumeError(
       `CCP4/MRC mode ${mode} is not supported (0, 1 and 2 are)`,
       "UNSUPPORTED_MODE",
     );
   }
   const samples = nc * nr * ns;
   if (!(samples <= maxSamples)) {
-    throw new VolumeParseError(
+    throw volumeError(
       `CCP4/MRC map has ${samples} samples, over maxSamples ${maxSamples}; ` +
         "pass a larger maxSamples to accept it (no implicit downsampling)",
       "VOLUME_TOO_LARGE",
@@ -111,7 +103,7 @@ function preflight(bytes: Uint8Array, maxSamples: number): Preflight {
   const dataBytes = samples * size;
   const offset = HEADER_BYTES + Math.max(0, int(23));
   if (bytes.length < offset + dataBytes) {
-    throw new VolumeParseError(
+    throw volumeError(
       `CCP4/MRC data is truncated: need ${
         offset + dataBytes
       } bytes, have ${bytes.length}`,
@@ -122,7 +114,8 @@ function preflight(bytes: Uint8Array, maxSamples: number): Preflight {
 }
 
 /**
- * Read a CCP4/MRC map (modes 0, 1 and 2) into a scalar `VolumeData`. The
+ * Read a CCP4/MRC map (modes 0, 1 and 2) into a scalar `VolumeData` from its
+ * bytes, a `Blob`/`File`, or a URL fetched once. The
  * transform is Mol*'s grid-to-Cartesian affine: cell angles (non-orthogonal
  * cells included), `MAPC/MAPR/MAPS` axis order, `N[CRS]START`, and the MRC
  * `ORIGIN` record when it is nonzero. Values are lowered to x-fastest order
@@ -131,15 +124,10 @@ function preflight(bytes: Uint8Array, maxSamples: number): Preflight {
  * `VOLUME_TOO_LARGE` before their values are read.
  */
 export async function volumeFromCcp4(
-  bytes: Uint8Array,
+  source: FileInput,
   options: { maxSamples?: number } = {},
 ): Promise<VolumeData> {
-  if (!(bytes instanceof Uint8Array)) {
-    throw new VolumeParseError(
-      "CCP4/MRC input must be a Uint8Array",
-      "INVALID_INPUT",
-    );
-  }
+  const bytes = await readInput(source, "CCP4/MRC", volumeError);
   const { maxSamples = MAX_VOLUME_SAMPLES } = options;
   const header = preflight(bytes, maxSamples);
   const input = header.little ? bytes : toLittleEndian(bytes, header);
@@ -151,7 +139,7 @@ export async function volumeFromCcp4(
       import("molstar/lib/mol-model/volume/grid.js"),
     ]);
   } catch (error) {
-    throw new VolumeParseError(
+    throw volumeError(
       "Unable to load the optional Mol* CCP4 reader",
       "PARSER_UNAVAILABLE",
       error,
@@ -167,7 +155,7 @@ export async function volumeFromCcp4(
     await Promise.resolve();
     grid = (await toVolume(parsed.result).run()).grid;
   } catch (error) {
-    throw new VolumeParseError(
+    throw volumeError(
       "Mol* rejected the CCP4/MRC map",
       "INVALID_MAP",
       error,
@@ -190,7 +178,7 @@ export async function volumeFromCcp4(
       transform: Float32Array.from(Grid.getGridToCartesianTransform(grid)),
     }, { maxSamples });
   } catch (error) {
-    throw new VolumeParseError(
+    throw volumeError(
       "The CCP4/MRC map is not a valid volume",
       "INVALID_MAP",
       error,

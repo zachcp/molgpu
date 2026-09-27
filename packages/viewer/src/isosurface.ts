@@ -16,7 +16,7 @@ import {
   flatAlpha,
   modeProps,
 } from "./internal/opacity.ts";
-import { withMaterial } from "./materials.ts";
+import { withMaterial } from "./internal/with-material.ts";
 import { runGeometryJob } from "./internal/geometry-job.ts";
 import { buildIsosurface } from "./internal/isosurface-geometry.ts";
 import { useRepaint } from "./internal/use-repaint.ts";

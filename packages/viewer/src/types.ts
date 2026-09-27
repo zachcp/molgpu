@@ -21,9 +21,13 @@ export type ViewerElement = object | null | undefined | false;
 
 /** A viewer component: a function of props that renders a scene element. Use
  *  it in JSX (`<Spacefill />`) or through the renderer's `use()`. */
-export type ViewerComponent<P = {}> = (props: P) => ViewerElement;
+export type ViewerComponent<P = object> = (
+  props: P,
+) => ViewerElement;
 
-export type TypedArray =
+/** A numeric vector, such as an RGBA colour: a plain array or a typed array. */
+export type VectorLike =
+  | readonly number[]
   | Int8Array
   | Uint8Array
   | Uint8ClampedArray
@@ -34,15 +38,7 @@ export type TypedArray =
   | Float32Array
   | Float64Array;
 
-/** A numeric vector: a plain array or a typed array. */
-export type VectorLike = readonly number[] | TypedArray;
-
-/** A colour: packed number, [r, g, b(, a)] vector, `{ rgb }`/`{ rgba }`, or a CSS string. */
-export type ColorLike = number | VectorLike | { rgb: VectorLike } | {
-  rgba: VectorLike;
-} | string;
-
-/** Blend-mode names accepted by layer and outline options. */
+/** Blend-mode names accepted by `<Spacefill>`'s point-layer options. */
 export type BlendMode =
   | "none"
   | "alpha"
@@ -59,7 +55,7 @@ export interface StructureBounds {
 }
 
 /** Material `type` names accepted by a representation's `material` prop. */
-export type MaterialType = "pbr" | "basic" | "normal" | "flat" | "lit";
+export type MaterialType = "pbr" | "basic" | "normal";
 
 /**
  * A representation's `material` prop. Either a spec object — `{ type?, ...props }`
@@ -120,30 +116,29 @@ export type StructureLoader = (
   cancelled: () => boolean,
 ) => StructureData | null | Promise<StructureData | null>;
 
-/** Preloaded values. This path never loads a parser. */
-export interface PreloadedStructureProps {
-  children?: ViewerElement;
-  data: StructureData;
-  src?: undefined;
-  loader?: undefined;
-  loading?: undefined;
-  error?: undefined;
-}
-
-/** A source to load. Replacing or unmounting it rejects in-flight results. */
-export interface LoadedStructureProps {
-  children?: ViewerElement;
-  src: string;
-  data?: undefined;
-  /** Defaults to fetch + BCIF lowering through @molgpu/io. Its identity is a
-   * reload dependency alongside `src`, so pass a stable or memoized function. */
-  loader?: StructureLoader;
-  loading?: ViewerElement | (() => ViewerElement);
-  error?: ViewerElement | ((failure: unknown) => ViewerElement);
-}
-
-/** `data` and `src` are mutually exclusive, and exactly one is required. */
-export type StructureProps = PreloadedStructureProps | LoadedStructureProps;
+/**
+ * `<Structure>` props: exactly one of `data` (preloaded; never loads a parser)
+ * or `src` (loaded; replacing or unmounting it rejects in-flight results).
+ */
+export type StructureProps =
+  | {
+    children?: ViewerElement;
+    data: StructureData;
+    src?: undefined;
+    loader?: undefined;
+    loading?: undefined;
+    error?: undefined;
+  }
+  | {
+    children?: ViewerElement;
+    src: string;
+    data?: undefined;
+    /** Defaults to fetch + BCIF lowering through @molgpu/io. Its identity is a
+     * reload dependency alongside `src`, so pass a stable or memoized function. */
+    loader?: StructureLoader;
+    loading?: ViewerElement | (() => ViewerElement);
+    error?: ViewerElement | ((failure: unknown) => ViewerElement);
+  };
 
 /** Open one trajectory source; resolve null when `cancelled()` became true. */
 export type TrajectoryLoader = (
@@ -151,38 +146,37 @@ export type TrajectoryLoader = (
   cancelled: () => boolean,
 ) => TrajectoryData | null | Promise<TrajectoryData | null>;
 
-/** Props shared by both `<Trajectory>` forms. */
-export interface TrajectoryPlayback {
-  children?: ViewerElement;
-  /**
-   * Fractional frame index, or a curve from timeline seconds to frames (see
-   * `frameCurve` in @molgpu/timeline). Clamped to `[0, frameCount - 1]`.
-   */
-  frame: number | Curve<number>;
-  /** `"linear"` (default) blends neighbouring frames; `"nearest"` rounds. */
-  interpolate?: "linear" | "nearest";
-  /**
-   * `"minimum-image"` interpolates each atom along the shortest periodic
-   * displacement when both frames carry a box, so atoms that wrap do not
-   * cross the box on screen. Default `"none"`.
-   */
-  pbc?: "none" | "minimum-image";
-}
-/** A trajectory already opened, e.g. with `openTrajectory` from @molgpu/io. */
-export interface PreloadedTrajectoryProps extends TrajectoryPlayback {
-  data: TrajectoryData;
-  src?: undefined;
-  loader?: undefined;
-}
-/** A DCD/XTC/TRR URL, opened for streaming through @molgpu/io. */
-export interface LoadedTrajectoryProps extends TrajectoryPlayback {
-  src: string;
-  data?: undefined;
-  /** Defaults to `openTrajectory(src)` (HTTP Range reads). Pass a stable function. */
-  loader?: TrajectoryLoader;
-}
-/** `data` and `src` are mutually exclusive, and exactly one is required. */
-export type TrajectoryProps = PreloadedTrajectoryProps | LoadedTrajectoryProps;
+/**
+ * `<Trajectory>` props: playback (`frame`, `interpolate`, `pbc`) plus exactly
+ * one of `data` (opened already, e.g. with `openTrajectory` from @molgpu/io) or
+ * `src` (a DCD/XTC/TRR URL streamed through @molgpu/io).
+ */
+export type TrajectoryProps =
+  & {
+    children?: ViewerElement;
+    /**
+     * Fractional frame index, or a curve from timeline seconds to frames (see
+     * `frameCurve` in @molgpu/timeline). Clamped to `[0, frameCount - 1]`.
+     */
+    frame: number | Curve<number>;
+    /** `"linear"` (default) blends neighbouring frames; `"nearest"` rounds. */
+    interpolate?: "linear" | "nearest";
+    /**
+     * `"minimum-image"` interpolates each atom along the shortest periodic
+     * displacement when both frames carry a box, so atoms that wrap do not
+     * cross the box on screen. Default `"none"`.
+     */
+    pbc?: "none" | "minimum-image";
+  }
+  & (
+    | { data: TrajectoryData; src?: undefined; loader?: undefined }
+    | {
+      src: string;
+      data?: undefined;
+      /** Defaults to `openTrajectory(src)` (HTTP Range reads). Pass a stable function. */
+      loader?: TrajectoryLoader;
+    }
+  );
 
 /** Apply a column-major 4x4 affine to all atoms or an atom selection. */
 export interface TransformProps {
@@ -391,124 +385,6 @@ export interface PointLayerOptions {
   depthWrite?: boolean;
   alphaToCoverage?: boolean;
   alphaToDiscard?: boolean;
-}
-
-// --- Materials --------------------------------------------------------------
-// Thin wrappers over @use-gpu/workbench materials with molecular defaults. A
-// material provides the shading model that `shaded` layers beneath it read; use
-// as a wrapping element, or via a representation's `material` prop.
-
-/** Props shared by the material wrappers. Texture maps and `render` callbacks
- *  forward at runtime but are typed only upstream (@use-gpu/workbench). */
-export interface MaterialProps {
-  children?: ViewerElement;
-}
-export interface PBRMaterialProps extends MaterialProps {
-  albedo?: ColorLike;
-  metalness?: number;
-  roughness?: number;
-  emissive?: VectorLike;
-}
-export interface BasicMaterialProps extends MaterialProps {
-  color?: ColorLike;
-}
-export type NormalMaterialProps = MaterialProps;
-export interface FresnelMaterialEffectProps extends MaterialProps {
-  opacity?: number;
-}
-
-/** Shadow-map settings for a shadow-casting light (needs `<Pass shadows>`). */
-export interface ShadowMapOptions {
-  size?: readonly number[];
-  depth?: readonly number[];
-  bias?: readonly number[];
-  span?: readonly number[];
-  up?: readonly number[];
-  blur?: number;
-  resolution?: number;
-  fov?: number;
-}
-export interface AmbientLightProps {
-  color?: ColorLike;
-  intensity?: number;
-}
-export interface DirectionalLightProps {
-  position?: VectorLike;
-  direction?: VectorLike;
-  color?: ColorLike;
-  intensity?: number;
-  shadowMap?: ShadowMapOptions;
-  debug?: boolean;
-}
-export interface PointLightProps {
-  position?: VectorLike;
-  color?: ColorLike;
-  intensity?: number;
-  cutoff?: number;
-  shadowMap?: ShadowMapOptions;
-  infinite?: boolean;
-  debug?: boolean;
-}
-export interface SpotLightProps extends PointLightProps {
-  direction?: VectorLike;
-  fov?: number;
-  feather?: number;
-}
-export interface DomeLightProps {
-  direction?: VectorLike;
-  horizon?: ColorLike;
-  zenith?: ColorLike;
-  intensity?: number;
-  bleed?: number;
-}
-/** A custom environment `map` (a shader source) forwards at runtime but is
- *  typed only upstream; use a named `preset` here. */
-export interface EnvironmentProps {
-  preset?: string;
-  gain?: number;
-  children?: ViewerElement;
-}
-
-export interface SSAOOptions {
-  opacity: number;
-  indirect: number;
-  radius: number;
-  depthRamp: number;
-  normalRamp: number;
-  temporalBlend: number;
-}
-export interface OutlineOptions {
-  inner: number;
-  outer: number;
-  color: VectorLike;
-  blend: BlendMode;
-  depthRamp: number;
-  normalRamp: number;
-}
-export interface OverscanOptions {
-  range: number;
-  all: boolean;
-}
-
-/** <Pass> props: render-pass flags plus the postprocessing options. */
-export interface PassProps {
-  children?: ViewerElement;
-  mode?: "forward" | "deferred" | "fullscreen";
-  /** Defaults to true (unlike upstream). */
-  lights?: boolean;
-  shadows?: boolean;
-  picking?: boolean;
-  facets?: boolean;
-  color?: boolean;
-  overlay?: boolean | { color?: boolean; picking?: boolean };
-  merge?: boolean;
-  /** Order-independent transparency, for transparent surfaces. */
-  oit?: boolean;
-  ssao?: boolean | number | Partial<SSAOOptions>;
-  outline?: boolean | number | Partial<OutlineOptions>;
-  overscan?: number | Partial<OverscanOptions>;
-  debug?: string;
-  debugIndex?: number;
 }
 
 // --- Picking ----------------------------------------------------------------

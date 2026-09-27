@@ -6,6 +6,8 @@ All notable changes to `@molgpu/geo` are recorded here. The format follows
 
 ## [Unreleased]
 
+- Keep the composed `interpolateCurveSegment` API and remove its low-level
+  interpolation helpers from the package entry.
 - `marchingCubes` accepts a full index-to-world affine `transform` in place of
   `origin`/`spacing`. Normals map through the inverse transpose, and a mirroring
   affine keeps triangle winding consistent.

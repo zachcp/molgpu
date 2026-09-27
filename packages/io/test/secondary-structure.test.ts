@@ -1,5 +1,4 @@
 import { assert, assertStrictEquals } from "@std/assert";
-import { readFile } from "node:fs/promises";
 import {
   activeAtoms,
   attributeColumn,
@@ -47,7 +46,7 @@ function oracleSecondaryStructure(
 
 async function loadFixture(id: string) {
   const bytes = new Uint8Array(
-    await readFile(new URL(`./fixtures/${id}.bcif`, import.meta.url)),
+    await Deno.readFile(new URL(`./fixtures/${id}.bcif`, import.meta.url)),
   );
   const categories = await cifCategories(bytes);
   const data = await structureFromBcif(bytes);

@@ -39,7 +39,7 @@ import {
   modeProps,
 } from "./internal/opacity.ts";
 import { useOpacityColors } from "./internal/use-opacity-colors.ts";
-import { withMaterial } from "./materials.ts";
+import { withMaterial } from "./internal/with-material.ts";
 import { Pickable } from "./picking.ts";
 import { useRepaint } from "./internal/use-repaint.ts";
 import { useBindingProbe } from "./internal/use-binding-probe.ts";

@@ -3,9 +3,9 @@
 Pure coordinate mathematics and CPU charge assignment for molecular scenes.
 Coordinate functions accept packed xyz typed arrays and return new arrays or
 mathematical results. GPU operations are published as WGSL source strings with
-plain buffer contracts; `@molgpu/viewer` owns the WebGPU resources and live
-coordinate providers. This package imports no renderer, WebGPU, or `@use-gpu/*`
-modules.
+plain buffer contracts on `@molgpu/dynamics/wgsl`; `@molgpu/viewer` owns the
+WebGPU resources and live coordinate providers. This package imports no
+renderer, WebGPU, or `@use-gpu/*` modules.
 
 Time-dependent functions take explicit time arguments, so evaluating the same
 input again while scrubbing gives the same output. CPU functions can run in a
@@ -22,88 +22,84 @@ deno add jsr:@molgpu/dynamics
 
 ## API
 
-| Export                   | Stability    | Purpose                                                                                  |
-| ------------------------ | ------------ | ---------------------------------------------------------------------------------------- |
-| `AffineMatrix`           | experimental | Column-major 4×4 affine matrix shape.                                                    |
-| `validateAffine`         | experimental | Reject malformed, non-finite or perspective matrices.                                    |
-| `isIdentityAffine`       | experimental | Detect an exact identity affine.                                                         |
-| `applyAffine`            | experimental | Pure CPU transform over packed xyz positions, optionally restricted to sorted atom rows. |
-| `affineWgsl`             | experimental | WGSL source for a transform over all rows.                                               |
-| `affineSelectedWgsl`     | experimental | WGSL source for a transform over a bitset-selected subset.                               |
-| `createCellList`         | experimental | CPU counting-sort cell grid with bounded exact neighbour queries.                        |
-| `CellListLimitError`     | experimental | Dense cell grid exceeds `maxCells`; carries `cells` and `limit`.                         |
-| `CellList`               | experimental | Grid arrays and bounded query methods.                                                   |
-| `CellListOptions`        | experimental | Selection and allocation limits for a cell grid.                                         |
-| `cellListWgsl`           | experimental | WGSL stages for bounds, count, scan, scatter and exact pair queries.                     |
-| `prepareDsspLayout`      | experimental | Pack one model's active protein rows into chain-ordered GPU descriptors.                 |
-| `DsspLayout`             | experimental | Descriptor, CA map and residue mapping for one model.                                    |
-| `dsspWgsl`               | experimental | WGSL stages for GPU DSSP backbone, H-bonds, turns, helices, bends and bridges.           |
-| `DsspBridge`             | experimental | Compact bridge entry with canonical generation order.                                    |
-| `finishDssp`             | experimental | Complete ladders and sheets from GPU flags and bridge readback.                          |
-| `planCellList`           | experimental | Validate generation-tagged bounds and device limits before GPU allocation.               |
-| `CellListPlan`           | experimental | Grid dimensions and buffer budget returned by `planCellList`.                            |
-| `CellListBoundsReadback` | experimental | Compact 32-byte GPU bounds result tagged with source generation.                         |
-| `fitKabsch`              | experimental | CPU proper rigid fit over corresponding atom rows.                                       |
-| `KabschFit`              | experimental | Column-major rigid transform, fitted RMSD, and row count.                                |
-| `superposeWgsl`          | experimental | WGSL for a live Kabsch fit: centroid, covariance and rotation solve, then apply.         |
-| `SUPERPOSE_FIT_BYTES`    | experimental | Size of the fit state buffer `superposeWgsl` reads and writes (144 bytes).               |
-| `minimumImage`           | experimental | Exact nearest Cartesian lattice displacement for a periodic box.                         |
-| `periodicBox`            | experimental | Validate and invert a column-major 3×3 box, as the unwrap kernels take it.               |
-| `PeriodicBox`            | experimental | Box vectors, row-major inverse and inverse norm.                                         |
-| `unwrapWgsl`             | experimental | WGSL for the live unwrap: image links, pointer jumping, centering, placement, rings.     |
-| `UNWRAP_LINK_BYTES`      | experimental | Bytes per row of each unwrap link buffer (16).                                           |
-| `UNWRAP_PARAMS_BYTES`    | experimental | Bytes of the unwrap uniform (128).                                                       |
-| `createUnwrapForest`     | experimental | Deterministic covalent spanning forest from typed bonds.                                 |
-| `unwrapFrame`            | experimental | Make each component whole for one frame and optionally center it.                        |
-| `PbcSearchLimitError`    | experimental | Named error for an excessive exact-image search.                                         |
-| `UnwrapForest`           | experimental | Parent traversal, components and ring edges for one topology.                            |
-| `UnwrapResult`           | experimental | Per-frame positions and ambiguity or box status.                                         |
-| `NormalModeData`         | experimental | Precomputed guide-node displacements and atom mapping.                                   |
-| `validateNormalMode`     | experimental | Validate mode vectors, mapping and structural version.                                   |
-| `applyNormalMode`        | experimental | Pure sinusoidal mode addition to upstream positions.                                     |
-| `residueGuideMap`        | experimental | Map each atom to its residue's guide node (normally CA), altloc-aware.                   |
-| `normalModeFromElastic`  | experimental | Wrap an ANM mode and atom map as `NormalModeData`.                                       |
-| `normalModeWgsl`         | experimental | WGSL for additive guide-node displacement.                                               |
-| `buildElasticNetwork`    | experimental | Exact-cutoff guide contacts through `table.spatialGrid`.                                 |
-| `solveElasticModes`      | experimental | CPU GNM/ANM eigenmodes: dense Jacobi or sparse Lanczos, with residual checks.            |
-| `ElasticSolveOptions`    | experimental | Solver choice (`auto`, `dense`, `lanczos`) and Lanczos basis cap.                        |
-| `ElasticNetwork`         | experimental | Sparse contact pairs and ANM directions.                                                 |
-| `ElasticMode`            | experimental | Eigenvalue, vector, residual and GNM/ANM kind.                                           |
-| `MAX_ELASTIC_DIM`        | experimental | Largest dimension solved densely (192); `auto` uses Lanczos above it.                    |
-| `templateCharges`        | experimental | Assign AMBER/PDB2PQR residue-template and monatomic-ion charges.                         |
-| `residueNetCharge`       | experimental | Sum a charge column over active atoms into residue rows.                                 |
-| `TemplateChargeOptions`  | experimental | Histidine and residue-specific template overrides.                                       |
-| `TemplateChargeReport`   | experimental | Net charge, gaps, ions and unmatched names.                                              |
-| `ChargeAssignment`       | experimental | Values, assigned mask and method report.                                                 |
-| `ChargeUnmatched`        | experimental | Aggregated unmatched atom name and sample residue keys.                                  |
-| `gasteigerCharges`       | experimental | Assign PEOE charges to complete non-polymer components.                                  |
-| `GasteigerOptions`       | experimental | Exclusion mask and iteration count.                                                      |
-| `GasteigerReport`        | experimental | Assigned count and refused components.                                                   |
-| `GasteigerRefusal`       | experimental | Component residue keys, refusal reason and detail.                                       |
-| `GasteigerRefusalReason` | experimental | Named reason an unsupported component was not charged.                                   |
-| `electrostatics`         | experimental | Validate dielectric options and derive κ, kT and the output scale.                       |
-| `ElectrostaticsOptions`  | experimental | Model (`vacuum`, `distance`, `debye`), ε, ionic strength, temperature, clamp and unit.   |
-| `Electrostatics`         | experimental | Normalised physics shared by the CPU reference and the WGSL uniform.                     |
-| `DielectricModel`        | experimental | `vacuum`, `distance` (ε = D·r) or `debye`.                                               |
-| `PotentialUnit`          | experimental | `kT/e` or `kcal/mol/e`.                                                                  |
-| `coulombPotential`       | experimental | f64 potential at packed-xyz points from packed-xyzq charges.                             |
-| `coulombField`           | experimental | f64 closed-form field E = −∇φ at packed-xyz points.                                      |
-| `coulombGrid`            | experimental | f64 potential on every sample of an index-to-world grid.                                 |
-| `CoulombGrid`            | experimental | Grid dims and column-major index-to-world affine.                                        |
-| `gridPoints`             | experimental | World position of every grid sample, x-fastest.                                          |
-| `packCharges`            | experimental | Pack `(x, y, z, q)` for nonzero-charge rows.                                             |
-| `debyeKappa`             | experimental | Inverse Debye length (1/Å) for an ionic strength, permittivity and temperature.          |
-| `COULOMB_CONSTANT`       | experimental | e²N_A/(4πε₀) in kcal·Å/(mol·e²), from CODATA 2018.                                       |
-| `GAS_CONSTANT_KCAL`      | experimental | R in kcal/(mol·K).                                                                       |
-| `coulombWgsl`            | experimental | WGSL for tiled direct Coulomb sums: `packAtoms`, `sumGrid` and `sumPoints`.              |
-| `coulombParams`          | experimental | Encode the 112-byte uniform for one `coulombWgsl` dispatch.                              |
-| `CoulombDispatch`        | experimental | One dispatch's sample range, atom range and grid.                                        |
-| `COULOMB_PARAMS_BYTES`   | experimental | Size of the `coulombWgsl` uniform (112 bytes).                                           |
-| `COULOMB_WORKGROUP`      | experimental | Invocations per workgroup and atoms per tile (64).                                       |
-| `COULOMB_MODEL_CODE`     | experimental | Model code in the uniform: vacuum 0, distance 1, debye 2.                                |
+`@molgpu/dynamics` (`.`) holds the domain functions an application calls.
+`@molgpu/dynamics/wgsl` holds the WGSL sources, buffer layouts and dispatch
+planning that `@molgpu/viewer`'s GPU components use; it is _advanced_ and tied
+to the viewer's buffer contracts. The CPU references that the GPU kernels are
+tested against (`applyAffine`, `unwrapFrame`, `applyNormalMode`,
+`coulombPotential`, `coulombField`, `createCellList`, …) are internal.
 
-`coulombPotential`/`coulombField` are the f64 oracle for `coulombWgsl`, which
-the viewer's `<EField>` dispatches. The physics and budgets are recorded in
+| Export                   | Stability    | Purpose                                                                                |
+| ------------------------ | ------------ | -------------------------------------------------------------------------------------- |
+| `CellListLimitError`     | experimental | Dense cell grid exceeds `maxCells`; carries `cells` and `limit`.                       |
+| `fitKabsch`              | experimental | CPU proper rigid fit over corresponding atom rows.                                     |
+| `KabschFit`              | experimental | Column-major rigid transform, fitted RMSD, and row count.                              |
+| `minimumImage`           | experimental | Exact nearest Cartesian lattice displacement for a periodic box.                       |
+| `periodicBox`            | experimental | Validate and invert a column-major 3×3 box, as the unwrap kernels take it.             |
+| `PeriodicBox`            | experimental | Box vectors, row-major inverse and inverse norm.                                       |
+| `PbcSearchLimitError`    | experimental | Named error for an excessive exact-image search.                                       |
+| `NormalModeData`         | experimental | Precomputed guide-node displacements and atom mapping.                                 |
+| `residueGuideMap`        | experimental | Map each atom to its residue's guide node (normally CA), altloc-aware.                 |
+| `normalModeFromElastic`  | experimental | Wrap an ANM mode and atom map as `NormalModeData`.                                     |
+| `buildElasticNetwork`    | experimental | Exact-cutoff guide contacts through `table.spatialGrid`.                               |
+| `solveElasticModes`      | experimental | CPU GNM/ANM eigenmodes: dense Jacobi or sparse Lanczos, with residual checks.          |
+| `ElasticSolveOptions`    | experimental | Solver choice (`auto`, `dense`, `lanczos`) and Lanczos basis cap.                      |
+| `ElasticNetwork`         | experimental | Sparse contact pairs and ANM directions.                                               |
+| `ElasticMode`            | experimental | Eigenvalue, vector, residual and GNM/ANM kind.                                         |
+| `templateCharges`        | experimental | Assign AMBER/PDB2PQR residue-template and monatomic-ion charges.                       |
+| `residueNetCharge`       | experimental | Sum a charge column over active atoms into residue rows.                               |
+| `TemplateChargeOptions`  | experimental | Histidine and residue-specific template overrides.                                     |
+| `TemplateChargeReport`   | experimental | Net charge, gaps, ions and unmatched names.                                            |
+| `ChargeAssignment`       | experimental | Values, assigned mask and method report.                                               |
+| `ChargeUnmatched`        | experimental | Aggregated unmatched atom name and sample residue keys.                                |
+| `gasteigerCharges`       | experimental | Assign PEOE charges to complete non-polymer components.                                |
+| `GasteigerOptions`       | experimental | Exclusion mask and iteration count.                                                    |
+| `GasteigerReport`        | experimental | Assigned count and refused components.                                                 |
+| `GasteigerRefusal`       | experimental | Component residue keys, refusal reason and detail.                                     |
+| `GasteigerRefusalReason` | experimental | Named reason an unsupported component was not charged.                                 |
+| `electrostatics`         | experimental | Validate dielectric options and derive κ, kT and the output scale.                     |
+| `ElectrostaticsOptions`  | experimental | Model (`vacuum`, `distance`, `debye`), ε, ionic strength, temperature, clamp and unit. |
+| `Electrostatics`         | experimental | Normalised physics shared by the CPU reference and the WGSL uniform.                   |
+| `DielectricModel`        | experimental | `vacuum`, `distance` (ε = D·r) or `debye`.                                             |
+| `PotentialUnit`          | experimental | `kT/e` or `kcal/mol/e`.                                                                |
+
+### `./wgsl`
+
+| Export                   | Stability | Purpose                                                                              |
+| ------------------------ | --------- | ------------------------------------------------------------------------------------ |
+| `AffineMatrix`           | advanced  | Column-major 4×4 affine matrix shape.                                                |
+| `validateAffine`         | advanced  | Reject malformed, non-finite or perspective matrices.                                |
+| `isIdentityAffine`       | advanced  | Detect an exact identity affine.                                                     |
+| `affineWgsl`             | advanced  | WGSL source for a transform over all rows.                                           |
+| `affineSelectedWgsl`     | advanced  | WGSL source for a transform over a bitset-selected subset.                           |
+| `cellListWgsl`           | advanced  | WGSL stages for bounds, count, scan, scatter and exact pair queries.                 |
+| `prepareDsspLayout`      | advanced  | Pack one model's active protein rows into chain-ordered GPU descriptors.             |
+| `DsspLayout`             | advanced  | Descriptor, CA map and residue mapping for one model.                                |
+| `dsspWgsl`               | advanced  | WGSL stages for GPU DSSP backbone, H-bonds, turns, helices, bends and bridges.       |
+| `DsspBridge`             | advanced  | Compact bridge entry with canonical generation order.                                |
+| `finishDssp`             | advanced  | Complete ladders and sheets from GPU flags and bridge readback.                      |
+| `planCellList`           | advanced  | Validate generation-tagged bounds and device limits before GPU allocation.           |
+| `CellListPlan`           | advanced  | Grid dimensions and buffer budget returned by `planCellList`.                        |
+| `CellListBoundsReadback` | advanced  | Compact 32-byte GPU bounds result tagged with source generation.                     |
+| `superposeWgsl`          | advanced  | WGSL for a live Kabsch fit: centroid, covariance and rotation solve, then apply.     |
+| `SUPERPOSE_FIT_BYTES`    | advanced  | Size of the fit state buffer `superposeWgsl` reads and writes (144 bytes).           |
+| `unwrapWgsl`             | advanced  | WGSL for the live unwrap: image links, pointer jumping, centering, placement, rings. |
+| `UNWRAP_LINK_BYTES`      | advanced  | Bytes per row of each unwrap link buffer (16).                                       |
+| `UNWRAP_PARAMS_BYTES`    | advanced  | Bytes of the unwrap uniform (128).                                                   |
+| `createUnwrapForest`     | advanced  | Deterministic covalent spanning forest from typed bonds.                             |
+| `UnwrapForest`           | advanced  | Parent traversal, components and ring edges for one topology.                        |
+| `validateNormalMode`     | advanced  | Validate mode vectors, mapping and structural version.                               |
+| `normalModeWgsl`         | advanced  | WGSL for additive guide-node displacement.                                           |
+| `coulombWgsl`            | advanced  | WGSL for tiled direct Coulomb sums: `packAtoms`, `sumGrid` and `sumPoints`.          |
+| `coulombParams`          | advanced  | Encode the 112-byte uniform for one `coulombWgsl` dispatch.                          |
+| `CoulombDispatch`        | advanced  | One dispatch's sample range, atom range and grid.                                    |
+| `COULOMB_PARAMS_BYTES`   | advanced  | Size of the `coulombWgsl` uniform (112 bytes).                                       |
+| `COULOMB_WORKGROUP`      | advanced  | Invocations per workgroup and atoms per tile (64).                                   |
+| `COULOMB_MODEL_CODE`     | advanced  | Model code in the uniform: vacuum 0, distance 1, debye 2.                            |
+
+The internal `coulombPotential`/`coulombField` are the f64 oracle for
+`coulombWgsl`, which the viewer's `<EField>` dispatches. The physics and budgets
+are recorded in
 [the electric-field plan](../../docs/findings/2026-09-27-efield-plan.md).
 
 The CPU function returns a new array. Unselected rows retain their exact input
@@ -121,13 +117,13 @@ package.
 
 ## Cell grid buffer contract
 
-`createCellList(positions, cellSize, options)` uses packed xyz coordinates and
-topology row numbers. `rows`, when supplied, must be sorted and unique. Queries
-accept a cutoff no greater than `cellSize`, inspect at most `maxCandidates`
-(4096 by default), and fail explicitly if that bound is exceeded. The dense grid
-defaults to at most four cells per indexed row. The CPU reference and GPU stages
-use a cell width of `cellSize * (1 + 1e-6)` to keep floating-point boundary
-pairs in adjacent cells.
+The internal CPU reference `createCellList(positions, cellSize, options)` uses
+packed xyz coordinates and topology row numbers. `rows`, when supplied, must be
+sorted and unique. Queries accept a cutoff no greater than `cellSize`, inspect
+at most `maxCandidates` (4096 by default), and fail explicitly if that bound is
+exceeded. The dense grid defaults to at most four cells per indexed row. The CPU
+reference and GPU stages use a cell width of `cellSize * (1 + 1e-6)` to keep
+floating-point boundary pairs in adjacent cells.
 
 `cellListWgsl` exposes separate `bounds`, `mergeBounds`, `count`, `scanCounts`,
 `scanValues`, `addOffsets`, `scatter`, and `pairs` entry-point strings. The
@@ -198,11 +194,12 @@ viewer tests the GPU RMSD matches `fitKabsch` within 1e-5 Å at a 1000 Å offset
 column-major 3×3 periodic box. It rejects near-singular boxes and uses a bounded
 candidate search. `createUnwrapForest(topology)` uses only bonds explicitly
 marked covalent, filtering different models and incompatible alternate
-locations. Build this forest once per topology version. `unwrapFrame` traverses
-it for each displayed frame, makes each molecule whole, checks non-tree ring
-edges for closure, and can move each selected component's centroid into the
-primary box. Missing or invalid boxes pass positions through with an explicit
-status. This CPU path is the reference for the live `<Unwrap>` viewer provider.
+locations. Build this forest once per topology version. The internal CPU
+reference `unwrapFrame` traverses it for each displayed frame, makes each
+molecule whole, checks non-tree ring edges for closure, and can move each
+selected component's centroid into the primary box. Missing or invalid boxes
+pass positions through with an explicit status. This CPU path is the reference
+for the live `<Unwrap>` viewer provider.
 
 `unwrapWgsl` is that traversal on the GPU, in five entry points run in order on
 one upstream generation:
@@ -229,7 +226,7 @@ kernels take.
 
 `NormalModeData` holds a precomputed xyz displacement for each guide node and an
 atom-to-node mapping (`0xffffffff` means no displacement). Atoms in one residue
-may share a CA guide node. `applyNormalMode` adds
+may share a CA guide node. The internal CPU reference `applyNormalMode` adds
 `amplitude * sin(2*pi*frequency*time + phase) * vector` to each mapped upstream
 row, so the same time always reproduces the same positions. The live
 `<NormalMode>` viewer provider uses `normalModeWgsl` and uploads mode vectors

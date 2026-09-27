@@ -6,23 +6,25 @@
  * frames, the box follows frames, `src` streams an XTC over HTTP Range, and
  * unmount releases every buffer. Part of `deno task test:components`.
  */
-import assert from "node:assert/strict";
-import { createServer } from "node:http";
-import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
-import { extname, normalize } from "node:path";
-import { fileURLToPath } from "node:url";
+import {
+  assert,
+  assertEquals,
+  assertNotStrictEquals,
+  assertStrictEquals,
+} from "@std/assert";
+import { extname, fromFileUrl, normalize } from "@std/path";
 import { build } from "vite";
 import { chromium } from "playwright";
 import { webgpuBrowserArgs } from "./webgpu-browser-args.mjs";
+import { applyAffine } from "../../dynamics/src/affine.ts";
 import {
-  applyAffine,
   cellListWgsl,
-  createCellList,
   createUnwrapForest,
-  fitKabsch,
   planCellList,
-  unwrapFrame,
-} from "@molgpu/dynamics";
+} from "@molgpu/dynamics/wgsl";
+import { createCellList } from "../../dynamics/src/cell-list.ts";
+import { fitKabsch } from "@molgpu/dynamics";
+import { unwrapFrame } from "../../dynamics/src/pbc.ts";
 import { writeXtc } from "../../io/test/trajectory-fixture.ts";
 import { structureFromBcif } from "@molgpu/io";
 import { interpolatePositions } from "../src/internal/frame-window.ts";
@@ -236,25 +238,25 @@ async function runGpuCellList(page, positions, cutoff) {
       dims: cpu.dims,
     },
   );
-  assert.deepEqual(gpu.errors, []);
-  assert.deepEqual(gpu.counts, [...cpu.counts]);
-  assert.deepEqual(gpu.offsets, [...cpu.offsets.slice(0, -1)]);
-  assert.deepEqual(
+  assertEquals(gpu.errors, []);
+  assertEquals(gpu.counts, [...cpu.counts]);
+  assertEquals(gpu.offsets, [...cpu.offsets.slice(0, -1)]);
+  assertEquals(
     gpu.rows.slice().sort((a, b) => a - b),
     [...cpu.rows].sort((a, b) => a - b),
   );
-  assert.equal(gpu.overflow, 0);
-  assert.deepEqual(gpu.pairs, [...cpu.pairsWithin(cutoff)]);
-  assert.deepEqual(gpu.bounds.slice(0, 3), [...cpu.origin]);
+  assertStrictEquals(gpu.overflow, 0);
+  assertEquals(gpu.pairs, [...cpu.pairsWithin(cutoff)]);
+  assertEquals(gpu.bounds.slice(0, 3), [...cpu.origin]);
   return { cells: cpu.counts.length, pairs: gpu.pairs.length / 2 };
 }
 
 Deno.test("trajectory components", async () => {
-  const root = fileURLToPath(new URL("../../../", import.meta.url));
+  const root = fromFileUrl(new URL("../../../", import.meta.url));
   const fixture = `${root}packages/viewer/test/trajectory`;
   const out = `${root}packages/viewer/test/results`;
   const PORT = 5194;
-  await mkdir(out, { recursive: true });
+  await Deno.mkdir(out, { recursive: true });
   await build({ configFile: `${fixture}/vite.config.mjs`, logLevel: "warn" });
   // The page's four synthetic frames, written as XTC for the `src` path.
   const frames = [0, 1, 2, 3].map((k) =>
@@ -263,45 +265,46 @@ Deno.test("trajectory components", async () => {
       (_, j) => [4 * Math.floor(j / 3) - 4 + k, k + 1, -k][j % 3],
     )
   );
-  await writeFile(
+  await Deno.writeFile(
     `${fixture}/dist/run.xtc`,
     writeXtc(frames.map((positions, i) => ({ positions, time: i }))),
   );
 
   const ranges = [];
-  const server = createServer(async (req, res) => {
-    const name = normalize(
-      decodeURIComponent(new URL(req.url, "http://x").pathname),
-    );
-    const path = `${fixture}/dist${name === "/" ? "/index.html" : name}`;
-    try {
-      if (!(await stat(path)).isFile()) throw new Error("not a file");
-    } catch {
-      res.writeHead(404);
-      res.end("not found");
-      return;
-    }
-    const type = { ".html": "text/html", ".js": "text/javascript" }[
-      extname(path)
-    ] ?? "application/octet-stream";
-    const body = await readFile(path);
-    const range = /bytes=(\d+)-(\d+)/.exec(req.headers.range ?? "");
-    if (range) {
-      ranges.push(req.headers.range);
-      const end = Math.min(Number(range[2]), body.length - 1);
-      res.writeHead(206, {
-        "content-type": type,
-        "content-range": `bytes ${range[1]}-${end}/${body.length}`,
-      });
-      res.end(body.subarray(Number(range[1]), end + 1));
-      return;
-    }
-    res.writeHead(200, { "content-type": type });
-    res.end(body);
-  });
+  const server = Deno.serve(
+    { port: PORT, hostname: "127.0.0.1", onListen() {} },
+    async (req) => {
+      const name = normalize(decodeURIComponent(new URL(req.url).pathname));
+      const path = `${fixture}/dist${name === "/" ? "/index.html" : name}`;
+      let info;
+      try {
+        info = await Deno.stat(path);
+        if (!info.isFile) throw new Error("not a file");
+      } catch {
+        return new Response("not found", { status: 404 });
+      }
+      const type = { ".html": "text/html", ".js": "text/javascript" }[
+        extname(path)
+      ] ?? "application/octet-stream";
+      const body = await Deno.readFile(path);
+      const rangeHeader = req.headers.get("range");
+      const range = /bytes=(\d+)-(\d+)/.exec(rangeHeader ?? "");
+      if (range) {
+        ranges.push(rangeHeader);
+        const end = Math.min(Number(range[2]), body.length - 1);
+        return new Response(body.subarray(Number(range[1]), end + 1), {
+          status: 206,
+          headers: {
+            "content-type": type,
+            "content-range": `bytes ${range[1]}-${end}/${body.length}`,
+          },
+        });
+      }
+      return new Response(body, { headers: { "content-type": type } });
+    },
+  );
   let browser;
   try {
-    await new Promise((resolve) => server.listen(PORT, "127.0.0.1", resolve));
     browser = await chromium.launch({
       channel: "chrome",
       headless: true,
@@ -363,9 +366,9 @@ Deno.test("trajectory components", async () => {
         return values;
       });
     const near = (actual, expected, what, tol = 1e-5) => {
-      assert.equal(actual.length, expected.length, `${what}: length`);
+      assertStrictEquals(actual.length, expected.length, `${what}: length`);
       actual.forEach((v, i) =>
-        assert.ok(
+        assert(
           Math.abs(v - expected[i]) <= tol,
           `${what}[${i}]: ${v} vs ${expected[i]}`,
         )
@@ -503,20 +506,24 @@ Deno.test("trajectory components", async () => {
     for (let i = 0; i < 5; i++) await update({ interpolate: "linear" });
     const idle = await writes();
     report.residentScrub = { scrub, idleRedrawsSameCount: idle };
-    assert.equal(
+    assertStrictEquals(
       scrub.window,
       0,
       "re-displaying resident frames uploads nothing",
     );
     const after = await counters();
     const windowBytes = after.ownedBuffers.bytes["coords:trajectory:window"];
-    assert.equal(windowBytes, 4 * 3 * 12, "four slots of 3 atoms");
+    assertStrictEquals(windowBytes, 4 * 3 * 12, "four slots of 3 atoms");
 
     // 3. Unmount releases the window and the provider output.
     await update({ mode: "none" });
     let now = await counters();
     for (const label of ["coords:trajectory:window", "coords:provider"]) {
-      assert.equal(now.ownedBuffers.bytes[label] ?? 0, 0, `${label} released`);
+      assertStrictEquals(
+        now.ownedBuffers.bytes[label] ?? 0,
+        0,
+        `${label} released`,
+      );
     }
 
     // 4. A subset: rows 2 and 0 move, row 1 keeps the structure's position.
@@ -533,9 +540,9 @@ Deno.test("trajectory components", async () => {
       "subset",
     );
     now = await counters();
-    assert.equal(now.ownedBuffers.bytes["coords:trajectory:map"], 12);
+    assertStrictEquals(now.ownedBuffers.bytes["coords:trajectory:map"], 12);
     await update({ mode: "none" });
-    assert.equal(
+    assertStrictEquals(
       (await counters()).ownedBuffers.bytes["coords:trajectory:map"] ?? 0,
       0,
     );
@@ -592,7 +599,7 @@ Deno.test("trajectory components", async () => {
     // 7. Before the first frame lands, upstream coordinates show; no blank.
     await update({ mode: "slow", frame: 2 });
     const early = await page.evaluate(() => window.__trajectory.state);
-    assert.equal(
+    assertStrictEquals(
       early.displayed,
       null,
       "nothing displayed before a frame lands",
@@ -631,8 +638,8 @@ Deno.test("trajectory components", async () => {
     await update({ frame: 1 });
     await displayed({ a: 1, b: 1, t: 0 });
     const large = await lit("cell-1");
-    assert.ok(small.green > 100, `box lines drawn: ${small.green}`);
-    assert.ok(
+    assert(small.green > 100, `box lines drawn: ${small.green}`);
+    assert(
       large.maxX > small.maxX,
       `box grows: ${small.maxX} → ${large.maxX}`,
     );
@@ -716,7 +723,7 @@ Deno.test("trajectory components", async () => {
     await update({ mode: "src", src: "/run.xtc", frame: 1 });
     await displayed({ a: 1, b: 1, t: 0 });
     await expectRead(pageFrames[1], "xtc frame 1", 0.0051);
-    assert.ok(ranges.length >= 3, `range requests: ${ranges.length}`);
+    assert(ranges.length >= 3, `range requests: ${ranges.length}`);
     report.rangeRequests = ranges.length;
     await update({ mode: "none" });
 
@@ -742,7 +749,7 @@ Deno.test("trajectory components", async () => {
       (await counters()).detail["uploadBytes:structure:positions"] ?? 0;
     await update({ matrix: shift(-4, 1) });
     await expectRead(shifted(rootPositions, -4, 1), "affine changed matrix");
-    assert.equal(
+    assertStrictEquals(
       (await counters()).detail["uploadBytes:structure:positions"] ?? 0,
       uploaded,
       "matrix change does not re-upload structure positions",
@@ -792,7 +799,7 @@ Deno.test("trajectory components", async () => {
     await expectRead(modal(pageFrames[1], 1, 0), "normal mode at a zero");
     await update({ time: 0.25 });
     await expectRead(modal(pageFrames[1], 1, 2), "normal mode after a zero");
-    assert.equal(
+    assertStrictEquals(
       await vectorUploads(),
       beforeZero,
       "a zero crossing does not re-upload mode buffers",
@@ -801,7 +808,7 @@ Deno.test("trajectory components", async () => {
     await expectRead(modal(pageFrames[1], 2, 2), "normal mode swap");
     await update({ amplitude: 0 });
     await expectRead(pageFrames[1], "normal mode zero amplitude");
-    assert.equal(
+    assertStrictEquals(
       (await counters()).detail["uploadBytes:structure:positions"] ?? 0,
       modeUpload,
       "normal-mode animation does not re-upload root positions",
@@ -823,7 +830,7 @@ Deno.test("trajectory components", async () => {
     // A corpus structure at two cutoffs (the CPU reference is itself checked
     // against table.spatialGrid on the corpus in dynamics' unit tests).
     const crn = await structureFromBcif(
-      await readFile(`${root}packages/io/test/fixtures/1crn.bcif`),
+      await Deno.readFile(`${root}packages/io/test/fixtures/1crn.bcif`),
     );
     for (const cutoff of [4, 8]) {
       report.cellList.push(
@@ -883,7 +890,7 @@ Deno.test("trajectory components", async () => {
       // f32 positions near 1000 Å carry ~6e-5 Å of rounding.
       const got = await expectRead(want.positions, what, 2e-3);
       const rmsd = rmsdOf(got, want.reference, options.rows ?? null);
-      assert.ok(
+      assert(
         Math.abs(rmsd - want.rmsd) <= 1e-4,
         `${what}: rmsd ${rmsd} vs ${want.rmsd}`,
       );
@@ -904,8 +911,8 @@ Deno.test("trajectory components", async () => {
     const initialFitStatus = await page.evaluate(() =>
       window.__trajectory.superpose.statuses.slice(-1)[0]
     );
-    assert.equal(initialFitStatus.status, "solved");
-    assert.ok(Math.abs(initialFitStatus.rmsd) <= 1e-3);
+    assertStrictEquals(initialFitStatus.status, "solved");
+    assert(Math.abs(initialFitStatus.rmsd) <= 1e-3);
     const referenceUploads = async () =>
       (await counters()).detail["uploadBytes:coords:superpose:reference"] ?? 0;
     const supUploads = await referenceUploads();
@@ -929,12 +936,12 @@ Deno.test("trajectory components", async () => {
     });
     await displayed({ a: 1, b: 2, t: 0.25 });
     await checkFit(1.25);
-    assert.equal(
+    assertStrictEquals(
       await referenceUploads(),
       supUploads,
       "scrubbing does not re-upload the reference",
     );
-    assert.equal(
+    assertStrictEquals(
       (await counters()).detail["uploadBytes:structure:positions"] ?? 0,
       rootUploads,
       "scrubbing does not re-upload structure positions",
@@ -951,7 +958,7 @@ Deno.test("trajectory components", async () => {
         s.status === "passthrough"
       )
     );
-    assert.equal(
+    assertStrictEquals(
       (await page.evaluate(() =>
         window.__trajectory.superpose.statuses.slice(-1)[0]
       )).rmsd,
@@ -974,7 +981,7 @@ Deno.test("trajectory components", async () => {
     const fixedFitStatus = await page.evaluate(() =>
       window.__trajectory.superpose.statuses.slice(-1)[0]
     );
-    assert.ok(
+    assert(
       Math.abs(fixedFitStatus.rmsd - oracle(2, { to: "fixed" }).rmsd) < 1e-4,
       "reported fitted RMSD agrees with the CPU oracle",
     );
@@ -1022,7 +1029,7 @@ Deno.test("trajectory components", async () => {
       await window.__trajectory.heldFit.release();
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
-    assert.equal(
+    assertStrictEquals(
       await page.evaluate(() => window.__trajectory.superpose.statuses.length),
       freshStatuses,
       "old fit readback does not report after reference buffers change",
@@ -1081,7 +1088,7 @@ Deno.test("trajectory components", async () => {
         1e-4,
       );
       bondLengths(got).forEach((length, k) =>
-        assert.ok(
+        assert(
           Math.abs(length - wholeLengths[k]) < 1e-4,
           `unwrap frame ${frame} bond ${k}: ${length} vs ${wholeLengths[k]}`,
         )
@@ -1089,7 +1096,7 @@ Deno.test("trajectory components", async () => {
       graphBytes ??= await graphUploads();
       report.unwrap.push({ frame, status: want.status });
     }
-    assert.equal(
+    assertStrictEquals(
       await graphUploads(),
       graphBytes,
       "frames re-upload no forest",
@@ -1109,7 +1116,7 @@ Deno.test("trajectory components", async () => {
     await update({ unwrapCenter: false, frame: 2 });
     await displayed({ a: 2, b: 2, t: 0 });
     const ambiguous = cpuUnwrap(2);
-    assert.equal(ambiguous.status, "ambiguous");
+    assertStrictEquals(ambiguous.status, "ambiguous");
     await expectRead(
       Array.from(ambiguous.positions),
       "unwrap ambiguous frame",
@@ -1128,16 +1135,16 @@ Deno.test("trajectory components", async () => {
     // No box, or a singular one: positions pass through, with a status.
     await update({ unwrapBox: "singular" });
     await expectRead(unw.frames[2], "unwrap singular box", 0);
-    assert.equal((await unwrapStatuses()).status, "invalid-box");
+    assertStrictEquals((await unwrapStatuses()).status, "invalid-box");
     await update({ unwrapBox: "none" });
     // Without a Trajectory the probe sees the root upload itself, which is not
     // a copy source: check that no provider output is published instead.
-    assert.notEqual(
+    assertNotStrictEquals(
       await page.evaluate(() => window.__trajectory.source.buffer.label),
       "molgpu:coords:provider",
       "no box: the root coordinates pass through",
     );
-    assert.equal((await unwrapStatuses()).status, "missing-box");
+    assertStrictEquals((await unwrapStatuses()).status, "missing-box");
     await update({ mode: "none" });
 
     // A near-degenerate but valid cell exceeds the bounded search. The GPU
@@ -1152,7 +1159,7 @@ Deno.test("trajectory components", async () => {
       window.__trajectory.unwrap.statuses.slice(-1)[0]?.status ===
         "search-limit"
     );
-    assert.equal((await unwrapStatuses()).ambiguousRingEdges, 0);
+    assertStrictEquals((await unwrapStatuses()).ambiguousRingEdges, 0);
     await update({ mode: "none" });
     // Depth 33 takes the logarithmic fallback and remains whole.
     await update({ mode: "unwrap-deep" });
@@ -1260,7 +1267,7 @@ Deno.test("trajectory components", async () => {
           ticks.push(await change({ time }));
         }
         const afterTicks = await dispatches();
-        assert.deepEqual(
+        assertEquals(
           afterTicks,
           before,
           "a timeline tick re-runs only NormalMode",
@@ -1268,11 +1275,11 @@ Deno.test("trajectory components", async () => {
         const frames = [];
         for (const frame of [1, 2, 3]) frames.push(await change({ frame }));
         const afterFrames = await dispatches();
-        assert.equal(afterFrames.unwrap - afterTicks.unwrap, 3);
-        assert.equal(afterFrames.superpose - afterTicks.superpose, 3);
+        assertStrictEquals(afterFrames.unwrap - afterTicks.unwrap, 3);
+        assertStrictEquals(afterFrames.superpose - afterTicks.superpose, 3);
         const worst = Math.max(...ticks.map((t) => t.frames));
         if (atoms === 100_000) {
-          assert.ok(
+          assert(
             worst <= 3,
             `100k: a warmed transform shows within 3 frames (${worst})`,
           );
@@ -1307,7 +1314,7 @@ Deno.test("trajectory components", async () => {
         await update({ mode: "none" });
       }
       console.log(JSON.stringify(report.gate, null, 2));
-      await writeFile(
+      await Deno.writeTextFile(
         `${out}/dynamics-gate.json`,
         JSON.stringify(report.gate, null, 2),
       );
@@ -1316,27 +1323,27 @@ Deno.test("trajectory components", async () => {
     now = await counters();
     for (const [label, bytes] of Object.entries(now.ownedBuffers.bytes)) {
       if (label.startsWith("coords:")) {
-        assert.equal(bytes, 0, `${label} leaked`);
+        assertStrictEquals(bytes, 0, `${label} leaked`);
       }
     }
-    assert.equal(
+    assertStrictEquals(
       now.ownedBuffers.live,
       baseline.ownedBuffers.live,
       "every owned buffer released",
     );
     const pageErrors = await page.evaluate(() => window.__trajectory.errors);
-    assert.deepEqual(
+    assertEquals(
       [...errors, ...pageErrors],
       [],
       "no page or WebGPU errors",
     );
     report.readPolls = polls;
-    await writeFile(
+    await Deno.writeTextFile(
       `${out}/trajectory-report.json`,
       JSON.stringify(report, null, 2),
     );
   } finally {
     await browser?.close();
-    server.close();
+    await server.shutdown();
   }
 });

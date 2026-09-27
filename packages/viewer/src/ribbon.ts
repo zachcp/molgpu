@@ -30,7 +30,7 @@ import {
   flatAlpha,
   modeProps,
 } from "./internal/opacity.ts";
-import { withMaterial } from "./materials.ts";
+import { withMaterial } from "./internal/with-material.ts";
 import { buildRibbonGeometry } from "./internal/ribbon-geometry.ts";
 import { ribbonDsspRows } from "./internal/ribbon-dssp.ts";
 import { useRepaint } from "./internal/use-repaint.ts";

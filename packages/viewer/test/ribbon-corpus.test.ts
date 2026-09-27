@@ -1,5 +1,4 @@
 import { assert, assertStrictEquals } from "@std/assert";
-import { readFile } from "node:fs/promises";
 import {
   activeAtoms,
   coordinateBounds,
@@ -11,7 +10,7 @@ import { buildRibbonGeometry } from "../src/internal/ribbon-geometry.ts";
 
 async function loadFixture(id: string) {
   const bytes = new Uint8Array(
-    await readFile(
+    await Deno.readFile(
       new URL(`../../io/test/fixtures/${id}.bcif`, import.meta.url),
     ),
   );

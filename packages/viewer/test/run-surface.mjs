@@ -2,15 +2,15 @@
 // attribution built in, probe radius/resolution rebuild geometry, an empty
 // selection renders nothing without error, and color/opacity does not
 // rebuild geometry.
-import assert from "node:assert/strict";
-import { fileURLToPath } from "node:url";
+import { assert, assertEquals, assertStrictEquals } from "@std/assert";
+import { fromFileUrl } from "@std/path";
 import { createServer } from "vite";
 import { chromium } from "playwright";
 import { webgpuBrowserArgs } from "./webgpu-browser-args.mjs";
 import { workspaceAliases } from "../../../scripts/workspace-aliases.mjs";
 
 Deno.test("viewer surface", async () => {
-  const root = fileURLToPath(new URL("../../../", import.meta.url));
+  const root = fromFileUrl(new URL("../../../", import.meta.url));
   const server = await createServer({
     root,
     configFile: false,
@@ -34,7 +34,6 @@ Deno.test("viewer surface", async () => {
         "@use-gpu/shader",
         "@use-gpu/shader/wgsl",
         "@use-gpu/wgsl",
-        "lodash",
       ],
     },
   });
@@ -99,20 +98,20 @@ Deno.test("viewer surface", async () => {
     await settle();
     const initial = await snap();
     const initialShot = await shot();
-    assert.deepEqual(
+    assertEquals(
       initial.errors,
       [],
       "initial surface produced WebGPU errors",
     );
-    assert.ok(
+    assert(
       initial.storageLabels.includes("molgpu:positions"),
       "expected a positions storage buffer",
     );
-    assert.ok(
+    assert(
       initial.storageLabels.includes("molgpu:normals"),
       "expected a normals storage buffer",
     );
-    assert.ok(
+    assert(
       initial.storageLabels.includes("molgpu:indices"),
       "expected an indices storage buffer",
     );
@@ -128,16 +127,16 @@ Deno.test("viewer surface", async () => {
     await settle();
     const rebuilt = await snap();
     const rebuiltShot = await shot();
-    assert.deepEqual(
+    assertEquals(
       rebuilt.errors,
       [],
       "resolution rebuild produced WebGPU errors",
     );
-    assert.ok(
+    assert(
       rebuilt.storage > initial.storage,
       "a resolution change must rebuild geometry (new storage buffers)",
     );
-    assert.ok(
+    assert(
       !rebuiltShot.equals(initialShot),
       "a resolution change must change the rendered image",
     );
@@ -148,13 +147,13 @@ Deno.test("viewer surface", async () => {
     await settle();
     const styled = await snap();
     const styledShot = await shot();
-    assert.deepEqual(styled.errors, [], "color edit produced WebGPU errors");
-    assert.equal(
+    assertEquals(styled.errors, [], "color edit produced WebGPU errors");
+    assertStrictEquals(
       styled.storage - rebuilt.storage,
       0,
       "a color edit must not rebuild surface geometry",
     );
-    assert.ok(
+    assert(
       !styledShot.equals(rebuiltShot),
       "a color edit must change the rendered image",
     );
@@ -165,12 +164,12 @@ Deno.test("viewer surface", async () => {
     await settle();
     const empty = await snap();
     const emptyShot = await shot();
-    assert.deepEqual(
+    assertEquals(
       empty.errors,
       [],
       "empty-input scene produced WebGPU errors",
     );
-    assert.ok(
+    assert(
       !emptyShot.equals(styledShot),
       "empty input must stop drawing the surface",
     );
@@ -179,7 +178,7 @@ Deno.test("viewer surface", async () => {
         label === "molgpu:positions" || label === "molgpu:normals" ||
         label === "molgpu:indices"
       );
-    assert.deepEqual(
+    assertEquals(
       newSurfaceBuffers,
       [],
       "empty selection must allocate no new surface geometry buffers",

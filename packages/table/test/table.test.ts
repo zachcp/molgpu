@@ -13,10 +13,9 @@ import {
   createStructure,
   elementRadius,
   residueKey,
-  selectBonds,
-  validateStructure,
   withPositions,
 } from "../src/index.ts";
+import { selectBonds, validateStructure } from "../src/structure.ts";
 import type { StructureInput } from "../src/index.ts";
 import type { Mutable } from "../../../test/support/mutable.ts";
 import { fixture } from "./fixture.ts";

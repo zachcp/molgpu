@@ -220,15 +220,3 @@ export const Distance: ViewerComponent<{
     }),
   ]);
 };
-
-/**
- * The centroid (mean atom position, in Ångström) of a selection of this
- * structure, or of the whole structure when `select` is null — the anchor
- * <Label>/<Distance> use, exposed for callers that need the point directly.
- */
-export function centroid(
-  data: StructureData,
-  select: Selection | null = null,
-): [number, number, number] {
-  return centroidOf(data, select ? select.indices : null);
-}

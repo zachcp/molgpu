@@ -9,9 +9,9 @@ import {
   useMemo,
 } from "@use-gpu/live";
 import {
+  type NearestVolume,
   useStableGrid,
   VolumeContext,
-  type VolumeContextValue,
 } from "./volume-context.ts";
 
 const noop = () => {};
@@ -20,16 +20,8 @@ import { useVolumeSource } from "./internal/volume-buffers.ts";
 import { live, viewer } from "./internal/elements.ts";
 
 const defaultLoader: VolumeLoader = async (src, cancelled) => {
-  const response = await fetch(src);
-  if (!response.ok) {
-    throw new Error(
-      `Unable to load volume (${response.status} ${response.statusText})`,
-    );
-  }
-  const bytes = new Uint8Array(await response.arrayBuffer());
-  if (cancelled()) return null;
   const { volumeFromCcp4 } = await import("@molgpu/io");
-  const volume = await volumeFromCcp4(bytes);
+  const volume = await volumeFromCcp4(src);
   return cancelled() ? null : volume;
 };
 
@@ -38,7 +30,7 @@ const VolumeProvider: LC<{ volume: VolumeData; children: LiveElement }> = (
 ) => {
   const source = useVolumeSource(volume);
   const grid = useStableGrid(volume);
-  const value = useMemo<VolumeContextValue>(() => {
+  const value = useMemo<NearestVolume>(() => {
     const { min, max } = volume.stats;
     return Object.freeze({
       grid,
@@ -81,7 +73,7 @@ export const Volume: ViewerComponent<VolumeProps> = (
   }
   const [loaded, failure, pending] = useAwait(
     data === undefined
-      ? async (cancelled: () => boolean) => loader(src!, cancelled)
+      ? async (cancelled: () => boolean) => await loader(src!, cancelled)
       : null,
     [src, loader],
   );

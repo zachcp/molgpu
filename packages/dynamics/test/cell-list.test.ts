@@ -1,7 +1,8 @@
 import { assertEquals, assertThrows } from "@std/assert";
 import { spatialGrid } from "@molgpu/table";
 import { structureFromBcif } from "@molgpu/io";
-import { createCellList, planCellList } from "../src/index.ts";
+import { createCellList } from "../src/cell-list.ts";
+import { planCellList } from "../src/wgsl.ts";
 
 function tablePairs(
   positions: Float32Array,

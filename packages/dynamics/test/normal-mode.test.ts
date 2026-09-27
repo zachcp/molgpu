@@ -1,14 +1,13 @@
 import { assertEquals, assertThrows } from "@std/assert";
 import type { Topology } from "@molgpu/table";
+import { applyNormalMode } from "../src/normal-mode.ts";
 import {
-  applyNormalMode,
   buildElasticNetwork,
   normalModeFromElastic,
-  normalModeWgsl,
   residueGuideMap,
   solveElasticModes,
-  validateNormalMode,
 } from "../src/index.ts";
+import { normalModeWgsl, validateNormalMode } from "../src/wgsl.ts";
 
 Deno.test("normal mode follows residue mapping and reverses under scrubbing", () => {
   const positions = Float32Array.of(1, 0, 0, 2, 0, 0, 3, 0, 0);

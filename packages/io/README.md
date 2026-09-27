@@ -8,7 +8,7 @@ bonds). `molecularSurfaceField` computes a solvent-excluded-surface scalar grid
 from plain atom columns with Mol*'s `calcMolecularSurface`. Both import Mol*
 lazily inside the call, so loading this module never loads Mol*, and nothing
 Mol*-typed crosses the public API: inputs and outputs are typed arrays and plain
-objects, and failures are this package's own error classes with a `code` you can
+objects, and every failure is an `IoError` with a `format` and a `code` you can
 branch on.
 
 ## Install
@@ -31,20 +31,13 @@ before.
 
 ## Example
 
-Runs in Node as an ES module, with `1crn.bcif` from
-`https://models.rcsb.org/1crn.bcif` in the working directory:
+Runs as an ES module in Deno or a browser:
 
 ```js
-import { readFile } from "node:fs/promises";
-import {
-  BcifParseError,
-  molecularSurfaceField,
-  structureFromBcif,
-} from "@molgpu/io";
+import { IoError, molecularSurfaceField, structureFromBcif } from "@molgpu/io";
 
-const data = await structureFromBcif(
-  new Uint8Array(await readFile("1crn.bcif")),
-);
+// Bytes, a Blob/File, or a URL (fetched once).
+const data = await structureFromBcif("https://models.rcsb.org/1crn.bcif");
 const { atoms, residues, chains } = data.topology;
 console.log(atoms.count, residues.count, chains.count); // 327 46 1
 
@@ -69,8 +62,8 @@ console.log(field.dims, field.level); // [ 33, 28, 33 ] 1.4
 try {
   await structureFromBcif(new Uint8Array([0, 1, 2]));
 } catch (error) {
-  if (error instanceof BcifParseError) console.log(error.code);
-} // INVALID_BCIF
+  if (error instanceof IoError) console.log(error.format, error.code);
+} // bcif INVALID_BCIF
 ```
 
 `field.values` is **x-fastest**: sample `(i, j, k)` is
@@ -84,45 +77,29 @@ isosurface.
 
 | Export                  | Stability    | Description                                                                                                                                                                                           |
 | ----------------------- | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `structureFromBcif`     | stable       | Parse BinaryCIF bytes and lower them to a `@molgpu/table` `StructureData`.                                                                                                                            |
-| `BcifParseError`        | stable       | Error thrown by `structureFromBcif`, with a `code: BcifErrorCode`.                                                                                                                                    |
-| `BcifErrorCode`         | stable       | Union of `structureFromBcif` failure codes.                                                                                                                                                           |
+| `structureFromBcif`     | stable       | Parse BinaryCIF (bytes, a `Blob`/`File`, or a URL fetched once) and lower it to a `@molgpu/table` `StructureData`.                                                                                    |
+| `FileInput`             | stable       | `Uint8Array \| Blob \| string \| URL`: what `structureFromBcif` and `volumeFromCcp4` read.                                                                                                            |
+| `IoError`               | stable       | Every failure this package raises, with `format` (which importer) and a stable `code`.                                                                                                                |
+| `IoErrorCode`           | stable       | Union of failure codes across importers; see its doc comment for which importer raises each.                                                                                                          |
+| `IoFormat`              | stable       | `"bcif" \| "ccp4" \| "pqr" \| "trajectory" \| "surface" \| "selection"`.                                                                                                                              |
 | `molecularSurfaceField` | experimental | Solvent-excluded-surface scalar grid over plain atom columns, via Mol*.                                                                                                                               |
-| `SurfaceFieldError`     | experimental | Error thrown by `molecularSurfaceField`, with a `code: SurfaceFieldErrorCode`.                                                                                                                        |
-| `SurfaceFieldErrorCode` | experimental | Union of `molecularSurfaceField` failure codes.                                                                                                                                                       |
 | `SurfaceFieldAtoms`     | experimental | Input atom columns: `count` and `Float32Array` `x`/`y`/`z`/`radius`.                                                                                                                                  |
 | `SurfaceFieldOptions`   | experimental | `probeRadius`, `resolution` and `probePositions`.                                                                                                                                                     |
 | `SurfaceField`          | experimental | `VolumeData` plus surface metadata: `resolution`, `maxRadius`, `level`.                                                                                                                               |
-| `volumeFromCcp4`        | experimental | CCP4/MRC map (modes 0–2, either endianness) to a scalar `VolumeData` with Mol*'s full grid-to-Cartesian affine.                                                                                       |
-| `VolumeParseError`      | experimental | Error thrown by `volumeFromCcp4`, with a `code: VolumeErrorCode`.                                                                                                                                     |
-| `VolumeErrorCode`       | experimental | Union of `volumeFromCcp4` failure codes, including `VOLUME_TOO_LARGE`.                                                                                                                                |
-| `parseSelection`        | experimental | Parse MolScript, PyMOL, VMD or Jmol selection text into a plain MolQL tree for `@molgpu/select`'s `compile`.                                                                                          |
-| `SelectionParseError`   | experimental | Error thrown by `parseSelection`, with the `language` and `text` that failed.                                                                                                                         |
+| `volumeFromCcp4`        | experimental | CCP4/MRC map (modes 0–2, either endianness; bytes, a `Blob`/`File`, or a URL) to a scalar `VolumeData` with Mol*'s full grid-to-Cartesian affine.                                                     |
+| `parseSelection`        | experimental | Parse MolScript, PyMOL, VMD or Jmol selection text into a plain MolQL tree for `@molgpu/select`'s `compile`; `symbols` rejects anything else at parse time.                                           |
 | `SelectionExpr`         | experimental | Type: a MolQL expression as plain JSON; the same shape as `@molgpu/select`'s.                                                                                                                         |
 | `SelectionLanguage`     | experimental | Type: `"mol-script" \| "pymol" \| "vmd" \| "jmol"`.                                                                                                                                                   |
-| `ParseSelectionOptions` | experimental | `symbols`: reject any symbol outside this list at parse time, e.g. `supportedSymbols`.                                                                                                                |
-| `openTrajectory`        | experimental | Open a DCD/XTC/TRR trajectory for streaming from bytes, a `Blob`/`File`, a `ByteSource` or a URL; format from an option or the name.                                                                  |
-| `trajectoryFromDcd`     | experimental | Stream a CHARMM/NAMD/X-PLOR DCD: fixed-stride index, own frame decode, cells to box vectors, AKMA times to ps.                                                                                        |
-| `trajectoryFromXtc`     | experimental | Stream a GROMACS XTC: header index scanned in 4 MiB blocks, each frame decoded by Mol* on a one-frame slice.                                                                                          |
-| `trajectoryFromTrr`     | experimental | Stream a GROMACS TRR (single/double); frames without positions skipped; velocities opt-in.                                                                                                            |
-| `trajectoryFormat`      | experimental | The format a file name or URL implies (`dcd`, `xtc`, `trr`), or null.                                                                                                                                 |
-| `byteSource`            | experimental | A `ByteSource` over a `Uint8Array` (zero-copy views) or a `Blob`/`File`.                                                                                                                              |
-| `urlByteSource`         | experimental | A `ByteSource` over HTTP Range requests; a server without Range support is downloaded whole up to `maxDownload`.                                                                                      |
-| `MAX_FULL_DOWNLOAD`     | experimental | Default `maxDownload`: 256 MiB.                                                                                                                                                                       |
-| `AKMA_PS`               | experimental | One AKMA time unit (CHARMM DELTA) in picoseconds.                                                                                                                                                     |
-| `TrajectoryParseError`  | experimental | Error with a stable `code` (`TrajectoryErrorCode`).                                                                                                                                                   |
-| `TrajectoryErrorCode`   | experimental | Why a trajectory import or frame read failed.                                                                                                                                                         |
-| `TrajectoryFormat`      | experimental | `"dcd"`, `"xtc"` or `"trr"`.                                                                                                                                                                          |
-| `TrajectoryReadOptions` | experimental | `velocities` (TRR, default false) and an open-time `signal`.                                                                                                                                          |
-| `ByteSource`            | experimental | Random access to a file's bytes: `size` and `read(offset, length, signal?)`.                                                                                                                          |
+| `openTrajectory`        | experimental | Open a DCD/XTC/TRR trajectory for streaming from bytes, a `Blob`/`File`, a `ByteSource` or a URL (HTTP Range reads); format from an option or the name.                                               |
+| `OpenTrajectoryOptions` | experimental | `format`, `maxDownload` (default 256 MiB when a server ignores Range), `velocities` (TRR) and an open-time `signal`.                                                                                  |
+| `ByteSource`            | experimental | Random access to a file's bytes: `size` and `read(offset, length, signal?)`, for custom range readers.                                                                                                |
 | `structureFromPqr`      | experimental | Read PQR text or bytes (tokenised, so PDB2PQR's widened fields parse) into a structure with `partialCharge` and raw `pqr:radius` (`imported:pqr`); zero radii display at the element radius.          |
 | `applyPqr`              | experimental | Set `partialCharge` on an existing structure from PQR records matched by chain, sequence, insertion code and atom name; folds missing hydrogens onto their heavy atom and reports what did not match. |
-| `PqrParseError`         | experimental | Error thrown by `structureFromPqr` and `applyPqr`, with a `code: PqrErrorCode`.                                                                                                                       |
-| `PqrErrorCode`          | experimental | Why a PQR import failed, including `AMBIGUOUS_CHAIN` for chain-less records.                                                                                                                          |
 | `PqrStructureReport`    | experimental | `atoms` and `radiusFallbacks` from `structureFromPqr`.                                                                                                                                                |
 | `PqrApplyReport`        | experimental | `matched`, `unmatchedAtoms`, `unmatchedRecords` and per-model, per-altloc `residueDelta` from `applyPqr`.                                                                                             |
 
-The surface exports are experimental while the result shape settles.
+The surface exports are experimental while the result shape settles. The
+per-format trajectory readers are internal; `openTrajectory` dispatches to them.
 
 `structureFromBcif` always sets the derived `formalCharge` attribute: the file's
 `pdbx_formal_charge` values (provenance `imported:mmcif`), or zeros marked

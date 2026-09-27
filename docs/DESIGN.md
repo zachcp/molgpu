@@ -110,9 +110,9 @@ One concept replaces MVS's entire `color` / `color_from_uri` /
 sort-order matrix. Fields compile to WGSL and bind as `ShaderSource`, which
 upstream supports directly (see findings).
 
-Annotations are **joins that produce fields**: `useAnnotation(uri, schema)`
-joins external per-residue or per-chain data onto the table and returns
-something indistinguishable from any other field.
+Annotations are **joins that produce fields**: `joinAnnotation` in
+`@molgpu/fields` joins caller-loaded per-residue or per-chain records onto the
+table and returns something indistinguishable from any other field.
 
 ### 4. One global timeline
 
@@ -147,7 +147,9 @@ survive data swaps and trajectory frames.
 ### 7. Materials, lights and postprocessing are first-class
 
 We have committed to a shading model, so we are allowed to name it. PBR
-materials, real lights, SSAO / outline / DoF / OIT all exist upstream.
+materials, real lights, SSAO / outline / DoF / OIT all exist upstream, and we
+use them from there: the caller's scene owns `<Pass>`, lights and camera from
+`@use-gpu/workbench`, and each representation takes a `material` prop.
 
 ### 8. Picking wires back into the timeline
 
@@ -159,14 +161,12 @@ Hover yields a tooltip field; click seeks to a beat. That subsumes MVS's
 Illustrative, not settled:
 
 ```jsx
-<Molecule>
-  <Structure id="cyp" src="1tqn.bcif">
-    <Cartoon select="polymer" color={byPlddt} />
-    <BallAndStick select={site} color={byElement} material={glossy} />
-    <Surface select="polymer" opacity={fade} />
-  </Structure>
+<Structure id="cyp" src="1tqn.bcif">
+  <Cartoon select="polymer" color={byPlddt} />
+  <BallAndStick select={site} color={byElement} material={glossy} />
+  <Surface select="polymer" opacity={fade} />
   <Focus on={site} at={4000} />
-</Molecule>;
+</Structure>;
 ```
 
 Note what is _absent_: no modifier child nodes. `color`, `opacity` and `clip`
@@ -186,7 +186,7 @@ exactly one wall, and (b) everything correctness-critical is a pure function.
 | `@molgpu/select`   | `table`                            | Selection language → sorted index buffers.                                                                                                      |
 | `@molgpu/fields`   | `table`, `@use-gpu/shader`         | Field abstraction, expression sublanguage → WGSL.                                                                                               |
 | `@molgpu/geo`      | —                                  | Geometry kernels: ported ribbon/spline math, molecular surface, sphere/cylinder instancing. Typed arrays in, typed arrays out. No GPU, no Live. |
-| `@molgpu/dynamics` | `table`                            | Pure coordinate math and CPU charge assignment, with WGSL sources. **Never imports `@use-gpu/*`.**                                              |
+| `@molgpu/dynamics` | `table`                            | Pure coordinate math and CPU charge assignment; WGSL sources on `./wgsl`. **Never imports `@use-gpu/*`.**                                       |
 | `@molgpu/timeline` | `@use-gpu/workbench`               | Global scrubbable timeline, beats, curve sampling.                                                                                              |
 | `@molgpu/viewer`   | all of the above                   | The Live components. **The only package that imports `@use-gpu/workbench` components.**                                                         |
 

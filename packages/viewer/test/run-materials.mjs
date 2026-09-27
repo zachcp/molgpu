@@ -2,15 +2,15 @@
 // mounts and draws under the viewer's light wrappers with no WebGPU errors, and
 // a runtime material switch compiles a new render pipeline (the material reaches
 // the shaded layer) without allocating new geometry storage buffers.
-import assert from "node:assert/strict";
-import { fileURLToPath } from "node:url";
+import { assert, assertEquals, assertStrictEquals } from "@std/assert";
+import { fromFileUrl } from "@std/path";
 import { createServer } from "vite";
 import { chromium } from "playwright";
 import { webgpuBrowserArgs } from "./webgpu-browser-args.mjs";
 import { workspaceAliases } from "../../../scripts/workspace-aliases.mjs";
 
 Deno.test("viewer materials", async () => {
-  const root = fileURLToPath(new URL("../../../", import.meta.url));
+  const root = fromFileUrl(new URL("../../../", import.meta.url));
   const server = await createServer({
     root,
     configFile: false,
@@ -33,7 +33,6 @@ Deno.test("viewer materials", async () => {
         "@use-gpu/shader",
         "@use-gpu/shader/wgsl",
         "@use-gpu/wgsl",
-        "lodash",
       ],
     },
   });
@@ -87,16 +86,16 @@ Deno.test("viewer materials", async () => {
     await settle();
     await settle();
     const pbr = await snap();
-    assert.deepEqual(
+    assertEquals(
       pbr.errors,
       [],
       "PBR material scene produced WebGPU errors",
     );
-    assert.ok(
+    assert(
       pbr.geometryBuffers > 0,
       "expected the structure to upload its radii column",
     );
-    assert.ok(
+    assert(
       pbr.pipelines > 0,
       "expected at least one shaded render pipeline",
     );
@@ -110,17 +109,17 @@ Deno.test("viewer materials", async () => {
     await settle();
     await settle();
     const metal = await snap();
-    assert.deepEqual(
+    assertEquals(
       metal.errors,
       [],
       "metal PBR scene produced WebGPU errors",
     );
-    assert.equal(
+    assertStrictEquals(
       metal.pipelines,
       pbr.pipelines,
       "a PBR parameter change must not compile a new pipeline",
     );
-    assert.equal(
+    assertStrictEquals(
       metal.geometryBuffers,
       pbr.geometryBuffers,
       "a PBR parameter change must not rebuild geometry",
@@ -133,12 +132,12 @@ Deno.test("viewer materials", async () => {
     await settle();
     await settle();
     const basic = await snap();
-    assert.deepEqual(
+    assertEquals(
       basic.errors,
       [],
       "basic material scene produced WebGPU errors",
     );
-    assert.ok(
+    assert(
       basic.pipelines > metal.pipelines,
       "switching shading model must compile a new render pipeline",
     );
@@ -150,7 +149,7 @@ Deno.test("viewer materials", async () => {
       await settle();
       await settle();
       const s = await snap();
-      assert.deepEqual(
+      assertEquals(
         s.errors,
         [],
         `material '${name}' produced WebGPU errors`,
@@ -158,8 +157,8 @@ Deno.test("viewer materials", async () => {
     }
 
     const final = await snap();
-    assert.deepEqual(errors, [], "page errors");
-    assert.deepEqual(final.errors, [], "uncaptured WebGPU errors");
+    assertEquals(errors, [], "page errors");
+    assertEquals(final.errors, [], "uncaptured WebGPU errors");
 
     console.log(
       JSON.stringify({

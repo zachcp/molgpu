@@ -8,33 +8,36 @@ import {
   withAttributes,
 } from "@molgpu/table";
 import type {
-  BcifErrorCode,
   SurfaceField,
   SurfaceFieldAtoms,
-  SurfaceFieldErrorCode,
   SurfaceFieldOptions,
 } from "./types.ts";
+import { errorFor, IoError } from "./error.ts";
+import { type FileInput, readInput } from "./input.ts";
 import { ELEMENT, polymerKind } from "./residues.ts";
 
-export type * from "./types.ts";
-export { volumeFromCcp4, VolumeParseError } from "./ccp4.ts";
-export { applyPqr, PqrParseError, structureFromPqr } from "./pqr.ts";
-export {
-  byteSource,
-  MAX_FULL_DOWNLOAD,
-  TrajectoryParseError,
-  urlByteSource,
-} from "./byte-source.ts";
-export { AKMA_PS, trajectoryFromDcd } from "./dcd.ts";
-export { trajectoryFromXtc } from "./xtc.ts";
-export { trajectoryFromTrr } from "./trr.ts";
-export { openTrajectory, trajectoryFormat } from "./trajectory.ts";
+const bcifError = errorFor("bcif");
+const surfaceError = errorFor("surface");
+
+export type { FileInput } from "./input.ts";
+export type {
+  ByteSource,
+  OpenTrajectoryOptions,
+  PqrApplyReport,
+  PqrStructureReport,
+  SurfaceField,
+  SurfaceFieldAtoms,
+  SurfaceFieldOptions,
+} from "./types.ts";
+export { IoError } from "./error.ts";
+export type { IoErrorCode, IoFormat } from "./error.ts";
+export { volumeFromCcp4 } from "./ccp4.ts";
+export { applyPqr, structureFromPqr } from "./pqr.ts";
+export { openTrajectory } from "./trajectory.ts";
 export {
   parseSelection,
-  type ParseSelectionOptions,
   type SelectionExpr,
   type SelectionLanguage,
-  SelectionParseError,
 } from "./selection.ts";
 
 /** The slice of a Mol* CIF category this module reads. */
@@ -82,22 +85,11 @@ const num = (
   fallback = 0,
 ): number => field(category, name)?.float(row) ?? fallback;
 
-/** A machine-readable failure at the BCIF/Mol* import boundary. */
-export class BcifParseError extends Error {
-  override readonly name: "BcifParseError";
-  readonly code: BcifErrorCode;
-  constructor(message: string, code: BcifErrorCode, cause?: unknown) {
-    super(message, cause === undefined ? undefined : { cause });
-    this.name = "BcifParseError";
-    this.code = code;
-  }
-}
-
 async function parseBcif(
   bytes: Uint8Array,
 ): Promise<{ blocks: readonly { categories: Categories }[] }> {
   if (!(bytes instanceof Uint8Array)) {
-    throw new BcifParseError(
+    throw bcifError(
       "BCIF input must be a Uint8Array",
       "INVALID_INPUT",
     );
@@ -108,29 +100,18 @@ async function parseBcif(
     const { CIF } = await import("molstar/lib/mol-io/reader/cif.js");
     const parsed = await CIF.parseBinary(bytes).run();
     if (parsed.isError) {
-      throw new BcifParseError(parsed.message, "INVALID_BCIF");
+      throw bcifError(parsed.message, "INVALID_BCIF");
     }
     return parsed.result as unknown as {
       blocks: readonly { categories: Categories }[];
     };
   } catch (error) {
-    if (error instanceof BcifParseError) throw error;
-    throw new BcifParseError(
+    if (error instanceof IoError) throw error;
+    throw bcifError(
       "Unable to load the optional Mol* BCIF parser",
       "PARSER_UNAVAILABLE",
       error,
     );
-  }
-}
-
-/** A machine-readable failure computing a molecular surface scalar field. */
-export class SurfaceFieldError extends Error {
-  override readonly name: "SurfaceFieldError";
-  readonly code: SurfaceFieldErrorCode;
-  constructor(message: string, code: SurfaceFieldErrorCode, cause?: unknown) {
-    super(message, cause === undefined ? undefined : { cause });
-    this.name = "SurfaceFieldError";
-    this.code = code;
   }
 }
 
@@ -153,7 +134,7 @@ export async function molecularSurfaceField(
   const { probeRadius = 1.4, resolution = 0.5, probePositions = 36 } = options;
   const { x, y, z, radius, count } = atoms;
   if (!Number.isSafeInteger(count) || count < 0) {
-    throw new SurfaceFieldError(
+    throw surfaceError(
       "atoms.count must be a nonnegative safe integer",
       "INVALID_INPUT",
     );
@@ -163,13 +144,13 @@ export async function molecularSurfaceField(
       a instanceof Float32Array && a.length === count
     )
   ) {
-    throw new SurfaceFieldError(
+    throw surfaceError(
       "atoms.x/y/z/radius must each be a Float32Array[count]",
       "INVALID_INPUT",
     );
   }
   if (count === 0) {
-    throw new SurfaceFieldError(
+    throw surfaceError(
       "atoms must contain at least one atom",
       "EMPTY_INPUT",
     );
@@ -243,8 +224,8 @@ export async function molecularSurfaceField(
       level: probeRadius,
     });
   } catch (error) {
-    if (error instanceof SurfaceFieldError) throw error;
-    throw new SurfaceFieldError(
+    if (error instanceof IoError) throw error;
+    throw surfaceError(
       "Unable to compute the molecular surface field",
       "FIELD_UNAVAILABLE",
       error,
@@ -538,15 +519,18 @@ function readSecondaryStructure(
   return codes;
 }
 
-/** Lower a BinaryCIF mmCIF block to renderer-independent owned table columns. */
+/**
+ * Lower a BinaryCIF mmCIF block to renderer-independent owned table columns.
+ * `input` is the bytes, a `Blob`/`File`, or a URL fetched once.
+ */
 export async function structureFromBcif(
-  bytes: Uint8Array,
+  input: FileInput,
 ): Promise<StructureData> {
-  const parsed = await parseBcif(bytes);
+  const parsed = await parseBcif(await readInput(input, "BCIF", bcifError));
   const categories = parsed.blocks[0]?.categories ?? {};
   const atom = categories.atom_site;
   if (!atom) {
-    throw new BcifParseError(
+    throw bcifError(
       "BCIF has no atom_site category",
       "MISSING_ATOM_SITE",
     );

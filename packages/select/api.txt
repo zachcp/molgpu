@@ -4,16 +4,12 @@
 
 Domain
   export type Domain = "atom" | "residue" | "bond";
-RevisionStream
-  export type RevisionStream = "topology" | "positions" | "attributes";
 Selection
-  export interface Selection { readonly domain: Domain; /** The originating StructureData identity; compared by reference for set ops. */ readonly dataset: StructureData["identity"]; readonly indices: Uint32Array; /** Revision of each stream the resolution read, for staleness and set-op checks. */ readonly deps: Readonly<Partial<Record<RevisionStream, number>>>; /** Human label from the query; NOT the cache key. */ readonly label: string; /** Library-owned identity derived from dataset, revisions, and membership. */ readonly id: string; readonly source: SourceMap | null }
+  export interface Selection { readonly domain: Domain; /** The originating StructureData identity; compared by reference for set ops. */ readonly dataset: StructureData["identity"]; readonly indices: Uint32Array; /** Revision of each stream the resolution read, for staleness and set-op checks. */ readonly deps: Readonly<Partial<Record<"topology" | "positions" | "attributes", number>>>; /** Human label from the query; NOT the cache key. */ readonly label: string; /** Library-owned identity derived from dataset, revisions, and membership. */ readonly id: string; readonly source: { readonly domain: "residue"; readonly rows: Uint32Array } | { readonly domain: "atom"; readonly a: Uint32Array; readonly b: Uint32Array } | null }
 SelectionExpr
   export type SelectionExpr = string | number | boolean | { readonly name: string } | { readonly head: SelectionExpr; readonly args?: readonly SelectionExpr[] | { readonly [name: string]: SelectionExpr } };
 SelectionQuery
-  export interface SelectionQuery { readonly type: string; readonly domain: Domain; readonly label: string; readonly deps: readonly RevisionStream[] }
-SourceMap
-  export type SourceMap = { readonly domain: "residue"; readonly rows: Uint32Array } | { readonly domain: "atom"; readonly a: Uint32Array; readonly b: Uint32Array };
+  export interface SelectionQuery { readonly type: string; readonly domain: Domain; readonly label: string; readonly deps: readonly ("topology" | "positions" | "attributes")[] }
 all
   export function all(domain?: Domain): SelectionQuery;
 comp
@@ -45,6 +41,6 @@ toResidues
 union
   export function union(a: Selection, b: Selection): Selection;
 where
-  export function where(domain: Domain, label: string, test: (data: StructureData, row: number) => boolean, deps?: readonly RevisionStream[]): SelectionQuery;
+  export function where(domain: Domain, label: string, test: (data: StructureData, row: number) => boolean, deps?: readonly ("topology" | "positions" | "attributes")[]): SelectionQuery;
 within
   export function within(cutoff: number, of: SelectionQuery): SelectionQuery;

@@ -25,7 +25,6 @@ import {
   coordinateBounds,
   createStructure,
   residueKey,
-  selectBonds,
   withPositions,
 } from "@molgpu/table";
 
@@ -94,7 +93,6 @@ const data = createStructure({
 const atoms = activeAtoms(data); // Uint32Array [0, 1]
 console.log(coordinateBounds(data, atoms).center); // [0.73, 0, 0]
 console.log(residueKey(data, 0)); // [1,"A","A",1,"1","","ALA"]
-console.log(selectBonds(data, atoms).length); // 1 (inferred N-CA bond)
 
 const moved = withPositions(data, Float32Array.from([0, 0, 0, 0, 1.46, 0]));
 console.log(moved.identity === data.identity, moved.revision.positions); // true 1
@@ -169,11 +167,9 @@ and ribbon geometry.
 | `elementRadius`           | experimental | Van der Waals radius in Ångström for an atomic number (1.7 when unlisted).                                                            |
 | `coordinateBounds`        | stable       | Untransformed min/max/center of selected atom positions, or null when empty.                                                          |
 | `StructureData`           | stable       | Validated, identity-branded structure value accepted by every other package.                                                          |
-| `validateStructure`       | experimental | Throw a `TypeError` naming the offending column if a `StructureInput` is malformed; returns the input.                                |
 | `bondTopology`            | experimental | Explicit bonds, or distance-inferred covalent bonds cached per position revision and policy.                                          |
 | `spatialGrid`             | experimental | Uniform spatial hash over packed positions for neighbour queries within one cell size, optionally partitioned.                        |
 | `SpatialGrid`             | experimental | Return type of `spatialGrid`.                                                                                                         |
-| `selectBonds`             | experimental | Bond row indices whose endpoints are both (or either) in an atom selection.                                                           |
 | `traceTable`              | experimental | Segmented polymer trace (guide points, tangent/normal/binormal frames, runs) for a selection.                                         |
 | `secondaryStructureTrace` | experimental | Per-sample direction vectors, helix/sheet/coil labels and block-boundary flags over a `Trace`.                                        |
 | `SS_CODES`                | experimental | DSSP letters in `ssCode` order: 0 coil, H, B, E, G, I, T, S, P (reserved).                                                            |
@@ -181,8 +177,6 @@ and ribbon geometry.
 | `dssp`                    | experimental | Mol*-ported DSSP: `ssCode` values per residue, per chain and model, over the given atom rows.                                         |
 | `DsspOptions`             | experimental | `rows`: atom rows to read (default every model, primary altlocs).                                                                     |
 | `withSecondaryStructure`  | experimental | Set `ssCode` by Mol*'s `auto`, `dssp` or `model` mode; computed codes carry `computed:dssp`.                                          |
-| `frameSecondaryStructure` | experimental | Cached per-frame DSSP over a `TrajectoryData`; `frame(i)` and an SS-vs-time `timeline(frames)`.                                       |
-| `FrameSecondaryStructure` | experimental | Return type of `frameSecondaryStructure`.                                                                                             |
 | `StructureInput`          | experimental | Unvalidated `{ topology, positions }` input to `createStructure`.                                                                     |
 | `Topology`                | experimental | The five column domains of a structure.                                                                                               |
 | `Atoms`                   | experimental | Per-atom columns (names, altloc, residue FK, element, occupancy, B-factor, optional radius).                                          |
@@ -197,7 +191,6 @@ and ribbon geometry.
 | `Trace`                   | experimental | Return type of `traceTable`.                                                                                                          |
 | `SecondaryStructureTrace` | experimental | Return type of `secondaryStructureTrace`.                                                                                             |
 | `createVolume`            | experimental | Validate and wrap a grid plus index-to-world affine as a frozen `VolumeData`; adopts `values`, computes stats.                        |
-| `validateVolume`          | experimental | Throw a `TypeError` naming the malformed field, or a `RangeError` over `maxSamples`; returns the input.                               |
 | `MAX_VOLUME_SAMPLES`      | experimental | Default `createVolume` ceiling: 256³ samples (64 MiB of scalar f32).                                                                  |
 | `sampleVolume`            | experimental | Trilinear sample at a world position; 0 outside the grid, clamped on its faces.                                                       |
 | `sampleVolumeGradient`    | experimental | World-space gradient of `sampleVolume` by central differences; zero within a step of the grid boundary.                               |
@@ -215,9 +208,6 @@ and ribbon geometry.
 | `VolumeLevel`             | experimental | Absolute isovalue or `{ sigma }`.                                                                                                     |
 | `createTrajectory`        | experimental | Validate and freeze a trajectory from in-memory `frames` or a streaming `source` plus `frameCount`; time defaults to the frame index. |
 | `validateTrajectory`      | experimental | Throw a `TypeError` unless a trajectory can move a structure (atom count, or in-range `atomMap` rows); frames are not decoded.        |
-| `validateTrajectoryFrame` | experimental | Throw a `TypeError` naming the field unless a frame holds `atomCount` finite positions (and a 3×3 box / velocities when present).     |
-| `frameAtTime`             | experimental | Fractional frame index at a trajectory time, clamped to the first and last frame.                                                     |
-| `trajectoryFromModels`    | experimental | A multi-model structure as frames over its first model (`atomMap` = that model's rows); models must list the same atoms.              |
 | `TrajectoryData`          | experimental | Immutable trajectory: `atomCount`, `frameCount`, per-frame `time` and `timeUnit`, optional `atomMap`, and a `FrameSource`.            |
 | `TrajectoryInput`         | experimental | Input to `createTrajectory`.                                                                                                          |
 | `TrajectoryFrame`         | experimental | One decoded frame: Å `positions`, optional column-major `box`, optional Å/ps `velocities`.                                            |

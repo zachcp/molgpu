@@ -8,7 +8,7 @@ import {
   byteSource,
   parsedTrajectory,
   readExactly,
-  TrajectoryParseError,
+  trajectoryError,
 } from "./byte-source.ts";
 import type { ByteSource, TrajectoryReadOptions } from "./types.ts";
 
@@ -16,7 +16,7 @@ import type { ByteSource, TrajectoryReadOptions } from "./types.ts";
 export const AKMA_PS = 0.0488882129;
 
 const invalid = (message: string): never => {
-  throw new TrajectoryParseError(`DCD: ${message}`, "INVALID_TRAJECTORY");
+  throw trajectoryError(`DCD: ${message}`, "INVALID_TRAJECTORY");
 };
 
 /**
@@ -85,7 +85,7 @@ interface Layout {
 
 async function readLayout(reader: BlockReader): Promise<Layout> {
   if (reader.size < 92) {
-    throw new TrajectoryParseError(
+    throw trajectoryError(
       `DCD: ${reader.size} bytes is shorter than the 92-byte header record`,
       "TRUNCATED_TRAJECTORY",
     );
@@ -114,7 +114,7 @@ async function readLayout(reader: BlockReader): Promise<Layout> {
   const cell = charmm && icntrl(10) !== 0;
   const fourDims = charmm && icntrl(11) === 1;
   if (namnf > 0) {
-    throw new TrajectoryParseError(
+    throw trajectoryError(
       `DCD: ${namnf} fixed atoms are not supported`,
       "UNSUPPORTED_TRAJECTORY",
     );
@@ -145,7 +145,7 @@ async function readLayout(reader: BlockReader): Promise<Layout> {
   // that were appended to or cut short. A trailing partial frame is ignored.
   const frames = Math.floor((reader.size - at) / stride);
   if (frames < 1) {
-    throw new TrajectoryParseError(
+    throw trajectoryError(
       "DCD: the file holds no complete frame",
       "TRUNCATED_TRAJECTORY",
     );
@@ -215,7 +215,7 @@ function decodeFrame(
  * Open a DCD trajectory for streaming. Only the header is read; each
  * `source.read(i)` fetches and decodes one frame. Times are picoseconds from
  * `(ISTART + i·NSAVC)·DELTA` AKMA units, or integrator steps when DELTA is 0.
- * Fails with `TrajectoryParseError`.
+ * Fails with an `IoError` (format `trajectory`).
  */
 export async function trajectoryFromDcd(
   input: Uint8Array | Blob | ByteSource,

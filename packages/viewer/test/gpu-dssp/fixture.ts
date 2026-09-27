@@ -4,7 +4,7 @@ import {
   dssp,
   withPositions,
 } from "@molgpu/table";
-import { prepareDsspLayout } from "@molgpu/dynamics";
+import { prepareDsspLayout } from "@molgpu/dynamics/wgsl";
 import { structureFromBcif } from "@molgpu/io";
 import { gpuDssp, GpuDsspOverflowError } from "../../src/gpu-dssp.ts";
 import { dsspOverflowMode } from "../../src/gpu-dssp-provider.ts";

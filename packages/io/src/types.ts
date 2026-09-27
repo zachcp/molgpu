@@ -1,46 +1,5 @@
 // Public types for @molgpu/io.
 import type { VolumeData } from "@molgpu/table";
-/** Why a BinaryCIF import failed, stable enough to branch on. */
-export type BcifErrorCode =
-  /** `bytes` was not a `Uint8Array`. */
-  | "INVALID_INPUT"
-  /** The Mol* parser rejected the bytes. */
-  | "INVALID_BCIF"
-  /** The first data block has no `atom_site` category. */
-  | "MISSING_ATOM_SITE"
-  /** The optional Mol* parser is absent or failed to load. */
-  | "PARSER_UNAVAILABLE";
-
-/** Why a volume file import failed, stable enough to branch on. */
-export type VolumeErrorCode =
-  /** `bytes` was not a `Uint8Array`. */
-  | "INVALID_INPUT"
-  /** The header or data is malformed or truncated, or Mol* rejected it. */
-  | "INVALID_MAP"
-  /** The map's value mode is not one the reader supports. */
-  | "UNSUPPORTED_MODE"
-  /** The map has more samples than `maxSamples`. */
-  | "VOLUME_TOO_LARGE"
-  /** The optional Mol* reader is absent or failed to load. */
-  | "PARSER_UNAVAILABLE";
-
-/** Why a trajectory import or frame read failed, stable enough to branch on. */
-export type TrajectoryErrorCode =
-  /** The input was not bytes, a Blob, a ByteSource or a URL, or an option was invalid. */
-  | "INVALID_INPUT"
-  /** A header or frame is malformed, or frames disagree on the atom count. */
-  | "INVALID_TRAJECTORY"
-  /** A valid file uses a feature the reader does not support (DCD fixed atoms, ...). */
-  | "UNSUPPORTED_TRAJECTORY"
-  /** The file ends inside its header or holds no complete frame. */
-  | "TRUNCATED_TRAJECTORY"
-  /** The server ignores Range requests and the whole file is over `maxDownload`. */
-  | "TRAJECTORY_TOO_LARGE"
-  /** A network request failed or returned an error status. */
-  | "FETCH_FAILED"
-  /** The optional Mol* decoder is absent or failed to load. */
-  | "PARSER_UNAVAILABLE";
-
 /** Trajectory container formats the readers understand. */
 export type TrajectoryFormat = "dcd" | "xtc" | "trr";
 
@@ -58,6 +17,7 @@ export interface ByteSource {
   ): Promise<Uint8Array>;
 }
 
+/** Options the per-format readers take; `openTrajectory` passes them through. */
 export interface TrajectoryReadOptions {
   /** Decode velocities where the format stores them (TRR). Default false. */
   readonly velocities?: boolean;
@@ -65,14 +25,17 @@ export interface TrajectoryReadOptions {
   readonly signal?: AbortSignal;
 }
 
-/** Why a molecular surface field computation failed, stable enough to branch on. */
-export type SurfaceFieldErrorCode =
-  /** `count` is not a nonnegative safe integer, or a column is not a `Float32Array` of length `count`. */
-  | "INVALID_INPUT"
-  /** `count` is 0. */
-  | "EMPTY_INPUT"
-  /** The optional Mol* surface code is absent, failed to load, or threw while computing. */
-  | "FIELD_UNAVAILABLE";
+/** `openTrajectory` options. */
+export interface OpenTrajectoryOptions {
+  /** Container format; default: the file name's extension. */
+  readonly format?: "dcd" | "xtc" | "trr";
+  /** Largest whole-file download when a server ignores Range requests. */
+  readonly maxDownload?: number;
+  /** Decode velocities where the format stores them (TRR). Default false. */
+  readonly velocities?: boolean;
+  /** Cancels opening (the header scan); frame reads take their own signal. */
+  readonly signal?: AbortSignal;
+}
 
 /** Plain owned atom columns: Angstrom coordinates and van der Waals radii. */
 export interface SurfaceFieldAtoms {
@@ -120,19 +83,6 @@ export interface SurfaceField extends VolumeData {
   /** Absolute isovalue of the surface; always equals `probeRadius`. */
   readonly level: number;
 }
-
-/** Why a PQR import failed, stable enough to branch on. */
-export type PqrErrorCode =
-  /** The input was not a string or `Uint8Array`. */
-  | "INVALID_INPUT"
-  /** A record is malformed, or the records do not form a valid structure. */
-  | "INVALID_PQR"
-  /** The file has no ATOM or HETATM records. */
-  | "NO_ATOMS"
-  /** The PQR has no chain IDs and a residue key spans several chains. */
-  | "AMBIGUOUS_CHAIN"
-  /** The optional Mol* element guesser failed to load. */
-  | "PARSER_UNAVAILABLE";
 
 /** What `structureFromPqr` substituted while building the structure. */
 export interface PqrStructureReport {

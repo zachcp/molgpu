@@ -1,5 +1,11 @@
-import assert from "node:assert/strict";
-import { fileURLToPath } from "node:url";
+import {
+  assert,
+  assertEquals,
+  assertMatch,
+  assertNotMatch,
+  assertStrictEquals,
+} from "@std/assert";
+import { fromFileUrl } from "@std/path";
 import { createServer } from "vite";
 import { chromium } from "playwright";
 
@@ -39,7 +45,7 @@ const settledFrame = async (page) => {
 };
 
 Deno.test("site landing page and maintained gallery routes", async () => {
-  const root = fileURLToPath(new URL("../", import.meta.url));
+  const root = fromFileUrl(new URL("../", import.meta.url));
   const server = await createServer({
     root,
     configFile: `${root}vite.config.mjs`,
@@ -61,11 +67,11 @@ Deno.test("site landing page and maintained gallery routes", async () => {
 
     await page.goto("http://127.0.0.1:5190/");
     await page.waitForSelector("#hero-title");
-    assert.match(
+    assertMatch(
       await page.locator("#hero-title").textContent(),
       /composable toolkit/i,
     );
-    assert.equal(
+    assertStrictEquals(
       await page.locator(".package-grid a").count(),
       7,
       "every public package is presented",
@@ -92,25 +98,25 @@ Deno.test("site landing page and maintained gallery routes", async () => {
     ) {
       await page.goto(`http://127.0.0.1:5190/#demos/${id}`);
       await page.waitForSelector(`#molecule-canvas[data-demo="${id}"]`);
-      assert.equal(
+      assertStrictEquals(
         (await page.locator("#demo-title").textContent())?.trim(),
         title,
       );
-      assert.equal(
+      assertStrictEquals(
         await page.locator("#molecule-canvas").getAttribute("data-fixture"),
         fixture,
       );
-      assert.match(
+      assertMatch(
         await page.locator(`[data-demo-assertion="${id}"]`).textContent(),
         /Behavior:/,
       );
-      assert.equal(
+      assertStrictEquals(
         await page.locator("[data-webgpu-error]").count(),
         1,
         "each route keeps a visible fallback",
       );
       await page.waitForTimeout(250);
-      assert.doesNotMatch(
+      assertNotMatch(
         await page.locator("[data-webgpu-error]").textContent(),
         /unavailable|unable|error/i,
       );
@@ -118,13 +124,13 @@ Deno.test("site landing page and maintained gallery routes", async () => {
       await page.mouse.down();
       await page.mouse.move(600, 420, { steps: 4 });
       await page.mouse.up();
-      assert.equal(
+      assertStrictEquals(
         await page.locator("#molecule-canvas").getAttribute("data-orbit"),
         "dragging",
         "dragging updates the shared orbit controller",
       );
       await page.mouse.wheel(0, 120);
-      assert.equal(
+      assertStrictEquals(
         await page.locator("#molecule-canvas").getAttribute("data-orbit"),
         "zooming",
         "wheel input updates the shared orbit controller",
@@ -162,7 +168,7 @@ Deno.test("site landing page and maintained gallery routes", async () => {
       }
       if (id === "timeline" || id === "coordinates" || id === "trajectory") {
         await page.getByLabel("Timeline time in seconds").fill("2");
-        assert.match(
+        assertMatch(
           await page.locator(".timeline-control output").textContent(),
           /2\.00 s/,
         );
@@ -181,13 +187,13 @@ Deno.test("site landing page and maintained gallery routes", async () => {
       if (id === "materials") {
         await page.getByLabel("Material model").selectOption("normal");
       }
-      assert.equal(
+      assertStrictEquals(
         await page.locator("#molecule-canvas canvas").count(),
         1,
         "re-rendering reuses one canvas instead of stacking new ones",
       );
       if (id === "charge") {
-        assert.equal(
+        assertStrictEquals(
           await page.locator("#molecule-canvas").getAttribute(
             "data-charge-provenance",
           ),
@@ -199,12 +205,12 @@ Deno.test("site landing page and maintained gallery routes", async () => {
             "data-net-charge",
           ),
         );
-        assert.ok(Math.abs(net) < 1e-3, `net charge ${net}`);
+        assert(Math.abs(net) < 1e-3, `net charge ${net}`);
       }
       if (id === "volume") {
         const before = await settledFrame(page);
         await page.getByLabel("Slice position").fill("0.8");
-        assert.match(
+        assertMatch(
           await page.locator('[data-output="slice"]').textContent(),
           /80%/,
         );
@@ -215,18 +221,18 @@ Deno.test("site landing page and maintained gallery routes", async () => {
             0
         );
         const after = await settledFrame(page);
-        assert.ok(
+        assert(
           !before.equals(after),
           "moving the slice plane changes the rendered WebGPU frame",
         );
         await page.getByLabel("Isosurface level in sigma").fill("1");
-        assert.match(
+        assertMatch(
           await page.locator('[data-output="iso"]').textContent(),
           /1\.0 σ/,
         );
       }
     }
-    assert.deepEqual(errors, [], "page has no JavaScript errors");
+    assertEquals(errors, [], "page has no JavaScript errors");
   } finally {
     await browser?.close();
     await server.close();

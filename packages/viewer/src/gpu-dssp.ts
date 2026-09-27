@@ -1,12 +1,12 @@
+import { CellListLimitError } from "@molgpu/dynamics";
 import {
-  CellListLimitError,
   cellListWgsl,
   type DsspBridge,
   type DsspLayout,
   dsspWgsl,
   finishDssp,
   planCellList,
-} from "@molgpu/dynamics";
+} from "@molgpu/dynamics/wgsl";
 import { dssp, type StructureData, withPositions } from "@molgpu/table";
 
 const MAP_READ = 0x0001;

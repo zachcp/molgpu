@@ -1,6 +1,6 @@
 /**
  * The typed consumer fixture: a real .tsx application that composes
- * <Molecule>/<Structure>/<Spacefill> inside one caller-owned use.gpu scene,
+ * <Structure>/<Spacefill> inside one caller-owned use.gpu scene,
  * with no canvas or device of its own beyond the <AutoCanvas> it mounts.
  *
  * `deno task typecheck:components` compiles it; `deno task test:components` builds it with
@@ -23,26 +23,25 @@ import { attribute, byChain, colormap, linear } from "@molgpu/fields";
 import type { StructureData } from "@molgpu/table";
 import {
   Bonds,
-  Molecule,
   Spacefill,
   Structure,
-  useAttributeSnapshot,
-  useCoordinateBounds,
   useCoordinateFocus,
-  useCoordinateSnapshot,
-  useStructureResource,
 } from "@molgpu/viewer";
 import type { StructureLoader, StructureProps } from "@molgpu/viewer";
 import {
-  IdentityCoordinates,
+  useAttributeSnapshot,
+  useCoordinateBounds,
   useCoordinates,
+  useCoordinateSnapshot,
   useStructure,
+  useStructureResource,
 } from "@molgpu/viewer/advanced";
 import { OffsetCoordinates } from "./offset-coordinates.ts";
 import { TestAttributeProducer } from "./test-attribute-producer.ts";
 import { BondVertexProbe } from "./bond-vertex-probe.ts";
 import { probe } from "./diagnostics.ts";
 import type { Mode, Phase, State } from "./diagnostics.ts";
+import { IdentityCoordinates } from "../fixtures/identity-coordinates.ts";
 
 /** One synthetic chain of carbons centred on x, owned by @molgpu/table. */
 const cluster = (
@@ -468,13 +467,11 @@ const App = (): LiveElement => {
         />
         {state.mounted
           ? (
-            <Molecule>
-              <Scene
-                mode={state.mode}
-                src={state.src}
-                offsetX={state.offsetX}
-              />
-            </Molecule>
+            <Scene
+              mode={state.mode}
+              src={state.src}
+              offsetX={state.offsetX}
+            />
           )
           : null}
       </Pass>

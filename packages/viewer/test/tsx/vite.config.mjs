@@ -1,7 +1,7 @@
-import { fileURLToPath } from "node:url";
+import { fromFileUrl } from "@std/path";
 import { workspaceAliases } from "../../../../scripts/workspace-aliases.mjs";
 
-const here = (p) => fileURLToPath(new URL(p, import.meta.url));
+const here = (p) => fromFileUrl(new URL(p, import.meta.url));
 
 /** Builds the typed consumer the way an application would, so the browser
  * check runs against bundled output rather than a dev server's module graph. */

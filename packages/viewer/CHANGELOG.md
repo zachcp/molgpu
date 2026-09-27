@@ -6,6 +6,56 @@ All notable changes to `@molgpu/viewer` are recorded here. The format follows
 
 ## [Unreleased]
 
+- `<Structure src>` and `<Volume src>` default loaders pass the URL to
+  `@molgpu/io`, so a failed fetch surfaces as an `IoError` (`FETCH_FAILED`).
+
+- **Changed (advanced):** `./advanced` exposes hooks and one provider-authoring
+  component, not raw contexts.
+  - Added: `CoordinateKernel` and `CoordinateKernelProps`, the supported way to
+    write a GPU coordinate transform (previously internal).
+  - Removed: `CoordinatesContext`, `StructureContext`, `TimelineContext`,
+    `TrajectoryContext`, `VolumeContext`, `AttributesContext`, `Attributes`,
+    `ProducedAttribute`; read through `useCoordinates`, `useStructure`,
+    `useTimelineTime`, `useTrajectoryFrame`, `useVolume` and
+    `useAttributeSnapshot`.
+  - Renamed: `StructureContextValue` to `NearestStructure`, `VolumeContextValue`
+    to `NearestVolume`.
+  - Removed: `gpuDssp`, `GpuDsspOptions`, `GpuDsspResult` (use `<GpuDssp>`), and
+    the demo transforms `WobbleCoordinates` and `IdentityCoordinates` (a worked
+    example lives in `site/src/demos/coordinates.ts`).
+
+- **Changed (experimental):** the `.` entry holds components and the hooks an
+  application composes with, listed explicitly (no `export type *`).
+  - Moved to `./advanced`: `useCoordinateSnapshot`, `CoordinateSnapshot`,
+    `useVolumeSnapshot`, `useCoordinateSelection`, `useCoordinateBounds`,
+    `CoordinateBounds`, `StructureResource`, `StructureBounds`,
+    `useStructureResource`, `createStructureResource`, `useTimelineTime`.
+    `useAttributeSnapshot` and `AttributeSnapshot` are now only on `./advanced`.
+  - Moved to `.`: `GpuDsspOverflowError`, which `<GpuDssp>` can throw.
+  - Removed: `useTimelineSample` (use `sample(curve, time)` from
+    `@molgpu/timeline`), `centroid`, `tooltipFields`, `useAnnotation` (load the
+    records yourself and use `joinAnnotation` from `@molgpu/fields`),
+    `focusSelection` (use `useCoordinateFocus`), `createCameraCurve`,
+    `sampleCamera`, `ColorLike`, `TypedArray`, `PreloadedStructureProps`,
+    `LoadedStructureProps`, `PreloadedTrajectoryProps`, `LoadedTrajectoryProps`
+    and `TrajectoryPlayback` (`StructureProps` and `TrajectoryProps` keep both
+    forms).
+
+- **Removed (experimental):** the scene-level wrappers over
+  `@use-gpu/workbench`. Build the pass, lights and camera from workbench
+  directly (`<Pass lights>`, `AmbientLight`, `DirectionalLight`, …), as the site
+  does. Removed from `.`: `Pass`, `PassProps`, `SSAOOptions`, `OutlineOptions`,
+  `OverscanOptions`, `AmbientLight`, `DirectionalLight`, `PointLight`,
+  `SpotLight`, `DomeLight`, `Environment` and their `*Props`,
+  `ShadowMapOptions`, `KEY_LIGHT_DIRECTION`, `PBRMaterial`, `BasicMaterial`,
+  `NormalMaterial`, `FresnelMaterialEffect` and their `*Props`, `MaterialProps`,
+  `materialTypes`, `withMaterial` and `Molecule`. Removed from `./advanced`:
+  `FlatMaterial`, `LitMaterial`.
+- **Changed (experimental):** `MaterialType` is `"pbr" | "basic" | "normal"`.
+  Use the function form of `material` for shader materials (upstream
+  `ShaderFlatMaterial` / `ShaderLitMaterial`). The `pbr` spec keeps its matte,
+  non-metallic defaults.
+
 - `<GpuDssp>` freezes each coordinate generation before its first GPU submit,
   keeps one run in flight (latest generation wins) during playback, waits for a
   kernel stream's first dispatch, and holds its last codes for up to 1 s while a

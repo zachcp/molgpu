@@ -1,8 +1,6 @@
 import {
   type LC,
-  type LiveContext,
   type LiveElement,
-  makeContext,
   provide,
   use,
   useContext,
@@ -12,11 +10,7 @@ import {
   useState,
 } from "@use-gpu/live";
 import { useDeviceContext } from "@use-gpu/workbench";
-import {
-  attributeColumn,
-  type StructureData,
-  withAttributes,
-} from "@molgpu/table";
+import { attributeColumn, withAttributes } from "@molgpu/table";
 import type { ProducedAttribute } from "./attributes-context.ts";
 import { useStructureResource } from "./structure-context.ts";
 import {
@@ -24,23 +18,22 @@ import {
   releaseOwnedBuffer,
   trackOwnedBuffer,
 } from "./internal/instrumentation.ts";
+import {
+  type AttributeSnapshot,
+  AttributeSnapshotContext,
+  EMPTY_ATTRIBUTE_SNAPSHOTS,
+  type SnapshotProvider,
+} from "./attribute-snapshot-context.ts";
 
-export interface AttributeSnapshot {
-  readonly data: StructureData;
-  readonly generation: number;
-}
+export type { AttributeSnapshot } from "./attribute-snapshot-context.ts";
+export {
+  AttributeSnapshotContext,
+  EMPTY_ATTRIBUTE_SNAPSHOTS,
+} from "./attribute-snapshot-context.ts";
 interface Request {
   maxHz: number;
   onPause: boolean;
 }
-interface SnapshotProvider {
-  readonly snapshot: AttributeSnapshot | null;
-  readonly subscribe: (maxHz: number, onPause: boolean) => () => void;
-}
-type SnapshotMap = Readonly<Record<string, SnapshotProvider>>;
-export const AttributeSnapshotContext: LiveContext<SnapshotMap | undefined> =
-  makeContext<SnapshotMap | undefined>(undefined, "AttributeSnapshotContext");
-export const EMPTY_ATTRIBUTE_SNAPSHOTS: SnapshotMap = Object.freeze({});
 const MAP_READ = 0x0001;
 const COPY_DST = 0x0008;
 const noop = () => {};

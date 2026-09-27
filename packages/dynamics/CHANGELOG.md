@@ -5,6 +5,24 @@ All notable changes to `@molgpu/dynamics` are recorded here. See
 
 ## [Unreleased]
 
+- **Changed (experimental):** the package has two entries.
+  - `.` keeps the domain API: template and Gasteiger charges, elastic networks
+    and normal modes (`buildElasticNetwork`, `solveElasticModes`,
+    `residueGuideMap`, `normalModeFromElastic`), `electrostatics`, periodic
+    boxes (`periodicBox`, `minimumImage`), `fitKabsch` and the two limit errors.
+  - `./wgsl` (advanced) now holds the WGSL sources, buffer-size constants and
+    dispatch/layout helpers used by `@molgpu/viewer`: the eight `*Wgsl` sources,
+    `COULOMB_*`, `SUPERPOSE_FIT_BYTES`, `UNWRAP_*_BYTES`, `coulombParams`,
+    `CoulombDispatch`, `prepareDsspLayout`, `finishDssp`, `DsspLayout`,
+    `DsspBridge`, `planCellList`, `CellListPlan`, `CellListBoundsReadback`,
+    `createUnwrapForest`, `UnwrapForest`, `validateAffine`, `isIdentityAffine`,
+    `AffineMatrix`, `validateNormalMode`.
+  - No longer exported: the CPU references and test constants `applyAffine`,
+    `applyNormalMode`, `unwrapFrame`, `UnwrapResult`, `coulombPotential`,
+    `coulombField`, `coulombGrid`, `CoulombGrid`, `gridPoints`, `packCharges`,
+    `debyeKappa`, `createCellList`, `CellList`, `CellListOptions`,
+    `COULOMB_CONSTANT`, `GAS_CONSTANT_KCAL`, `MAX_ELASTIC_DIM`.
+
 - Add `CellListLimitError` (a `RangeError` with `cells` and `limit`), thrown by
   `createCellList` and `planCellList` when the dense grid exceeds `maxCells`.
 - `cellListWgsl` pairs and `dsspWgsl` hbonds clamp grid cells to the bounds, so

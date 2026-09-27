@@ -1,15 +1,14 @@
-import assert from "node:assert/strict";
-import { mkdir, writeFile } from "node:fs/promises";
-import { fileURLToPath } from "node:url";
+import { assert, assertEquals, assertStrictEquals } from "@std/assert";
+import { fromFileUrl } from "@std/path";
 import { createServer } from "vite";
 import { chromium } from "playwright";
 import { webgpuBrowserArgs } from "./webgpu-browser-args.mjs";
 import { workspaceAliases } from "../../../scripts/workspace-aliases.mjs";
 
 Deno.test("viewer GPU smoke", async () => {
-  const root = fileURLToPath(new URL("../../../", import.meta.url));
+  const root = fromFileUrl(new URL("../../../", import.meta.url));
   const out = `${root}packages/viewer/test/results`;
-  await mkdir(out, { recursive: true });
+  await Deno.mkdir(out, { recursive: true });
   const server = await createServer({
     root,
     configFile: false,
@@ -23,13 +22,12 @@ Deno.test("viewer GPU smoke", async () => {
         "@use-gpu/core",
         "@use-gpu/shader",
         "@use-gpu/wgsl",
-        "lodash",
       ],
     },
   });
   let browser;
   const report = { date: new Date().toISOString(), status: "running" };
-  await writeFile(`${out}/report.json`, JSON.stringify(report));
+  await Deno.writeTextFile(`${out}/report.json`, JSON.stringify(report));
   try {
     await server.listen();
     browser = await chromium.launch({
@@ -77,13 +75,17 @@ Deno.test("viewer GPU smoke", async () => {
     };
     const before = await snapshot();
     for (const [format, values] of Object.entries(expected)) {
-      assert.deepEqual(
+      assertEquals(
         await read(format, values.length, format),
         values,
         `${format} GPU readback`,
       );
-      assert.equal(before.sources[format].length, 2, `${format} logical rows`);
-      assert.deepEqual(before.sources[format].size, [2]);
+      assertStrictEquals(
+        before.sources[format].length,
+        2,
+        `${format} logical rows`,
+      );
+      assertEquals(before.sources[format].size, [2]);
     }
     report.readback = expected;
     // Analyze canvas pixels, not PNG bytes or DOM state, for disconnected strokes.
@@ -137,30 +139,30 @@ Deno.test("viewer GPU smoke", async () => {
         return components;
       }, png.toString("base64"));
     };
-    assert.equal((await screenshot("three-strokes")).length, 3);
+    assertStrictEquals((await screenshot("three-strokes")).length, 3);
     await update({ trace: true });
-    assert.equal((await screenshot("two-traces")).length, 2);
+    assertStrictEquals((await screenshot("two-traces")).length, 2);
     await page.evaluate(() => window.__adapter.mutate());
     await settle();
-    assert.deepEqual(await read("f32", 2, "f32"), [11.25, 2.5]);
+    assertEquals(await read("f32", 2, "f32"), [11.25, 2.5]);
     const changed = await snapshot();
-    assert.ok(changed.sources.f32.version > before.sources.f32.version);
+    assert(changed.sources.f32.version > before.sources.f32.version);
     report.updated = changed;
     await update({ empty: true });
-    assert.equal((await screenshot("empty")).length, 0);
+    assertStrictEquals((await screenshot("empty")).length, 0);
     const empty = await snapshot();
-    assert.ok(Object.values(empty.sources).every((s) => s === null));
-    assert.equal(
+    assert(Object.values(empty.sources).every((s) => s === null));
+    assertStrictEquals(
       empty.destroyed,
       before.buffers,
       "empty input must release every observed column buffer",
     );
     await update({ empty: false });
-    assert.equal((await screenshot("remounted")).length, 2);
-    assert.deepEqual(await read("vec3<f32>", 8, "f32"), expected["vec3<f32>"]);
+    assertStrictEquals((await screenshot("remounted")).length, 2);
+    assertEquals(await read("vec3<f32>", 8, "f32"), expected["vec3<f32>"]);
     await update({ mounted: false });
     const unmounted = await snapshot();
-    assert.equal(
+    assertStrictEquals(
       unmounted.destroyed,
       unmounted.buffers,
       "all observed buffers destroyed on unmount",
@@ -172,8 +174,8 @@ Deno.test("viewer GPU smoke", async () => {
     report.hookAllComponents = await screenshot("hook-all");
     // Hook variants are diagnostic controls, not production adapter paths.
     await settle();
-    assert.deepEqual(errors, [], "Browser errors");
-    assert.deepEqual((await snapshot()).errors, [], "WebGPU errors");
+    assertEquals(errors, [], "Browser errors");
+    assertEquals((await snapshot()).errors, [], "WebGPU errors");
     report.status = "passed";
     report.browser = browser.version();
     console.log(JSON.stringify(report, null, 2));
@@ -182,7 +184,7 @@ Deno.test("viewer GPU smoke", async () => {
     report.error = String(error);
     throw error;
   } finally {
-    await writeFile(
+    await Deno.writeTextFile(
       `${out}/report.json`,
       JSON.stringify(report, null, 2) + "\n",
     );

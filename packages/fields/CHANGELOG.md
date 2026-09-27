@@ -6,6 +6,8 @@ All notable changes to `@molgpu/fields` are recorded here. The format follows
 
 ## [Unreleased]
 
+- Trim evaluator constants, identity accessors and `columnRange` from the
+  package entry; keep field constructors and types needed by public signatures.
 - `volumeSample()` without an argument samples the nearest viewer volume
   (`volume:nearest`). `compile` takes its grid as `options.volume`, and
   `evaluate` takes CPU samples as `{ volume }`. Add `readsNearestVolume`.

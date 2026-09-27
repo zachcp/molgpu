@@ -9,22 +9,10 @@ import {
   withAttributes,
 } from "@molgpu/table";
 import { AMINO_ACID_NAMES, ELEMENT, polymerKind } from "./residues.ts";
-import type {
-  PqrApplyReport,
-  PqrErrorCode,
-  PqrStructureReport,
-} from "./types.ts";
+import type { PqrApplyReport, PqrStructureReport } from "./types.ts";
+import { errorFor, type IoErrorCode } from "./error.ts";
 
-/** A machine-readable failure reading or applying a PQR file. */
-export class PqrParseError extends Error {
-  override readonly name: "PqrParseError";
-  readonly code: PqrErrorCode;
-  constructor(message: string, code: PqrErrorCode, cause?: unknown) {
-    super(message, cause === undefined ? undefined : { cause });
-    this.name = "PqrParseError";
-    this.code = code;
-  }
-}
+const pqrError = errorFor("pqr");
 
 /** Parsed ATOM/HETATM records, one row per record, in file order. */
 interface Records {
@@ -47,8 +35,8 @@ interface Records {
 const NUMBER = /[-+]?(?:\d+\.\d*|\.\d+)(?:[eE][-+]?\d+)?/g;
 const SEQ = /^(-?\d+)([A-Za-z]?)$/;
 
-function fail(message: string, code: PqrErrorCode = "INVALID_PQR"): never {
-  throw new PqrParseError(message, code);
+function fail(message: string, code: IoErrorCode = "INVALID_PQR"): never {
+  throw pqrError(message, code);
 }
 
 /** Tokenise one ATOM/HETATM line into `out`; throws with the line number. */
@@ -173,7 +161,7 @@ async function elementGuesser(): Promise<
     );
     return guessElement = util.guessElementSymbolString;
   } catch (error) {
-    throw new PqrParseError(
+    throw pqrError(
       "Unable to load the optional Mol* element guesser",
       "PARSER_UNAVAILABLE",
       error,
@@ -303,7 +291,7 @@ export async function structureFromPqr(
     });
   } catch (error) {
     // Duplicate atom names in one residue, for example.
-    throw new PqrParseError(
+    throw pqrError(
       `PQR records do not form a valid structure: ${(error as Error).message}`,
       "INVALID_PQR",
       error,
@@ -403,7 +391,7 @@ export function applyPqr(
           rows.map((r) => chains.labelId[residues.chain[r]]),
         );
         if (labels.size > 1) {
-          throw new PqrParseError(
+          throw pqrError(
             `PQR has no chain IDs and residue ${key.slice(1)} is in chains ${
               [...labels].join(", ")
             }`,

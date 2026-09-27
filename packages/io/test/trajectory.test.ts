@@ -8,21 +8,15 @@ import {
 import {
   activeAtoms,
   type TrajectoryData,
-  trajectoryFromModels,
   validateTrajectory,
 } from "@molgpu/table";
-import {
-  AKMA_PS,
-  byteSource,
-  openTrajectory,
-  structureFromBcif,
-  trajectoryFormat,
-  trajectoryFromDcd,
-  trajectoryFromTrr,
-  trajectoryFromXtc,
-  TrajectoryParseError,
-  urlByteSource,
-} from "../src/index.ts";
+import { AKMA_PS, trajectoryFromDcd } from "../src/dcd.ts";
+import { byteSource, urlByteSource } from "../src/byte-source.ts";
+import { IoError, openTrajectory, structureFromBcif } from "../src/index.ts";
+import { trajectoryFormat } from "../src/trajectory.ts";
+import { trajectoryFromTrr } from "../src/trr.ts";
+import { trajectoryFromXtc } from "../src/xtc.ts";
+import { trajectoryFromModels } from "../../table/src/trajectory.ts";
 import type { ByteSource } from "../src/index.ts";
 import {
   proteinFrames,
@@ -36,8 +30,8 @@ import { parseXtc } from "molstar/lib/mol-io/reader/xtc/parser.js";
 import { parseTrr } from "molstar/lib/mol-io/reader/trr/parser.js";
 
 const code = async (p: Promise<unknown>, expected: string) => {
-  const error = await assertRejects(() => p, TrajectoryParseError);
-  assertEquals((error as TrajectoryParseError).code, expected, error.message);
+  const error = await assertRejects(() => p, IoError);
+  assertEquals((error as IoError).code, expected, error.message);
 };
 const frames = async (t: TrajectoryData) =>
   await Promise.all(

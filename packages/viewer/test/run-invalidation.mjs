@@ -19,15 +19,14 @@
 // kernels those components call are covered by invalidation.test.ts.
 //
 // Run: deno task test:viewer:invalidation
-import assert from "node:assert/strict";
-import { mkdir, writeFile } from "node:fs/promises";
-import { fileURLToPath } from "node:url";
+import { assert, assertEquals, assertStrictEquals } from "@std/assert";
+import { fromFileUrl } from "@std/path";
 import { createServer } from "vite";
 import { chromium } from "playwright";
 import { webgpuBrowserArgs } from "./webgpu-browser-args.mjs";
 import { workspaceAliases } from "../../../scripts/workspace-aliases.mjs";
 
-const root = fileURLToPath(new URL("../../../", import.meta.url));
+const root = fromFileUrl(new URL("../../../", import.meta.url));
 const out = `${root}packages/viewer/test/results`;
 const PORT = 5231;
 const MOUNT_CYCLES = 5;
@@ -70,7 +69,6 @@ async function setup() {
         "@use-gpu/shader",
         "@use-gpu/shader/wgsl",
         "@use-gpu/wgsl",
-        "lodash",
       ],
     },
   });
@@ -109,8 +107,8 @@ async function setup() {
 }
 
 async function teardown() {
-  await mkdir(out, { recursive: true });
-  await writeFile(
+  await Deno.mkdir(out, { recursive: true });
+  await Deno.writeTextFile(
     `${out}/invalidation.json`,
     JSON.stringify(evidence, null, 2),
   );
@@ -196,29 +194,37 @@ const brief = (s) =>
   });
 const keysOf = (s, re) => Object.keys(s.detail).filter((k) => re.test(k));
 const noErrors = (s) =>
-  assert.deepEqual(s.errors, [], `WebGPU errors: ${s.errors.join("; ")}`);
+  assertEquals(s.errors, [], `WebGPU errors: ${s.errors.join("; ")}`);
 
 // Color/opacity/clock uniform and display size: bindings only.
 function styleOnly(s) {
   noErrors(s);
-  assert.equal(
+  assertStrictEquals(
     s.topologyBuilds,
     0,
     `topology rebuilt on a style edit: ${brief(s)}`,
   );
-  assert.equal(
+  assertStrictEquals(
     s.geometryBuilds,
     0,
     `geometry rebuilt on a style edit: ${brief(s)}`,
   );
-  assert.equal(s.gathers, 0, `columns gathered on a style edit: ${brief(s)}`);
-  assert.equal(
+  assertStrictEquals(
+    s.gathers,
+    0,
+    `columns gathered on a style edit: ${brief(s)}`,
+  );
+  assertStrictEquals(
     s.allocations,
     0,
     `GPU buffers allocated on a style edit: ${brief(s)}`,
   );
-  assert.equal(s.uploadBytes, 0, `bytes uploaded on a style edit: ${brief(s)}`);
-  assert.ok(
+  assertStrictEquals(
+    s.uploadBytes,
+    0,
+    `bytes uploaded on a style edit: ${brief(s)}`,
+  );
+  assert(
     s.bindingUpdates > 0,
     `a style edit must reach the bindings: ${brief(s)}`,
   );
@@ -227,17 +233,17 @@ function styleOnly(s) {
 // Selection membership: rebuild the mapping and gather affected columns only.
 function selectionOnly(s) {
   noErrors(s);
-  assert.equal(
+  assertStrictEquals(
     s.topologyBuilds,
     0,
     `topology rebuilt on a selection edit: ${brief(s)}`,
   );
-  assert.deepEqual(
+  assertEquals(
     keysOf(s, /structure:/),
     [],
     `shared Structure columns re-uploaded on a selection edit: ${brief(s)}`,
   );
-  assert.ok(
+  assert(
     s.gathers + s.geometryBuilds + (s.detail["uploadBytes:index"] ?? 0) > 0,
     `a selection edit must re-derive the mapping: ${brief(s)}`,
   );
@@ -253,27 +259,27 @@ const TOPOLOGY_ONLY =
 const coordinatesOnly = (mustRebuild) =>
   Object.assign((s) => {
     noErrors(s);
-    assert.ok(
+    assert(
       s.detail["uploadBytes:structure:positions"] > 0,
       `shared positions not re-uploaded: ${brief(s)}`,
     );
-    assert.equal(
+    assertStrictEquals(
       s.detail["uploadBytes:structure:radii"],
       undefined,
       `radii re-uploaded on a coordinate edit: ${brief(s)}`,
     );
     for (const key of mustRebuild) {
-      assert.ok(
+      assert(
         s.detail[key] > 0,
         `coordinate-dependent ${key} was not rebuilt: ${brief(s)}`,
       );
     }
-    assert.equal(
+    assertStrictEquals(
       s.topologyBuilds,
       0,
       `topology rebuilt on a coordinate edit: ${brief(s)}`,
     );
-    assert.deepEqual(
+    assertEquals(
       keysOf(s, TOPOLOGY_ONLY),
       [],
       `topology-only columns re-derived on a coordinate edit: ${brief(s)}`,
@@ -286,7 +292,7 @@ const rebuilds = (mustRebuild) =>
   Object.assign((s) => {
     noErrors(s);
     for (const key of mustRebuild) {
-      assert.ok(
+      assert(
         s.detail[key] > 0,
         `${key} was not rebuilt for a new topology: ${brief(s)}`,
       );
@@ -297,20 +303,24 @@ const rebuilds = (mustRebuild) =>
 const geometryParam = (key, upstream) =>
   Object.assign((s) => {
     noErrors(s);
-    assert.equal(s.detail[key], 1, `expected exactly one ${key}: ${brief(s)}`);
-    assert.equal(
+    assertStrictEquals(
+      s.detail[key],
+      1,
+      `expected exactly one ${key}: ${brief(s)}`,
+    );
+    assertStrictEquals(
       s.topologyBuilds,
       0,
       `topology rebuilt on a geometry-parameter edit: ${brief(s)}`,
     );
     for (const k of upstream) {
-      assert.equal(
+      assertStrictEquals(
         s.detail[k],
         undefined,
         `${k} rebuilt on a geometry-parameter edit: ${brief(s)}`,
       );
     }
-    assert.deepEqual(
+    assertEquals(
       keysOf(s, /structure:/),
       [],
       `shared Structure columns re-uploaded: ${brief(s)}`,
@@ -322,17 +332,17 @@ const geometryParam = (key, upstream) =>
 // no topology work, and no shared Structure columns re-uploaded.
 function splitModeSwitch(s) {
   noErrors(s);
-  assert.equal(
+  assertStrictEquals(
     s.detail["geometryBuilds:bonds:columns"],
     1,
     `expected one bond-column build: ${brief(s)}`,
   );
-  assert.equal(
+  assertStrictEquals(
     s.topologyBuilds,
     0,
     `topology rebuilt on a colour-mode switch: ${brief(s)}`,
   );
-  assert.deepEqual(
+  assertEquals(
     keysOf(s, /structure:/),
     [],
     `shared Structure columns re-uploaded: ${brief(s)}`,
@@ -346,17 +356,17 @@ splitModeSwitch.rebuilds = true;
 // rerun inference. Unchanged inferred pairs retain their uploaded row columns.
 const liveBondsCoordinates = Object.assign((s) => {
   coordinatesOnly([])(s);
-  assert.equal(s.detail["geometryBuilds:bonds:columns"], undefined);
-  assert.equal(s.detail["uploadBytes:endpoints"], undefined);
-  assert.equal(s.detail["uploadBytes:segments"], undefined);
+  assertStrictEquals(s.detail["geometryBuilds:bonds:columns"], undefined);
+  assertStrictEquals(s.detail["uploadBytes:endpoints"], undefined);
+  assertStrictEquals(s.detail["uploadBytes:segments"], undefined);
 }, { rebuilds: true });
 const inferredBondsKept = Object.assign((s) => {
   noErrors(s);
-  assert.ok(
+  assert(
     s.detail["geometryBuilds:bonds:columns"] > 0,
     `bond geometry not rebuilt: ${brief(s)}`,
   );
-  assert.deepEqual(
+  assertEquals(
     keysOf(s, /attr:|uploadBytes:(rows|endpoints)/),
     [],
     `attribute or row columns re-derived for unchanged bonds: ${brief(s)}`,
@@ -364,12 +374,12 @@ const inferredBondsKept = Object.assign((s) => {
 }, { rebuilds: true });
 const inferredBondsChanged = Object.assign((s) => {
   noErrors(s);
-  assert.deepEqual(
+  assertEquals(
     keysOf(s, /attr:/),
     [],
     `attribute columns re-derived for a coordinate edit: ${brief(s)}`,
   );
-  assert.equal(
+  assertStrictEquals(
     s.detail["uploadBytes:rows"],
     s.detail["uploadBytes:endpoints"] * 2,
     `row and endpoint columns disagree: ${brief(s)}`,
@@ -381,17 +391,17 @@ const inferredBondsChanged = Object.assign((s) => {
 const attributesOnly = (built) =>
   Object.assign((s) => {
     noErrors(s);
-    assert.equal(
+    assertStrictEquals(
       s.topologyBuilds,
       0,
       `topology rebuilt on an attribute edit: ${brief(s)}`,
     );
-    assert.deepEqual(
+    assertEquals(
       keysOf(s, /^geometryBuilds:/).sort(),
       built.map((k) => `geometryBuilds:${k}`).sort(),
       `unexpected geometry builds on an attribute edit: ${brief(s)}`,
     );
-    assert.deepEqual(
+    assertEquals(
       keysOf(s, /structure:/),
       [],
       `shared Structure columns re-uploaded on an attribute edit: ${brief(s)}`,
@@ -725,13 +735,13 @@ const MATRIX = {
       from: { props: { color: GREY } },
       to: { props: { color: GREY, secondaryStructure: "dssp" } },
       expect: Object.assign((s) => {
-        assert.equal(s.detail["geometryBuilds:ribbon:dssp"], 1, brief(s));
-        assert.equal(
+        assertStrictEquals(s.detail["geometryBuilds:ribbon:dssp"], 1, brief(s));
+        assertStrictEquals(
           s.detail["geometryBuilds:ribbon:trace"],
           undefined,
           brief(s),
         );
-        assert.equal(s.topologyBuilds, 0, brief(s));
+        assertStrictEquals(s.topologyBuilds, 0, brief(s));
       }, { rebuilds: true }),
     },
     "ssCode, new projection": {
@@ -973,12 +983,12 @@ async function mountCycles() {
 
 test(`mount/unmount every representation ${MOUNT_CYCLES}x: viewer-owned live GPU buffers return to baseline`, async () => {
   const l = await mountCycles();
-  assert.deepEqual(l.errors, []);
-  assert.ok(
+  assertEquals(l.errors, []);
+  assert(
     l.mounted.every((m) => m.owned > l.baseline.owned),
     `mounting must allocate owned buffers: ${JSON.stringify(l)}`,
   );
-  assert.deepEqual(
+  assertEquals(
     l.unmounted.map((u) => u.owned),
     l.unmounted.map(() => l.baseline.owned),
     `owned buffers leak per cycle: ${JSON.stringify(l)}`,
@@ -993,7 +1003,7 @@ test(`mount/unmount every representation ${MOUNT_CYCLES}x: viewer-owned live GPU
 // created-minus-destroyed count keeps growing by design and stays in the evidence.
 test(`mount/unmount every representation ${MOUNT_CYCLES}x: no device GPU buffer outlives unmount after GC`, async () => {
   const l = await mountCycles();
-  assert.deepEqual(
+  assertEquals(
     l.leakedOrigins.retained,
     {},
     `device buffers still referenced after unmount + GC: ${JSON.stringify(l)}`,
@@ -1018,7 +1028,7 @@ test("selection churn: 64 distinct Spacefill selections keep owned live GPU buff
   }
   evidence.churn = { liveAfter };
   const first = liveAfter[7], last = liveAfter.at(-1);
-  assert.ok(
+  assert(
     last <= first,
     `owned live GPU buffers grow with selection churn: ${
       JSON.stringify(liveAfter)

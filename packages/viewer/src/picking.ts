@@ -29,9 +29,6 @@ interface PickingRegistry {
   remove(id: number): void;
   get(id: number): PickEntry | null;
 }
-import { tooltipFields } from "./internal/tooltip.ts";
-
-export { tooltipFields };
 
 /**
  * Molecular picking. A pickable representation draws itself into @use-gpu's

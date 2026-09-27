@@ -2,15 +2,15 @@
 // pickable <Spacefill>, and a click seeks the caller-owned timeline to the
 // picked atom's beat. Three atoms in a row; the middle (row 1) is at the camera
 // target, so the canvas centre picks atom 1 and seeks to beat time 5.
-import assert from "node:assert/strict";
-import { fileURLToPath } from "node:url";
+import { assert, assertEquals, assertStrictEquals } from "@std/assert";
+import { fromFileUrl } from "@std/path";
 import { createServer } from "vite";
 import { chromium } from "playwright";
 import { webgpuBrowserArgs } from "./webgpu-browser-args.mjs";
 import { workspaceAliases } from "../../../scripts/workspace-aliases.mjs";
 
 Deno.test("viewer picking", async () => {
-  const root = fileURLToPath(new URL("../../../", import.meta.url));
+  const root = fromFileUrl(new URL("../../../", import.meta.url));
   const server = await createServer({
     root,
     configFile: false,
@@ -35,7 +35,6 @@ Deno.test("viewer picking", async () => {
         "@use-gpu/shader",
         "@use-gpu/shader/wgsl",
         "@use-gpu/wgsl",
-        "lodash",
       ],
     },
   });
@@ -88,8 +87,8 @@ Deno.test("viewer picking", async () => {
     await page.mouse.move(8, 8);
     await settle();
     const away = await snap();
-    assert.deepEqual(away.errors, [], "picking scene produced WebGPU errors");
-    assert.equal(
+    assertEquals(away.errors, [], "picking scene produced WebGPU errors");
+    assertStrictEquals(
       away.hover,
       null,
       "cursor over the background must resolve to no atom",
@@ -99,33 +98,33 @@ Deno.test("viewer picking", async () => {
     await page.mouse.move(cx, cy);
     await settle();
     const hovering = await snap();
-    assert.deepEqual(hovering.errors, [], "hovering produced WebGPU errors");
-    assert.ok(
+    assertEquals(hovering.errors, [], "hovering produced WebGPU errors");
+    assert(
       hovering.hover,
       "hovering the centre atom must resolve to an atom",
     );
-    assert.equal(
+    assertStrictEquals(
       hovering.hover.atom,
       1,
       `expected the middle atom (row 1), got ${hovering.hover?.atom}`,
     );
-    assert.ok(
+    assert(
       hovering.hover.id > 0,
       "a resolved hover must carry a real picking object id",
     );
 
     // Click the centre atom: the click-to-seek recipe moves the timeline to its
     // beat (atom row 1 -> beat time 5), from the initial time 0.
-    assert.equal(hovering.time, 0, "timeline should start at time 0");
+    assertStrictEquals(hovering.time, 0, "timeline should start at time 0");
     await page.mouse.click(cx, cy);
     await settle();
     const clicked = await snap();
-    assert.deepEqual(clicked.errors, [], "clicking produced WebGPU errors");
-    assert.ok(
+    assertEquals(clicked.errors, [], "clicking produced WebGPU errors");
+    assert(
       clicked.pick && clicked.pick.atom === 1,
       `a click must pick the middle atom, got ${JSON.stringify(clicked.pick)}`,
     );
-    assert.equal(
+    assertStrictEquals(
       clicked.time,
       5,
       `click-to-seek must move the timeline to beat time 5, got ${clicked.time}`,
@@ -147,8 +146,8 @@ Deno.test("viewer picking", async () => {
     await page.mouse.move(cx, cy);
     await settle();
     const selected = await snap();
-    assert.deepEqual(selected.errors, [], "selected picking WebGPU errors");
-    assert.deepEqual(
+    assertEquals(selected.errors, [], "selected picking WebGPU errors");
+    assertEquals(
       selected.hover && [selected.hover.atom, selected.hover.instance],
       [1, 0],
       `selected draw must resolve the middle atom as instance 0, got ${
@@ -156,7 +155,7 @@ Deno.test("viewer picking", async () => {
       }`,
     );
 
-    assert.deepEqual(errors, [], "page errors");
+    assertEquals(errors, [], "page errors");
     console.log(
       JSON.stringify({
         status: "passed",

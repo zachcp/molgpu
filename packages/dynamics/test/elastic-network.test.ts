@@ -1,9 +1,6 @@
 import { assertAlmostEquals, assertEquals, assertThrows } from "@std/assert";
-import {
-  buildElasticNetwork,
-  MAX_ELASTIC_DIM,
-  solveElasticModes,
-} from "../src/index.ts";
+import { buildElasticNetwork, solveElasticModes } from "../src/index.ts";
+import { MAX_ELASTIC_DIM } from "../src/elastic-network.ts";
 
 Deno.test("GNM path has analytical eigenvalues 1 and 3", () => {
   const positions = Float32Array.of(0, 0, 0, 1, 0, 0, 2, 0, 0);

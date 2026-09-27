@@ -1,9 +1,5 @@
 import { assertEquals, assertRejects } from "@std/assert";
-import {
-  parseSelection,
-  type SelectionExpr,
-  SelectionParseError,
-} from "../src/index.ts";
+import { IoError, parseSelection, type SelectionExpr } from "../src/index.ts";
 
 const call = (
   name: string,
@@ -73,22 +69,23 @@ Deno.test("options.symbols rejects anything else, naming the language", async ()
   );
   const error = await assertRejects(
     () => parseSelection("pymol", "byring resn PHE", { symbols }),
-    SelectionParseError,
+    IoError,
     "(pymol)",
   );
-  assertEquals(error.language, "pymol");
+  assertEquals((error as IoError).format, "selection");
+  assertEquals((error as IoError).code, "UNSUPPORTED_SYMBOL");
   assertEquals(error.message.includes("is not supported"), true);
 });
 
-Deno.test("parse failures are SelectionParseErrors", async () => {
+Deno.test("parse failures are selection IoErrors", async () => {
   await assertRejects(
     () => parseSelection("pymol", "resn ((("),
-    SelectionParseError,
+    IoError,
     "cannot parse",
   );
   await assertRejects(
     () => parseSelection("vmd", "   "),
-    SelectionParseError,
+    IoError,
     "empty selection",
   );
   await assertRejects(

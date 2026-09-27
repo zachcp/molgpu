@@ -5,7 +5,6 @@ import {
   assertRejects,
   assertStrictEquals,
 } from "@std/assert";
-import { readFile } from "node:fs/promises";
 import { createStructure, type StructureData } from "@molgpu/table";
 import { structureFromBcif } from "@molgpu/io";
 import { buildSurfaceGeometry } from "../src/internal/surface-geometry.ts";
@@ -196,7 +195,7 @@ Deno.test("sourceAtom is expressed in atom-row space, not local gather order, fo
 
 Deno.test("probeRadius/resolution changes alter the mesh; a real corpus structure produces a finite surface", async () => {
   const bytes = new Uint8Array(
-    await readFile(
+    await Deno.readFile(
       new URL("../../io/test/fixtures/1crn.bcif", import.meta.url),
     ),
   );

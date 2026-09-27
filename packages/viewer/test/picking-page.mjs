@@ -5,15 +5,18 @@
 // target, so the canvas centre picks atom 1.
 import { render, use, useState } from "@use-gpu/live";
 import { AutoCanvas, WebGPU } from "@use-gpu/webgpu";
-import { OrbitCamera, useDeviceContext } from "@use-gpu/workbench";
+import {
+  AmbientLight,
+  DirectionalLight,
+  OrbitCamera,
+  Pass,
+  useDeviceContext,
+} from "@use-gpu/workbench";
 import { createStructure } from "@molgpu/table";
 import { resolve, where } from "@molgpu/select";
 import { byElement } from "@molgpu/fields";
 import { createTimeline } from "@molgpu/timeline";
 import {
-  AmbientLight,
-  DirectionalLight,
-  Pass,
   PickingProvider,
   Spacefill,
   Structure,
@@ -145,10 +148,11 @@ const App = () => {
       bearing: 0,
       pitch: 0,
       children: use(Pass, {
+        lights: true,
         picking: true,
         children: [
-          use(AmbientLight, {}),
-          use(DirectionalLight, {}),
+          use(AmbientLight, { intensity: 0.3 }),
+          use(DirectionalLight, { direction: [-1, -2, -1.5], intensity: 1 }),
           use(Structure, {
             data,
             children: use(Spacefill, {

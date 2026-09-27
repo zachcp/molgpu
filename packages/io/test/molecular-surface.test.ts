@@ -4,17 +4,17 @@ import {
   assertRejects,
   assertStrictEquals,
 } from "@std/assert";
-import { readFile } from "node:fs/promises";
-import { activeAtoms, validateVolume } from "@molgpu/table";
+import { activeAtoms } from "@molgpu/table";
+import { validateVolume } from "../../table/src/volume.ts";
 import {
+  IoError,
   molecularSurfaceField,
   structureFromBcif,
-  SurfaceFieldError,
 } from "../src/index.ts";
 
 async function loadAtoms(id: string) {
   const bytes = new Uint8Array(
-    await readFile(new URL(`./fixtures/${id}.bcif`, import.meta.url)),
+    await Deno.readFile(new URL(`./fixtures/${id}.bcif`, import.meta.url)),
   );
   const data = await structureFromBcif(bytes);
   const radii = data.topology.atoms.radius;
@@ -94,7 +94,7 @@ Deno.test("rejects malformed or empty atom input before touching Mol*", async ()
         radius: new Float32Array(1),
         count: 2,
       }),
-    SurfaceFieldError,
+    IoError,
   );
   await assertRejects(
     () =>

@@ -1,5 +1,4 @@
 import { assert, assertEquals } from "@std/assert";
-import { readFile } from "node:fs/promises";
 import {
   activeAtoms,
   attributeColumn,
@@ -14,7 +13,7 @@ import { ribbonDsspRows } from "../src/internal/ribbon-dssp.ts";
 // 2k39: an NMR ensemble, so every model has its own coordinates.
 const DATA = await structureFromBcif(
   new Uint8Array(
-    await readFile(
+    await Deno.readFile(
       new URL("../../io/test/fixtures/2k39.bcif", import.meta.url),
     ),
   ),

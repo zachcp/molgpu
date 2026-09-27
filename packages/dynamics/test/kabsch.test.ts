@@ -1,5 +1,6 @@
 import { assertAlmostEquals, assertEquals, assertThrows } from "@std/assert";
-import { applyAffine, fitKabsch } from "../src/index.ts";
+import { applyAffine } from "../src/affine.ts";
+import { fitKabsch } from "../src/index.ts";
 
 const SOURCE = Float32Array.of(
   0,

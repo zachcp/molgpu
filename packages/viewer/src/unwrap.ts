@@ -8,19 +8,17 @@ import {
   type LiveElement,
   use,
   useMemo,
-  useRef,
   useResource,
 } from "@use-gpu/live";
 import { useDeviceContext } from "@use-gpu/workbench";
 import {
   createUnwrapForest,
-  type PeriodicBox,
-  periodicBox,
   UNWRAP_LINK_BYTES,
   UNWRAP_PARAMS_BYTES,
   type UnwrapForest,
   unwrapWgsl,
-} from "@molgpu/dynamics";
+} from "@molgpu/dynamics/wgsl";
+import { type PeriodicBox, periodicBox } from "@molgpu/dynamics";
 import type { Topology } from "@molgpu/table";
 import { useCoordinates } from "./coordinates-context.ts";
 import { CoordinatePasses } from "./internal/coordinate-passes.ts";
@@ -30,6 +28,7 @@ import {
   trackOwnedBuffer,
 } from "./internal/instrumentation.ts";
 import { live, viewer } from "./internal/elements.ts";
+import { useStatusReadback } from "./internal/status-readback.ts";
 import { useTrajectoryFrame } from "./trajectory.ts";
 import type { UnwrapProps, UnwrapStatus, ViewerComponent } from "./types.ts";
 import { useCoordinateSelection } from "./use-coordinate-selection.ts";
@@ -38,7 +37,6 @@ const STORAGE = 0x0080;
 const UNIFORM = 0x0040;
 const COPY_SRC = 0x0004;
 const COPY_DST = 0x0008;
-const MAP_READ = 0x0001;
 const GROUP = 64;
 const MAX_GROUPS = 65535;
 /** Lattice candidates per exact image search before it reports a limit. */
@@ -235,31 +233,28 @@ const Unwrapped: LC<{
         UNIFORM | COPY_DST,
         "coords:unwrap:params",
       ),
-      staging: [0, 1].map(() =>
-        make(16, MAP_READ | COPY_DST, "coords:unwrap:staging")
-      ),
     };
   }, [device, forest, graph, centerKey, n]);
-  const alive = useRef(true);
-  const busy = useRef([false, false]);
-  const epoch = useRef(0);
-  const report = useRef<((status: UnwrapStatus) => void) | undefined>(
-    onStatus,
-  );
-  report.current = onStatus;
   useResource((dispose) => {
-    epoch.current++;
-    alive.current = true;
-    busy.current = [false, false];
     dispose(() => {
-      epoch.current++;
-      alive.current = false;
       for (const buffer of buffers.all) {
         releaseOwnedBuffer(buffer);
         buffer.destroy();
       }
     });
   }, [buffers]);
+  const statusReadback = useStatusReadback(
+    16,
+    "coords:unwrap:staging",
+    onStatus && ((data, generation) => {
+      const [ambiguous, limited] = new Uint32Array(data);
+      onStatus(Object.freeze({
+        status: limited ? "search-limit" : ambiguous ? "ambiguous" : "ok",
+        ambiguousRingEdges: ambiguous,
+        generation,
+      }));
+    }),
+  );
 
   const encode = (
     encoder: GPUCommandEncoder,
@@ -367,31 +362,7 @@ const Unwrapped: LC<{
     pass.end();
     // Status is optional and never blocks a frame: with both staging buffers
     // mapped, this generation goes unreported.
-    const slot = busy.current.indexOf(false);
-    if (!report.current || slot < 0) return;
-    const staging = buffers.staging[slot];
-    const readEpoch = epoch.current;
-    busy.current[slot] = true;
-    encoder.copyBufferToBuffer(buffers.status, 0, staging, 0, 16);
-    return () => {
-      staging.mapAsync(MAP_READ).then(() => {
-        if (epoch.current !== readEpoch) return;
-        const [ambiguous, limited] = new Uint32Array(
-          staging.getMappedRange().slice(0),
-        );
-        staging.unmap();
-        busy.current[slot] = false;
-        if (!alive.current) return;
-        report.current?.(Object.freeze({
-          status: limited ? "search-limit" : ambiguous ? "ambiguous" : "ok",
-          ambiguousRingEdges: ambiguous,
-          generation,
-        }));
-      }, () => {
-        if (epoch.current !== readEpoch) return;
-        busy.current[slot] = false;
-      });
-    };
+    return statusReadback(encoder, buffers.status, generation);
   };
   return use(CoordinatePasses, {
     upstream,

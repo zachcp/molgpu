@@ -4,6 +4,7 @@
 // Only Mol*'s parsers are used (mol-script/language, mol-script/transpilers and
 // mol-util/monadic-parser). None of them import Mol*'s structure model. They are
 // loaded lazily, like the rest of this package's Mol* use.
+import { IoError, type IoErrorCode } from "./error.ts";
 
 /** Selection syntaxes `parseSelection` accepts. */
 export type SelectionLanguage = "mol-script" | "pymol" | "vmd" | "jmol";
@@ -25,26 +26,18 @@ export type SelectionExpr =
       | { readonly [name: string]: SelectionExpr };
   };
 
-export interface ParseSelectionOptions {
-  /**
-   * Symbol names the caller can evaluate, for example `@molgpu/select`'s
-   * `supportedSymbols`. When given, any other symbol is a SelectionParseError
-   * that names the source language, rather than a later compile error.
-   */
-  readonly symbols?: readonly string[];
-}
-
-/** Text that does not parse, or parses to symbols outside `options.symbols`. */
-export class SelectionParseError extends Error {
-  readonly language: SelectionLanguage;
-  readonly text: string;
-  constructor(language: SelectionLanguage, text: string, message: string) {
-    super(`@molgpu/io parseSelection (${language}): ${message}`);
-    this.name = "SelectionParseError";
-    this.language = language;
-    this.text = text;
-  }
-}
+const selectionError = (
+  language: SelectionLanguage,
+  message: string,
+  code: IoErrorCode,
+  cause?: unknown,
+) =>
+  new IoError(
+    `@molgpu/io parseSelection (${language}): ${message}`,
+    "selection",
+    code,
+    cause,
+  );
 
 const LANGUAGES: readonly SelectionLanguage[] = [
   "mol-script",
@@ -154,7 +147,15 @@ function normalise(
 export async function parseSelection(
   language: SelectionLanguage,
   text: string,
-  options: ParseSelectionOptions = {},
+  options: {
+    /**
+     * Symbol names the caller can evaluate, for example `@molgpu/select`'s
+     * `supportedSymbols`. Any other symbol fails with an `IoError` (code
+     * `UNSUPPORTED_SYMBOL`) that names the source language, rather than a
+     * later compile error.
+     */
+    readonly symbols?: readonly string[];
+  } = {},
 ): Promise<SelectionExpr> {
   if (!LANGUAGES.includes(language)) {
     throw new TypeError(
@@ -164,15 +165,15 @@ export async function parseSelection(
     );
   }
   if (typeof text !== "string" || !text.trim()) {
-    throw new SelectionParseError(language, String(text), "empty selection");
+    throw selectionError(language, "empty selection", "INVALID_SELECTION");
   }
   const allowed = options.symbols ? new Set(options.symbols) : null;
   const check = (name: string) => {
     if (allowed && !allowed.has(name)) {
-      throw new SelectionParseError(
+      throw selectionError(
         language,
-        text,
         `'${text}' uses symbol '${name}', which is not supported`,
+        "UNSUPPORTED_SYMBOL",
       );
     }
   };
@@ -184,12 +185,22 @@ export async function parseSelection(
     const message = error instanceof Error
       ? error.message
       : JSON.stringify(error);
-    throw new SelectionParseError(language, text, `cannot parse: ${message}`);
+    throw selectionError(
+      language,
+      `cannot parse: ${message}`,
+      "INVALID_SELECTION",
+      error,
+    );
   }
   try {
     return normalise(parsed, known, check);
   } catch (error) {
-    if (error instanceof SelectionParseError) throw error;
-    throw new SelectionParseError(language, text, (error as Error).message);
+    if (error instanceof IoError) throw error;
+    throw selectionError(
+      language,
+      (error as Error).message,
+      "INVALID_SELECTION",
+      error,
+    );
   }
 }

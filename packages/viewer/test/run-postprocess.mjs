@@ -1,18 +1,17 @@
-// hj0.2 acceptance: the @molgpu/viewer <Pass> wrapper draws a transparent
-// molecular surface under the viewer light wrappers with no WebGPU errors, and
-// enabling ssao + outline + oit compiles the extra full-screen render pipelines
-// and allocates the extra offscreen targets those passes need — proving the
-// postprocessing flags wire through the wrapper. OIT is the transparent-surface
-// pass.
-import assert from "node:assert/strict";
-import { fileURLToPath } from "node:url";
+// hj0.2 acceptance: a use.gpu <Pass lights> draws a transparent molgpu
+// molecular surface with no WebGPU errors, and enabling ssao + outline + oit
+// compiles the extra full-screen render pipelines and allocates the extra
+// offscreen targets those passes need, with molgpu layers in the pass. OIT is
+// the transparent-surface pass.
+import { assert, assertEquals } from "@std/assert";
+import { fromFileUrl } from "@std/path";
 import { createServer } from "vite";
 import { chromium } from "playwright";
 import { webgpuBrowserArgs } from "./webgpu-browser-args.mjs";
 import { workspaceAliases } from "../../../scripts/workspace-aliases.mjs";
 
 Deno.test("viewer postprocess", async () => {
-  const root = fileURLToPath(new URL("../../../", import.meta.url));
+  const root = fromFileUrl(new URL("../../../", import.meta.url));
   const server = await createServer({
     root,
     configFile: false,
@@ -36,7 +35,6 @@ Deno.test("viewer postprocess", async () => {
         "@use-gpu/shader",
         "@use-gpu/shader/wgsl",
         "@use-gpu/wgsl",
-        "lodash",
       ],
     },
   });
@@ -96,8 +94,8 @@ Deno.test("viewer postprocess", async () => {
     await settle();
     await settle();
     const plain = await snap();
-    assert.deepEqual(plain.errors, [], "plain pass produced WebGPU errors");
-    assert.ok(
+    assertEquals(plain.errors, [], "plain pass produced WebGPU errors");
+    assert(
       plain.pipelines > 0,
       "expected the plain scene to compile render pipelines",
     );
@@ -113,21 +111,21 @@ Deno.test("viewer postprocess", async () => {
     await settle();
     await settle();
     const post = await snap();
-    assert.deepEqual(
+    assertEquals(
       post.errors,
       [],
       "postprocessed pass produced WebGPU errors",
     );
-    assert.ok(
+    assert(
       post.pipelines > plain.pipelines,
       `ssao/outline/oit must compile extra render pipelines (plain ${plain.pipelines}, post ${post.pipelines})`,
     );
-    assert.ok(
+    assert(
       post.textures > plain.textures,
       `ssao/outline/oit must allocate extra offscreen targets (plain ${plain.textures}, post ${post.textures})`,
     );
 
-    assert.deepEqual(errors, [], "page errors");
+    assertEquals(errors, [], "page errors");
 
     console.log(JSON.stringify({
       status: "passed",

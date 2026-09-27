@@ -7,7 +7,6 @@ import {
 } from "@std/assert";
 import { createStructure } from "@molgpu/table";
 import {
-  COLOR,
   type Color,
   colormap,
   compile,
@@ -15,8 +14,9 @@ import {
   type IdentityField,
   joinAnnotation,
   linear,
-  residueIdentity,
 } from "../src/index.ts";
+import { COLOR } from "../src/primitives.ts";
+import { residueIdentity } from "../src/annotation-join.ts";
 import { fixture } from "./fixture.ts";
 
 // Base fixture: atoms residue [0,0,1,1]; residues authSeq ['1','2'] on chain 0
