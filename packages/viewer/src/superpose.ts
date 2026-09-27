@@ -179,14 +179,17 @@ const Fitted: LC<{
   }, [device, gathered, rows]);
   const alive = useRef(true);
   const busy = useRef([false, false]);
+  const epoch = useRef(0);
   const report = useRef<((status: SuperposeStatus) => void) | undefined>(
     onStatus,
   );
   report.current = onStatus;
   useResource((dispose) => {
+    epoch.current++;
     alive.current = true;
     busy.current = [false, false];
     dispose(() => {
+      epoch.current++;
       alive.current = false;
       for (
         const buffer of [
@@ -256,10 +259,12 @@ const Fitted: LC<{
     const slot = busy.current.indexOf(false);
     if (!report.current || slot < 0) return;
     const staging = buffers.staging[slot];
+    const readEpoch = epoch.current;
     busy.current[slot] = true;
     encoder.copyBufferToBuffer(buffers.fit, 0, staging, 0, SUPERPOSE_FIT_BYTES);
     return () => {
       staging.mapAsync(MAP_READ).then(() => {
+        if (epoch.current !== readEpoch) return;
         const values = new Float32Array(staging.getMappedRange().slice(0));
         staging.unmap();
         busy.current[slot] = false;
@@ -271,6 +276,7 @@ const Fitted: LC<{
           generation,
         }));
       }, () => {
+        if (epoch.current !== readEpoch) return;
         busy.current[slot] = false;
       });
     };

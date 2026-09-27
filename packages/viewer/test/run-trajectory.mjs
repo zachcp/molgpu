@@ -923,6 +923,60 @@ Deno.test("trajectory components", async () => {
     );
     await update({ mode: "none" });
 
+    // Hold an old fit readback while changing reference buffers. Its eventual
+    // completion must neither report a stale generation nor clear a new slot.
+    await page.evaluate(() => {
+      const original = GPUBuffer.prototype.mapAsync;
+      let release;
+      let pending = false;
+      GPUBuffer.prototype.mapAsync = function (...args) {
+        const mapped = original.apply(this, args);
+        if (!pending && this.label === "molgpu:coords:superpose:staging") {
+          pending = true;
+          return new Promise((resolve, reject) => {
+            release = () => mapped.then(resolve, reject);
+          });
+        }
+        return mapped;
+      };
+      window.__trajectory.heldFit = {
+        get pending() {
+          return pending;
+        },
+        release() {
+          GPUBuffer.prototype.mapAsync = original;
+          return release();
+        },
+      };
+    });
+    await update({ mode: "superpose", frame: 2, supTo: "fixed" });
+    await page.waitForFunction(() => window.__trajectory.heldFit.pending);
+    await page.evaluate(() =>
+      window.__trajectory.superpose.statuses.length = 0
+    );
+    await update({ supTo: "first" });
+    await page.waitForFunction(() =>
+      window.__trajectory.superpose.statuses.some((s) => s.status === "solved")
+    );
+    const freshStatuses = await page.evaluate(() =>
+      window.__trajectory.superpose.statuses.length
+    );
+    await page.evaluate(async () => {
+      await window.__trajectory.heldFit.release();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    assert.equal(
+      await page.evaluate(() => window.__trajectory.superpose.statuses.length),
+      freshStatuses,
+      "old fit readback does not report after reference buffers change",
+    );
+    await update({ frame: 3 });
+    await page.waitForFunction(
+      (previous) => window.__trajectory.superpose.statuses.length > previous,
+      freshStatuses,
+    );
+    await update({ mode: "none" });
+
     // 15. <Unwrap>: each displayed frame agrees with the CPU unwrapFrame on a
     // skew triclinic cell, bonds come back whole, the box follows frames,
     // centering moves the ring into the primary cell, ring ambiguity is

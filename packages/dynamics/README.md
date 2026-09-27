@@ -172,8 +172,8 @@ one upstream generation:
    and counted in `status[1]` where the CPU throws.
 2. For forests of depth at most 32, `propagate` visits one topology level per
    dispatch. Each non-root link is accumulated once, in place, from a parent
-   already relative to its root. Deeper forests use `jump` pointer jumping
-   in `ceil(log2(depth))` rounds. Both preserve cross-row bond continuity.
+   already relative to its root. Deeper forests use `jump` pointer jumping in
+   `ceil(log2(depth))` rounds. Both preserve cross-row bond continuity.
 3. `centerSums` computes, per centered component, the lattice shift that moves
    its center rows' centroid into the primary cell.
 4. `place` writes each row as its root position plus its displacement, minus

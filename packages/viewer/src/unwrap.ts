@@ -242,14 +242,17 @@ const Unwrapped: LC<{
   }, [device, forest, graph, centerKey, n]);
   const alive = useRef(true);
   const busy = useRef([false, false]);
+  const epoch = useRef(0);
   const report = useRef<((status: UnwrapStatus) => void) | undefined>(
     onStatus,
   );
   report.current = onStatus;
   useResource((dispose) => {
+    epoch.current++;
     alive.current = true;
     busy.current = [false, false];
     dispose(() => {
+      epoch.current++;
       alive.current = false;
       for (const buffer of buffers.all) {
         releaseOwnedBuffer(buffer);
@@ -367,10 +370,12 @@ const Unwrapped: LC<{
     const slot = busy.current.indexOf(false);
     if (!report.current || slot < 0) return;
     const staging = buffers.staging[slot];
+    const readEpoch = epoch.current;
     busy.current[slot] = true;
     encoder.copyBufferToBuffer(buffers.status, 0, staging, 0, 16);
     return () => {
       staging.mapAsync(MAP_READ).then(() => {
+        if (epoch.current !== readEpoch) return;
         const [ambiguous, limited] = new Uint32Array(
           staging.getMappedRange().slice(0),
         );
@@ -383,6 +388,7 @@ const Unwrapped: LC<{
           generation,
         }));
       }, () => {
+        if (epoch.current !== readEpoch) return;
         busy.current[slot] = false;
       });
     };
