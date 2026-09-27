@@ -42,6 +42,11 @@ deno add jsr:@molgpu/dynamics
 | `superposeWgsl`          | experimental | WGSL for a live Kabsch fit: centroid, covariance and rotation solve, then apply.         |
 | `SUPERPOSE_FIT_BYTES`    | experimental | Size of the fit state buffer `superposeWgsl` reads and writes (144 bytes).               |
 | `minimumImage`           | experimental | Exact nearest Cartesian lattice displacement for a periodic box.                         |
+| `periodicBox`            | experimental | Validate and invert a column-major 3×3 box, as the unwrap kernels take it.               |
+| `PeriodicBox`            | experimental | Box vectors, row-major inverse and inverse norm.                                         |
+| `unwrapWgsl`             | experimental | WGSL for the live unwrap: image links, pointer jumping, centering, placement, rings.     |
+| `UNWRAP_LINK_BYTES`      | experimental | Bytes per row of each unwrap link buffer (16).                                           |
+| `UNWRAP_PARAMS_BYTES`    | experimental | Bytes of the unwrap uniform (128).                                                       |
 | `createUnwrapForest`     | experimental | Deterministic covalent spanning forest from typed bonds.                                 |
 | `unwrapFrame`            | experimental | Make each component whole for one frame and optionally center it.                        |
 | `PbcSearchLimitError`    | experimental | Named error for an excessive exact-image search.                                         |
@@ -157,7 +162,27 @@ locations. Build this forest once per topology version. `unwrapFrame` traverses
 it for each displayed frame, makes each molecule whole, checks non-tree ring
 edges for closure, and can move each selected component's centroid into the
 primary box. Missing or invalid boxes pass positions through with an explicit
-status. This CPU path is the reference for the planned live unwrap provider.
+status. This CPU path is the reference for the live `<Unwrap>` viewer provider.
+
+`unwrapWgsl` is that traversal on the GPU, in five entry points run in order on
+one upstream generation:
+
+1. `link` stores each row's exact nearest image from its forest parent. It uses
+   the same bounded lattice search as `minimumImage`, capped at `maxCandidates`
+   and counted in `status[1]` where the CPU throws.
+2. `jump` is pointer jumping, run `ceil(log2(depth))` times, so every row ends
+   relative to its component root in a logarithmic number of dispatches. It
+   never assumes rows unwrap independently.
+3. `centerSums` computes, per centered component, the lattice shift that moves
+   its center rows' centroid into the primary cell.
+4. `place` writes each row as its root position plus its displacement, minus
+   that shift.
+5. `rings` counts non-tree covalent edges that do not close within 1e-3 Å.
+
+Displacements travel as f32 bits in `vec4<u32>` links, so no GPU flushes a
+denormal pointer. The binding table and uniform layout are documented on
+`unwrapWgsl`. Use `periodicBox(box)` to validate a box and get the inverse the
+kernels take.
 
 ## Mode application
 

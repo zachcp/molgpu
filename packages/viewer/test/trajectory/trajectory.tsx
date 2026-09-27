@@ -32,6 +32,8 @@ import {
   type TrajectoryFrameState,
   Transform,
   UnitCell,
+  Unwrap,
+  type UnwrapStatus,
   useCoordinateSnapshot,
   useTrajectoryFrame,
 } from "@molgpu/viewer";
@@ -51,6 +53,7 @@ function atoms(
     { length: n * 3 },
     (_, i) => i % 3 === 0 ? (i / 3) * 4 - 4 : 0,
   ),
+  bonds: [number, number][] = [],
 ): StructureData {
   return createStructure({
     positions,
@@ -82,11 +85,13 @@ function atoms(
         authId: ["A"],
       },
       bonds: {
-        count: 0,
-        a: new Uint32Array(),
-        b: new Uint32Array(),
-        order: new Uint8Array(),
-        source: [],
+        count: bonds.length,
+        a: Uint32Array.from(bonds, (bond) => bond[0]),
+        b: Uint32Array.from(bonds, (bond) => bond[1]),
+        order: new Uint8Array(bonds.length).fill(1),
+        source: bonds.map(() => "explicit" as const),
+        // Covalent: the only bonds the unwrap forest follows.
+        flags: new Uint8Array(bonds.length).fill(1),
       },
       instances: {
         count: 1,
@@ -213,6 +218,91 @@ const SUP_FIXED = packed(
   [-20, 40, 7],
 );
 const SUP_FIT = where("atom", "row<6", (_data, row) => row < 6);
+// Unwrap: a skew triclinic cell holding a 14-atom zig-zag chain that spans
+// several box lengths (depth 13: four pointer-jumping rounds), a six-ring, a
+// diatomic and a lone atom. Frames wrap every atom into the primary cell; the
+// box changes between frames 0 and 1. Frame 2 displaces one ring atom so its
+// ring closure is ambiguous.
+const UNW_WHOLE: number[][] = [
+  ...Array.from(
+    { length: 14 },
+    (_, i) => [0.5 + 1.2 * i, 1 + 0.7 * (i % 2), 3],
+  ),
+  ...Array.from({ length: 6 }, (_, i) => {
+    const angle = (Math.PI / 3) * i;
+    return [4.6 + 1.4 * Math.cos(angle), 2.2 + 1.4 * Math.sin(angle), 1.2];
+  }),
+  [4.7, 4.6, 5.5],
+  [5.6, 5.3, 5.9],
+  [2, 2.5, 2],
+];
+const UNW_BONDS: [number, number][] = [
+  ...Array.from({ length: 13 }, (_, i): [number, number] => [i, i + 1]),
+  ...Array.from({ length: 6 }, (_, i): [number, number] => [
+    14 + i,
+    14 + (i + 1) % 6,
+  ]),
+  [20, 21],
+];
+const UNW_BOXES = [
+  [5, 0, 0, 2, 5, 0, 1, 1, 6],
+  [5.3, 0, 0, 2, 5.2, 0, 1, 1, 6.1],
+  [5, 0, 0, 2, 5, 0, 1, 1, 6],
+];
+function wrap(points: number[][], box: number[]): Float32Array {
+  const [a, d, g, b, e, h, c, f, i] = box;
+  const det = a * (e * i - f * h) - b * (d * i - f * g) + c * (d * h - e * g);
+  const inverse = [
+    (e * i - f * h) / det,
+    (c * h - b * i) / det,
+    (b * f - c * e) / det,
+    (f * g - d * i) / det,
+    (a * i - c * g) / det,
+    (c * d - a * f) / det,
+    (d * h - e * g) / det,
+    (b * g - a * h) / det,
+    (a * e - b * d) / det,
+  ];
+  return Float32Array.from(points.flatMap((p) => {
+    const cell = [0, 1, 2].map((r) =>
+      Math.floor(
+        inverse[3 * r] * p[0] + inverse[3 * r + 1] * p[1] +
+          inverse[3 * r + 2] * p[2],
+      )
+    );
+    return [0, 1, 2].map((r) =>
+      p[r] - (box[r] * cell[0] + box[3 + r] * cell[1] + box[6 + r] * cell[2])
+    );
+  }));
+}
+const UNW_FRAMES = [
+  wrap(UNW_WHOLE, UNW_BOXES[0]),
+  wrap(
+    UNW_WHOLE.map((p) => [p[0] + 3.1, p[1] - 2.7, p[2] + 1.9]),
+    UNW_BOXES[1],
+  ),
+  wrap(
+    UNW_WHOLE.map((p, i) => i === 17 ? [p[0] + 2, p[1] + 1.5, p[2]] : p),
+    UNW_BOXES[2],
+  ),
+];
+const UNW_STRUCTURE = atoms(
+  UNW_WHOLE.length,
+  Float32Array.from(UNW_WHOLE.flat()),
+  UNW_BONDS,
+);
+const UNW_TRAJECTORY = createTrajectory({
+  atomCount: UNW_WHOLE.length,
+  frames: UNW_FRAMES.map((positions, k) => ({
+    positions,
+    box: Float32Array.from(UNW_BOXES[k]),
+  })),
+});
+const UNW_RING = where("atom", "ring", (_data, row) => row >= 14 && row < 20);
+const SINGULAR = [1, 0, 0, 2, 0, 0, 0, 0, 1];
+const recordUnwrap = (status: UnwrapStatus) => {
+  probe.unwrap.statuses.push(status);
+};
 // A source that answers after `delay` ms, for streaming states.
 const slow = (delay: number): TrajectoryData =>
   createTrajectory({
@@ -245,7 +335,8 @@ type Mode =
   | "transform-selected"
   | "transform-curve"
   | "normal-mode"
-  | "superpose";
+  | "superpose"
+  | "unwrap";
 interface State {
   mode: Mode;
   frame: number;
@@ -261,6 +352,8 @@ interface State {
   supTo: "first" | "fixed";
   supSelect: boolean;
   supTranslate: boolean;
+  unwrapBox: "trajectory" | "none" | "singular";
+  unwrapCenter: boolean;
 }
 
 interface Probe {
@@ -274,6 +367,13 @@ interface Probe {
   frames: number[][];
   root: number[];
   superpose: { frames: number[][]; root: number[]; fixed: number[] };
+  unwrap: {
+    frames: number[][];
+    boxes: number[][];
+    bonds: [number, number][];
+    root: number[];
+    statuses: UnwrapStatus[];
+  };
   counters: typeof snapshotCounters;
   update(patch: Partial<State>): void;
 }
@@ -292,10 +392,23 @@ const probe: Probe = {
     root: Array.from(SUP_STRUCTURE.positions),
     fixed: Array.from(SUP_FIXED),
   },
+  unwrap: {
+    frames: [],
+    boxes: [],
+    bonds: [],
+    root: [],
+    statuses: [],
+  },
   counters: snapshotCounters,
   update: () => {},
 };
 (globalThis as unknown as { __trajectory: Probe }).__trajectory = probe;
+Object.assign(probe.unwrap, {
+  frames: UNW_FRAMES.map((f) => Array.from(f)),
+  boxes: UNW_BOXES,
+  bonds: UNW_BONDS,
+  root: Array.from(UNW_STRUCTURE.positions),
+});
 
 const request = GPUAdapter.prototype.requestDevice;
 GPUAdapter.prototype.requestDevice = async function (
@@ -450,6 +563,29 @@ const Scene = ({ state }: { state: State }): LiveElement => {
           </Trajectory>
         </Structure>
       );
+    case "unwrap": {
+      const unwrapped = (
+        <Unwrap
+          box={state.unwrapBox === "singular" ? SINGULAR : undefined}
+          center={state.unwrapCenter ? UNW_RING : undefined}
+          onStatus={recordUnwrap}
+        >
+          <Spacefill />
+          <Probe />
+        </Unwrap>
+      );
+      return (
+        <Structure data={UNW_STRUCTURE}>
+          {state.unwrapBox === "none"
+            ? unwrapped
+            : (
+              <Trajectory data={UNW_TRAJECTORY} frame={state.frame}>
+                {unwrapped}
+              </Trajectory>
+            )}
+        </Structure>
+      );
+    }
   }
 };
 
@@ -469,6 +605,8 @@ const App = (): LiveElement => {
     supTo: "first",
     supSelect: false,
     supTranslate: true,
+    unwrapBox: "trajectory",
+    unwrapCenter: false,
   });
   probe.update = (patch) => setState((previous) => ({ ...previous, ...patch }));
   probe.mounted = true;

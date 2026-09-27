@@ -16,6 +16,14 @@ All notable changes to `@molgpu/viewer` are recorded here. The format follows
   it moves, so there is no readback and no stale fit. Fit RMSD matches the CPU
   `fitKabsch` oracle within 1e-5 Å while scrubbing. A nearly collinear frame
   passes through.
+- Add experimental `<Unwrap box center onStatus>`. It makes each covalent
+  component whole on the displayed frame of a periodic system, with exact
+  nearest images in triclinic cells. A spanning forest is built once per
+  topology, and the frame is traversed by GPU pointer jumping in the same
+  submission as the upstream frame. `box` defaults to the nearest
+  `<Trajectory>`'s displayed box. `center` moves components into the primary
+  cell. `onStatus` reports ring edges that do not close, and a missing or
+  invalid box, where positions pass through.
 - Add experimental `<NormalMode mode amplitude frequency phase>` for precomputed
   guide-node modes. Its animation changes a uniform and composes with
   Trajectory. Only a zero `amplitude` passes through; an animated scale that

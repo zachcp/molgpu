@@ -164,6 +164,12 @@ TypedArray
   export type TypedArray = Int8Array | Uint8Array | Uint8ClampedArray | Int16Array | Uint16Array | Int32Array | Uint32Array | Float32Array | Float64Array;
 UnitCell
   export const UnitCell: ViewerComponent<{ color?: VectorLike; width?: number; opacity?: number }>;
+Unwrap
+  export const Unwrap: ViewerComponent<UnwrapProps>;
+UnwrapProps
+  export interface UnwrapProps { children?: ViewerElement; /** * Column-major 3×3 box vectors (a, b, c as columns). Defaults to the * nearest `<Trajectory>`'s displayed box; null passes positions through. */ box?: ArrayLike<number> | null; /** Move each component holding these atoms so their centroid lies in the * primary cell. */ center?: SelectionQuery; /** Called asynchronously after unwrapped frames, and when a box is missing * or invalid. Frames may be skipped while earlier reports are in flight. */ onStatus?: (status: UnwrapStatus) => void }
+UnwrapStatus
+  export interface UnwrapStatus { /** * `ok`; `ambiguous` when some covalent ring edge does not close; `search-limit` * when an exact image search exceeded its candidate bound (that bond keeps * its best image so far); `missing-box` or `invalid-box` when positions * passed through. */ readonly status: "ok" | "ambiguous" | "search-limit" | "missing-box" | "invalid-box"; readonly ambiguousRingEdges: number; /** The provider generation (or, when passing through, the upstream one). */ readonly generation: number }
 VectorLike
   export type VectorLike = readonly number[] | TypedArray;
 ViewerComponent

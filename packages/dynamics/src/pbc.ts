@@ -114,6 +114,30 @@ function nearest(delta: Vec3, box: Box, limit: number): Vec3 {
   return best;
 }
 
+/** A validated periodic box with its inverse, as the unwrap kernels need it. */
+export interface PeriodicBox {
+  /** Column-major 3×3 box vectors (a, b, c as columns). */
+  readonly matrix: readonly number[];
+  /** Row-major inverse: fractional = inverse · Cartesian. */
+  readonly inverse: readonly number[];
+  /** Frobenius norm of the inverse, which bounds the exact image search. */
+  readonly inverseNorm: number;
+}
+
+/**
+ * Validate a column-major 3×3 box and invert it. Throws a RangeError for a
+ * non-finite, singular or nearly singular box, the cases `unwrapFrame`
+ * reports as `invalid-box`.
+ */
+export function periodicBox(box: ArrayLike<number>): PeriodicBox {
+  const prepared = prepareBox(box);
+  return Object.freeze({
+    matrix: Object.freeze(prepared.matrix),
+    inverse: Object.freeze(prepared.inverse),
+    inverseNorm: prepared.inverseNorm,
+  });
+}
+
 /** Nearest Cartesian lattice displacement, including for skew triclinic boxes. */
 export function minimumImage(
   delta: ArrayLike<number>,

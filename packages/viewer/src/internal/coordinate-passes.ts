@@ -8,12 +8,17 @@ const STORAGE = 0x0080;
 const COPY_SRC = 0x0004;
 const COPY_DST = 0x0008;
 
-/** Encode a provider's stages, reading `input` and writing packed `output`. */
+/**
+ * Encode a provider's stages, reading `input` and writing packed `output`. It
+ * may return a callback to run after the submission, e.g. to map a small
+ * status buffer the stages copied out.
+ */
 export type EncodePasses = (
   encoder: GPUCommandEncoder,
   input: GPUBuffer,
   output: GPUBuffer,
-) => void;
+  generation: number,
+) => void | (() => void);
 
 /**
  * A coordinate provider built from raw compute stages (reductions, graph
@@ -50,9 +55,10 @@ export const CoordinatePasses: LC<{
   ]);
   useMemo(() => {
     const encoder = device.createCommandEncoder({ label: `molgpu:${label}` });
-    encode(encoder, upstream.source.buffer, output);
+    const after = encode(encoder, upstream.source.buffer, output, generation);
     device.queue.submit([encoder.finish()]);
     count("gathers", `${label}:dispatch`);
+    after?.();
   }, [generation]);
   return use(Published, {
     upstream,

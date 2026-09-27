@@ -17,7 +17,9 @@ import {
   applyAffine,
   cellListWgsl,
   createCellList,
+  createUnwrapForest,
   fitKabsch,
+  unwrapFrame,
 } from "@molgpu/dynamics";
 import { writeXtc } from "../../io/test/trajectory-fixture.ts";
 import { interpolatePositions } from "../src/internal/frame-window.ts";
@@ -847,6 +849,132 @@ Deno.test("trajectory components", async () => {
     await checkFit(2, { translate: false });
     await update({ supTranslate: true, supTo: "fixed" });
     await checkFit(2, { to: "fixed" });
+    await update({ mode: "none" });
+
+    // 15. <Unwrap>: each displayed frame agrees with the CPU unwrapFrame on a
+    // skew triclinic cell, bonds come back whole, the box follows frames,
+    // centering moves the ring into the primary cell, ring ambiguity is
+    // reported, and a missing or singular box passes through.
+    const unw = await page.evaluate(() => {
+      const { statuses: _, ...rest } = window.__trajectory.unwrap;
+      return rest;
+    });
+    const unwrapTopology = {
+      atoms: {
+        count: unw.root.length / 3,
+        residue: new Uint32Array(unw.root.length / 3),
+        altloc: new Array(unw.root.length / 3).fill(""),
+      },
+      residues: { chain: new Uint32Array(1) },
+      chains: { model: Int32Array.of(1) },
+      bonds: {
+        count: unw.bonds.length,
+        a: Uint32Array.from(unw.bonds, (bond) => bond[0]),
+        b: Uint32Array.from(unw.bonds, (bond) => bond[1]),
+        flags: new Uint8Array(unw.bonds.length).fill(1),
+      },
+    };
+    const forest = createUnwrapForest(unwrapTopology);
+    const ringRows = [14, 15, 16, 17, 18, 19];
+    const cpuUnwrap = (frame, center = null) =>
+      unwrapFrame(
+        Float32Array.from(unw.frames[frame]),
+        forest,
+        unw.boxes[frame],
+        center,
+      );
+    const bondLengths = (values) =>
+      unw.bonds.map(([a, b]) =>
+        Math.hypot(
+          values[3 * a] - values[3 * b],
+          values[3 * a + 1] - values[3 * b + 1],
+          values[3 * a + 2] - values[3 * b + 2],
+        )
+      );
+    const wholeLengths = bondLengths(unw.root);
+    const unwrapStatuses = () =>
+      page.evaluate(() => window.__trajectory.unwrap.statuses.slice(-1)[0]);
+    await page.evaluate(() => {
+      window.__trajectory.unwrap.statuses.length = 0;
+    });
+    await update({
+      mode: "unwrap",
+      frame: 0,
+      unwrapBox: "trajectory",
+      unwrapCenter: false,
+    });
+    await displayed({ a: 0, b: 0, t: 0 });
+    const graphUploads = async () =>
+      (await counters()).detail["uploadBytes:coords:unwrap:graph"] ?? 0;
+    let graphBytes;
+    report.unwrap = [];
+    for (const frame of [0, 1, 0, 1]) {
+      await update({ frame });
+      await displayed({ a: frame, b: frame, t: 0 });
+      const want = cpuUnwrap(frame);
+      const got = await expectRead(
+        Array.from(want.positions),
+        `unwrap frame ${frame}`,
+        1e-4,
+      );
+      bondLengths(got).forEach((length, k) =>
+        assert.ok(
+          Math.abs(length - wholeLengths[k]) < 1e-4,
+          `unwrap frame ${frame} bond ${k}: ${length} vs ${wholeLengths[k]}`,
+        )
+      );
+      graphBytes ??= await graphUploads();
+      report.unwrap.push({ frame, status: want.status });
+    }
+    assert.equal(
+      await graphUploads(),
+      graphBytes,
+      "frames re-upload no forest",
+    );
+    await page.waitForFunction(
+      () => window.__trajectory.unwrap.statuses.slice(-1)[0]?.status === "ok",
+    );
+    // Centering: the ring's centroid lands in the primary cell.
+    await update({ unwrapCenter: true, frame: 1 });
+    await displayed({ a: 1, b: 1, t: 0 });
+    await expectRead(
+      Array.from(cpuUnwrap(1, ringRows).positions),
+      "unwrap centered",
+      1e-4,
+    );
+    // Ambiguous ring closure is counted like the CPU reference.
+    await update({ unwrapCenter: false, frame: 2 });
+    await displayed({ a: 2, b: 2, t: 0 });
+    const ambiguous = cpuUnwrap(2);
+    assert.equal(ambiguous.status, "ambiguous");
+    await expectRead(
+      Array.from(ambiguous.positions),
+      "unwrap ambiguous frame",
+      1e-4,
+    );
+    await page.waitForFunction(
+      (count) => {
+        const last = window.__trajectory.unwrap.statuses.slice(-1)[0];
+        return last?.status === "ambiguous" &&
+          last.ambiguousRingEdges === count;
+      },
+      ambiguous.ambiguousRingEdges,
+      { timeout: 5000 },
+    );
+    report.unwrap.push(await unwrapStatuses());
+    // No box, or a singular one: positions pass through, with a status.
+    await update({ unwrapBox: "singular" });
+    await expectRead(unw.frames[2], "unwrap singular box", 0);
+    assert.equal((await unwrapStatuses()).status, "invalid-box");
+    await update({ unwrapBox: "none" });
+    // Without a Trajectory the probe sees the root upload itself, which is not
+    // a copy source: check that no provider output is published instead.
+    assert.notEqual(
+      await page.evaluate(() => window.__trajectory.source.buffer.label),
+      "molgpu:coords:provider",
+      "no box: the root coordinates pass through",
+    );
+    assert.equal((await unwrapStatuses()).status, "missing-box");
     await update({ mode: "none" });
 
     now = await counters();

@@ -25,3 +25,6 @@ All notable changes to `@molgpu/dynamics` are recorded here. See
   `<NormalMode>` input.
 - Add `superposeWgsl` and `SUPERPOSE_FIT_BYTES`: a live GPU Kabsch fit in three
   ordered stages, checked against `fitKabsch`.
+- Add `unwrapWgsl` (nearest-image links, pointer jumping, centering, placement
+  and ring checks), `UNWRAP_LINK_BYTES`, `UNWRAP_PARAMS_BYTES`, and
+  `periodicBox` / `PeriodicBox` for the live unwrap.

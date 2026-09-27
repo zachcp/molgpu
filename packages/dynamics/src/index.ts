@@ -21,6 +21,11 @@ export {
 export { fitKabsch, type KabschFit } from "./kabsch.ts";
 export { SUPERPOSE_FIT_BYTES, superposeWgsl } from "./superpose-wgsl.ts";
 export {
+  UNWRAP_LINK_BYTES,
+  UNWRAP_PARAMS_BYTES,
+  unwrapWgsl,
+} from "./unwrap-wgsl.ts";
+export {
   buildElasticNetwork,
   type ElasticMode,
   type ElasticNetwork,
@@ -40,6 +45,8 @@ export {
   createUnwrapForest,
   minimumImage,
   PbcSearchLimitError,
+  type PeriodicBox,
+  periodicBox,
   type UnwrapForest,
   unwrapFrame,
   type UnwrapResult,
