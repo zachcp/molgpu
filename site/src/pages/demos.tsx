@@ -19,6 +19,7 @@ import { mountViewer } from "../demos/viewer.tsx";
 /** Demos whose scene is driven by the scrub slider's seconds. */
 const scrubbed = (id: DemoId): boolean =>
   id === "timeline" || id === "coordinates" || id === "trajectory";
+const SCRUB_DURATION = 4;
 
 const demoFromHash = (): DemoId =>
   demoById(location.hash.replace(/^#demos\/?/, "")).id;
@@ -26,6 +27,7 @@ const demoFromHash = (): DemoId =>
 export const DemosPage = () => {
   const [id, setId] = useState<DemoId>(demoFromHash);
   const [time, setTime] = useState(0);
+  const [playing, setPlaying] = useState(false);
   const [surfaceMode, setSurfaceMode] = useState<SurfaceMode>("glass");
   const [materialMode, setMaterialMode] = useState<MaterialMode>("matte");
   // Slice position as a fraction of the map's k extent, and isolevel in sigma.
@@ -37,7 +39,25 @@ export const DemosPage = () => {
     addEventListener("hashchange", update);
     return () => removeEventListener("hashchange", update);
   }, []);
-  useEffect(() => setTime(0), [id]);
+  useEffect(() => {
+    setTime(0);
+    setPlaying(false);
+  }, [id]);
+  useEffect(() => {
+    if (!playing || !scrubbed(id)) return;
+    let frame = 0;
+    let previous: number | undefined;
+    const tick = (now: number) => {
+      if (previous !== undefined) {
+        const elapsed = (now - previous) / 1000;
+        setTime((current) => (current + elapsed) % SCRUB_DURATION);
+      }
+      previous = now;
+      frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [playing, id]);
   useEffect(() => {
     let cancelled = false;
     void (async () => {
@@ -105,20 +125,31 @@ export const DemosPage = () => {
         <p className="demo-assertion" data-demo-assertion={demo.id}>
           Behavior: {demo.assertion}.
         </p>
-        {(scrubbed(demo.id)) && (
-          <label className="timeline-control">
-            Scrub{" "}
+        {scrubbed(demo.id) && (
+          <div className="timeline-control">
+            <label htmlFor="timeline-time">Scrub</label>
             <input
+              id="timeline-time"
               aria-label="Timeline time in seconds"
               type="range"
               min="0"
-              max="4"
+              max={SCRUB_DURATION}
               step="0.01"
               value={time}
               onChange={(event) => setTime(Number(event.currentTarget.value))}
             />{" "}
-            <output>{time.toFixed(2)} s</output>
-          </label>
+            <output htmlFor="timeline-time">{time.toFixed(2)} s</output>
+            <button
+              type="button"
+              aria-label={playing
+                ? "Pause looping playback"
+                : "Play looping playback"}
+              aria-pressed={playing}
+              onClick={() => setPlaying((value) => !value)}
+            >
+              {playing ? "Pause" : "Play"}
+            </button>
+          </div>
         )}
         {demo.id === "surface" && (
           <label className="timeline-control">
