@@ -1,13 +1,13 @@
 // Gate 2 acceptance: recolouring the ball-and-stick uploads no new geometry.
-import assert from "node:assert/strict";
-import { fileURLToPath } from "node:url";
+import { assert, assertEquals, assertStrictEquals } from "@std/assert";
+import { fromFileUrl } from "@std/path";
 import { createServer } from "vite";
 import { chromium } from "playwright";
 import { webgpuBrowserArgs } from "./webgpu-browser-args.mjs";
 import { workspaceAliases } from "../../../scripts/workspace-aliases.mjs";
 
 Deno.test("viewer gate 2", async () => {
-  const root = fileURLToPath(new URL("../../../", import.meta.url));
+  const root = fromFileUrl(new URL("../../../", import.meta.url));
   const server = await createServer({
     root,
     configFile: false,
@@ -83,16 +83,16 @@ Deno.test("viewer gate 2", async () => {
     }
     const before = await snap();
     const beforeShot = await shot();
-    assert.ok(
+    assert(
       before.storageLabels.filter((label) => label === "molgpu:positions")
         .length >= 1,
       "probe must observe the shared coordinate buffer",
     );
-    assert.ok(
+    assert(
       before.storageLabels.includes("molgpu:endpoints"),
       "probe must observe bond endpoint rows",
     );
-    assert.ok(
+    assert(
       before.storageLabels.includes("molgpu:segments"),
       "probe must observe bond segment buffer",
     );
@@ -104,13 +104,13 @@ Deno.test("viewer gate 2", async () => {
     const after = await snap();
     const afterShot = await shot();
 
-    assert.ok(
+    assert(
       !afterShot.equals(beforeShot),
       "recolour must change the rendered image",
     );
     const newBuffers = after.storage.slice(before.storage.length);
     const newWrites = after.storageWrites.slice(before.storageWrites.length);
-    assert.equal(
+    assertStrictEquals(
       newBuffers.length,
       0,
       `recolour allocated storage buffers: ${JSON.stringify(newBuffers)}`,
@@ -119,12 +119,12 @@ Deno.test("viewer gate 2", async () => {
       label === "molgpu:positions" || label === "molgpu:endpoints" ||
       label === "molgpu:segments"
     );
-    assert.deepEqual(
+    assertEquals(
       geometryWrites,
       [],
       `recolour uploaded geometry: ${JSON.stringify(geometryWrites)}`,
     );
-    assert.deepEqual(after.errors, [], "uncaptured WebGPU errors");
+    assertEquals(after.errors, [], "uncaptured WebGPU errors");
     // Exercise the default Bonds appearance in the same real WebGPU scene.
     await page.evaluate(() => window.__probe.setMode("bonds"));
     await settle();
@@ -148,13 +148,13 @@ Deno.test("viewer gate 2", async () => {
       }
       return { blue, red };
     }, defaultBondPng.toString("base64"));
-    assert.ok(
+    assert(
       colorCounts.blue > 20 && colorCounts.red > 20,
       `default C-N-O bonds must show blue N and red O halves: ${
         JSON.stringify(colorCounts)
       }`,
     );
-    assert.deepEqual((await snap()).errors, [], "default bonds WebGPU errors");
+    assertEquals((await snap()).errors, [], "default bonds WebGPU errors");
     // The same controlled clock now samples a focused camera curve. Rewind must
     // reproduce the earlier frame without touching molecular geometry.
     const beforeFocus = await snap();
@@ -163,21 +163,21 @@ Deno.test("viewer gate 2", async () => {
     await settle();
     const focused = await snap();
     const focusedShot = await shot();
-    assert.deepEqual(await page.evaluate(() => window.__probe.camera.target), [
+    assertEquals(await page.evaluate(() => window.__probe.camera.target), [
       1,
       0,
       0,
     ]);
-    assert.ok(
+    assert(
       !focusedShot.equals(defaultBondPng),
       "focused camera must change the image",
     );
-    assert.equal(
+    assertStrictEquals(
       focused.storage.length - beforeFocus.storage.length,
       0,
       "focus allocated geometry",
     );
-    assert.deepEqual(
+    assertEquals(
       focused.storageWrites.slice(beforeFocus.storageWrites.length)
         .filter(({ label }) =>
           label === "molgpu:positions" || label === "molgpu:segments"
@@ -189,16 +189,16 @@ Deno.test("viewer gate 2", async () => {
     await settle();
     await settle();
     const rewound = await snap();
-    assert.ok(
+    assert(
       (await shot()).equals(defaultBondPng),
       "reverse camera scrub must reproduce the prior image",
     );
-    assert.equal(
+    assertStrictEquals(
       rewound.storage.length - focused.storage.length,
       0,
       "reverse focus allocated geometry",
     );
-    assert.deepEqual(rewound.errors, [], "focused camera WebGPU errors");
+    assertEquals(rewound.errors, [], "focused camera WebGPU errors");
     console.log(JSON.stringify({
       status: "passed",
       storageBefore: before.storage.length,

@@ -3,16 +3,17 @@
 // r32float when `float32-filterable` exists, hardware-filtered r16float).
 // Raw WebGPU in headless Chrome, no use.gpu. Run:
 //   deno run -A docs/findings/evidence/2026-09-26-volume-texture-spike/bench.mjs
-import { createServer } from "node:http";
-import { writeFile } from "node:fs/promises";
 import { chromium } from "playwright";
 
 const here = new URL(".", import.meta.url).pathname;
-const server = createServer((_, res) => {
-  res.setHeader("content-type", "text/html");
-  res.end("<!doctype html><meta charset=utf-8><title>volume spike</title>");
-});
-await new Promise((r) => server.listen(5194, "127.0.0.1", r));
+const server = Deno.serve(
+  { port: 5194, hostname: "127.0.0.1", onListen() {} },
+  () =>
+    new Response(
+      "<!doctype html><meta charset=utf-8><title>volume spike</title>",
+      { headers: { "content-type": "text/html" } },
+    ),
+);
 const browser = await chromium.launch({
   channel: "chrome",
   headless: true,
@@ -309,9 +310,12 @@ fn main(@builtin(global_invocation_id) g: vec3<u32>) {
   });
   result.date = new Date().toISOString();
   result.browser = browser.version();
-  await writeFile(`${here}report.json`, JSON.stringify(result, null, 2));
+  await Deno.writeTextFile(
+    `${here}report.json`,
+    JSON.stringify(result, null, 2),
+  );
   console.log(JSON.stringify(result, null, 2));
 } finally {
   await browser.close();
-  server.close();
+  await server.shutdown();
 }

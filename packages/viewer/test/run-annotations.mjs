@@ -4,15 +4,15 @@
 // helper; the label's glyphs actually paint (hj0.6: they once drew entirely
 // off-screen with zero errors, so "no errors + an atlas exists" is not enough);
 // and re-anchoring the label to a different selection moves the painted text.
-import assert from "node:assert/strict";
-import { fileURLToPath } from "node:url";
+import { assert, assertEquals, assertStrictEquals } from "@std/assert";
+import { fromFileUrl } from "@std/path";
 import { createServer } from "vite";
 import { chromium } from "playwright";
 import { webgpuBrowserArgs } from "./webgpu-browser-args.mjs";
 import { workspaceAliases } from "../../../scripts/workspace-aliases.mjs";
 
 Deno.test("viewer annotations", async () => {
-  const root = fileURLToPath(new URL("../../../", import.meta.url));
+  const root = fromFileUrl(new URL("../../../", import.meta.url));
   const server = await createServer({
     root,
     configFile: false,
@@ -113,31 +113,31 @@ Deno.test("viewer annotations", async () => {
     await settle();
     await settle();
     const s = await snap();
-    assert.deepEqual(s.errors, [], "annotations scene produced WebGPU errors");
+    assertEquals(s.errors, [], "annotations scene produced WebGPU errors");
     // The pure anchor the components use: centroid of rows 0,1 = (-3,1,0), 6 A apart from rows 2,3.
-    assert.deepEqual(
+    assertEquals(
       s.centroidA,
       [-3, 1, 0],
       `centroid anchor wrong: ${JSON.stringify(s.centroidA)}`,
     );
-    assert.equal(s.distance, 6, `distance anchor wrong: ${s.distance}`);
-    assert.ok(
+    assertStrictEquals(s.distance, 6, `distance anchor wrong: ${s.distance}`);
+    assert(
       s.pipelines > 0,
       "expected render pipelines for the labels + line",
     );
     // The label text needs a font atlas: a texture beyond the render targets means
     // the glyph path actually engaged.
-    assert.ok(
+    assert(
       s.textures > 0,
       "expected a font-atlas / render texture to be allocated",
     );
     // The glyphs must actually reach the canvas, left of centre (centroid A, x=-3).
     const textA = await yellow();
-    assert.ok(
+    assert(
       textA.count > 40,
       `label glyphs did not paint: ${JSON.stringify(textA)}`,
     );
-    assert.ok(
+    assert(
       textA.meanX < 0.5,
       `label A should sit left of centre: ${JSON.stringify(textA)}`,
     );
@@ -147,24 +147,24 @@ Deno.test("viewer annotations", async () => {
     await settle();
     await settle();
     const moved = await snap();
-    assert.deepEqual(
+    assertEquals(
       moved.errors,
       [],
       "re-anchoring the label produced WebGPU errors",
     );
     const textB = await yellow();
-    assert.ok(
+    assert(
       textB.count > 40,
       `re-anchored label glyphs did not paint: ${JSON.stringify(textB)}`,
     );
-    assert.ok(
+    assert(
       textB.meanX > 0.5,
       `label should follow selection B (x=+3) right of centre: ${
         JSON.stringify(textB)
       }`,
     );
 
-    assert.deepEqual(errors, [], "page errors");
+    assertEquals(errors, [], "page errors");
     console.log(
       JSON.stringify({
         status: "passed",

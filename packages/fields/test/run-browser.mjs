@@ -2,8 +2,7 @@
 // evaluator, within tolerance. Node compiles each field and computes the CPU
 // reference; the browser runs the generated WGSL in a raw-WebGPU compute pass
 // (no use.gpu) and reads the result back for comparison.
-import assert from "node:assert/strict";
-import { createServer } from "node:http";
+import { assert, assertEquals, assertStrictEquals } from "@std/assert";
 import { chromium } from "playwright";
 import { webgpuBrowserArgs } from "../../viewer/test/webgpu-browser-args.mjs";
 import {
@@ -255,11 +254,14 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
   }
 
   // WebGPU needs a secure context; http://127.0.0.1 counts as one, about:blank does not.
-  const server = createServer((_, res) => {
-    res.setHeader("content-type", "text/html");
-    res.end("<!doctype html><meta charset=utf-8><title>fields gpu</title>");
-  });
-  await new Promise((r) => server.listen(5192, "127.0.0.1", r));
+  const server = Deno.serve(
+    { port: 5192, hostname: "127.0.0.1", onListen() {} },
+    () =>
+      new Response(
+        "<!doctype html><meta charset=utf-8><title>fields gpu</title>",
+        { headers: { "content-type": "text/html" } },
+      ),
+  );
 
   const browser = await chromium.launch({
     channel: "chrome",
@@ -355,8 +357,16 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
         job,
       );
 
-      assert.equal(out.error, undefined, `${job.name} WGSL: ${out.error}`);
-      assert.equal(out.result.length, job.cpu.length, `${job.name} length`);
+      assertStrictEquals(
+        out.error,
+        undefined,
+        `${job.name} WGSL: ${out.error}`,
+      );
+      assertStrictEquals(
+        out.result.length,
+        job.cpu.length,
+        `${job.name} length`,
+      );
       const tolerance = job.tolerance ?? 1e-5;
       let maxErr = 0;
       for (let i = 0; i < job.cpu.length; i++) {
@@ -368,19 +378,19 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
           : 1;
         maxErr = Math.max(maxErr, err / scale);
         if (job.relative) {
-          assert.ok(
+          assert(
             err <= tolerance * scale,
             `${job.name} row ${i}: GPU ${out.result[i]} vs CPU ${job.cpu[i]}`,
           );
         }
       }
-      assert.ok(
+      assert(
         maxErr <= tolerance,
         `${job.name} CPU/GPU disagree by ${maxErr}`,
       );
       if (job.name === "volumeSample") {
-        assert.ok(job.cpu.some((v) => v === 0), "outside points return 0");
-        assert.ok(
+        assert(job.cpu.some((v) => v === 0), "outside points return 0");
+        assert(
           out.result.filter((v) => v === 0).length ===
             job.cpu.filter((v) => v === 0).length,
           "GPU and CPU agree on which points are outside",
@@ -392,7 +402,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
         maxErr,
       };
     }
-    assert.deepEqual(errors, [], "page errors");
+    assertEquals(errors, [], "page errors");
     console.log(
       JSON.stringify({
         status: "passed",
@@ -402,6 +412,6 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
     );
   } finally {
     await browser.close();
-    server.close();
+    await server.shutdown();
   }
 });

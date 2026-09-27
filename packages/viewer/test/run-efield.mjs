@@ -6,12 +6,8 @@
  * surface colouring, <FieldLines> and <FieldArrows>. Part of
  * `deno task test:components`.
  */
-import assert from "node:assert/strict";
-import { createServer } from "node:http";
-import { createReadStream } from "node:fs";
-import { copyFile, mkdir, stat, writeFile } from "node:fs/promises";
-import { extname, normalize } from "node:path";
-import { fileURLToPath } from "node:url";
+import { assert, assertEquals, assertStrictEquals } from "@std/assert";
+import { extname, fromFileUrl, normalize } from "@std/path";
 import { build } from "vite";
 import { chromium } from "playwright";
 import { webgpuBrowserArgs } from "./webgpu-browser-args.mjs";
@@ -31,42 +27,43 @@ function relativeError(gpu, cpu) {
 }
 
 Deno.test("electric fields", async () => {
-  const root = fileURLToPath(new URL("../../../", import.meta.url));
+  const root = fromFileUrl(new URL("../../../", import.meta.url));
   const fixture = `${root}packages/viewer/test/efield`;
   const out = `${root}packages/viewer/test/results`;
   const PORT = 5197;
-  await mkdir(out, { recursive: true });
+  await Deno.mkdir(out, { recursive: true });
   await build({ configFile: `${fixture}/vite.config.mjs`, logLevel: "warn" });
   for (const id of ["1crn", "1a4y"]) {
-    await copyFile(
+    await Deno.copyFile(
       `${root}packages/io/test/fixtures/${id}.bcif`,
       `${fixture}/dist/${id}.bcif`,
     );
   }
 
-  const server = createServer(async (req, res) => {
-    const name = normalize(
-      decodeURIComponent(new URL(req.url, "http://x").pathname),
-    );
-    const path = `${fixture}/dist${name === "/" ? "/index.html" : name}`;
-    try {
-      if (!(await stat(path)).isFile()) throw new Error("not a file");
-    } catch {
-      res.writeHead(404);
-      res.end("not found");
-      return;
-    }
-    res.writeHead(200, {
-      "content-type": { ".html": "text/html", ".js": "text/javascript" }[
+  const server = Deno.serve(
+    { port: PORT, hostname: "127.0.0.1", onListen() {} },
+    async (req) => {
+      const name = normalize(decodeURIComponent(new URL(req.url).pathname));
+      const path = `${fixture}/dist${name === "/" ? "/index.html" : name}`;
+      let info;
+      try {
+        info = await Deno.stat(path);
+        if (!info.isFile) throw new Error("not a file");
+      } catch {
+        return new Response("not found", { status: 404 });
+      }
+      const type = { ".html": "text/html", ".js": "text/javascript" }[
         extname(path)
-      ] ?? "application/octet-stream",
-    });
-    createReadStream(path).pipe(res);
-  });
+      ] ?? "application/octet-stream";
+      const file = await Deno.open(path, { read: true });
+      return new Response(file.readable, {
+        headers: { "content-type": type },
+      });
+    },
+  );
   const report = { date: new Date().toISOString(), states: {} };
   let browser;
   try {
-    await new Promise((resolve) => server.listen(PORT, "127.0.0.1", resolve));
     browser = await chromium.launch({
       channel: "chrome",
       headless: true,
@@ -156,9 +153,9 @@ Deno.test("electric fields", async () => {
         ([w, e]) => window.__efield.cpuPotential(w, e),
         [which, extra],
       );
-      assert.equal(gpu.length, cpu.length);
+      assertStrictEquals(gpu.length, cpu.length);
       const error = relativeError(gpu, cpu);
-      assert.ok(error < tolerance, `${which} GPU vs CPU: ${error}`);
+      assert(error < tolerance, `${which} GPU vs CPU: ${error}`);
       return { error, peak: Math.max(...cpu.map(Math.abs)) };
     };
 
@@ -183,19 +180,19 @@ Deno.test("electric fields", async () => {
     }
     const grid = await page.evaluate(() => window.__efield.grid);
     report.states.grid = { dims: grid.dims, unit: grid.unit };
-    assert.equal(grid.unit, "kcal/mol/e");
+    assertStrictEquals(grid.unit, "kcal/mol/e");
 
     // A ready root buffer needs no timed settling recomputations.
     let before = await counters();
     await page.waitForTimeout(1150);
     let now = await counters();
-    assert.equal(delta(now, before, "gathers:efield:dispatch"), 0);
+    assertStrictEquals(delta(now, before, "gathers:efield:dispatch"), 0);
 
     // A distant neutral atom does not expand the automatic charge grid.
     await update({ mode: "none", physics: {} });
     await update({ mode: "sparse" });
     await ready();
-    assert.deepEqual(await page.evaluate(() => window.__efield.grid.dims), [
+    assertEquals(await page.evaluate(() => window.__efield.grid.dims), [
       17,
       17,
       17,
@@ -221,19 +218,23 @@ Deno.test("electric fields", async () => {
       await parity("wobble", { phase });
     }
     now = await counters();
-    assert.deepEqual(
+    assertEquals(
       await page.evaluate(() => window.__efield.grid.dims),
       gridBefore,
       "the grid stays locked while coordinates move",
     );
-    assert.ok(delta(now, before, "gathers:efield:dispatch") >= 3);
+    assert(delta(now, before, "gathers:efield:dispatch") >= 3);
     for (
       const key of [
         "gathers:coords:snapshot:dispatch",
         "gathers:efield:snapshot:dispatch",
       ]
     ) {
-      assert.equal(delta(now, before, key), 0, `${key}: no CPU round trip`);
+      assertStrictEquals(
+        delta(now, before, key),
+        0,
+        `${key}: no CPU round trip`,
+      );
     }
 
     // 4. One computation in flight: while it is held, new generations only
@@ -243,7 +244,7 @@ Deno.test("electric fields", async () => {
     await update({ phase: 2.1 });
     for (const phase of [2.2, 2.3, 2.4]) await update({ phase });
     now = await counters();
-    assert.equal(
+    assertStrictEquals(
       delta(now, before, "gathers:efield:dispatch"),
       1,
       "held: later generations wait",
@@ -255,7 +256,7 @@ Deno.test("electric fields", async () => {
       updates: 4,
       dispatches: delta(now, before, "gathers:efield:dispatch"),
     };
-    assert.equal(report.states.coalesce.dispatches, 2, "latest wins");
+    assertStrictEquals(report.states.coalesce.dispatches, 2, "latest wins");
 
     // 4b. Many sample-range dispatches in one submission match one.
     await update({ mode: "none" });
@@ -283,12 +284,12 @@ Deno.test("electric fields", async () => {
     await ready();
     await frames(30);
     now = await counters();
-    assert.ok(delta(now, before, "gathers:efield:snapshot:publish") >= 1);
-    assert.ok(delta(now, before, "geometryBuilds:isosurface:mesh") >= 2);
+    assert(delta(now, before, "gathers:efield:snapshot:publish") >= 1);
+    assert(delta(now, before, "geometryBuilds:isosurface:mesh") >= 2);
     const shot = await page.locator("canvas").screenshot({
       path: `${out}/efield-iso.png`,
     });
-    assert.ok(shot.length > 0);
+    assert(shot.length > 0);
 
     // 7. A slice under <EField> draws live samples; moving it uploads nothing.
     await update({ mode: "none" });
@@ -300,8 +301,12 @@ Deno.test("electric fields", async () => {
     before = await counters();
     await update({ planeIndex: 10 });
     now = await counters();
-    assert.equal(now.uploadBytes, before.uploadBytes, "no upload on move");
-    assert.equal(delta(now, before, "gathers:efield:dispatch"), 0);
+    assertStrictEquals(
+      now.uploadBytes,
+      before.uploadBytes,
+      "no upload on move",
+    );
+    assertStrictEquals(delta(now, before, "gathers:efield:dispatch"), 0);
     await page.locator("canvas").screenshot({
       path: `${out}/efield-slice.png`,
     });
@@ -330,12 +335,16 @@ Deno.test("electric fields", async () => {
       }),
     );
     report.states.surface = surface;
-    assert.ok(surface.red > 200 && surface.blue > 200, JSON.stringify(surface));
+    assert(surface.red > 200 && surface.blue > 200, JSON.stringify(surface));
     before = await counters();
     await update({ sampleOffset: 2 });
     now = await counters();
-    assert.equal(now.uploadBytes, before.uploadBytes, "offset is a uniform");
-    assert.equal(now.geometryBuilds, before.geometryBuilds, "no remesh");
+    assertStrictEquals(
+      now.uploadBytes,
+      before.uploadBytes,
+      "offset is a uniform",
+    );
+    assertStrictEquals(now.geometryBuilds, before.geometryBuilds, "no remesh");
 
     // 10. 1A4Y: ribonuclease inhibitor (chain A) is negative and angiogenin
     //     (chain B) positive, each computed alone, as published.
@@ -355,8 +364,8 @@ Deno.test("electric fields", async () => {
         chain,
       );
       report.states.complementarity[chain] = stats;
-      assert.ok(sign * stats.mean > 1, `${chain}: ${JSON.stringify(stats)}`);
-      assert.ok(
+      assert(sign * stats.mean > 1, `${chain}: ${JSON.stringify(stats)}`);
+      assert(
         Math.abs(stats.mean - pinned) < 1.5,
         `${chain} pinned ${pinned}: ${stats.mean}`,
       );
@@ -385,17 +394,17 @@ Deno.test("electric fields", async () => {
         if (rp < 1.5 || rm < 1.5) continue;
         values.push((x + 3) / rp - (x - 3) / rm);
       }
-      assert.ok(values.length > 20, `line ${l} traced: ${values.length}`);
+      assert(values.length > 20, `line ${l} traced: ${values.length}`);
       drift.push(Math.max(...values) - Math.min(...values));
     }
     report.states.lines = { drift };
-    assert.ok(Math.max(...drift) < 0.02, `dipole invariant: ${drift}`);
+    assert(Math.max(...drift) < 0.02, `dipole invariant: ${drift}`);
     before = await counters();
     await update({ lineRange: [0.5, 5] });
     now = await counters();
-    assert.equal(delta(now, before, "gathers:fieldLines:dispatch"), 0);
-    assert.equal(now.geometryBuilds, before.geometryBuilds);
-    assert.equal(
+    assertStrictEquals(delta(now, before, "gathers:fieldLines:dispatch"), 0);
+    assertStrictEquals(now.geometryBuilds, before.geometryBuilds);
+    assertStrictEquals(
       now.uploadBytes,
       before.uploadBytes,
       "ramp range is a uniform",
@@ -425,16 +434,16 @@ Deno.test("electric fields", async () => {
       const d = head.map((h, i) => h - tail[i]);
       const len = Math.hypot(...d);
       const expected = Math.min(m, 1.8);
-      assert.ok(
+      assert(
         Math.abs(len - expected) < 0.05 * expected,
         `arrow ${a}: ${len} vs ${expected}`,
       );
       const cos = (d[0] * e[0] + d[1] * e[1] + d[2] * e[2]) / (len * m);
-      assert.ok(cos > 0.995, `arrow ${a} direction ${cos}`);
+      assert(cos > 0.995, `arrow ${a} direction ${cos}`);
       checked++;
     }
     report.states.arrows = { checked };
-    assert.ok(checked >= 4, `arrows checked: ${checked}`);
+    assert(checked >= 4, `arrows checked: ${checked}`);
     await frames(10);
     before = await counters();
     await update({ planeIndex: 16, arrowScale: 2 });
@@ -447,7 +456,7 @@ Deno.test("electric fields", async () => {
         "shaderBuilds",
       ]
     ) {
-      assert.equal(now[key], before[key], `plane move: no ${key}`);
+      assertStrictEquals(now[key], before[key], `plane move: no ${key}`);
     }
     await page.locator("canvas").screenshot({
       path: `${out}/efield-arrows.png`,
@@ -489,7 +498,7 @@ Deno.test("electric fields", async () => {
     }
     await update({ mode: "none", physics: {} });
 
-    assert.deepEqual(
+    assertEquals(
       await page.evaluate(() => window.__efield.errors),
       [],
       "no WebGPU errors",
@@ -497,8 +506,11 @@ Deno.test("electric fields", async () => {
     report.status = "passed";
     console.log(JSON.stringify(report));
   } finally {
-    await writeFile(`${out}/efield.json`, JSON.stringify(report, null, 2));
+    await Deno.writeTextFile(
+      `${out}/efield.json`,
+      JSON.stringify(report, null, 2),
+    );
     await browser?.close();
-    server.close();
+    await server.shutdown();
   }
 });

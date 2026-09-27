@@ -1,15 +1,15 @@
 // 0sj.5 acceptance: multiple runs render as separate strips (never bridged
 // across the chain break), empty input renders nothing without error, and a
 // width/color edit uploads no new geometry.
-import assert from "node:assert/strict";
-import { fileURLToPath } from "node:url";
+import { assert, assertEquals } from "@std/assert";
+import { fromFileUrl } from "@std/path";
 import { createServer } from "vite";
 import { chromium } from "playwright";
 import { webgpuBrowserArgs } from "./webgpu-browser-args.mjs";
 import { workspaceAliases } from "../../../scripts/workspace-aliases.mjs";
 
 Deno.test("viewer tube", async () => {
-  const root = fileURLToPath(new URL("../../../", import.meta.url));
+  const root = fromFileUrl(new URL("../../../", import.meta.url));
   const server = await createServer({
     root,
     configFile: false,
@@ -82,16 +82,16 @@ Deno.test("viewer tube", async () => {
     await settle();
     const multi = await snap();
     const multiShot = await shot();
-    assert.deepEqual(
+    assertEquals(
       multi.errors,
       [],
       "multi-run scene produced WebGPU errors",
     );
-    assert.ok(
+    assert(
       multi.storageLabels.includes("molgpu:positions"),
       "expected a positions storage buffer",
     );
-    assert.ok(
+    assert(
       multi.storageLabels.includes("molgpu:segments"),
       "expected a segments storage buffer",
     );
@@ -100,7 +100,7 @@ Deno.test("viewer tube", async () => {
     // GPUBuffer sizes round up (observed: to a 16-byte alignment), so allow slack.
     const segmentsCapacity =
       multi.storageCapacities[multi.storageLabels.indexOf("molgpu:segments")];
-    assert.ok(
+    assert(
       segmentsCapacity >= 38 * 4 && segmentsCapacity <= 38 * 4 + 16,
       `expected ~38 i32 segment codes (152-168 bytes) for two unbridged 19-sample runs, got ${segmentsCapacity} bytes`,
     );
@@ -111,12 +111,12 @@ Deno.test("viewer tube", async () => {
     await settle();
     const empty = await snap();
     const emptyShot = await shot();
-    assert.deepEqual(
+    assertEquals(
       empty.errors,
       [],
       "empty-input scene produced WebGPU errors",
     );
-    assert.ok(
+    assert(
       !emptyShot.equals(multiShot),
       "empty input must stop drawing the tubes",
     );
@@ -124,7 +124,7 @@ Deno.test("viewer tube", async () => {
       .filter((label) =>
         label === "molgpu:positions" || label === "molgpu:segments"
       );
-    assert.deepEqual(
+    assertEquals(
       newTubeBuffers,
       [],
       "empty selection must allocate no new tube geometry buffers",
@@ -138,7 +138,7 @@ Deno.test("viewer tube", async () => {
     await settle();
     const restored = await snap();
     const restoredShot = await shot();
-    assert.ok(
+    assert(
       restoredShot.equals(multiShot),
       "switching back to the multi-run scene must reproduce the same image",
     );
@@ -151,7 +151,7 @@ Deno.test("viewer tube", async () => {
     await settle();
     const styled = await snap();
     const styledShot = await shot();
-    assert.ok(
+    assert(
       !styledShot.equals(restoredShot),
       "a width/color edit must change the rendered image",
     );
@@ -159,7 +159,7 @@ Deno.test("viewer tube", async () => {
       .filter((label) =>
         label === "molgpu:positions" || label === "molgpu:segments"
       );
-    assert.deepEqual(
+    assertEquals(
       newGeometryBuffers,
       [],
       "a width/color edit must not rebuild trace/spline geometry",
@@ -170,14 +170,14 @@ Deno.test("viewer tube", async () => {
       .filter((w) =>
         w.label === "molgpu:positions" || w.label === "molgpu:segments"
       );
-    assert.deepEqual(
+    assertEquals(
       newGeometryWrites,
       [],
       "a width/color edit must not re-upload trace/spline geometry",
     );
 
-    assert.deepEqual(errors, [], "page errors");
-    assert.deepEqual(styled.errors, [], "uncaptured WebGPU errors");
+    assertEquals(errors, [], "page errors");
+    assertEquals(styled.errors, [], "uncaptured WebGPU errors");
 
     console.log(
       JSON.stringify({

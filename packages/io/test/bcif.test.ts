@@ -1,12 +1,11 @@
 import { assert, assertRejects, assertStrictEquals } from "@std/assert";
-import { readFile } from "node:fs/promises";
 import { BOND_FLAGS, type Topology } from "@molgpu/table";
 import { BcifParseError, structureFromBcif } from "../src/index.ts";
 
 Deno.test("lowers public 1TQN BinaryCIF into owned table domains", async () => {
   const data = await structureFromBcif(
     new Uint8Array(
-      await readFile(new URL("./fixtures/1tqn.bcif", import.meta.url)),
+      await Deno.readFile(new URL("./fixtures/1tqn.bcif", import.meta.url)),
     ),
   );
   assertStrictEquals(data.topology.atoms.count, 3999);
@@ -27,7 +26,7 @@ Deno.test("reports malformed BCIF through a structured boundary error", async ()
 Deno.test("every element symbol maps to its atomic number, not only common ones", async () => {
   // 4C7R carries five chloride ions; an 8-symbol table once read them as 0.
   const data = await structureFromBcif(
-    await readFile(new URL("./fixtures/4c7r.bcif", import.meta.url)),
+    await Deno.readFile(new URL("./fixtures/4c7r.bcif", import.meta.url)),
   );
   const { element } = data.topology.atoms;
   assertStrictEquals(element.filter((z) => z === 17).length, 5);
@@ -37,7 +36,7 @@ Deno.test("every element symbol maps to its atomic number, not only common ones"
 Deno.test("a microheterogeneous position is one residue with per-atom components", async () => {
   // 1EJG residue 22 is modelled as PRO (altloc A) and SER (altloc B).
   const data = await structureFromBcif(
-    await readFile(new URL("./fixtures/1ejg.bcif", import.meta.url)),
+    await Deno.readFile(new URL("./fixtures/1ejg.bcif", import.meta.url)),
   );
   const { atoms, residues } = data.topology;
   assert(atoms.comp, "atoms.comp is emitted when a residue mixes components");
@@ -60,7 +59,7 @@ Deno.test("a microheterogeneous position is one residue with per-atom components
 
 Deno.test("atoms.comp is omitted without microheterogeneity", async () => {
   const data = await structureFromBcif(
-    await readFile(new URL("./fixtures/1crn.bcif", import.meta.url)),
+    await Deno.readFile(new URL("./fixtures/1crn.bcif", import.meta.url)),
   );
   assertStrictEquals(data.topology.atoms.comp, undefined);
 });
@@ -68,7 +67,7 @@ Deno.test("atoms.comp is omitted without microheterogeneity", async () => {
 Deno.test("links carry typed bonds from chem_comp_bond and struct_conn", async () => {
   const load = async (id: string) =>
     (await structureFromBcif(
-      await readFile(new URL(`./fixtures/${id}.bcif`, import.meta.url)),
+      await Deno.readFile(new URL(`./fixtures/${id}.bcif`, import.meta.url)),
     )).topology;
   const seen = (id: string, links: NonNullable<Topology["links"]>) => {
     const out = new Map<string, number>();

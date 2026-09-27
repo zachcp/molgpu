@@ -1,15 +1,15 @@
 // urn.5 acceptance probe: a style-only `scale` change writes a uniform and
 // re-uploads no per-atom column. Warm up, snapshot STORAGE allocations,
 // change scale, and assert zero new storage buffers while the image changes.
-import assert from "node:assert/strict";
-import { fileURLToPath } from "node:url";
+import { assert, assertEquals, assertStrictEquals } from "@std/assert";
+import { fromFileUrl } from "@std/path";
 import { createServer } from "vite";
 import { chromium } from "playwright";
 import { webgpuBrowserArgs } from "./webgpu-browser-args.mjs";
 import { workspaceAliases } from "../../../scripts/workspace-aliases.mjs";
 
 Deno.test("viewer size field", async () => {
-  const root = fileURLToPath(new URL("../../../", import.meta.url));
+  const root = fromFileUrl(new URL("../../../", import.meta.url));
   const server = await createServer({
     root,
     configFile: false,
@@ -97,7 +97,7 @@ Deno.test("viewer size field", async () => {
         "molgpu:radii",
       ]
     ) {
-      assert.ok(
+      assert(
         before.storageLabels.includes(label),
         `probe missed ${label} buffer`,
       );
@@ -111,12 +111,12 @@ Deno.test("viewer size field", async () => {
     const after = await snap();
     const afterShot = await shot();
 
-    assert.ok(
+    assert(
       !afterShot.equals(beforeShot),
       "scale change must change the rendered image",
     );
     const storageDelta = after.storage - before.storage;
-    assert.equal(
+    assertStrictEquals(
       storageDelta,
       0,
       `scale change reallocated ${storageDelta} storage buffers (expected 0)`,
@@ -130,11 +130,11 @@ Deno.test("viewer size field", async () => {
     const afterPalette = await snap();
     const paletteShot = await shot();
     const paletteDelta = afterPalette.storage - after.storage;
-    assert.ok(
+    assert(
       !paletteShot.equals(afterShot),
       "palette change must change the rendered image",
     );
-    assert.equal(
+    assertStrictEquals(
       paletteDelta,
       0,
       `palette change reallocated ${paletteDelta} storage buffers (expected 0)`,
@@ -153,21 +153,21 @@ Deno.test("viewer size field", async () => {
     const afterTime = await snap();
     const timeShot = await shot();
     const timeDelta = afterTime.storage - timeBase.storage;
-    assert.ok(
+    assert(
       !timeShot.equals(timeBaseShot),
       "time change must change the rendered image",
     );
-    assert.equal(
+    assertStrictEquals(
       timeDelta,
       0,
       `time change reallocated ${timeDelta} storage buffers (expected 0)`,
     );
-    assert.deepEqual(
+    assertEquals(
       geometryWrites(afterTime, timeBase),
       [],
       "time change rewrote geometry",
     );
-    assert.deepEqual(
+    assertEquals(
       afterTime.camera,
       { radius: 34, bearing: 0.6 },
       "style beat keeps camera fixed",
@@ -180,17 +180,17 @@ Deno.test("viewer size field", async () => {
     await settle();
     const orbit = await snap();
     const orbitShot = await shot();
-    assert.deepEqual(orbit.camera, { radius: 20, bearing: 1.1 });
-    assert.ok(
+    assertEquals(orbit.camera, { radius: 20, bearing: 1.1 });
+    assert(
       !orbitShot.equals(timeShot),
       "camera curve must change the rendered image",
     );
-    assert.equal(
+    assertStrictEquals(
       orbit.storage - afterTime.storage,
       0,
       "camera scrub reallocated storage",
     );
-    assert.deepEqual(
+    assertEquals(
       geometryWrites(orbit, afterTime),
       [],
       "camera scrub rewrote geometry",
@@ -201,17 +201,17 @@ Deno.test("viewer size field", async () => {
     await settle();
     const rewind = await snap();
     const rewindShot = await shot();
-    assert.deepEqual(rewind.camera, { radius: 34, bearing: 0.6 });
-    assert.ok(
+    assertEquals(rewind.camera, { radius: 34, bearing: 0.6 });
+    assert(
       rewindShot.equals(timeShot),
       "reverse scrub must reproduce the prior beat image",
     );
-    assert.equal(
+    assertStrictEquals(
       rewind.storage - orbit.storage,
       0,
       "reverse scrub reallocated storage",
     );
-    assert.deepEqual(
+    assertEquals(
       geometryWrites(rewind, orbit),
       [],
       "reverse scrub rewrote geometry",
@@ -221,23 +221,23 @@ Deno.test("viewer size field", async () => {
     await settle();
     await settle();
     const reset = await snap();
-    assert.ok(
+    assert(
       (await shot()).equals(timeBaseShot),
       "scrub to zero must reproduce the start image",
     );
-    assert.equal(
+    assertStrictEquals(
       reset.storage - rewind.storage,
       0,
       "reset scrub reallocated storage",
     );
-    assert.deepEqual(
+    assertEquals(
       geometryWrites(reset, rewind),
       [],
       "reset scrub rewrote geometry",
     );
 
-    assert.deepEqual(errors, [], "page errors");
-    assert.deepEqual(reset.errors, [], "uncaptured WebGPU errors");
+    assertEquals(errors, [], "page errors");
+    assertEquals(reset.errors, [], "uncaptured WebGPU errors");
 
     console.log(JSON.stringify({
       status: "passed",

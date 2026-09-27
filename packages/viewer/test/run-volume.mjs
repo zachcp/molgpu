@@ -5,26 +5,27 @@
  * <VolumeSlice> moves by uniforms only and composes with depth. Part of
  * `deno task test:components`.
  */
-import assert from "node:assert/strict";
-import { createServer } from "node:http";
-import { createReadStream } from "node:fs";
-import { mkdir, stat, writeFile } from "node:fs/promises";
-import { extname, normalize } from "node:path";
-import { fileURLToPath } from "node:url";
+import {
+  assert,
+  assertEquals,
+  assertMatch,
+  assertStrictEquals,
+} from "@std/assert";
+import { extname, fromFileUrl, normalize } from "@std/path";
 import { build } from "vite";
 import { chromium } from "playwright";
 import { webgpuBrowserArgs } from "./webgpu-browser-args.mjs";
 import { writeCcp4 } from "../../io/test/ccp4-fixture.ts";
 
 Deno.test("volume components", async () => {
-  const root = fileURLToPath(new URL("../../../", import.meta.url));
+  const root = fromFileUrl(new URL("../../../", import.meta.url));
   const fixture = `${root}packages/viewer/test/volume`;
   const out = `${root}packages/viewer/test/results`;
   const PORT = 5193;
-  await mkdir(out, { recursive: true });
+  await Deno.mkdir(out, { recursive: true });
   await build({ configFile: `${fixture}/vite.config.mjs`, logLevel: "warn" });
   // A small EM-style map served as a file, for the `src` path.
-  await writeFile(
+  await Deno.writeFile(
     `${fixture}/dist/map.mrc`,
     writeCcp4({
       extent: [8, 6, 5],
@@ -34,29 +35,30 @@ Deno.test("volume components", async () => {
     }),
   );
 
-  const server = createServer(async (req, res) => {
-    const name = normalize(
-      decodeURIComponent(new URL(req.url, "http://x").pathname),
-    );
-    const path = `${fixture}/dist${name === "/" ? "/index.html" : name}`;
-    try {
-      if (!(await stat(path)).isFile()) throw new Error("not a file");
-    } catch {
-      res.writeHead(404);
-      res.end("not found");
-      return;
-    }
-    res.writeHead(200, {
-      "content-type": { ".html": "text/html", ".js": "text/javascript" }[
+  const server = Deno.serve(
+    { port: PORT, hostname: "127.0.0.1", onListen() {} },
+    async (req) => {
+      const name = normalize(decodeURIComponent(new URL(req.url).pathname));
+      const path = `${fixture}/dist${name === "/" ? "/index.html" : name}`;
+      let info;
+      try {
+        info = await Deno.stat(path);
+        if (!info.isFile) throw new Error("not a file");
+      } catch {
+        return new Response("not found", { status: 404 });
+      }
+      const type = { ".html": "text/html", ".js": "text/javascript" }[
         extname(path)
-      ] ?? "application/octet-stream",
-    });
-    createReadStream(path).pipe(res);
-  });
+      ] ?? "application/octet-stream";
+      const file = await Deno.open(path, { read: true });
+      return new Response(file.readable, {
+        headers: { "content-type": type },
+      });
+    },
+  );
   const report = { date: new Date().toISOString(), states: {} };
   let browser;
   try {
-    await new Promise((resolve) => server.listen(PORT, "127.0.0.1", resolve));
     browser = await chromium.launch({
       channel: "chrome",
       headless: true,
@@ -184,24 +186,28 @@ Deno.test("volume components", async () => {
       staging.destroy();
       return values;
     });
-    assert.deepEqual(
+    assertEquals(
       readback,
       await page.evaluate(() => window.__volume.values("gradient")),
       "the GPU buffer holds the volume's values",
     );
     let now = await counters();
-    assert.equal(delta(now, baseline, "allocations:volume:values"), 1);
-    assert.equal(
+    assertStrictEquals(delta(now, baseline, "allocations:volume:values"), 1);
+    assertStrictEquals(
       delta(now, baseline, "uploadBytes:volume:values"),
       volumeBytes,
     );
-    assert.equal(now.ownedBuffers.bytes["volume:values"], volumeBytes);
+    assertStrictEquals(now.ownedBuffers.bytes["volume:values"], volumeBytes);
 
     // 2. Unmounting releases the buffer.
     await update({ mode: "none" });
     now = await counters();
-    assert.equal(now.ownedBuffers.bytes["volume:values"], 0, "volume released");
-    assert.equal(now.ownedBuffers.live, baseline.ownedBuffers.live);
+    assertStrictEquals(
+      now.ownedBuffers.bytes["volume:values"],
+      0,
+      "volume released",
+    );
+    assertStrictEquals(now.ownedBuffers.live, baseline.ownedBuffers.live);
 
     // 3. <Volume> and a volumeSample field share one copy; the field colours
     //    atoms by the sampled value without uploading a colour column.
@@ -209,58 +215,74 @@ Deno.test("volume components", async () => {
     await update({ mode: "shared" });
     const shared = await classify(await settled("shared"));
     now = await counters();
-    assert.equal(
+    assertStrictEquals(
       delta(now, before, "allocations:volume:values"),
       1,
       "one GPU copy for <Volume> and the field",
     );
-    assert.equal(delta(now, before, "uploadBytes:volume:values"), volumeBytes);
+    assertStrictEquals(
+      delta(now, before, "uploadBytes:volume:values"),
+      volumeBytes,
+    );
     const uploads = Object.keys(now.detail).filter((key) =>
       key.startsWith("uploadBytes:") && delta(now, before, key) > 0
     ).sort();
-    assert.deepEqual(uploads, [
+    assertEquals(uploads, [
       "uploadBytes:structure:positions",
       "uploadBytes:structure:radii",
       "uploadBytes:volume:values",
     ], "no per-atom colour upload");
-    assert.ok(
+    assert(
       shared.blue > 200,
       `x = -8 samples blue: ${JSON.stringify(shared)}`,
     );
-    assert.ok(shared.red > 200, `x = 8 samples red: ${JSON.stringify(shared)}`);
-    assert.ok(
+    assert(shared.red > 200, `x = 8 samples red: ${JSON.stringify(shared)}`);
+    assert(
       shared.purple > 200,
       `outside samples 0 → mid: ${JSON.stringify(shared)}`,
     );
     report.states.shared = shared;
     await update({ mode: "none" });
-    assert.equal((await counters()).ownedBuffers.bytes["volume:values"], 0);
+    assertStrictEquals(
+      (await counters()).ownedBuffers.bytes["volume:values"],
+      0,
+    );
 
     // 4. <Isosurface>: level remeshes; colour and opacity do not.
     before = await counters();
     await update({ mode: "iso", level: 5 });
     const iso = await settled("iso");
     const isoPixels = await classify(iso);
-    assert.ok(isoPixels.lit > 2000, "the isosurface draws");
+    assert(isoPixels.lit > 2000, "the isosurface draws");
     const afterMesh = await counters();
-    assert.equal(delta(afterMesh, before, "geometryBuilds:isosurface:mesh"), 1);
+    assertStrictEquals(
+      delta(afterMesh, before, "geometryBuilds:isosurface:mesh"),
+      1,
+    );
     await update({ color: [0.95, 0.2, 0.2, 1] });
     const recoloured = await settled("iso-recoloured");
     await update({ opacity: 0.6 });
     await settled("iso-faded");
     now = await counters();
-    assert.ok(!recoloured.equals(iso), "colour change reaches the draw");
-    assert.equal(
+    assert(!recoloured.equals(iso), "colour change reaches the draw");
+    assertStrictEquals(
       delta(now, afterMesh, "geometryBuilds:isosurface:mesh"),
       0,
       "colour/opacity never remesh",
     );
-    assert.equal(now.uploadBytes, afterMesh.uploadBytes, "no style upload");
+    assertStrictEquals(
+      now.uploadBytes,
+      afterMesh.uploadBytes,
+      "no style upload",
+    );
     await update({ level: { sigma: 1.5 }, opacity: 1 });
     const relevelled = await settled("iso-sigma");
     now = await counters();
-    assert.equal(delta(now, afterMesh, "geometryBuilds:isosurface:mesh"), 1);
-    assert.ok(!relevelled.equals(recoloured), "a new level redraws");
+    assertStrictEquals(
+      delta(now, afterMesh, "geometryBuilds:isosurface:mesh"),
+      1,
+    );
+    assert(!relevelled.equals(recoloured), "a new level redraws");
     report.states.iso = { pixels: isoPixels };
     await update({ mode: "none" });
 
@@ -273,38 +295,42 @@ Deno.test("volume components", async () => {
     await update({ index: 16 });
     const sliceB = await settled("slice-b");
     now = await counters();
-    assert.ok(
+    assert(
       !sliceB.equals(sliceA),
       `moving the plane changes the draw ${
         JSON.stringify(await page.evaluate(() => window.__volume.errors))
       } ${JSON.stringify(errors)}`,
     );
-    assert.equal(now.uploadBytes, beforeMove.uploadBytes, "no upload on move");
-    assert.equal(
+    assertStrictEquals(
+      now.uploadBytes,
+      beforeMove.uploadBytes,
+      "no upload on move",
+    );
+    assertStrictEquals(
       now.geometryBuilds,
       beforeMove.geometryBuilds,
       "no remesh on move",
     );
-    assert.equal(
+    assertStrictEquals(
       now.allocations,
       beforeMove.allocations,
       "no new buffers on move",
     );
     const [a, b] = [await classify(sliceA), await classify(sliceB)];
     // Index 6 is x ≈ -4 (bluish); index 16 is x ≈ 6 (reddish).
-    assert.ok(
+    assert(
       a.blue + a.purple > a.red,
       `low plane is blue-ish: ${JSON.stringify(a)}`,
     );
-    assert.ok(b.red > a.red, `high plane is redder: ${JSON.stringify(b)}`);
+    assert(b.red > a.red, `high plane is redder: ${JSON.stringify(b)}`);
     report.states.slice = { a, b };
     await update({ mode: "none", bearing: 0 });
 
     // 6. Depth: the slice hides the atom behind it, not the one in front.
     await update({ mode: "depth" });
     const depth = await classify(await settled("depth"));
-    assert.ok(depth.green > 5000, "the slice draws");
-    assert.equal(
+    assert(depth.green > 5000, "the slice draws");
+    assertStrictEquals(
       depth.redBlobs.length,
       1,
       `one atom visible: ${JSON.stringify(depth)}`,
@@ -321,9 +347,12 @@ Deno.test("volume components", async () => {
       { timeout: 30000 },
     );
     now = await counters();
-    assert.equal(now.ownedBuffers.bytes["volume:values"], 256 ** 3 * 4);
+    assertStrictEquals(now.ownedBuffers.bytes["volume:values"], 256 ** 3 * 4);
     await update({ mode: "none" });
-    assert.equal((await counters()).ownedBuffers.bytes["volume:values"], 0);
+    assertStrictEquals(
+      (await counters()).ownedBuffers.bytes["volume:values"],
+      0,
+    );
 
     // 8. <Volume src> loads CCP4/MRC with loading → ready, and reports errors.
     await update({ mode: "src", src: "/map.mrc" });
@@ -331,28 +360,31 @@ Deno.test("volume components", async () => {
       timeout: 30000,
     });
     const dims = await page.evaluate(() => [...window.__volume.volume.dims]);
-    assert.deepEqual(dims, [8, 6, 5]);
+    assertEquals(dims, [8, 6, 5]);
     await update({ src: "/missing.mrc" });
     await page.waitForFunction(() => window.__volume.phase === "error", null, {
       timeout: 30000,
     });
-    assert.match(
+    assertMatch(
       await page.evaluate(() => window.__volume.failure),
       /volume 404/,
     );
     await update({ mode: "none" });
 
-    assert.deepEqual(
+    assertEquals(
       await page.evaluate(() => window.__volume.errors),
       [],
       "no WebGPU errors",
     );
-    assert.deepEqual(errors, [], "no page errors");
+    assertEquals(errors, [], "no page errors");
     report.status = "passed";
     console.log(JSON.stringify(report));
   } finally {
-    await writeFile(`${out}/volume.json`, JSON.stringify(report, null, 2));
+    await Deno.writeTextFile(
+      `${out}/volume.json`,
+      JSON.stringify(report, null, 2),
+    );
     await browser?.close();
-    server.close();
+    await server.shutdown();
   }
 });

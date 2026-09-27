@@ -1,39 +1,34 @@
-import assert from "node:assert/strict";
-import { createServer } from "node:http";
-import { readFile, stat } from "node:fs/promises";
-import { extname, normalize } from "node:path";
-import { fileURLToPath } from "node:url";
+import { assertEquals, assertStrictEquals } from "@std/assert";
+import { extname, fromFileUrl, normalize } from "@std/path";
 import { build } from "vite";
 import { chromium } from "playwright";
 import { webgpuBrowserArgs } from "./webgpu-browser-args.mjs";
 
 Deno.test("GPU DSSP agrees with CPU on the pinned protein corpus", async () => {
-  const fixture = fileURLToPath(new URL("./gpu-dssp/", import.meta.url));
+  const fixture = fromFileUrl(new URL("./gpu-dssp/", import.meta.url));
   await build({ configFile: `${fixture}vite.config.mjs`, logLevel: "warn" });
-  const server = createServer(async (req, res) => {
-    const name = normalize(
-      decodeURIComponent(new URL(req.url, "http://x").pathname),
-    );
-    const path = `${fixture}dist${name === "/" ? "/index.html" : name}`;
-    try {
-      if (!(await stat(path)).isFile()) throw new Error("not a file");
-      const type = { ".html": "text/html", ".js": "text/javascript" }[
-        extname(path)
-      ] ?? "application/octet-stream";
-      res.writeHead(200, { "content-type": type });
-      res.end(await readFile(path));
-    } catch {
-      res.writeHead(404);
-      res.end("not found");
-    }
-  });
+  const server = Deno.serve(
+    { port: 0, hostname: "127.0.0.1", onListen() {} },
+    async (req) => {
+      const name = normalize(decodeURIComponent(new URL(req.url).pathname));
+      const path = `${fixture}dist${name === "/" ? "/index.html" : name}`;
+      try {
+        const info = await Deno.stat(path);
+        if (!info.isFile) throw new Error("not a file");
+        const type = { ".html": "text/html", ".js": "text/javascript" }[
+          extname(path)
+        ] ?? "application/octet-stream";
+        return new Response(await Deno.readFile(path), {
+          headers: { "content-type": type },
+        });
+      } catch {
+        return new Response("not found", { status: 404 });
+      }
+    },
+  );
   let browser;
   try {
-    await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
-    const address = server.address();
-    if (!address || typeof address === "string") {
-      throw new Error("HTTP address");
-    }
+    const address = server.addr;
     browser = await chromium.launch({
       channel: "chrome",
       headless: true,
@@ -48,7 +43,7 @@ Deno.test("GPU DSSP agrees with CPU on the pinned protein corpus", async () => {
     });
     await page.goto(`http://127.0.0.1:${address.port}/`);
     await page.waitForFunction(() => typeof window.runGpuDssp === "function");
-    assert.deepEqual(
+    assertEquals(
       await page.evaluate(() => window.runDsspOverflowPolicy()),
       ["static", "frame", "frame"],
       "component overflow defaults must distinguish a static root from live coordinates",
@@ -63,19 +58,19 @@ Deno.test("GPU DSSP agrees with CPU on the pinned protein corpus", async () => {
           result.milliseconds.toFixed(1)
         } ms`,
       );
-      assert.deepEqual(result.mismatch, [], `${id} GPU/CPU mismatch`);
+      assertEquals(result.mismatch, [], `${id} GPU/CPU mismatch`);
       if (id === "1crn") {
-        assert.equal(
+        assertStrictEquals(
           result.aborted,
           true,
           "superseded frame must stop before the next GPU pass",
         );
-        assert.equal(
+        assertStrictEquals(
           result.stableFrame,
           true,
           "a source write between submits must not mix coordinate frames",
         );
-        assert.equal(
+        assertStrictEquals(
           result.storageCopy,
           true,
           "a source without COPY_SRC is frozen by a storage copy",
@@ -90,10 +85,10 @@ Deno.test("GPU DSSP agrees with CPU on the pinned protein corpus", async () => {
       console.log(
         `2k39 model ${model}: ${result.residues} residues, ${result.near} direct threshold centres`,
       );
-      assert.deepEqual(result.mismatch, [], `2k39 model ${model} mismatch`);
+      assertEquals(result.mismatch, [], `2k39 model ${model} mismatch`);
     }
     const overflow = await page.evaluate(() => window.runDenseDsspOverflow());
-    assert.deepEqual(overflow, {
+    assertEquals(overflow, {
       named: true,
       equal: true,
       sparseNamed: true,
@@ -107,13 +102,13 @@ Deno.test("GPU DSSP agrees with CPU on the pinned protein corpus", async () => {
           copies,
         );
         console.log(`DSSP benchmark: ${JSON.stringify(result)}`);
-        assert.equal(result.mismatch, 0);
-        assert.equal(result.fallback, false);
+        assertStrictEquals(result.mismatch, 0);
+        assertStrictEquals(result.fallback, false);
       }
     }
-    assert.deepEqual(errors, [], "browser errors");
+    assertEquals(errors, [], "browser errors");
   } finally {
     await browser?.close();
-    await new Promise((resolve) => server.close(resolve));
+    await server.shutdown();
   }
 });

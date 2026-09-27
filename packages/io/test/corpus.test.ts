@@ -1,10 +1,15 @@
 import { assert, assertEquals, assertStrictEquals } from "@std/assert";
-import { readFile } from "node:fs/promises";
-import { createHash } from "node:crypto";
 import { activeAtoms } from "@molgpu/table";
 import { structureFromBcif } from "../src/index.ts";
 import { corpus } from "./corpus.ts";
 import { cifCategories, type CifCategory, num, str } from "./cif.ts";
+
+async function sha256Hex(bytes: Uint8Array): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", bytes as BufferSource);
+  return Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+}
 
 function primaryOracle(atom: CifCategory): Uint32Array {
   const residueRows = new Map<string, number>(),
@@ -60,11 +65,11 @@ function primaryOracle(atom: CifCategory): Uint32Array {
 
 for (const fixture of corpus) {
   Deno.test(`${fixture.id}: preserve Mol* atom_site rows and policy selection`, async () => {
-    const bytes = new Uint8Array(
-      await readFile(new URL(`./fixtures/${fixture.id}.bcif`, import.meta.url)),
+    const bytes = await Deno.readFile(
+      new URL(`./fixtures/${fixture.id}.bcif`, import.meta.url),
     );
     assertStrictEquals(
-      createHash("sha256").update(bytes).digest("hex"),
+      await sha256Hex(bytes),
       fixture.sha256,
       "fixture bytes are pinned",
     );

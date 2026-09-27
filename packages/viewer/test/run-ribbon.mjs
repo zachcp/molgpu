@@ -1,15 +1,15 @@
 // 0sj.6 acceptance: a real corpus structure renders a ribbon, a color edit
 // uploads no new geometry, and an empty selection renders nothing without
 // error.
-import assert from "node:assert/strict";
-import { fileURLToPath } from "node:url";
+import { assert, assertEquals, assertStrictEquals } from "@std/assert";
+import { fromFileUrl } from "@std/path";
 import { createServer } from "vite";
 import { chromium } from "playwright";
 import { webgpuBrowserArgs } from "./webgpu-browser-args.mjs";
 import { workspaceAliases } from "../../../scripts/workspace-aliases.mjs";
 
 Deno.test("viewer ribbon", async () => {
-  const root = fileURLToPath(new URL("../../../", import.meta.url));
+  const root = fromFileUrl(new URL("../../../", import.meta.url));
   const server = await createServer({
     root,
     configFile: false,
@@ -96,20 +96,20 @@ Deno.test("viewer ribbon", async () => {
     await settle();
     const initial = await snap();
     const initialShot = await shot();
-    assert.deepEqual(
+    assertEquals(
       initial.errors,
       [],
       "initial ribbon produced WebGPU errors",
     );
-    assert.ok(
+    assert(
       initial.storageLabels.includes("molgpu:positions"),
       "expected a positions storage buffer",
     );
-    assert.ok(
+    assert(
       initial.storageLabels.includes("molgpu:normals"),
       "expected a normals storage buffer",
     );
-    assert.ok(
+    assert(
       initial.storageLabels.includes("molgpu:indices"),
       "expected an indices storage buffer",
     );
@@ -120,13 +120,13 @@ Deno.test("viewer ribbon", async () => {
     await settle();
     const styled = await snap();
     const styledShot = await shot();
-    assert.deepEqual(styled.errors, [], "color edit produced WebGPU errors");
-    assert.equal(
+    assertEquals(styled.errors, [], "color edit produced WebGPU errors");
+    assertStrictEquals(
       styled.storage - initial.storage,
       0,
       "a color edit must not rebuild ribbon geometry",
     );
-    assert.ok(
+    assert(
       !styledShot.equals(initialShot),
       "a color edit must change the rendered image",
     );
@@ -137,12 +137,12 @@ Deno.test("viewer ribbon", async () => {
     await settle();
     const empty = await snap();
     const emptyShot = await shot();
-    assert.deepEqual(
+    assertEquals(
       empty.errors,
       [],
       "empty-input scene produced WebGPU errors",
     );
-    assert.ok(
+    assert(
       !emptyShot.equals(styledShot),
       "empty input must stop drawing the ribbon",
     );
@@ -151,7 +151,7 @@ Deno.test("viewer ribbon", async () => {
         label === "molgpu:positions" || label === "molgpu:normals" ||
         label === "molgpu:indices"
       );
-    assert.deepEqual(
+    assertEquals(
       newRibbonBuffers,
       [],
       "empty selection must allocate no new ribbon geometry buffers",
@@ -174,16 +174,16 @@ Deno.test("viewer ribbon", async () => {
         );
       });
     await settle();
-    assert.deepEqual(
+    assertEquals(
       (await snap()).errors,
       [],
       "GPU DSSP ribbon produced WebGPU errors",
     );
     const status = await page.evaluate(() => window.__probe.dsspStatus);
-    assert.equal(status.fallback, false);
-    assert.ok(status.bridgeCount > 0);
+    assertStrictEquals(status.fallback, false);
+    assert(status.bridgeCount > 0);
     const snapshot = await page.evaluate(() => window.__probe.dsspSnapshot);
-    assert.deepEqual(snapshot, {
+    assertEquals(snapshot, {
       generation: status.generation,
       provenance: "gpu:dssp",
     });
@@ -191,9 +191,9 @@ Deno.test("viewer ribbon", async () => {
     await page.evaluate(() => window.__probe.setColor([0.7, 0.3, 0.5, 1]));
     await settle();
     const afterGpuStyle = await snap();
-    assert.deepEqual(afterGpuStyle.errors, []);
-    assert.equal(await page.evaluate(() => window.__probe.dsspRuns), 1);
-    assert.deepEqual(
+    assertEquals(afterGpuStyle.errors, []);
+    assertStrictEquals(await page.evaluate(() => window.__probe.dsspRuns), 1);
+    assertEquals(
       afterGpuStyle.storageLabels.slice(gpuBuffers.length).filter((label) =>
         ["molgpu:positions", "molgpu:normals", "molgpu:indices"].includes(label)
       ),
@@ -209,7 +209,7 @@ Deno.test("viewer ribbon", async () => {
       window.__probe.dsspSnapshot?.generation ===
         window.__probe.dsspStatus?.generation
     );
-    assert.deepEqual((await snap()).errors, []);
+    assertEquals((await snap()).errors, []);
 
     // A kernel-backed coordinate source may compile after its buffer appears.
     // One static generation must publish codes only after its first dispatch.
@@ -220,7 +220,7 @@ Deno.test("viewer ribbon", async () => {
     await page.waitForFunction(() =>
       window.__probe.dsspStatus !== null && window.__probe.dsspCodes !== null
     );
-    assert.deepEqual(
+    assertEquals(
       await page.evaluate(() => window.__probe.dsspCodes),
       await page.evaluate(() => window.__probe.expectedWobbleCodes),
       "static WobbleCoordinates must publish DSSP for its computed positions",
@@ -245,13 +245,13 @@ Deno.test("viewer ribbon", async () => {
       codes: window.__probe.dsspCodes,
     }));
     await page.evaluate(() => clearInterval(window.__probe.playback));
-    assert.ok(
+    assert(
       duringPlayback.runs >= runsBeforePlayback + 2,
       "continuous playback must publish GPU DSSP at a bounded rate",
     );
-    assert.equal(duringPlayback.inFlight, 1);
-    assert.ok(duringPlayback.codes?.length > 0);
-    assert.deepEqual((await snap()).errors, []);
+    assertStrictEquals(duringPlayback.inFlight, 1);
+    assert(duringPlayback.codes?.length > 0);
+    assertEquals((await snap()).errors, []);
 
     console.log(
       JSON.stringify({

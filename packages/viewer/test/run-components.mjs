@@ -7,19 +7,19 @@
  * sibling isolation, empty/loading/error states, replaced and unmounted
  * sources, and the uncaptured WebGPU error channel.
  */
-import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
-import { createServer } from "node:http";
-import { createReadStream } from "node:fs";
-import { mkdir, stat, writeFile } from "node:fs/promises";
-import { extname, normalize } from "node:path";
-import { fileURLToPath } from "node:url";
+import {
+  assert,
+  assertEquals,
+  assertMatch,
+  assertStrictEquals,
+} from "@std/assert";
+import { extname, fromFileUrl, normalize } from "@std/path";
 import { build } from "vite";
 import { chromium } from "playwright";
 import { webgpuBrowserArgs } from "./webgpu-browser-args.mjs";
 
 Deno.test("viewer components", async () => {
-  const root = fileURLToPath(new URL("../../../", import.meta.url));
+  const root = fromFileUrl(new URL("../../../", import.meta.url));
   const fixture = `${root}packages/viewer/test/tsx`;
   const out = `${root}packages/viewer/test/results`;
   const PORT = 5187;
@@ -29,23 +29,25 @@ Deno.test("viewer components", async () => {
     ".wasm": "application/wasm",
     ".bcif": "application/octet-stream",
   };
-  await mkdir(out, { recursive: true });
+  await Deno.mkdir(out, { recursive: true });
 
   const report = {
     date: new Date().toISOString(),
     status: "running",
     states: {},
   };
-  await writeFile(`${out}/components.json`, JSON.stringify(report));
+  await Deno.writeTextFile(`${out}/components.json`, JSON.stringify(report));
 
-  const typecheck = spawnSync(Deno.execPath(), [
-    "check",
-    `${fixture}/consumer.tsx`,
-    `${fixture}/diagnostics.ts`,
-  ], { cwd: root, encoding: "utf8" });
-  if (typecheck.status !== 0) {
+  const typecheck = new Deno.Command(Deno.execPath(), {
+    args: ["check", `${fixture}/consumer.tsx`, `${fixture}/diagnostics.ts`],
+    cwd: root,
+  }).outputSync();
+  if (!typecheck.success) {
+    const decoder = new TextDecoder();
     throw new Error(
-      `Deno check failed:\n${typecheck.stdout}${typecheck.stderr}`,
+      `Deno check failed:\n${decoder.decode(typecheck.stdout)}${
+        decoder.decode(typecheck.stderr)
+      }`,
     );
   }
   report.typecheck = "passed";
@@ -53,30 +55,37 @@ Deno.test("viewer components", async () => {
   report.build = "passed";
 
   // Serve the built bundle plus the pinned corpus, so `src` fetches real bytes.
-  const server = createServer(async (req, res) => {
-    const url = new URL(req.url, "http://127.0.0.1");
-    const name = normalize(decodeURIComponent(url.pathname));
-    const path = name.startsWith("/fixtures/")
-      ? `${root}packages/io/test${name}`
-      : name.startsWith("/site/assets/")
-      ? `${root}${name}`
-      : `${fixture}/dist${name === "/" ? "/index.html" : name}`;
-    try {
-      if (!(await stat(path)).isFile()) throw new Error("not a file");
-    } catch {
-      res.writeHead(404, { "content-type": "text/plain" });
-      res.end("not found");
-      return;
-    }
-    res.writeHead(200, {
-      "content-type": TYPES[extname(path)] ?? "application/octet-stream",
-    });
-    createReadStream(path).pipe(res);
-  });
+  const server = Deno.serve(
+    { port: PORT, hostname: "127.0.0.1", onListen() {} },
+    async (req) => {
+      const url = new URL(req.url);
+      const name = normalize(decodeURIComponent(url.pathname));
+      const path = name.startsWith("/fixtures/")
+        ? `${root}packages/io/test${name}`
+        : name.startsWith("/site/assets/")
+        ? `${root}${name}`
+        : `${fixture}/dist${name === "/" ? "/index.html" : name}`;
+      let info;
+      try {
+        info = await Deno.stat(path);
+        if (!info.isFile) throw new Error("not a file");
+      } catch {
+        return new Response("not found", {
+          status: 404,
+          headers: { "content-type": "text/plain" },
+        });
+      }
+      const file = await Deno.open(path, { read: true });
+      return new Response(file.readable, {
+        headers: {
+          "content-type": TYPES[extname(path)] ?? "application/octet-stream",
+        },
+      });
+    },
+  );
 
   let browser;
   try {
-    await new Promise((resolve) => server.listen(PORT, "127.0.0.1", resolve));
     browser = await chromium.launch({
       channel: "chrome",
       headless: true,
@@ -231,14 +240,18 @@ Deno.test("viewer components", async () => {
 
     // 1. Preloaded StructureData draws, and never reaches for the BCIF parser.
     const preloaded = await blobs("preloaded", "components-preloaded");
-    assert.equal(preloaded.length, 1, "preloaded structure draws one cluster");
-    assert.match(
+    assertStrictEquals(
+      preloaded.length,
+      1,
+      "preloaded structure draws one cluster",
+    );
+    assertMatch(
       await page.evaluate(() => window.__viewer.missingCoordinatesError),
       /Required context 'CoordinatesContext' was used without being provided/,
       "useCoordinates outside Structure reports a composition error",
     );
-    assert.equal(molstar(), 0, "a preloaded dataset must not load Mol*");
-    assert.deepEqual(
+    assertStrictEquals(molstar(), 0, "a preloaded dataset must not load Mol*");
+    assertEquals(
       await page.evaluate(() => window.__viewer.rootPositionReads),
       { cpu: "ok", gpu: "ok" },
       "root-only trees may read root positions",
@@ -258,7 +271,7 @@ Deno.test("viewer components", async () => {
       }
       await settle();
     }
-    assert.deepEqual(
+    assertEquals(
       positions,
       expectedCoordinates,
       "the two offsets compose exactly in the GPU buffer",
@@ -266,11 +279,11 @@ Deno.test("viewer components", async () => {
     const guardedReads = await page.evaluate(() =>
       window.__viewer.rootPositionReads
     );
-    assert.match(
+    assertMatch(
       guardedReads.cpu,
       /useCoordinates\(\) or useCoordinateSnapshot\(\)/,
     );
-    assert.match(
+    assertMatch(
       guardedReads.gpu,
       /useCoordinates\(\) or useCoordinateSnapshot\(\)/,
     );
@@ -284,8 +297,12 @@ Deno.test("viewer components", async () => {
       await settle();
       offsetBlobs = await blobs("offset", "components-offset");
     }
-    assert.equal(offsetBlobs.length, 1, "the provider chain draws Spacefill");
-    assert.ok(
+    assertStrictEquals(
+      offsetBlobs.length,
+      1,
+      "the provider chain draws Spacefill",
+    );
+    assert(
       offsetBlobs[0].x > preloaded[0].x + 20 &&
         offsetBlobs[0].x < preloaded[0].x + 45,
       "the chained offset moves the Spacefill draw",
@@ -293,9 +310,9 @@ Deno.test("viewer components", async () => {
     const firstDispatches = await page.evaluate(() =>
       window.__viewer.dispatches
     );
-    assert.equal(firstDispatches, 2, "one dispatch per offset provider");
+    assertStrictEquals(firstDispatches, 2, "one dispatch per offset provider");
     await settle();
-    assert.equal(
+    assertStrictEquals(
       await page.evaluate(() => window.__viewer.dispatches),
       firstDispatches,
       "unchanged content does not redispatch",
@@ -315,30 +332,30 @@ Deno.test("viewer components", async () => {
         break;
       }
     }
-    assert.ok(
+    assert(
       visibilityFrame !== null,
       `updated coordinates reach the draw: before=${
         JSON.stringify(offsetBlobs)
       } observed=${JSON.stringify(observed)}`,
     );
     await settle();
-    assert.deepEqual(
+    assertEquals(
       await readCoordinates(),
       [-12, 1, 0, -9, 1, 0, -6, 1, 0],
       "changing a parameter republishes both provider generations",
     );
-    assert.equal(
+    assertStrictEquals(
       await page.evaluate(() => window.__viewer.dispatches),
       firstDispatches + 2,
       "each changed provider dispatches once",
     );
-    assert.equal(
+    assertStrictEquals(
       await page.evaluate(() => window.__viewer.counters().uploadBytes),
       uploadsBefore,
       "coordinate updates do not upload topology or style data",
     );
     await update({ mode: "preloaded" });
-    assert.equal(
+    assertStrictEquals(
       await page.evaluate(() => window.__viewer.counters().ownedBuffers.live),
       ownedBefore,
       "provider teardown returns owned GPU buffers to baseline",
@@ -389,9 +406,9 @@ Deno.test("viewer components", async () => {
       await settle();
     }
     const bondBefore = await shot();
-    assert.equal(bondVertices.length, expectedBondVertices.length);
+    assertStrictEquals(bondVertices.length, expectedBondVertices.length);
     for (let i = 0; i < bondVertices.length; i++) {
-      assert.ok(
+      assert(
         Math.abs(bondVertices[i] - expectedBondVertices[i]) <= 1e-5,
         `bond vertex ${i} matches the CPU midpoint oracle`,
       );
@@ -402,22 +419,22 @@ Deno.test("viewer components", async () => {
     await update({ offsetX: 6 }, true);
     const movedBondVertices = await readBondVertices();
     for (let i = 0; i < bondVertices.length; i += 3) {
-      assert.ok(Math.abs(movedBondVertices[i] - bondVertices[i] - 1) <= 1e-5);
-      assert.ok(
+      assert(Math.abs(movedBondVertices[i] - bondVertices[i] - 1) <= 1e-5);
+      assert(
         Math.abs(movedBondVertices[i + 1] - bondVertices[i + 1]) <= 1e-5,
       );
-      assert.ok(
+      assert(
         Math.abs(movedBondVertices[i + 2] - bondVertices[i + 2]) <= 1e-5,
       );
     }
-    assert.equal(
+    assertStrictEquals(
       await page.evaluate(() =>
         window.__viewer.counters().detail["geometryBuilds:bonds:columns"] ?? 0
       ),
       bondBuilds,
       "moving coordinates does not rebuild CPU bond columns",
     );
-    assert.ok(
+    assert(
       !(await shot()).equals(bondBefore),
       "live bonds move in the draw",
     );
@@ -428,13 +445,13 @@ Deno.test("viewer components", async () => {
     const attributeBytes = await page.evaluate(() =>
       window.__viewer.counters().detail["uploadBytes:attr:atomChain"] ?? 0
     );
-    assert.equal(
+    assertStrictEquals(
       attributeBytes,
       12,
       "Spacefill and Bonds share one three-row attribute upload",
     );
     await update({ offsetX: 7 });
-    assert.equal(
+    assertStrictEquals(
       await page.evaluate(() =>
         window.__viewer.counters().detail["uploadBytes:attr:atomChain"] ?? 0
       ),
@@ -447,9 +464,9 @@ Deno.test("viewer components", async () => {
     const unrelatedBytes = await page.evaluate(() =>
       window.__viewer.counters().detail["uploadBytes:attr:user:a"] ?? 0
     );
-    assert.equal(unrelatedBytes, 12);
+    assertStrictEquals(unrelatedBytes, 12);
     await update({ offsetX: 1 });
-    assert.equal(
+    assertStrictEquals(
       await page.evaluate(() =>
         window.__viewer.counters().detail["uploadBytes:attr:user:a"] ?? 0
       ),
@@ -492,8 +509,8 @@ Deno.test("viewer components", async () => {
     const nextAttribute = await page.evaluate(() =>
       window.__viewer.attributeSnapshot
     );
-    assert.ok(nextAttribute.generation > firstAttribute.generation);
-    assert.ok(
+    assert(nextAttribute.generation > firstAttribute.generation);
+    assert(
       !(await shot()).equals(attributeBefore),
       "kernel-produced attribute changes Spacefill colour",
     );
@@ -507,18 +524,18 @@ Deno.test("viewer components", async () => {
     const finalAttribute = await page.evaluate(() =>
       window.__viewer.attributeSnapshot
     );
-    assert.ok(finalAttribute.generation > nextAttribute.generation);
+    assert(finalAttribute.generation > nextAttribute.generation);
     const attributeOwned = await page.evaluate(() =>
       window.__viewer.counters().ownedBuffers.bytes
     );
-    assert.equal(attributeOwned["attr:producer:gpu:test"], 12);
-    assert.equal(attributeOwned["attr:snapshot:gpu:test"], 24);
+    assertStrictEquals(attributeOwned["attr:producer:gpu:test"], 12);
+    assertStrictEquals(attributeOwned["attr:snapshot:gpu:test"], 24);
     const projectedAttributeMB = (
       attributeOwned["attr:producer:gpu:test"] +
       attributeOwned["attr:snapshot:gpu:test"] +
       finalAttribute.values.length * 4
     ) / finalAttribute.values.length;
-    assert.equal(
+    assertStrictEquals(
       projectedAttributeMB,
       16,
       "producer, staging and CPU copy use 16 bytes per atom",
@@ -560,30 +577,30 @@ Deno.test("viewer components", async () => {
     const firstBounds = await page.evaluate(() =>
       window.__viewer.coordinateBounds
     );
-    assert.deepEqual(firstBounds.min, [-13, 1, 0]);
-    assert.deepEqual(firstBounds.max, [-7, 1, 0]);
-    assert.equal(firstBounds.count, 3);
+    assertEquals(firstBounds.min, [-13, 1, 0]);
+    assertEquals(firstBounds.max, [-7, 1, 0]);
+    assertStrictEquals(firstBounds.count, 3);
     // Memory budget (contract section 4): root, two providers and snapshot
     // staging at 1M atoms, plus the 12 B/atom CPU copy, stay within 92 MB.
     const ownedBytes = await page.evaluate(() =>
       window.__viewer.counters().ownedBuffers.bytes
     );
     const atoms = 3;
-    assert.equal(
+    assertStrictEquals(
       ownedBytes["coords:provider"],
       2 * atoms * 12,
       "two providers hold one packed vec3 buffer each",
     );
-    assert.equal(
+    assertStrictEquals(
       ownedBytes["coords:snapshot"],
       2 * atoms * 12,
       "snapshot readback holds two packed staging buffers",
     );
-    assert.ok(ownedBytes["structure:positions"] > 0, "root positions tracked");
+    assert(ownedBytes["structure:positions"] > 0, "root positions tracked");
     const perAtom = (ownedBytes["structure:positions"] +
       ownedBytes["coords:provider"] + ownedBytes["coords:snapshot"]) / atoms;
     const projected = (perAtom + 12) * 1e6;
-    assert.ok(
+    assert(
       projected <= 92e6,
       `coords budget at 1M atoms: ${projected / 1e6} MB <= 92 MB`,
     );
@@ -596,16 +613,19 @@ Deno.test("viewer components", async () => {
     const selectedBounds = await page.evaluate(() =>
       window.__viewer.selectedBounds
     );
-    assert.deepEqual(selectedBounds.min, [-13, 1, 0]);
-    assert.deepEqual(selectedBounds.max, [-10, 1, 0]);
-    assert.equal(selectedBounds.count, 2);
-    assert.equal(await page.evaluate(() => window.__viewer.emptyBounds), null);
+    assertEquals(selectedBounds.min, [-13, 1, 0]);
+    assertEquals(selectedBounds.max, [-10, 1, 0]);
+    assertStrictEquals(selectedBounds.count, 2);
+    assertStrictEquals(
+      await page.evaluate(() => window.__viewer.emptyBounds),
+      null,
+    );
     await page.waitForFunction(
       () => window.__viewer.coordinateFocus?.target[0] === -10,
       null,
       { timeout: 10000 },
     );
-    assert.deepEqual(firstSnapshot.positions, [-13, 1, 0, -10, 1, 0, -7, 1, 0]);
+    assertEquals(firstSnapshot.positions, [-13, 1, 0, -10, 1, 0, -7, 1, 0]);
     await update({ offsetX: 6 }, true);
     await page.waitForFunction(
       () => window.__viewer.coordinateSnapshot?.positions[0] === -12,
@@ -625,21 +645,21 @@ Deno.test("viewer components", async () => {
       null,
       { timeout: 10000 },
     );
-    assert.ok(secondSnapshot.revision > firstSnapshot.revision);
+    assert(secondSnapshot.revision > firstSnapshot.revision);
     report.states.snapshot = { first: firstSnapshot, second: secondSnapshot };
     await update({ mode: "preloaded" });
 
     // 2. The runtime rejects the same prop combinations the types reject.
     const invalid = await page.evaluate(() => window.__viewer.invalid());
-    assert.match(invalid[0], /either data or src, not both/);
-    assert.match(invalid[1], /requires data or src/);
-    assert.match(invalid[2], /src must be a string/);
-    assert.match(invalid[3], /loader must be a function/);
+    assertMatch(invalid[0], /either data or src, not both/);
+    assertMatch(invalid[1], /requires data or src/);
+    assertMatch(invalid[2], /src must be a string/);
+    assertMatch(invalid[3], /loader must be a function/);
     report.states.invalidProps = invalid;
 
     // 3. An empty structure owns no GPU source and draws nothing.
     await update({ mode: "empty" });
-    assert.deepEqual(
+    assertEquals(
       await blobs("empty", "components-empty"),
       [],
       "an empty structure draws nothing",
@@ -650,17 +670,17 @@ Deno.test("viewer components", async () => {
     //    own nearest Structure, which here means its own radii.
     await update({ mode: "siblings" });
     const siblings = await blobs("siblings", "components-siblings");
-    assert.equal(
+    assertStrictEquals(
       siblings.length,
       2,
       "two sibling structures draw two clusters",
     );
     const [wide, narrow] = siblings;
-    assert.ok(
+    assert(
       wide.size > narrow.size * 1.5,
       `each sibling keeps its own radii: ${JSON.stringify(siblings)}`,
     );
-    assert.ok(
+    assert(
       Math.min(wide.x, narrow.x) < 400 && Math.max(wide.x, narrow.x) > 400,
       `each sibling keeps its own coordinates: ${JSON.stringify(siblings)}`,
     );
@@ -669,7 +689,7 @@ Deno.test("viewer components", async () => {
     // 5. A replaced source cannot mount a stale result.
     await update({ mode: "controlled", src: "/first" });
     await until(() => window.__viewer.snapshot().pending === 1);
-    assert.equal(
+    assertStrictEquals(
       (await snapshot()).phase,
       "loading",
       "an in-flight load shows the loading prop",
@@ -680,17 +700,17 @@ Deno.test("viewer components", async () => {
       window.__viewer.settle(0, "left")
     );
     await settle();
-    assert.equal(
+    assertStrictEquals(
       staleCancelled,
       true,
       "replacing src cancels the outstanding request",
     );
-    assert.equal(
+    assertStrictEquals(
       (await snapshot()).phase,
       "loading",
       "a stale result must not mount",
     );
-    assert.deepEqual(
+    assertEquals(
       await blobs("stale", "components-stale"),
       [],
       "a stale result must not draw",
@@ -698,12 +718,12 @@ Deno.test("viewer components", async () => {
     await page.evaluate(() => window.__viewer.settle(1, "right"));
     await until(() => window.__viewer.snapshot().phase === "ready");
     const replaced = await snapshot();
-    assert.deepEqual(
+    assertEquals(
       replaced.history,
       ["loading", "ready"],
       "the replacement never showed a stale mount",
     );
-    assert.equal(
+    assertStrictEquals(
       (await blobs("replaced", "components-replaced")).length,
       1,
       "the current source mounts",
@@ -714,17 +734,17 @@ Deno.test("viewer components", async () => {
     await update({ mode: "missing", src: "/fixtures/absent.bcif" });
     await until(() => window.__viewer.snapshot().phase === "error");
     const failed = await snapshot();
-    assert.deepEqual(
+    assertEquals(
       failed.history,
       ["loading", "error"],
       "a failing source shows loading, then the error prop",
     );
-    assert.match(
+    assertMatch(
       failed.failure,
       /404/,
       "the error prop receives the transport failure",
     );
-    assert.deepEqual(
+    assertEquals(
       await blobs("error", "components-error"),
       [],
       "a failed source draws nothing",
@@ -735,22 +755,22 @@ Deno.test("viewer components", async () => {
     await update({ mode: "remote", src: "/fixtures/1crn.bcif" });
     await until(() => window.__viewer.snapshot().phase === "ready");
     const loaded = await snapshot();
-    assert.deepEqual(
+    assertEquals(
       loaded.history,
       ["loading", "ready"],
       "a BCIF source shows loading, then its structure",
     );
-    assert.equal(
+    assertStrictEquals(
       loaded.atoms,
       327,
       "useStructureResource() reads the loaded structure",
     );
     const protein = await blobs("protein", "components-1crn");
-    assert.ok(
+    assert(
       protein.length >= 1 && protein[0].size > 20000,
       `1CRN renders as a protein-sized body: ${JSON.stringify(protein)}`,
     );
-    assert.ok(molstar() > 0, "a BCIF source does load the lazy parser");
+    assert(molstar() > 0, "a BCIF source does load the lazy parser");
     report.states.protein = {
       blobs: protein,
       history: loaded.history,
@@ -759,26 +779,26 @@ Deno.test("viewer components", async () => {
 
     // 8. Unmounting releases the subtree without leaving stale geometry.
     await update({ mounted: false });
-    assert.deepEqual(
+    assertEquals(
       await blobs("unmounted", "components-unmounted"),
       [],
       "unmounting removes the structure",
     );
     await update({ mounted: true, mode: "preloaded" });
-    assert.equal(
+    assertStrictEquals(
       (await blobs("remounted", "components-remounted")).length,
       1,
       "remounting redraws",
     );
 
     await settle();
-    assert.deepEqual(errors, [], "Browser errors");
-    assert.equal(
+    assertEquals(errors, [], "Browser errors");
+    assertStrictEquals(
       notFound.length,
       1,
       "only the deliberate absent structure may 404",
     );
-    assert.deepEqual((await snapshot()).errors, [], "WebGPU errors");
+    assertEquals((await snapshot()).errors, [], "WebGPU errors");
     report.status = "passed";
     report.browser = browser.version();
     console.log(JSON.stringify(report, null, 2));
@@ -787,11 +807,11 @@ Deno.test("viewer components", async () => {
     report.error = String(error);
     throw error;
   } finally {
-    await writeFile(
+    await Deno.writeTextFile(
       `${out}/components.json`,
       JSON.stringify(report, null, 2) + "\n",
     );
     await browser?.close();
-    await new Promise((resolve) => server.close(resolve));
+    await server.shutdown();
   }
 });
