@@ -63,7 +63,12 @@ export function atomSiteBcif(
   for (const [name, catRows] of Object.entries(options.categories ?? {})) {
     const builder = CifWriter.fields<number, typeof catRows>();
     for (const field of Object.keys(catRows[0] ?? {})) {
-      builder.str(field, (i, d) => String(d[i][field]));
+      builder.str(field, (i, d) => String(d[i][field]), {
+        // Encode CIF's missing/unknown markers as value kinds, so Mol*'s
+        // schema reader exercises the same fallback behavior as real inputs.
+        valueKind: (i, d) =>
+          d[i][field] === "." ? 1 : d[i][field] === "?" ? 2 : 0,
+      });
     }
     const catFields = builder.getFields();
     encoder.writeCategory({
