@@ -38,6 +38,11 @@ export type VectorLike =
   | Float32Array
   | Float64Array;
 
+/** RGBA colour stops over a normalised 0–1 range. */
+export type ColorStops = ReadonlyArray<
+  readonly [number, readonly [number, number, number, number]]
+>;
+
 /** Blend-mode names accepted by `<Spacefill>`'s point-layer options. */
 export type BlendMode =
   | "none"

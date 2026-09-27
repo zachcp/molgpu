@@ -254,6 +254,14 @@ Element identity exports:
 | `FrameSource`             | experimental | `read(index, signal?)`: decode one frame on demand, cancellable.                                                                      |
 | `TrajectoryTimeUnit`      | experimental | `"ps"`, `"step"` or `"index"`.                                                                                                        |
 
+### Element identity exports
+
+| Export                         | Stability    | Description                                                                |
+| ------------------------------ | ------------ | -------------------------------------------------------------------------- |
+| `ELEMENT_SYMBOL`               | experimental | MolQL-compatible uppercase symbols indexed by atomic number (0 = unknown). |
+| `atomicNumberForSymbol`        | experimental | Resolve an element symbol or accepted alias to its atomic number.          |
+| `elementSymbolForAtomicNumber` | experimental | Resolve an atomic number to its MolQL-compatible uppercase symbol.         |
+
 The column schema interfaces are experimental because columns may still be
 added; `StructureData` as the nominal value passed between packages is stable.
 `api.txt` holds the exact signatures and must be updated

@@ -3,7 +3,7 @@
  * colouring. `deno task test:components` builds it with vite and drives every
  * mode from run-volume.mjs through `window.__volume`.
  */
-import { type React, render, useState } from "@use-gpu/live";
+import { React, render, useState } from "@use-gpu/live";
 import type { LiveElement } from "@use-gpu/live";
 import type { StorageSource } from "@use-gpu/core";
 import { AutoCanvas, WebGPU } from "@use-gpu/webgpu";
@@ -33,6 +33,8 @@ import {
   enableInstrumentation,
   snapshotCounters,
 } from "../../src/internal/instrumentation.ts";
+
+void React;
 
 enableInstrumentation();
 

@@ -1,7 +1,4 @@
-/** RGBA colour stops over a normalised 0–1 range. */
-export type ColorStops = ReadonlyArray<
-  readonly [number, readonly [number, number, number, number]]
->;
+import type { ColorStops } from "../types.ts";
 
 /** Format a JavaScript number as a WGSL f32 literal. */
 export const wgslF32 = (value: number): string => {

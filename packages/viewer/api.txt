@@ -14,6 +14,8 @@ CameraFrame
   export interface CameraFrame extends CameraPose { readonly time: number; readonly ease?: "linear" | "cosine" | "hold" | "bezier"; readonly bezier?: readonly [number, number, number, number] }
 CameraPose
   export interface CameraPose { readonly target: readonly number[]; readonly radius: number; readonly bearing: number; readonly pitch: number }
+ColorStops
+  export type ColorStops = ReadonlyArray<readonly [number, readonly [number, number, number, number]]>;
 Distance
   export const Distance: ViewerComponent<{ a: Selection; b: Selection; color?: VectorLike; width?: number; size?: number; labelColor?: VectorLike; /** 0–1, fades the line and label together. */ opacity?: number; /** Customise the label text; receives the distance in Ångström. */ format?: (distance: number) => string }>;
 DrawMode
@@ -63,7 +65,7 @@ Ribbon
 SlicePlane
   export type SlicePlane = { readonly axis: 0 | 1 | 2; readonly index: number } | { readonly normal: readonly [number, number, number]; readonly point?: readonly [number, number, number] };
 SliceStops
-  export type SliceStops = ReadonlyArray<readonly [number, readonly [number, number, number, number]]>;
+  export type SliceStops = ColorStops;
 Spacefill
   export const Spacefill: ViewerComponent<{ /** Multiplies each atom's Ångström radius; defaults to 1. */ scale?: number; /** A @molgpu/select atom Selection for this structure; restricts the draw. */ select?: Selection | null; /** A flat colour, or a @molgpu/fields Field composed shader-side per atom. */ color?: VectorLike | Field; /** Wraps the shaded point layer; without one, the ambient scene material. */ material?: MaterialSpec; /** Draw the atoms into the picking buffer so usePicking() can resolve them * (needs a <PickingProvider> and a <Pass picking>). Defaults to false. */ pickable?: boolean } & Translucency & PointLayerOptions>;
 Structure

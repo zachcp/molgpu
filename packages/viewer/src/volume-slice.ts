@@ -1,6 +1,11 @@
 import { sampleVolumeWgsl } from "@molgpu/fields";
 import { type VolumeGrid, volumeInverseTransform } from "@molgpu/table";
-import type { Translucency, VectorLike, ViewerComponent } from "./types.ts";
+import type {
+  ColorStops,
+  Translucency,
+  VectorLike,
+  ViewerComponent,
+} from "./types.ts";
 import { use, useMemo } from "@use-gpu/live";
 import {
   FaceLayer,
@@ -16,11 +21,7 @@ import { type SlicePlane, slicePlaneFrame } from "./internal/slice-plane.ts";
 import { useRepaint } from "./internal/use-repaint.ts";
 import { useBindingProbe } from "./internal/use-binding-probe.ts";
 import { count } from "./internal/instrumentation.ts";
-import {
-  colorRampWgsl,
-  type ColorStops,
-  wgslF32 as f32,
-} from "./internal/color-ramp.ts";
+import { colorRampWgsl, wgslF32 as f32 } from "./internal/color-ramp.ts";
 
 export type { SlicePlane } from "./internal/slice-plane.ts";
 

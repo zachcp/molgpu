@@ -8,7 +8,7 @@
  * control surface, imported from ./diagnostics.ts so this file keeps consumer
  * shape: state in, Live elements out.
  */
-import { type React, render, useOne, useState } from "@use-gpu/live";
+import { React, render, useOne, useState } from "@use-gpu/live";
 import type { LiveElement } from "@use-gpu/live";
 import { AutoCanvas, WebGPU } from "@use-gpu/webgpu";
 import {
@@ -42,6 +42,16 @@ import { BondVertexProbe } from "./bond-vertex-probe.ts";
 import { probe } from "./diagnostics.ts";
 import type { Mode, Phase, State } from "./diagnostics.ts";
 import { IdentityCoordinates } from "../fixtures/identity-coordinates.ts";
+
+declare global {
+  namespace JSX {
+    interface IntrinsicAttributes {
+      key?: string | number;
+    }
+  }
+}
+
+void React;
 
 /** One synthetic chain of carbons centred on x, owned by @molgpu/table. */
 const cluster = (

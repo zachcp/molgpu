@@ -3,7 +3,7 @@
  * builds it with vite and drives every mode from run-trajectory.mjs through
  * `window.__trajectory`.
  */
-import { type React, render, useState } from "@use-gpu/live";
+import { React, render, useState } from "@use-gpu/live";
 import type { LiveElement } from "@use-gpu/live";
 import type { StorageSource } from "@use-gpu/core";
 import { AutoCanvas, WebGPU } from "@use-gpu/webgpu";
@@ -44,6 +44,8 @@ import {
   snapshotCounters,
 } from "../../src/internal/instrumentation.ts";
 import { WobbleCoordinates } from "../fixtures/wobble-coordinates.ts";
+
+void React;
 
 enableInstrumentation();
 

@@ -4,6 +4,8 @@
 
 Binding
   export interface Binding { readonly id: string; readonly binding: number; readonly kind: "buffer" | "uniform"; readonly wgslType: string; /** Name of the WGSL accessor for this input (`@link fn` in the link target). */ readonly accessor: string; /** buffer: fill(data) -> Float32Array; uniform: fill({ t }) -> Float32Array. */ readonly fill: (source: StructureData | { t?: number }) => Float32Array; /** For a `volume:<n>` buffer: the volume whose samples fill it. */ readonly volume?: VolumeData }
+COLOR
+  export const COLOR: ValueType;
 Color
   export type Color = readonly [number, number, number, number];
 Compiled
@@ -22,6 +24,8 @@ Overflow
   export type Overflow = "clamp" | "wrap" | "fail";
 ResidueIdentity
   export interface ResidueIdentity { model: number; chainLabel: string; chainAuth: string; labelSeq: number; authSeq: string; insCode: string; comp: string }
+SCALAR
+  export const SCALAR: ValueType;
 Scalar
   export type Scalar = number;
 Target
@@ -50,6 +54,8 @@ categorical
   export function categorical(input: Field, cases: Record<number, number | Color>, fallback: number | Color): Field;
 colormap
   export function colormap(input: Field, stops: ReadonlyArray<readonly [number, Color]>): Field;
+columnRange
+  export function columnRange(data: StructureData, name: string): [number, number];
 compile
   export function compile(field: Field, options?: { domain?: Domain; target?: Target; /** The grid argument-free `volumeSample()` samples (the viewer's nearest volume). */ volume?: VolumeGrid }): Compiled;
 constant

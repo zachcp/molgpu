@@ -3,7 +3,7 @@
  * `deno task test:components` builds it with vite and drives every mode from
  * run-efield.mjs through `window.__efield`.
  */
-import { type React, render, useState } from "@use-gpu/live";
+import { React, render, useState } from "@use-gpu/live";
 import type { LiveElement } from "@use-gpu/live";
 import { AutoCanvas, WebGPU } from "@use-gpu/webgpu";
 import {
@@ -49,6 +49,8 @@ import { fieldLinesTesting } from "../../src/field-lines.ts";
 import { positionsWgsl } from "../../src/field-arrows.ts";
 import { slicePlaneFrame } from "../../src/internal/slice-plane.ts";
 import { WobbleCoordinates } from "../fixtures/wobble-coordinates.ts";
+
+void React;
 
 enableInstrumentation();
 

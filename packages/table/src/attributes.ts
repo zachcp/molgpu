@@ -25,7 +25,19 @@ const ATTRIBUTE_NAMES = /^[a-z][a-z0-9-]*:[A-Za-z][A-Za-z0-9_-]*$/;
 const PROVENANCE =
   /^(legacy|default|user|(?:imported|template|computed|gpu):[A-Za-z0-9][A-Za-z0-9._-]*)$/;
 /** Domains shared by table's built-in columns and fields' attribute builder. */
-export const ATTRIBUTE_DOMAINS = Object.freeze(
+export const ATTRIBUTE_DOMAINS: Readonly<{
+  element: "atom";
+  occupancy: "atom";
+  bfactor: "atom";
+  radius: "atom";
+  residue: "atom";
+  atomChain: "atom";
+  formalCharge: "atom";
+  partialCharge: "atom";
+  labelSeq: "residue";
+  chain: "residue";
+  ssCode: "residue";
+}> = Object.freeze(
   {
     element: "atom",
     occupancy: "atom",

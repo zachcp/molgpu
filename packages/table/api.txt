@@ -2,6 +2,8 @@
 
 ## .
 
+ATTRIBUTE_DOMAINS
+  export const ATTRIBUTE_DOMAINS: Readonly<{ element: "atom"; occupancy: "atom"; bfactor: "atom"; radius: "atom"; residue: "atom"; atomChain: "atom"; formalCharge: "atom"; partialCharge: "atom"; labelSeq: "residue"; chain: "residue"; ssCode: "residue" }>;
 Atoms
   export interface Atoms { readonly count: number; readonly id: readonly string[]; readonly name: readonly string[]; readonly altloc: readonly string[]; readonly residue: Uint32Array; /** Atomic number; 0 denotes unknown. */ readonly element: Uint8Array; readonly occupancy: Float32Array; readonly bfactor: Float32Array; readonly radius?: Float32Array; /** Per-atom chemical component, present only when some residue mixes components (microheterogeneity); residues.comp is then the residue's first atom's. */ readonly comp?: readonly string[]; /** * Formal charge on hand-built structures; resolves as `formalCharge` with * provenance `legacy`. @deprecated Set the derived `formalCharge` attribute * with `withAttributes`; `@molgpu/io` no longer writes this column. */ readonly formalCharge?: Int8Array }
 AttributeColumn
@@ -24,6 +26,8 @@ Chains
   export interface Chains { readonly count: number; readonly model: Int32Array; readonly labelId: readonly string[]; readonly authId: readonly string[]; /** mmCIF label_entity_id. Absent when the source has none. */ readonly entityId?: readonly string[]; /** mmCIF _entity.type of the chain's entity, lower-cased ("polymer", "non-polymer", "water", "branched", ...); "" when unlisted. Absent with entityId. */ readonly entityType?: readonly string[]; /** Entity subtype as Mol* assigns it (entity_poly / pdbx_entity_branch type, else derived from the component: "polypeptide(L)", "oligosaccharide", "other", ...). Absent with entityId. */ readonly entitySubtype?: readonly string[] }
 DsspOptions
   export interface DsspOptions { /** * Atom rows to read, ascending (default: every model with primary altlocs, * `activeAtoms(data, { model: "all" })`). A residue's backbone atom is the * first row with that name, so `altloc: "all"` rows read the first conformer * in file order, as Mol* does. */ readonly rows?: ArrayLike<number> }
+ELEMENT_SYMBOL
+  export const ELEMENT_SYMBOL: readonly string[];
 FrameSource
   export interface FrameSource { /** Decode frame `index`. Rejects with an `AbortError` when `signal` aborts. */ read(index: number, signal?: AbortSignal): Promise<TrajectoryFrame> }
 Instances
@@ -72,6 +76,8 @@ activeAtoms
   export function activeAtoms(data: StructureData, policy?: ViewPolicy): Uint32Array;
 atomRadii
   export function atomRadii(data: StructureData): Float32Array;
+atomicNumberForSymbol
+  export function atomicNumberForSymbol(symbol: string): number;
 attributeColumn
   export function attributeColumn(data: StructureData, name: string): AttributeColumn | undefined;
 attributeNames
@@ -92,6 +98,8 @@ dssp
   export function dssp(data: StructureData, options?: DsspOptions): Uint8Array;
 elementRadius
   export function elementRadius(atomicNumber: number): number;
+elementSymbolForAtomicNumber
+  export function elementSymbolForAtomicNumber(atomicNumber: number): string;
 residueKey
   export function residueKey(data: StructureData, row: number): string;
 sampleVolume

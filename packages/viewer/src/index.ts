@@ -6,6 +6,7 @@ export type {
   CameraCurve,
   CameraFrame,
   CameraPose,
+  ColorStops,
   DrawMode,
   EFieldProps,
   FocusCameraFrame,
