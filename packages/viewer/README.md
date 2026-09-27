@@ -123,6 +123,10 @@ may change before 0.1.0; _advanced_ — only from `@molgpu/viewer/advanced`.
 | `VolumeLoader`               | experimental | Cancellable `(src, cancelled) => VolumeData` loader.                                                                                                                                                                    |
 | `Isosurface`                 | experimental | CPU marching-cubes isosurface of the nearest `<Volume>` at an absolute or sigma `level`.                                                                                                                                |
 | `VolumeSlice`                | experimental | Per-fragment planar cross-section of the nearest `<Volume>` through a colour ramp.                                                                                                                                      |
+| `EField`                     | experimental | GPU Coulomb potential (vacuum, ε = 4r or Debye–Hückel) of the nearest coordinates and a charge column, provided as a live Volume in kT/e.                                                                               |
+| `EFieldProps`                | experimental | `<EField>` props: selection, charge column, dielectric model, grid and budgets.                                                                                                                                         |
+| `FieldLines`                 | experimental | RK4 streamlines of E = −∇φ through the nearest volume, integrated on the GPU per volume generation.                                                                                                                     |
+| `FieldArrows`                | experimental | E = −∇φ arrows on a lattice in a slice plane; moving the plane is a uniform write.                                                                                                                                      |
 | `Trajectory`                 | experimental | Coordinate provider that plays a `TrajectoryData` (`data`) or a DCD/XTC/TRR URL (`src`) over the nearest coordinates; `frame` is a number or timeline curve; `interpolate`, `pbc="minimum-image"`.                      |
 | `Transform`                  | experimental | Coordinate provider applying a column-major 4×4 affine matrix (or vector curve) to all atoms or `select` rows. Other rows pass through.                                                                                 |
 | `TransformProps`             | experimental | Matrix, optional atom selection, and children for `<Transform>`.                                                                                                                                                        |
@@ -159,6 +163,7 @@ may change before 0.1.0; _advanced_ — only from `@molgpu/viewer/advanced`.
 | `createStructureResource`    | experimental | Create a StructureResource outside a `<Structure>`.                                                                                                                                                                     |
 | `useStructureResource`       | experimental | The nearest `<Structure>`'s `StructureResource`, for `focusSelection` and other resource-taking APIs.                                                                                                                   |
 | `useCoordinateSnapshot`      | experimental | Shared, throttled CPU positions below a GPU provider; `null` until first readback.                                                                                                                                      |
+| `useVolumeSnapshot`          | experimental | CPU samples of the nearest volume: at once for `<Volume>`, throttled readback for a computed one.                                                                                                                       |
 | `CoordinateSnapshot`         | experimental | Published structure data, revisioned resource and source generation.                                                                                                                                                    |
 | `useAttributeSnapshot`       | experimental | Demand-driven CPU copy of a GPU-produced attribute, with its source generation.                                                                                                                                         |
 | `AttributeSnapshot`          | experimental | Published structure data and attribute producer generation.                                                                                                                                                             |
@@ -234,8 +239,8 @@ may change before 0.1.0; _advanced_ — only from `@molgpu/viewer/advanced`.
 | `TimelineContext`            | advanced     | Live context carrying timeline time.                                                                                                                                                                                    |
 | `TrajectoryContext`          | advanced     | Live context carrying the nearest `<Trajectory>` state.                                                                                                                                                                 |
 | `VolumeContext`              | advanced     | Live context carrying the nearest `<Volume>`'s data and GPU samples.                                                                                                                                                    |
-| `VolumeContextValue`         | advanced     | `{ volume, source }` from the volume context.                                                                                                                                                                           |
-| `useVolume`                  | advanced     | Read the nearest `<Volume>`; throws without one.                                                                                                                                                                        |
+| `VolumeContextValue`         | advanced     | `{ grid, source, generation, range, volume, snapshot, subscribe }` from the volume context.                                                                                                                             |
+| `useVolume`                  | advanced     | Read the nearest `<Volume>` or `<EField>`; throws without one.                                                                                                                                                          |
 | `FlatMaterial`               | advanced     | Custom unlit fragment-shader material.                                                                                                                                                                                  |
 | `LitMaterial`                | advanced     | Custom lit shader material.                                                                                                                                                                                             |
 | `WorldSpacePointLayer`       | advanced     | PointLayer with GPU radii source and Ångström size conversion in a shader.                                                                                                                                              |
@@ -253,14 +258,53 @@ may change before 0.1.0; _advanced_ — only from `@molgpu/viewer/advanced`.
 ## Volumes
 
 `<Volume>` sits beside `<Structure>`, not inside it: a structure never owns a
-volume. Its samples upload once per `VolumeData` identity to a GPU buffer that
-`<Isosurface>`, `<VolumeSlice>` and any `volumeSample` field share; the last
-consumer to unmount destroys it. `<Isosurface>` meshes on the CPU through the
-volume's full index-to-world affine and remeshes only when the volume or the
-resolved level changes. `<VolumeSlice>` samples per fragment, so moving its
-plane, range or opacity updates uniforms only. Colour atoms from a map with
-`color={colormap(volumeSample(map), stops)}`: the field reads the atoms'
-positions and the shared samples, with no per-atom colour upload.
+volume. (A computed volume, `<EField>`, sits inside the structure it reads; see
+Electric fields below.) Its samples upload once per `VolumeData` identity to a
+GPU buffer that `<Isosurface>`, `<VolumeSlice>` and any `volumeSample` field
+share; the last consumer to unmount destroys it. `<Isosurface>` meshes on the
+CPU through the volume's full index-to-world affine and remeshes only when the
+volume or the resolved level changes. `<VolumeSlice>` samples per fragment, so
+moving its plane, range or opacity updates uniforms only. Colour atoms from a
+map with `color={colormap(volumeSample(map), stops)}`: the field reads the
+atoms' positions and the shared samples, with no per-atom colour upload.
+
+## Electric fields
+
+`<EField>` is a computed volume. It sums the Coulomb potential of the nearest
+coordinates and a charge column on the GPU, so the representations below it work
+as they do under `<Volume>`:
+
+```tsx
+<Structure data={withAttributes(data, { partialCharge })}>
+  <EField select={protein}>
+    <Surface color={byPotential()} />
+    <Isosurface level={5} color={[0.3, 0.4, 1, 1]} />
+    <FieldLines seeds={{ spacing: 4 }} colorRange={[0, 2]} />
+  </EField>
+</Structure>;
+```
+
+Assign charges first with `templateCharges` (@molgpu/dynamics), `applyPqr` or
+`structureFromPqr`; a missing column throws by name. Only the first model's
+primary-conformer atoms are summed. Pass a `select` that leaves out water if the
+charges include it.
+
+- **Physics.** The default model is a distance-dependent dielectric (ε = 4r,
+  ChimeraX's coulombic default). `model="debye"` screens with an ionic strength,
+  and `model="vacuum"` is plain Coulomb. Values are in kT/e at 298.15 K, which
+  makes the default display range ±15 (±2 for Debye). This is not
+  Poisson–Boltzmann: import an APBS map with `<Volume>` for that.
+- **Grid.** The grid is placed around the structure's own positions, padded by 8
+  Å at 1 Å spacing, or set with `box`. It stays fixed while coordinates move.
+- **Cost.** Direct summation runs at about 2e10 pairs per second on an Apple
+  silicon laptop. `maxPairs` (samples × charged atoms, default 2³⁴) refuses
+  larger sums and names a spacing that fits.
+- **Live updates.** Each coordinate generation recomputes on the GPU, one
+  computation at a time. Slices, `volumeSample()` colours, field lines and
+  arrows follow live. `<Isosurface>` follows CPU snapshots.
+- **Colouring and glyphs.** `byPotential()` colours a surface `sampleOffset` Å
+  (default 1.4) off each vertex. `<FieldLines>` and `<FieldArrows>` read E = −∇φ
+  from the same grid.
 
 ## Attribute channels
 

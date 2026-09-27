@@ -3,8 +3,12 @@
 // Live contexts, custom-shader materials) live in `@molgpu/viewer/advanced`.
 import type { StructureData, TrajectoryData, VolumeData } from "@molgpu/table";
 import type { Curve } from "@molgpu/timeline";
-import type { SelectionQuery } from "@molgpu/select";
-import type { NormalModeData } from "@molgpu/dynamics";
+import type {
+  DielectricModel,
+  NormalModeData,
+  PotentialUnit,
+} from "@molgpu/dynamics";
+import type { Selection, SelectionQuery } from "@molgpu/select";
 
 // --- Owned element, component and value types -------------------------------
 
@@ -278,6 +282,54 @@ export interface TrajectoryFrameState {
   readonly frame: number | null;
   /** Interpolated column-major box of the displayed frames, if both have one. */
   readonly box: Float32Array | null;
+}
+
+/**
+ * `<EField>` props. Physics defaults follow `electrostatics()` in
+ * @molgpu/dynamics: ε = 4r, 1 Å distance clamp, output in kT/e at 298.15 K.
+ */
+export interface EFieldProps {
+  children?: ViewerElement;
+  /** Summed atoms (∩ first model, primary altloc); default every active atom. */
+  select?: Selection | null;
+  /** Charge column (e per atom); defaults to `partialCharge`. */
+  charge?: string;
+  /** `vacuum`, `distance` (ε = D·r, the default) or `debye`. */
+  model?: DielectricModel;
+  /** ε for vacuum (1) and debye (78.54); D for distance (4). */
+  epsilon?: number;
+  /** mol/L, debye only; defaults to 0.15. */
+  ionicStrength?: number;
+  /** Kelvin; defaults to 298.15. */
+  temperature?: number;
+  /** Å below which distances clamp; defaults to 1. */
+  minDistance?: number;
+  /** Output unit; defaults to `kT/e`. */
+  unit?: PotentialUnit;
+  /** Grid spacing in Å; defaults to 1. */
+  spacing?: number;
+  /** Å added around the summed atoms' bounds; defaults to 8. */
+  padding?: number;
+  /** Explicit axis-aligned grid extent in Å (no padding), instead of padded bounds. */
+  box?: {
+    readonly min: readonly [number, number, number];
+    readonly max: readonly [number, number, number];
+  };
+  /** Sample ceiling; defaults to 128³. A larger grid throws a RangeError. */
+  maxSamples?: number;
+  /**
+   * Ceiling on samples × charged atoms per computation; defaults to 2³⁴
+   * (about 1.7e10, some tens of ms to a few hundred ms on an integrated GPU).
+   * A larger sum throws a RangeError naming a spacing that fits.
+   */
+  maxPairs?: number;
+  /**
+   * Display interval ±range (a slice's default). Defaults to 15 kT/e, or 2
+   * kT/e for `debye` (the same values in kcal/mol/e when that is the unit).
+   */
+  range?: number;
+  /** Cap recomputation per second; default: every coordinate generation. */
+  maxHz?: number;
 }
 
 /** Load one volume source; resolve null when `cancelled()` became true. */

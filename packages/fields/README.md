@@ -185,46 +185,49 @@ work; the viewer's `useAnnotation` adds fetching and loading state.
 _stable_: relied on by other packages and settled. _experimental_: may change
 before 0.1.0. _advanced_: for renderer integrations (the viewer), not app code.
 
-| Export                 | Stability    | Description                                                                                              |
-| ---------------------- | ------------ | -------------------------------------------------------------------------------------------------------- |
-| `Field`                | stable       | Opaque typed per-row value description; build with the constructors.                                     |
-| `Color`                | stable       | `[r, g, b, a]` colour tuple, components in 0–1.                                                          |
-| `Domain`               | stable       | Row domain of a field: `'atom'` or `'residue'`.                                                          |
-| `constant`             | stable       | One value for every row (number, colour, or string).                                                     |
-| `attribute`            | stable       | Read a numeric table column as a scalar field.                                                           |
-| `categorical`          | stable       | Map an integer scalar to per-category values with a fallback.                                            |
-| `colormap`             | stable       | Piecewise-linear colour gradient over a scalar input.                                                    |
-| `volumeSample`         | experimental | Scalar value of a `VolumeData` at each atom's position (trilinear; 0 outside).                           |
-| `sampleVolumeWgsl`     | experimental | WGSL `fn(p: vec3<f32>) -> f32` trilinear sampler for a volume, reading samples through a named accessor. |
-| `curve`                | stable       | Scalar along the global timeline parameter `t`.                                                          |
-| `evaluate`             | stable       | CPU evaluation to a packed `Float32Array` or `string[]`.                                                 |
-| `byElement`            | stable       | CPK colour-by-element preset.                                                                            |
-| `linear`               | experimental | Affine map of a scalar input with clamp/wrap/fail overflow.                                              |
-| `annotation`           | experimental | Externally supplied per-row values with a missing policy.                                                |
-| `Overflow`             | experimental | `linear` overflow mode: `'clamp' \| 'wrap' \| 'fail'`.                                                   |
-| `Scalar`               | experimental | Alias for `number` as a field value.                                                                     |
-| `ValueType`            | experimental | Field value type descriptor (kind, components, WGSL type name).                                          |
-| `SCALAR`               | experimental | Scalar value type (for `annotation` / `JoinOptions.type`).                                               |
-| `COLOR`                | experimental | Colour value type (for `annotation` / `JoinOptions.type`).                                               |
-| `STRING`               | experimental | String value type (CPU-only fields).                                                                     |
-| `EvalContext`          | experimental | `evaluate` options: timeline `t` and broadcast `domain`.                                                 |
-| `byBfactor`            | experimental | B-factor on a cool-to-warm ramp.                                                                         |
-| `bySeq`                | experimental | Residue index on a rainbow ramp.                                                                         |
-| `byChain`              | experimental | Chain index from a cyclic palette.                                                                       |
-| `byCharge`             | experimental | Charge on Mol*'s red-white-blue scale over `[-1, 1]` e; `column` and `lift` read other charge columns.   |
-| `bySecondaryStructure` | experimental | Residue `ssCode` on Mol*'s secondary-structure colours (helix types, strand, turn, bend, white coil).    |
-| `columnRange`          | experimental | Min/max of a column, for auto-ranging a domain.                                                          |
-| `joinAnnotation`       | experimental | Join external records onto the table by identity; returns an annotation field.                           |
-| `JoinOptions`          | experimental | Options for `joinAnnotation` (identity fields, value, policies, lift).                                   |
-| `IdentityField`        | experimental | Name of an identity field usable as a join key.                                                          |
-| `ResidueIdentity`      | experimental | Full residue identity (model, chain ids, seq ids, insertion code, comp).                                 |
-| `ChainIdentity`        | experimental | Chain identity (model, label and auth chain ids).                                                        |
-| `residueIdentity`      | experimental | Read a residue row's identity from a structure.                                                          |
-| `chainIdentity`        | experimental | Read a chain row's identity from a structure.                                                            |
-| `compile`              | advanced     | Lower a numeric field to a WGSL string plus a plain-data binding schema.                                 |
-| `Compiled`             | advanced     | Result of `compile`: value type, domain, entry, bindings, WGSL.                                          |
-| `Binding`              | advanced     | One GPU input of a compiled field, with a pure `fill` function.                                          |
-| `Target`               | advanced     | `compile` target: `'raw'` (plain WebGPU) or `'link'` (use.gpu linker).                                   |
+| Export                     | Stability    | Description                                                                                                   |
+| -------------------------- | ------------ | ------------------------------------------------------------------------------------------------------------- |
+| `Field`                    | stable       | Opaque typed per-row value description; build with the constructors.                                          |
+| `Color`                    | stable       | `[r, g, b, a]` colour tuple, components in 0–1.                                                               |
+| `Domain`                   | stable       | Row domain of a field: `'atom'` or `'residue'`.                                                               |
+| `constant`                 | stable       | One value for every row (number, colour, or string).                                                          |
+| `attribute`                | stable       | Read a numeric table column as a scalar field.                                                                |
+| `categorical`              | stable       | Map an integer scalar to per-category values with a fallback.                                                 |
+| `colormap`                 | stable       | Piecewise-linear colour gradient over a scalar input.                                                         |
+| `volumeSample`             | experimental | Scalar value of a `VolumeData` at each atom's position (trilinear; 0 outside).                                |
+| `sampleVolumeWgsl`         | experimental | WGSL `fn(p: vec3<f32>) -> f32` trilinear sampler for a volume, reading samples through a named accessor.      |
+| `sampleVolumeGradientWgsl` | experimental | WGSL `fn(p) -> vec3<f32>` gradient of the trilinear sampler; zero near the grid boundary.                     |
+| `readsNearestVolume`       | experimental | True when a field contains an argument-free `volumeSample()`.                                                 |
+| `curve`                    | stable       | Scalar along the global timeline parameter `t`.                                                               |
+| `evaluate`                 | stable       | CPU evaluation to a packed `Float32Array` or `string[]`.                                                      |
+| `byElement`                | stable       | CPK colour-by-element preset.                                                                                 |
+| `linear`                   | experimental | Affine map of a scalar input with clamp/wrap/fail overflow.                                                   |
+| `annotation`               | experimental | Externally supplied per-row values with a missing policy.                                                     |
+| `Overflow`                 | experimental | `linear` overflow mode: `'clamp' \| 'wrap' \| 'fail'`.                                                        |
+| `Scalar`                   | experimental | Alias for `number` as a field value.                                                                          |
+| `ValueType`                | experimental | Field value type descriptor (kind, components, WGSL type name).                                               |
+| `SCALAR`                   | experimental | Scalar value type (for `annotation` / `JoinOptions.type`).                                                    |
+| `COLOR`                    | experimental | Colour value type (for `annotation` / `JoinOptions.type`).                                                    |
+| `STRING`                   | experimental | String value type (CPU-only fields).                                                                          |
+| `EvalContext`              | experimental | `evaluate` options: timeline `t` and broadcast `domain`.                                                      |
+| `byBfactor`                | experimental | B-factor on a cool-to-warm ramp.                                                                              |
+| `bySeq`                    | experimental | Residue index on a rainbow ramp.                                                                              |
+| `byChain`                  | experimental | Chain index from a cyclic palette.                                                                            |
+| `byCharge`                 | experimental | Charge on Mol*'s red-white-blue scale over `[-1, 1]` e; `column` and `lift` read other charge columns.        |
+| `byPotential`              | experimental | Electrostatic potential, red-white-blue over ±`range` (default 15), sampled from a volume or the nearest one. |
+| `bySecondaryStructure`     | experimental | Residue `ssCode` on Mol*'s secondary-structure colours (helix types, strand, turn, bend, white coil).         |
+| `columnRange`              | experimental | Min/max of a column, for auto-ranging a domain.                                                               |
+| `joinAnnotation`           | experimental | Join external records onto the table by identity; returns an annotation field.                                |
+| `JoinOptions`              | experimental | Options for `joinAnnotation` (identity fields, value, policies, lift).                                        |
+| `IdentityField`            | experimental | Name of an identity field usable as a join key.                                                               |
+| `ResidueIdentity`          | experimental | Full residue identity (model, chain ids, seq ids, insertion code, comp).                                      |
+| `ChainIdentity`            | experimental | Chain identity (model, label and auth chain ids).                                                             |
+| `residueIdentity`          | experimental | Read a residue row's identity from a structure.                                                               |
+| `chainIdentity`            | experimental | Read a chain row's identity from a structure.                                                                 |
+| `compile`                  | advanced     | Lower a numeric field to a WGSL string plus a plain-data binding schema.                                      |
+| `Compiled`                 | advanced     | Result of `compile`: value type, domain, entry, bindings, WGSL.                                               |
+| `Binding`                  | advanced     | One GPU input of a compiled field, with a pure `fill` function.                                               |
+| `Target`                   | advanced     | `compile` target: `'raw'` (plain WebGPU) or `'link'` (use.gpu linker).                                        |
 
 ## Place in the dependency graph
 

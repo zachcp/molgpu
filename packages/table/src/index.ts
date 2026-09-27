@@ -24,10 +24,13 @@ export {
 export { type SpatialGrid, spatialGrid } from "./spatial-grid.ts";
 export {
   createVolume,
+  createVolumeGrid,
   MAX_VOLUME_SAMPLES,
   sampleVolume,
+  sampleVolumeGradient,
   validateVolume,
   volumeComponent,
+  volumeGradientStep,
   volumeIndexToWorld,
   volumeInverseTransform,
   volumeLevel,
