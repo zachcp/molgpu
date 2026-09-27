@@ -6,6 +6,13 @@ All notable changes to `@molgpu/table` are recorded here. The format follows
 
 ## [Unreleased]
 
+- DSSP (Phase 15, efv.5). `dssp(data, { rows })` ports Mol* 5.11's DSSP (per
+  chain and model, Mol*'s default options) and returns `ssCode` values per
+  residue. `withSecondaryStructure(data, { mode })` sets `ssCode` with
+  provenance `computed:dssp` by Mol*'s modes: `auto` (the default) keeps an
+  imported, legacy or user column and computes when it is absent or `default`,
+  `dssp` always computes, `model` keeps the data. The port fixes Mol*'s bend
+  bug, so bends (S) are also assigned outside a model's first chain.
 - Secondary-structure codes (Phase 15, efv.3). `SS_CODES` lists the DSSP letters
   in `ssCode` order (0 coil, H, B, E, G, I, T, S, P) and `ssKind(code)` projects
   a code to helix, sheet or coil. `secondaryStructureTrace` reads the `ssCode`

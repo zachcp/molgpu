@@ -16,6 +16,7 @@ export type * from "./types.ts";
 export { traceTable } from "./trace.ts";
 export { secondaryStructureTrace } from "./secondary-structure.ts";
 export { SS_CODES, ssKind } from "./ss-codes.ts";
+export { dssp, type DsspOptions, withSecondaryStructure } from "./dssp.ts";
 export { type SpatialGrid, spatialGrid } from "./spatial-grid.ts";
 export {
   createVolume,

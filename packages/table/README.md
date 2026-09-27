@@ -178,6 +178,9 @@ and ribbon geometry.
 | `secondaryStructureTrace` | experimental | Per-sample direction vectors, helix/sheet/coil labels and block-boundary flags over a `Trace`.                                        |
 | `SS_CODES`                | experimental | DSSP letters in `ssCode` order: 0 coil, H, B, E, G, I, T, S, P (reserved).                                                            |
 | `ssKind`                  | experimental | Cartoon kind of an `ssCode` value: H/G/I helix, E/B sheet, otherwise coil.                                                            |
+| `dssp`                    | experimental | Mol*-ported DSSP: `ssCode` values per residue, per chain and model, over the given atom rows.                                         |
+| `DsspOptions`             | experimental | `rows`: atom rows to read (default every model, primary altlocs).                                                                     |
+| `withSecondaryStructure`  | experimental | Set `ssCode` by Mol*'s `auto`, `dssp` or `model` mode; computed codes carry `computed:dssp`.                                          |
 | `StructureInput`          | experimental | Unvalidated `{ topology, positions }` input to `createStructure`.                                                                     |
 | `Topology`                | experimental | The five column domains of a structure.                                                                                               |
 | `Atoms`                   | experimental | Per-atom columns (names, altloc, residue FK, element, occupancy, B-factor, optional radius).                                          |

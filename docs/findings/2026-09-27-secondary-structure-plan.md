@@ -397,3 +397,19 @@ verdicts; accepted ones are folded into the body above.
     exercises T, S, B, G from DSSP or the fine flags on computed codes.
     _Accepted:_ efv.6 also runs the SS keyword cases with Mol* in `dssp` mode
     against our DSSP column, with the bend difference from 2. Changes efv.6.
+
+## Results: CPU DSSP (efv.5)
+
+- **Oracle.** `packages/io/test/dssp-oracle.test.ts` runs Mol*'s
+  `computeUnitDSSP` on every unit of every corpus model and compares codes per
+  residue. Residues are matched by source atom row; Mol*'s `atomSourceIndex`
+  restarts at 0 in each model, so the test offsets it by the model's first row.
+  Every residue matches, including all 116 models of 2k39. The only differences
+  are the documented bend-bug cases: 69 residues in 1a4y and 58 in 4c7r where
+  the port assigns S and Mol* gives `-`. 1bna has no protein units and gets all
+  zeros.
+- **Timing** (Deno, Apple silicon, 4c7r tiled into separate chains, second run):
+  109,872 atoms (13,806 protein residues) in 52 ms, and 1,001,056 atoms (125,788
+  residues) in 516 ms. That is about 4 µs per residue. On 4c7r itself, Mol*
+  takes 2.7 µs per residue and the port 4.2 µs. The gap is small allocations in
+  the H-bond loop, and closing it is not needed for Phase 15.
