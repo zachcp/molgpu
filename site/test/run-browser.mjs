@@ -2,7 +2,6 @@ import {
   assert,
   assertEquals,
   assertMatch,
-  assertNotMatch,
   assertStrictEquals,
 } from "@std/assert";
 import { fromFileUrl } from "@std/path";
@@ -14,31 +13,34 @@ const frames = (page) =>
     for (let i = 0; i < 8; i++) await new Promise(requestAnimationFrame);
   });
 
+const litPixels = (page, png) =>
+  page.evaluate(async (base64) => {
+    const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+    const bmp = await createImageBitmap(
+      new Blob([bytes], { type: "image/png" }),
+    );
+    const canvas = new OffscreenCanvas(bmp.width, bmp.height);
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(bmp, 0, 0);
+    const { data } = ctx.getImageData(0, 0, bmp.width, bmp.height);
+    let count = 0;
+    for (let i = 0; i < data.length; i += 4) {
+      if (data[i] + data[i + 1] + data[i + 2] > 120) count++;
+    }
+    return count;
+  }, png.toString("base64"));
+
 /** A canvas frame equal to its successor, with something drawn on it. */
 const settledFrame = async (page) => {
   const shot = () => page.locator("#molecule-canvas canvas").screenshot();
-  const lit = (png) =>
-    page.evaluate(async (base64) => {
-      const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
-      const bmp = await createImageBitmap(
-        new Blob([bytes], { type: "image/png" }),
-      );
-      const canvas = new OffscreenCanvas(bmp.width, bmp.height);
-      const ctx = canvas.getContext("2d");
-      ctx.drawImage(bmp, 0, 0);
-      const { data } = ctx.getImageData(0, 0, bmp.width, bmp.height);
-      let count = 0;
-      for (let i = 0; i < data.length; i += 4) {
-        if (data[i] + data[i + 1] + data[i + 2] > 120) count++;
-      }
-      return count;
-    }, png.toString("base64"));
   await frames(page);
   let previous = await shot();
   for (let attempt = 0; attempt < 30; attempt++) {
     await frames(page);
     const current = await shot();
-    if (current.equals(previous) && (await lit(current)) > 0) return current;
+    if (current.equals(previous) && (await litPixels(page, current)) > 0) {
+      return current;
+    }
     previous = current;
   }
   throw new Error("volume demo frame never settled");
@@ -116,9 +118,17 @@ Deno.test("site landing page and maintained gallery routes", async () => {
         "each route keeps a visible fallback",
       );
       await page.waitForTimeout(250);
-      assertNotMatch(
+      assertStrictEquals(
         await page.locator("[data-webgpu-error]").textContent(),
-        /unavailable|unable|error/i,
+        "",
+        "successful mounting clears the loading status",
+      );
+      await frames(page);
+      const initialFrame = await page.locator("#molecule-canvas canvas")
+        .screenshot();
+      assert(
+        await litPixels(page, initialFrame) > 0,
+        `${id} produces visible WebGPU output`,
       );
       await page.locator("#molecule-canvas").hover();
       await page.mouse.down();

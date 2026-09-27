@@ -105,6 +105,7 @@ export const DemosPage = () => {
           demoCamera(data, demo.id),
           scrubbed(demo.id) ? { ...demo.options, time } : demo.options,
         );
+        if (status) status.textContent = "";
       } catch (error) {
         if (status) {
           status.textContent = error instanceof Error
