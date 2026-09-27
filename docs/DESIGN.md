@@ -63,8 +63,12 @@ the "modifiers are props" rule below does not apply. Topology stays in
 `StructureContext`; coordinates live in their own context with a content
 `version`, so re-providing one never re-provides the other. Derived per-row
 columns (charges, DSSP codes, kernel outputs) follow the same idea: they are
-added after import with provenance and bump `revision.attributes`. See the
-[dynamic-data plan](findings/2026-09-26-dynamic-data-epics.md) (Phases 9–10).
+added after import with provenance and bump `revision.attributes`. Built-in
+topology and derived columns resolve through `attributeColumn`; viewer
+representations share one GPU upload per immutable column object. A scoped
+`AttributeProducer` can provide a live GPU column, while CPU consumers request a
+generation-tagged snapshot. See the
+[Phase 10 contract](findings/2026-09-26-attribute-channels-plan.md).
 
 **Trajectories are coordinates over a topology.** A `TrajectoryData` holds per
 frame times and a `FrameSource` that decodes one frame on demand, optionally

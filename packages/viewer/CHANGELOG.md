@@ -6,6 +6,11 @@ All notable changes to `@molgpu/viewer` are recorded here. The format follows
 
 ## [Unreleased]
 
+- Derived attribute channels (Phase 10): shared GPU column uploads across
+  representations, an advanced `AttributeProducer` for kernel-written columns,
+  and demand-driven `useAttributeSnapshot` CPU readback. `byChain()` now reads
+  the table resolver correctly in Spacefill and Bonds.
+
 - Trajectories (Phase 12). New experimental `<Trajectory data|src frame>`
   coordinate provider, `useTrajectoryFrame` and `<UnitCell>`, with the
   `TrajectoryProps`, `PreloadedTrajectoryProps`, `LoadedTrajectoryProps`,

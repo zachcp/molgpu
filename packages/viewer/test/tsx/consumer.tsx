@@ -17,14 +17,16 @@ import {
   OrbitCamera,
   Pass,
 } from "@use-gpu/workbench";
-import { createStructure } from "@molgpu/table";
+import { createStructure, withAttributes } from "@molgpu/table";
 import { all, resolve, where } from "@molgpu/select";
+import { attribute, byChain, colormap, linear } from "@molgpu/fields";
 import type { StructureData } from "@molgpu/table";
 import {
   Bonds,
   Molecule,
   Spacefill,
   Structure,
+  useAttributeSnapshot,
   useCoordinateBounds,
   useCoordinateFocus,
   useCoordinateSnapshot,
@@ -37,6 +39,7 @@ import {
   useStructure,
 } from "@molgpu/viewer/advanced";
 import { OffsetCoordinates } from "./offset-coordinates.ts";
+import { TestAttributeProducer } from "./test-attribute-producer.ts";
 import { BondVertexProbe } from "./bond-vertex-probe.ts";
 import { probe } from "./diagnostics.ts";
 import type { Mode, Phase, State } from "./diagnostics.ts";
@@ -162,6 +165,28 @@ const left = cluster(-13, 1.8),
   bonded = cluster(-13, 1.8, 3, true),
   right = cluster(7, 3.2),
   blank = emptyStructure();
+const attributesA = withAttributes(bonded, {
+  "user:a": {
+    domain: "atom",
+    kind: "scalar",
+    provenance: "user",
+    values: Float32Array.from([0, 1, 2]),
+  },
+  "user:b": {
+    domain: "atom",
+    kind: "scalar",
+    provenance: "user",
+    values: Float32Array.from([3, 4, 5]),
+  },
+});
+const attributesB = withAttributes(attributesA, {
+  "user:b": {
+    domain: "atom",
+    kind: "scalar",
+    provenance: "user",
+    values: Float32Array.from([6, 7, 8]),
+  },
+});
 
 /** Hands each in-flight request to the test instead of resolving it. */
 const controlledLoader: StructureLoader = (src, cancelled) =>
@@ -238,6 +263,17 @@ const RootPositionProbe = (): LiveElement => {
   return null;
 };
 
+const AttributeSnapshotProbe = (): LiveElement => {
+  const snapshot = useAttributeSnapshot("gpu:test", { maxHz: 10 });
+  probe.attributeSnapshot = snapshot
+    ? {
+      generation: snapshot.generation,
+      values: Array.from(snapshot.data.attributes?.["gpu:test"]?.values ?? []),
+    }
+    : null;
+  return null;
+};
+
 const SnapshotProbe = (): LiveElement => {
   const snapshot = useCoordinateSnapshot({ maxHz: 4 });
   probe.coordinateBounds = useCoordinateBounds();
@@ -306,6 +342,45 @@ const Scene = (
             </OffsetCoordinates>
           </IdentityCoordinates>
         </OffsetCoordinates>
+      </Structure>
+    );
+  }
+  if (mode === "attributes") {
+    const chainColor = byChain();
+    return (
+      <Structure data={bonded}>
+        <Spacefill color={chainColor} />
+        <Bonds color={chainColor} />
+      </Structure>
+    );
+  }
+  if (mode === "attribute-revision") {
+    const colorA = colormap(attribute("user:a", { domain: "atom" }), [
+      [0, [0, 0, 1, 1]],
+      [2, [1, 0, 0, 1]],
+    ]);
+    const colorB = colormap(attribute("user:b", { domain: "atom" }), [
+      [3, [0, 0, 1, 1]],
+      [8, [1, 0, 0, 1]],
+    ]);
+    return (
+      <Structure data={offsetX ? attributesB : attributesA}>
+        <Spacefill color={colorA} />
+        <Bonds color={colorB} />
+      </Structure>
+    );
+  }
+  if (mode === "attribute-producer") {
+    const color = colormap(
+      linear(attribute("gpu:test", { domain: "atom" }), { domain: [5, 9] }),
+      [[0, [0, 0, 1, 1]], [1, [1, 0, 0, 1]]],
+    );
+    return (
+      <Structure data={bonded}>
+        <TestAttributeProducer phase={offsetX}>
+          <Spacefill color={color} />
+          <AttributeSnapshotProbe />
+        </TestAttributeProducer>
       </Structure>
     );
   }

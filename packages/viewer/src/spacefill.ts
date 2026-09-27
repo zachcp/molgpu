@@ -9,12 +9,15 @@ import type {
 } from "./types.ts";
 import { type LC, use, useMemo } from "@use-gpu/live";
 import type { ShaderSource } from "@use-gpu/shader";
+import type { StorageSource } from "@use-gpu/core";
 import type { StructureData } from "@molgpu/table";
+import type { AttributeDomain } from "@molgpu/table";
 import { WorldSpacePointLayer } from "./world-space-points.ts";
 import { type StructureSources, useStructure } from "./structure-context.ts";
 import { useCoordinates } from "./coordinates-context.ts";
 import { useField } from "./use-field.ts";
 import { indexed } from "./internal/indexed.ts";
+import { useAttributeSources } from "./internal/attribute-sources.ts";
 import {
   checkAtomSelection,
   type ColumnMap,
@@ -23,7 +26,6 @@ import {
   isField,
   withColumns,
 } from "./internal/representation.ts";
-import { gatherAtomColumns } from "./internal/gather.ts";
 
 /** Point-layer props Spacefill forwards to its layer (flags, draw mode, picking id). */
 type LayerProps = PointLayerOptions & {
@@ -78,6 +80,8 @@ const IndexedPoints: LC<
   {
     map: ColumnMap;
     attrNames: readonly string[];
+    attrSources: Record<string, StorageSource>;
+    attrDomains: Record<string, AttributeDomain>;
     shared: StructureSources;
     positions: ShaderSource;
     count: number;
@@ -90,6 +94,8 @@ const IndexedPoints: LC<
   {
     map,
     attrNames,
+    attrSources,
+    attrDomains,
     shared,
     positions,
     count,
@@ -101,17 +107,20 @@ const IndexedPoints: LC<
   },
 ) => {
   const index = map.index ?? null;
-  const columns = attrNames.map((name) => map[`attr:${name}`]);
+  const columns = attrNames.map((name) => attrSources[`attr:${name}`]);
+  const domains = attrNames.map((name) => attrDomains[`attr:${name}`]);
   const sources = useMemo(() => ({
     positions: indexed(positions, index, "vec3<f32>"),
     radii: indexed(shared.radii, index, "f32"),
     attrs: Object.fromEntries(
       attrNames.map((name, k) => [
         `attr:${name}`,
-        indexed(columns[k]!, index, "f32"),
+        attrDomains[`attr:${name}`] === "atom"
+          ? indexed(columns[k]!, index, "f32")
+          : columns[k]!,
       ]),
     ),
-  }), [shared, positions, index, attrNames.join(), ...columns]);
+  }), [shared, positions, index, attrNames.join(), ...domains, ...columns]);
   return field
     ? use(FieldPoints, {
       positions: sources.positions,
@@ -141,8 +150,6 @@ const IndexedPoints: LC<
 const SelectedSpacefill: LC<
   {
     data: StructureData;
-    identity: StructureData["identity"];
-    topologyRevision: number;
     indices: Uint32Array | null;
     attrNames: readonly string[];
     field: Field | null;
@@ -155,26 +162,26 @@ const SelectedSpacefill: LC<
 > = (
   {
     data,
-    identity,
-    topologyRevision,
     indices,
     attrNames,
     ...props
   },
 ) => {
-  const attrs = useMemo(
-    () => gatherAtomColumns(data, null, attrNames, "spacefill"),
-    [identity, topologyRevision, attrNames.join()],
-  );
+  const attributes = useAttributeSources(data, attrNames);
   const specs: ColumnSpec[] = [];
   if (indices) specs.push({ key: "index", data: indices, format: "u32" });
-  for (const name of attrNames) {
-    specs.push({ key: `attr:${name}`, data: attrs[name], format: "f32" });
-  }
   const count = indices ? indices.length : data.topology.atoms.count;
   return withColumns(
     specs,
-    (map) => use(IndexedPoints, { map, attrNames, count, ...props }),
+    (map) =>
+      use(IndexedPoints, {
+        map,
+        attrNames,
+        attrSources: attributes.sources,
+        attrDomains: attributes.domains,
+        count,
+        ...props,
+      }),
   );
 };
 
@@ -261,8 +268,6 @@ export const Spacefill: ViewerComponent<
         })
         : use(SelectedSpacefill, {
           data,
-          identity: resource.identity,
-          topologyRevision: resource.topologyRevision,
           indices,
           attrNames,
           field,

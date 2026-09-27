@@ -8,6 +8,8 @@ import type {
 } from "./types.ts";
 import { type LC, type LiveElement, use, useMemo, useRef } from "@use-gpu/live";
 import type { ShaderSource } from "@use-gpu/shader";
+import type { StorageSource } from "@use-gpu/core";
+import type { AttributeDomain } from "@molgpu/table";
 import { LineLayer } from "@use-gpu/workbench";
 import { byElement } from "@molgpu/fields";
 import { useStructure, useStructureResource } from "./structure-context.ts";
@@ -20,7 +22,7 @@ import {
   isField,
   withColumns,
 } from "./internal/representation.ts";
-import { gatherAtomColumns } from "./internal/gather.ts";
+import { useAttributeSources } from "./internal/attribute-sources.ts";
 import { indexed } from "./internal/indexed.ts";
 import { useCoordinates } from "./coordinates-context.ts";
 import { useBondPositions } from "./internal/bond-positions.ts";
@@ -89,6 +91,8 @@ const FieldBonds: LC<
     positions: ShaderSource;
     count: number;
     attrNames: readonly string[];
+    attrSources: Record<string, StorageSource>;
+    attrDomains: Record<string, AttributeDomain>;
     field: Field;
     opacity: number;
     width: number;
@@ -101,6 +105,8 @@ const FieldBonds: LC<
     positions,
     count,
     attrNames,
+    attrSources,
+    attrDomains,
     field,
     opacity,
     width,
@@ -109,20 +115,23 @@ const FieldBonds: LC<
     ...props
   },
 ) => {
-  const columns = attrNames.map((name) => map[`attr:${name}`]);
+  const columns = attrNames.map((name) => attrSources[`attr:${name}`]);
+  const domains = attrNames.map((name) => attrDomains[`attr:${name}`]);
   const attrs = useMemo(
     () =>
       Object.fromEntries(
         [
           ...attrNames.map((name, k) => [
             `attr:${name}`,
-            indexed(columns[k]!, map.rows, "f32"),
+            attrDomains[`attr:${name}`] === "atom"
+              ? indexed(columns[k]!, map.rows, "f32")
+              : columns[k]!,
           ]),
           // A volume-sampled colour reads each vertex's own position.
           ["positions", positions],
         ],
       ),
-    [map.rows, positions, attrNames.join(), ...columns],
+    [map.rows, positions, attrNames.join(), ...domains, ...columns],
   );
   const colors = useOpacityColors(
     useField(field, attrs, { domain: "atom" }),
@@ -147,6 +156,8 @@ const BondLines: LC<{
   split: boolean;
   field: Field | null;
   attrNames: readonly string[];
+  attrSources: Record<string, StorageSource>;
+  attrDomains: Record<string, AttributeDomain>;
   opacity: number;
   width: number;
   sides: number;
@@ -160,6 +171,8 @@ const BondLines: LC<{
     split,
     field,
     attrNames,
+    attrSources,
+    attrDomains,
     opacity,
     width,
     sides,
@@ -175,6 +188,8 @@ const BondLines: LC<{
       positions,
       count,
       attrNames,
+      attrSources,
+      attrDomains,
       field,
       opacity,
       width,
@@ -285,10 +300,7 @@ export const Bonds: ViewerComponent<
   const endpointRows = useStableRows(built.endpoints);
   // Full attribute columns follow topology only; selections, coordinate edits
   // and re-inferred bonds change only the row column.
-  const attrs = useMemo(
-    () => gatherAtomColumns(data, null, attrNames, "bonds"),
-    [resource.identity, resource.topologyRevision, attrNames.join()],
-  );
+  const attributes = useAttributeSources(data, attrNames);
   if (!coordinates || !built.n) return null;
 
   const specs: ColumnSpec[] = [
@@ -297,9 +309,6 @@ export const Bonds: ViewerComponent<
   ];
   if (field) {
     specs.push({ key: "rows", data: rows, format: "u32" });
-    for (const name of attrNames) {
-      specs.push({ key: `attr:${name}`, data: attrs[name], format: "f32" });
-    }
   }
   return withColumns(
     specs,
@@ -313,6 +322,8 @@ export const Bonds: ViewerComponent<
           split: defaultColor,
           field,
           attrNames,
+          attrSources: attributes.sources,
+          attrDomains: attributes.domains,
           opacity,
           width,
           sides,

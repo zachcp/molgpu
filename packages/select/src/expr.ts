@@ -13,7 +13,12 @@
 // compile time. Adding a symbol needs its own bead (lkd.14 as amended by
 // molgpu-sept-922.1; docs/findings/2026-09-26-molql-selection-spike.md §4.7).
 
-import { BOND_FLAGS, spatialGrid, type StructureData } from "@molgpu/table";
+import {
+  attributeColumn,
+  BOND_FLAGS,
+  spatialGrid,
+  type StructureData,
+} from "@molgpu/table";
 import {
   type AtomSets,
   EMPTY,
@@ -500,11 +505,10 @@ const SPECS: Readonly<Record<string, Spec>> = {
   ),
   [`${AP}macromolecular.pdbx_formal_charge`]: atomProp((ctx, i) =>
     need(
-      ctx.data.topology.atoms.formalCharge,
-      "atoms.formalCharge",
+      attributeColumn(ctx.data, "formalCharge")?.values,
+      "formalCharge",
       "pdbx_formal_charge",
-    )[i]
-  ),
+    )[i], "attributes"),
   [`${AP}macromolecular.label_entity_id`]: atomProp((ctx, i) =>
     need(
       ctx.data.topology.chains.entityId,

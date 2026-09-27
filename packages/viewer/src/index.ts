@@ -2,6 +2,8 @@
 export type * from "./types.ts";
 export { createStructureResource } from "./internal/structure-resource.ts";
 export { useStructureResource } from "./structure-context.ts";
+export { useAttributeSnapshot } from "./attribute-snapshot.ts";
+export type { AttributeSnapshot } from "./attribute-snapshot.ts";
 export { useCoordinateSnapshot } from "./coordinate-snapshot.ts";
 export { useCoordinateSelection } from "./use-coordinate-selection.ts";
 export { useCoordinateBounds } from "./use-coordinate-bounds.ts";

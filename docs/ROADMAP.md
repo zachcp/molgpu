@@ -187,10 +187,19 @@ snapshots; focus uses a GPU bounds reduction. The worst-case Phase 9 footprint
 
 ## Phase 10 — Derived attribute channels
 
-`withAttributes(data, columns, provenance)` in `@molgpu/table` adds named,
-domain-tagged, typed columns and bumps `revision.attributes`. `attribute()` in
-`@molgpu/fields` resolves registered columns through a typed registry, and the
-viewer lets a GPU kernel produce a column that fields link against directly.
+`withAttributes(data, columns)` in `@molgpu/table` adds named, domain-tagged,
+typed columns with per-column provenance and bumps `revision.attributes`.
+`attribute()` in `@molgpu/fields` resolves these columns through the table
+resolver, and the viewer lets a GPU kernel produce a column that fields link
+against directly. See the
+[Phase 10 contract](findings/2026-09-26-attribute-channels-plan.md).
+
+Gate 10 passed on 2026-09-26. Table columns preserve topology identity and
+record provenance; fields and formal-charge selections use the shared resolver.
+Spacefill and Bonds share attribute uploads, and a GPU producer feeds fields
+directly with optional demand-driven CPU snapshots. The browser gate covers
+unrelated column updates, rapid producer generations and a 16 MB per 1M rows
+produced-column snapshot budget.
 
 ## Phase 11 — Volume dataset
 

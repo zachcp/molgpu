@@ -1,40 +1,46 @@
 # Derived attribute channels (Phase 10 plan)
 
-Decision record for molgpu-sept-5wy.1. It answers the six questions on that bead.
-Build beads 5wy.3–5wy.5 point here. The counter-review (5wy.2) attacks this
-note before any build bead starts. Phases 14 (charge) and 15 (secondary
+Decision record for molgpu-sept-5wy.1. It answers the six questions on that
+bead. Build beads 5wy.3–5wy.5 point here. The counter-review (5wy.2) attacks
+this note before any build bead starts. Phases 14 (charge) and 15 (secondary
 structure) build on it.
 
 ## What the code does today (evidence)
 
-| Piece                             | Today                                                                                                   | Problem                                                                                                                             |
-| --------------------------------- | ------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `revision.attributes`             | Always 0 (`createStructure`); no setter.                                                                | Nothing can add a column after import.                                                                                              |
-| `@molgpu/fields` `ATTRIBUTES`     | A closed map of 8 names with `read(data)`, private to fields (`fields/src/index.ts`).                   | Select and the viewer cannot share it.                                                                                              |
-| Viewer `gatherAtomColumns`        | Reads `data.topology.atoms[name]` for every `attr:<name>` binding (`viewer/src/internal/gather.ts`).    | **Bug:** `byChain()` compiles to `attr:atomChain`, which is not an atoms column, so `<Spacefill color={byChain()}>` throws.         |
-| Viewer uploads                    | Each representation gathers and uploads its own `attr:*` columns (`spacefill.ts`, `bonds.ts`).          | Two representations colouring by the same column upload it twice.                                                                 |
-| Selections                        | `pdbx_formal_charge` reads `topology.atoms.formalCharge`; `occupancy`/`B_iso` declare an `attributes` dep. | Deps already name the stream; no column ever advances it.                                                                         |
-| `topology.atoms.formalCharge`     | Optional `Int8Array` from mmCIF (922.13).                                                               | Phase 14 must reconcile it with provenance-aware charge columns, not ingest mmCIF a second time.                                   |
+| Piece                         | Today                                                                                                      | Problem                                                                                                                     |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `revision.attributes`         | Always 0 (`createStructure`); no setter.                                                                   | Nothing can add a column after import.                                                                                      |
+| `@molgpu/fields` `ATTRIBUTES` | A closed map of 8 names with `read(data)`, private to fields (`fields/src/index.ts`).                      | Select and the viewer cannot share it.                                                                                      |
+| Viewer `gatherAtomColumns`    | Reads `data.topology.atoms[name]` for every `attr:<name>` binding (`viewer/src/internal/gather.ts`).       | **Bug:** `byChain()` compiles to `attr:atomChain`, which is not an atoms column, so `<Spacefill color={byChain()}>` throws. |
+| Viewer uploads                | Each representation gathers and uploads its own `attr:*` columns (`spacefill.ts`, `bonds.ts`).             | Two representations colouring by the same column upload it twice.                                                           |
+| Selections                    | `pdbx_formal_charge` reads `topology.atoms.formalCharge`; `occupancy`/`B_iso` declare an `attributes` dep. | Deps already name the stream; no column ever advances it.                                                                   |
+| `topology.atoms.formalCharge` | Optional `Int8Array` from mmCIF (922.13).                                                                  | Phase 14 must reconcile it with provenance-aware charge columns, not ingest mmCIF a second time.                            |
 
 ## 1. `withAttributes` and names
 
 ```ts
 type AttributeDomain = "atom" | "residue";
-type AttributeValues = Float32Array | Int8Array | Uint8Array | Int32Array | Uint32Array;
+type AttributeValues =
+  | Float32Array
+  | Int8Array
+  | Uint8Array
+  | Int32Array
+  | Uint32Array;
 
 /** Where a column came from. A closed grammar, validated. */
 type Provenance =
-  | "default"                      // filled because the source had nothing
-  | "user"                         // set by application code
-  | `imported:${string}`           // imported:mmcif, imported:pqr
-  | `template:${string}`           // template:amber-united
-  | `computed:${string}`           // computed:dssp, computed:gasteiger
-  | `gpu:${string}`;               // gpu:dssp (only via a GPU producer's snapshot)
+  | "legacy" // pre-registry topology; source not recorded
+  | "default" // filled because the source had nothing
+  | "user" // set by application code
+  | `imported:${string}` // imported:mmcif, imported:pqr
+  | `template:${string}` // template:amber-united
+  | `computed:${string}` // computed:dssp, computed:gasteiger
+  | `gpu:${string}`; // gpu:dssp (only via a GPU producer's snapshot)
 
 interface AttributeColumn {
   readonly name: string;
   readonly domain: AttributeDomain;
-  readonly values: AttributeValues;     // length = domain row count, read-only
+  readonly values: AttributeValues; // length = domain row count, read-only
   readonly provenance: Provenance;
   /** "scalar": a measurement. "code": a small integer category. */
   readonly kind: "scalar" | "code";
@@ -47,9 +53,9 @@ function withAttributes(
 ```
 
 - **Well-known names are typed.** A fixed table in `@molgpu/table` pins domain,
-  array type and kind: `formalCharge` (atom, `Int8Array`, code),
-  `partialCharge` (atom, `Float32Array`, scalar), `ssCode` (residue,
-  `Uint8Array`, code). Setting one with the wrong domain or type throws.
+  array type and kind: `formalCharge` (atom, `Int8Array`, code), `partialCharge`
+  (atom, `Float32Array`, scalar), `ssCode` (residue, `Uint8Array`, code).
+  Setting one with the wrong domain or type throws.
 - **Custom names must be namespaced**: `<ns>:<name>` matching
   `/^[a-z][a-z0-9-]*:[A-Za-z][A-Za-z0-9_-]*$/` (e.g. `user:hydrophobicity`,
   `gpu:test`). They can never collide with a future well-known name, and the
@@ -64,9 +70,11 @@ function withAttributes(
 
 ## 2. Where columns live, and revisions
 
-- A new optional `StructureData.attributes: Readonly<Record<string,
-  AttributeColumn>>`. Topology is untouched, so `identity`, `revision.topology`
-  and every topology cache stay valid.
+- A new optional
+  `StructureData.attributes: Readonly<Record<string,
+  AttributeColumn>>`.
+  Topology is untouched, so `identity`, `revision.topology` and every topology
+  cache stay valid.
 - `withAttributes` returns a new frozen `StructureData` with the same identity,
   topology and positions, the merged map (unchanged columns shared, not copied),
   and `revision.attributes` bumped from the same per-identity counter that
@@ -77,16 +85,17 @@ function withAttributes(
   computed from. This keeps positions and attributes orthogonal.
 - **One resolver for everyone:** `attributeColumn(data, name)` in
   `@molgpu/table` returns an `AttributeColumn`-shaped view for built-in topology
-  columns (with provenance `imported:<source>`, or `default` for derived ones
-  like `atomChain`, cached per identity), then for derived columns. It returns
-  `undefined` when the dataset lacks the column. `attributeNames(data)` lists
-  what resolves. Fields, select and the viewer gather all read through it. This
-  fixes the `byChain()` bug as a side effect.
+  columns (with provenance `legacy` when their import source is unknown, or
+  `default` for derived ones like `atomChain`, cached per identity), then for
+  derived columns. It returns `undefined` when the dataset lacks the column.
+  `attributeNames(data)` lists what resolves. Fields, select and the viewer
+  gather all read through it. This fixes the `byChain()` bug as a side effect.
 - **`formalCharge` precedence:** a derived `formalCharge` column (from
   `withAttributes`) wins; otherwise the resolver exposes
-  `topology.atoms.formalCharge` as `imported:mmcif`; otherwise `undefined`.
-  Phase 14 decides whether an absent charge becomes zeros with provenance
-  `default`. io keeps writing the topology column, so 922.13 needs no change.
+  `topology.atoms.formalCharge` as `legacy` (the source is not stored in
+  `StructureData`); otherwise `undefined`. Phase 14 decides whether an absent
+  charge becomes zeros with provenance `default`. io keeps writing the topology
+  column, so 922.13 needs no change.
 
 ## 3. Fields
 
@@ -103,38 +112,42 @@ function withAttributes(
   no new field type.
 - **Residue columns on atoms:** `attribute("ssCode", { domain: "atom" })` lifts
   through `atoms.residue`. CPU evaluation indexes the residue column by
-  `atoms.residue[row]`. The GPU emits `field_getR(u32(field_getA(row)))`, with
-  a second binding `attr:residue`. Without the option the field keeps the
-  column's own domain, and mixing domains still fails.
+  `atoms.residue[row]`. The GPU emits `field_getR(u32(field_getA(row)))`, with a
+  second binding `attr:residue`. Without the option the field keeps the column's
+  own domain, and mixing domains still fails.
 - Binding ids stay `attr:<name>`, so the viewer contract does not change shape.
 - `columnRange(data, name)` resolves through the same function.
 
 ## 4. GPU columns and kernel-produced columns
 
 **Shared uploads.** The viewer keeps a refcounted cache per device, keyed by
-`(identity, name, provenance revision)`. The key is `revision.topology` for
-built-in columns and `revision.attributes` for derived ones. This is the same
-shape as the volume buffer cache (`internal/volume-buffers.ts`).
-`useAttributeSource(name)` acquires during render and releases on unmount. Each
-column is stored as full-domain `f32` rows in topology order, and
-representations index it through their selection rows with `indexed()`, as they
-do today. Two representations colouring by one column share one upload. Style
-changes never touch it (INVARIANT 4). `gatherAtomColumns` and the per-rep
-`attr:*` specs in `spacefill.ts` and `bonds.ts` go away.
+`(identity, name, column object)`. Unchanged derived columns keep their object
+identity across revisions, so editing one column does not re-upload the others.
+Built-in views are cached per identity. This is the same shape as the volume
+buffer cache (`internal/volume-buffers.ts`). `useAttributeSource(name)` acquires
+during render and releases on unmount. Each column is stored as full-domain
+`f32` rows in topology order, and representations index it through their
+selection rows with `indexed()`, as they do today. Two representations colouring
+by one column share one upload. Style changes never touch it (INVARIANT 4).
+`gatherAtomColumns` and the per-rep `attr:*` specs in `spacefill.ts` and
+`bonds.ts` go away.
 
 **Producers.** A GPU kernel can produce a column, following the
 coordinate-provider pattern:
 
 ```tsx
 <AttributeProducer name="gpu:test" domain="atom" kind="scalar" kernel={wgsl}>
-  <Spacefill color={colormap(attribute("gpu:test", { domain: "atom" }), stops)} />
-</AttributeProducer>
+  <Spacefill
+    color={colormap(attribute("gpu:test", { domain: "atom" }), stops)}
+  />
+</AttributeProducer>;
 ```
 
-- A new `AttributesContext` maps each name to `{ source: StorageSource, domain,
-  generation, provenance }`. A producer re-provides it with one added entry,
-  scoped to its subtree. It never changes topology, coordinates or other
-  columns.
+- A new `AttributesContext` maps each name to
+  `{ source: StorageSource, domain,
+  generation, provenance }`. A producer
+  re-provides it with one added entry, scoped to its subtree. It never changes
+  topology, coordinates or other columns.
 - The producer owns one `ComputeBuffer` (count rows, `f32`) and dispatches with
   `<Kernel initial version={generation}>`. Its generation advances exactly when
   its inputs change: upstream coordinates `generation` and its own params. The
@@ -143,10 +156,14 @@ coordinate-provider pattern:
   then from the shared cache. Fields link against the producer's source, and
   `Binding.fill` is never called for it.
 - **CPU values for a GPU-only column:** `useAttributeSnapshot(name, { maxHz })`
-  reuses the Phase 9 snapshot machinery. That means demand-driven staging, one
-  copy in flight, and stale generations discarded. It publishes
-  `withAttributes(data, { [name]: { values, provenance: "gpu:<kernel>" } })`
-  for tooltips and `evaluate`. Nothing reads a GPU-only column synchronously.
+  uses the Phase 9 readback policy; the coordinate-specific implementation needs
+  a reusable helper or an equivalent attribute implementation. That means
+  demand-driven staging, one copy in flight, and stale generations discarded. It
+  publishes
+  `withAttributes(data, { [name]: { values, provenance: "gpu:<kernel>" } })` for
+  tooltips and `evaluate`, tagged with the producer generation. Consumers must
+  reject a snapshot whose generation no longer matches their requested
+  coordinates. Nothing reads a GPU-only column synchronously.
 
 `@molgpu/fields` and `@molgpu/table` stay free of use.gpu types (INVARIANT 2).
 The producer's WGSL is a string, which is how `@molgpu/dynamics` hands off
@@ -179,10 +196,44 @@ kernels.
 
 - CPU: one copy per derived column. That is 4 B/row for f32/i32/u32 and 1 B/row
   for i8/u8. `withAttributes` shares unchanged columns between revisions.
-- GPU: 4 B/row per distinct column in use, once per structure, regardless of
-  how many representations read it. At 1M atoms that is 4 MB per column, where
-  today each representation uploads its own. A producer adds 4 B/row, plus 2
-  staging buffers and a CPU copy only while a snapshot consumer is mounted.
+- GPU: 4 B/row per distinct column in use, once per structure, regardless of how
+  many representations read it. At 1M atoms that is 4 MB per column, where today
+  each representation uploads its own. A producer adds 4 B/row, plus 2 staging
+  buffers and a CPU copy only while a snapshot consumer is mounted.
+
+## Counter-review (5wy.2)
+
+The reviewer did not write the plan. Findings are recorded with verdicts so the
+build beads can be checked against concrete risks.
+
+1. **Accepted — unrelated updates must not re-upload columns.** The original
+   cache key used `revision.attributes`, which changes when _any_ derived column
+   changes. Key by the immutable column object instead; test that updating B
+   preserves A's GPU buffer and upload count. This protects INVARIANT 4 and
+   costs one cache entry per live column identity.
+2. **Accepted — do not invent import provenance.** `StructureData` records no
+   source for legacy topology columns. Mark them `legacy`, including an existing
+   `formalCharge`; only `withAttributes` may assert `imported:mmcif`. An
+   incorrect source label would mislead Phase 14's charge precedence.
+3. **Accepted — snapshot policy needs an actual implementation boundary.** The
+   Phase 9 readback is coordinate-specific, so `useAttributeSnapshot` cannot
+   simply call it. Extract a reusable staged-copy helper or implement the same
+   bounded protocol with a producer-generation check. Test a superseded copy and
+   the final paused generation. This coupling reaches Phase 12 playback.
+4. **Accepted — clarify typed-array ownership.** A copied typed array remains
+   mutable even when its containing object is frozen. The public contract is
+   read-only by convention, like current `StructureData`; `withAttributes`
+   defensively copies input and never shares it with the caller. Test the input
+   mutation case. Full immutable access would require a larger table change.
+5. **Rejected — forbid namespaced custom attributes.** The namespace grammar
+   does not introduce expressions or selection symbols. It avoids collisions
+   with well-known names and is needed for user and GPU producers. Keep strict
+   validation and no free-form MolQL registration (R5/R6).
+6. **Accepted — make memory tests concrete.** One f32 column costs 0.4 MB at
+   100k rows or 4 MB at 1M. A live GPU producer with demanded CPU snapshot can
+   hold its 4 MB output, two 4 MB staging buffers, and a 4 MB CPU copy at 1M (16
+   MB total, excluding temporary setter copies). The gate must assert
+   owned-buffer counts and bound transient CPU copies.
 
 ## Build bead amendments
 

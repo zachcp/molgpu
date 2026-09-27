@@ -423,6 +423,113 @@ Deno.test("viewer components", async () => {
     report.states.bonds = { vertices: bondVertices, movedBy: 1 };
     await update({ mode: "preloaded" });
 
+    await update({ mode: "attributes" });
+    const attributeBytes = await page.evaluate(() =>
+      window.__viewer.counters().detail["uploadBytes:attr:atomChain"] ?? 0
+    );
+    assert.equal(
+      attributeBytes,
+      12,
+      "Spacefill and Bonds share one three-row attribute upload",
+    );
+    await update({ offsetX: 7 });
+    assert.equal(
+      await page.evaluate(() =>
+        window.__viewer.counters().detail["uploadBytes:attr:atomChain"] ?? 0
+      ),
+      attributeBytes,
+      "a style-neutral rerender does not re-upload the column",
+    );
+    await update({ mode: "preloaded" });
+
+    await update({ mode: "attribute-revision", offsetX: 0 });
+    const unrelatedBytes = await page.evaluate(() =>
+      window.__viewer.counters().detail["uploadBytes:attr:user:a"] ?? 0
+    );
+    assert.equal(unrelatedBytes, 12);
+    await update({ offsetX: 1 });
+    assert.equal(
+      await page.evaluate(() =>
+        window.__viewer.counters().detail["uploadBytes:attr:user:a"] ?? 0
+      ),
+      unrelatedBytes,
+      "changing column B preserves column A's GPU upload",
+    );
+    await update({ mode: "preloaded" });
+
+    await update({ mode: "attribute-producer", offsetX: 5 });
+    await page.waitForFunction(
+      () => window.__viewer.attributeSnapshot?.values.join(",") === "5,6,7",
+      null,
+      { timeout: 10000 },
+    ).catch(async (failure) => {
+      console.log(
+        "attribute diagnostics",
+        JSON.stringify(
+          await page.evaluate(() => ({
+            snapshot: window.__viewer.attributeSnapshot,
+            errors: window.__viewer.errors,
+            dispatches: window.__viewer.dispatches,
+            pipelines: window.__viewer.computePipelines,
+            submissions: window.__viewer.submissions,
+            counters: window.__viewer.counters(),
+          })),
+        ),
+      );
+      throw failure;
+    });
+    const firstAttribute = await page.evaluate(() =>
+      window.__viewer.attributeSnapshot
+    );
+    const attributeBefore = await shot();
+    await update({ offsetX: 6 });
+    await page.waitForFunction(
+      () => window.__viewer.attributeSnapshot?.values.join(",") === "6,7,8",
+      null,
+      { timeout: 10000 },
+    );
+    const nextAttribute = await page.evaluate(() =>
+      window.__viewer.attributeSnapshot
+    );
+    assert.ok(nextAttribute.generation > firstAttribute.generation);
+    assert.ok(
+      !(await shot()).equals(attributeBefore),
+      "kernel-produced attribute changes Spacefill colour",
+    );
+    await update({ offsetX: 8 });
+    await update({ offsetX: 9 });
+    await page.waitForFunction(
+      () => window.__viewer.attributeSnapshot?.values.join(",") === "9,10,11",
+      null,
+      { timeout: 10000 },
+    );
+    const finalAttribute = await page.evaluate(() =>
+      window.__viewer.attributeSnapshot
+    );
+    assert.ok(finalAttribute.generation > nextAttribute.generation);
+    const attributeOwned = await page.evaluate(() =>
+      window.__viewer.counters().ownedBuffers.bytes
+    );
+    assert.equal(attributeOwned["attr:producer:gpu:test"], 12);
+    assert.equal(attributeOwned["attr:snapshot:gpu:test"], 24);
+    const projectedAttributeMB = (
+      attributeOwned["attr:producer:gpu:test"] +
+      attributeOwned["attr:snapshot:gpu:test"] +
+      finalAttribute.values.length * 4
+    ) / finalAttribute.values.length;
+    assert.equal(
+      projectedAttributeMB,
+      16,
+      "producer, staging and CPU copy use 16 bytes per atom",
+    );
+    report.states.attributeProducer = {
+      first: firstAttribute,
+      second: nextAttribute,
+      final: finalAttribute,
+      projectedMBAt1M: projectedAttributeMB,
+    };
+    await update({ mode: "preloaded" });
+
     await update({ mode: "snapshot", offsetX: 5 });
     await page.waitForFunction(
       () => window.__viewer.coordinateSnapshot?.positions[0] === -13,

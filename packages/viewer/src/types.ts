@@ -71,6 +71,7 @@ export interface StructureResource {
   readonly identity: StructureData["identity"];
   readonly topologyRevision: number;
   readonly positionsRevision: number;
+  readonly attributesRevision: number;
   /** Lazily computed and cached; throws once the resource is disposed. */
   readonly bounds: StructureBounds | null;
   dispose(): void;

@@ -4,6 +4,11 @@
 export { WorldSpacePointLayer } from "./world-space-points.ts";
 export { StructureContext, useStructure } from "./structure-context.ts";
 export { CoordinatesContext, useCoordinates } from "./coordinates-context.ts";
+export { AttributeProducer } from "./attribute-producer.ts";
+export { AttributesContext } from "./attributes-context.ts";
+export type { Attributes, ProducedAttribute } from "./attributes-context.ts";
+export { useAttributeSnapshot } from "./attribute-snapshot.ts";
+export type { AttributeSnapshot } from "./attribute-snapshot.ts";
 export type { Coordinates } from "./coordinates-context.ts";
 export { IdentityCoordinates } from "./identity-coordinates.ts";
 export { WobbleCoordinates } from "./wobble-coordinates.ts";

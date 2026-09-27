@@ -126,9 +126,9 @@ representation rather than evaluating it yourself.
 
 - `constant(value)` — one value everywhere (number→scalar, `[r,g,b,a]`→colour,
   string→label).
-- `attribute(name)` — read a numeric table column (`element`, `bfactor`,
-  `occupancy`, `radius`, `residue`, `atomChain`, `labelSeq`, `chain`) as a
-  scalar on that column's domain.
+- `attribute(name, { domain? })` — read a built-in, well-known or namespaced
+  custom numeric column through `@molgpu/table`. Custom names require a domain.
+  A residue column can be lifted to atoms with `{ domain: "atom" }`.
 - `categorical(input, cases, fallback)` — map an integer scalar input to
   per-category values, with an explicit fallback.
 - `linear(input, { domain: [lo,hi], range?, overflow? })` — affine map into
