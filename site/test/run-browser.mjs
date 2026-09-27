@@ -73,12 +73,22 @@ Deno.test("site landing page and maintained gallery routes", async () => {
       await page.locator("#hero-title").textContent(),
       /composable toolkit/i,
     );
-    assertStrictEquals(
-      await page.locator(".package-grid a").count(),
-      7,
-      "every public package is presented",
+    assertEquals(
+      (await page.locator(".package-grid a code").allTextContents()).map(
+        (name) => name.trim(),
+      ),
+      [
+        "@molgpu/table",
+        "@molgpu/select",
+        "@molgpu/fields",
+        "@molgpu/io",
+        "@molgpu/geo",
+        "@molgpu/timeline",
+        "@molgpu/dynamics",
+        "@molgpu/viewer",
+      ],
+      "every public package has a card in dependency order",
     );
-
     for (const link of await page.locator(".package-grid a").all()) {
       assertMatch(
         await link.getAttribute("href"),

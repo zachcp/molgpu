@@ -33,6 +33,11 @@ const packages = [
     packageReadme("timeline"),
   ],
   [
+    "@molgpu/dynamics",
+    "Coordinate math and GPU kernels for molecular motion.",
+    packageReadme("dynamics"),
+  ],
+  [
     "@molgpu/viewer",
     "Composable use.gpu visualization components.",
     packageReadme("viewer"),
