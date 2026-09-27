@@ -26,6 +26,9 @@ import {
 } from "./internal/instrumentation.ts";
 import type { ViewerComponent, ViewerElement } from "./types.ts";
 
+/** How long codes from an older coordinate generation stay published. */
+const HOLD_MS = 1000;
+
 export interface GpuDsspStatus {
   readonly generation: number;
   /** Directly flagged acceptor and bend-centre rows, excluding dependents. */
@@ -246,6 +249,20 @@ const Provider: LC<GpuDsspProps & { children: LiveElement }> = ({
       buffer.destroy();
     });
   }, [published?.result.codeBuffer]);
+  // Codes from an older generation are held for at most HOLD_MS. Re-render
+  // when the hold ends so a stalled or failed newer run cannot pin them.
+  const [, setHoldExpired] = useState(0);
+  const holding = !!published && !!coordinates &&
+    published.result.generation !== coordinates.generation;
+  useResource((dispose) => {
+    if (!holding || !published) return;
+    const remaining = published.publishedAt + HOLD_MS - performance.now();
+    const timer = setTimeout(
+      () => setHoldExpired((n) => n + 1),
+      Math.max(0, remaining) + 1,
+    );
+    dispose(() => clearTimeout(timer));
+  }, [holding, published]);
   if (
     failure && failure.source === coordinates?.source.buffer &&
     failure.generation === coordinates.generation
@@ -255,7 +272,7 @@ const Provider: LC<GpuDsspProps & { children: LiveElement }> = ({
       published.identity === root.identity &&
       published.layout === layout &&
       (published.result.generation === coordinates.generation ||
-        performance.now() - published.publishedAt < 1000)
+        performance.now() - published.publishedAt < HOLD_MS)
     ? published.result
     : null;
   const data = useMemo(() =>

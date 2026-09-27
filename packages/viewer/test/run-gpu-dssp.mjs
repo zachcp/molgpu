@@ -75,6 +75,11 @@ Deno.test("GPU DSSP agrees with CPU on the pinned protein corpus", async () => {
           true,
           "a source write between submits must not mix coordinate frames",
         );
+        assert.equal(
+          result.storageCopy,
+          true,
+          "a source without COPY_SRC is frozen by a storage copy",
+        );
       }
     }
     for (const model of [1, 58, 116]) {

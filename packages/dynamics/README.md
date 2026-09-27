@@ -31,6 +31,7 @@ deno add jsr:@molgpu/dynamics
 | `affineWgsl`             | experimental | WGSL source for a transform over all rows.                                               |
 | `affineSelectedWgsl`     | experimental | WGSL source for a transform over a bitset-selected subset.                               |
 | `createCellList`         | experimental | CPU counting-sort cell grid with bounded exact neighbour queries.                        |
+| `CellListLimitError`     | experimental | Dense cell grid exceeds `maxCells`; carries `cells` and `limit`.                         |
 | `CellList`               | experimental | Grid arrays and bounded query methods.                                                   |
 | `CellListOptions`        | experimental | Selection and allocation limits for a cell grid.                                         |
 | `cellListWgsl`           | experimental | WGSL stages for bounds, count, scan, scatter and exact pair queries.                     |

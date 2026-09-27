@@ -141,9 +141,9 @@ export const Ribbon: ViewerComponent<
         });
       }
       // GpuDssp holds its last completed code column briefly while a newer
-      // coordinate generation runs. Its provider limits that staleness and
-      // verifies source/topology identity before publishing the snapshot.
-      if (attributeSnapshot) {
+      // coordinate generation runs, so generations may differ. The dataset
+      // must still match: a snapshot from a replaced structure is ignored.
+      if (attributeSnapshot?.data.identity === snapshot.identity) {
         const column = attributeColumn(attributeSnapshot.data, "ssCode");
         if (column?.provenance === "gpu:dssp") {
           return withAttributes(snapshot, { ssCode: column });

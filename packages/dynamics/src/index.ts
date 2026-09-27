@@ -9,6 +9,7 @@ export {
 } from "./affine.ts";
 export {
   type CellList,
+  CellListLimitError,
   type CellListOptions,
   createCellList,
 } from "./cell-list.ts";

@@ -1,4 +1,5 @@
 import {
+  CellListLimitError,
   cellListWgsl,
   type DsspBridge,
   type DsspLayout,
@@ -34,8 +35,14 @@ struct Params { count: u32, pad0: u32, pad1: u32, pad2: u32 };
 @group(0) @binding(1) var<storage, read_write> output: array<f32>;
 @group(0) @binding(2) var<uniform> params: Params;
 @compute @workgroup_size(64)
-fn main(@builtin(global_invocation_id) id: vec3<u32>) {
-  if (id.x < params.count) { output[id.x] = input[id.x]; }
+fn main(
+  @builtin(global_invocation_id) id: vec3<u32>,
+  @builtin(num_workgroups) groups: vec3<u32>,
+) {
+  // Grid-stride: one dimension covers any atom count within the group limit.
+  for (var i = id.x; i < params.count; i += groups.x * 64u) {
+    output[i] = input[i];
+  }
 }`;
 const pipelines = new WeakMap<
   GPUDevice,
@@ -277,11 +284,19 @@ export async function gpuDssp(
         Uint32Array.of(data.topology.atoms.count * 3, 0, 0, 0),
       );
       const copy = gather.beginComputePass();
-      dispatch(copy, "copyPositions", [
-        [0, positions],
-        [1, framePositions],
-        [2, copyParams],
-      ], Math.ceil(data.topology.atoms.count * 3 / GROUP));
+      dispatch(
+        copy,
+        "copyPositions",
+        [
+          [0, positions],
+          [1, framePositions],
+          [2, copyParams],
+        ],
+        Math.min(
+          Math.ceil(data.topology.atoms.count * 3 / GROUP),
+          device.limits.maxComputeWorkgroupsPerDimension,
+        ),
+      );
       copy.end();
     }
     const gatherPass = gather.beginComputePass();
@@ -348,12 +363,10 @@ export async function gpuDssp(
         Math.max(1, caCount * 8),
       )!;
     } catch (error) {
-      if (error instanceof RangeError) {
-        const stage = error.message.startsWith("cell list needs")
-          ? "sparse cell grid"
-          : "cell list";
-        return await frameFallback(stage);
+      if (error instanceof CellListLimitError) {
+        return await frameFallback("sparse cell grid");
       }
+      if (error instanceof RangeError) return await frameFallback("cell list");
       throw error;
     }
 

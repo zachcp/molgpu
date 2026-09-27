@@ -16,6 +16,8 @@ CellList
   export interface CellList { readonly cellSize: number; readonly origin: readonly [number, number, number]; readonly dims: readonly [number, number, number]; readonly counts: Uint32Array; readonly offsets: Uint32Array; readonly rows: Uint32Array; /** Visit exact neighbours within `cutoff`, stopping when visitor returns true. */ near(x: number, y: number, z: number, cutoff: number, visit: (row: number) => boolean | void): boolean; /** Flattened, lexicographically sorted unordered row pairs within cutoff. */ pairsWithin(cutoff: number, maxPairs?: number): Uint32Array }
 CellListBoundsReadback
   export interface CellListBoundsReadback { /** Generation of the coordinate source when the reduction was dispatched. */ readonly generation: number; /** min xyz, invalid count, max xyz, finite count. */ readonly values: Float32Array }
+CellListLimitError
+  export class CellListLimitError extends RangeError { readonly cells: number; readonly limit: number; constructor(cells: number, limit: number) }
 CellListOptions
   export interface CellListOptions { /** Sorted, unique topology rows to index; omitted indexes every row. */ readonly rows?: ArrayLike<number> | null; /** Maximum dense cells; defaults to four per indexed atom. */ readonly maxCells?: number; /** Maximum candidate rows one query may inspect; defaults to 4096. */ readonly maxCandidates?: number }
 CellListPlan

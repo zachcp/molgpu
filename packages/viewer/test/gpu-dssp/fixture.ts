@@ -37,6 +37,7 @@ declare global {
       milliseconds: number;
       aborted?: boolean;
       stableFrame?: boolean;
+      storageCopy?: boolean;
     }>;
   }
 }
@@ -370,6 +371,7 @@ window.runGpuDssp = async (id: string, model: "first" | number = "first") => {
   }
   let aborted: boolean | undefined;
   let stableFrame: boolean | undefined;
+  let storageCopy: boolean | undefined;
   if (id === "1crn") {
     const controller = new AbortController();
     const pending = gpuDssp(device, coordinates, {
@@ -417,6 +419,21 @@ window.runGpuDssp = async (id: string, model: "first" | number = "first") => {
     } finally {
       GPUBuffer.prototype.mapAsync = originalMap;
     }
+    // use.gpu RawData positions lack COPY_SRC: freeze them by storage copy.
+    const storageOnly = device.createBuffer({
+      size: data.positions.byteLength,
+      usage: 0x0080 | 0x0008,
+    });
+    device.queue.writeBuffer(storageOnly, 0, data.positions);
+    const copied = await gpuDssp(device, storageOnly, {
+      data,
+      rows,
+      layout,
+      generation: 4,
+    });
+    storageCopy = copied.codes.every((code, i) => code === expected[i]);
+    copied.codeBuffer.destroy();
+    storageOnly.destroy();
   }
   result.codeBuffer.destroy();
   coordinates.destroy();
@@ -429,5 +446,6 @@ window.runGpuDssp = async (id: string, model: "first" | number = "first") => {
     milliseconds,
     aborted,
     stableFrame,
+    storageCopy,
   };
 };
