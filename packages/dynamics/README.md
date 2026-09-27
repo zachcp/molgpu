@@ -105,8 +105,9 @@ also read and write grid indexes and pair output according to occupancy.
 rows in double precision and returns a proper rotation (determinant +1). It
 rejects collinear or nearly collinear fit points, including degenerate input
 with fewer than three rows. The returned matrix applies to **all** output rows;
-`rows` selects only the fit. The default also aligns centroids. This CPU result
-is the oracle for the planned live `<Superpose>` GPU provider.
+`rows` selects only the fit. The default also aligns centroids; with `translate`
+false the source rotates about its own centroid, which stays put. This CPU
+result is the oracle for the planned live `<Superpose>` GPU provider.
 
 ## Periodic reference
 

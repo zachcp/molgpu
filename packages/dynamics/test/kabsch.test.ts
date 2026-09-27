@@ -119,3 +119,30 @@ Deno.test("Kabsch solves small-scale coordinates without an absolute cutoff", ()
   assertAlmostEquals(fit.matrix[0], 0, 1e-6);
   assertAlmostEquals(fit.matrix[1], 1, 1e-6);
 });
+
+Deno.test("Kabsch without translation rotates about the source centroid", () => {
+  // Far from the origin, so rotating about the origin would move the centroid.
+  const offset = Float32Array.from(
+    SOURCE,
+    (v, i) => v + [100, -200, 300][i % 3],
+  );
+  // The reference is SOURCE rotated 90 degrees about z and moved elsewhere.
+  const reference = new Float32Array(SOURCE.length);
+  for (let i = 0; i < SOURCE.length; i += 3) {
+    reference[i] = -SOURCE[i + 1] + 7;
+    reference[i + 1] = SOURCE[i] - 3;
+    reference[i + 2] = SOURCE[i + 2] + 2;
+  }
+  const rotated = fitKabsch(offset, reference);
+  const fixed = fitKabsch(offset, reference, null, false);
+  for (let k = 0; k < 12; k++) {
+    assertAlmostEquals(fixed.matrix[k], rotated.matrix[k], 1e-9);
+  }
+  const moved = applyAffine(offset, fixed.matrix);
+  const centroid = (p: Float32Array, axis: number) =>
+    p.filter((_, i) => i % 3 === axis).reduce((a, b) => a + b, 0) / 5;
+  for (let axis = 0; axis < 3; axis++) {
+    assertAlmostEquals(centroid(moved, axis), centroid(offset, axis), 1e-4);
+  }
+  assertAlmostEquals(rotated.rmsd, 0, 1e-4);
+});

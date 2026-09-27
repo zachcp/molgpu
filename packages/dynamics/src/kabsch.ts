@@ -67,7 +67,8 @@ function secondScatterEigenvalue(scatter: Float64Array): number {
 /** Proper Kabsch rigid fit over corresponding topology rows.
  * Source and reference are packed xyz and equal length. Selected rows must be
  * sorted and unique; all output rows can be transformed with the returned
- * matrix. Throws on fewer than three non-collinear fit points. */
+ * matrix. With `translate` false the rotation is about the source centroid,
+ * which stays in place. Throws on fewer than three non-collinear fit points. */
 export function fitKabsch(
   source: Float32Array,
   reference: Float32Array,
@@ -181,18 +182,14 @@ export function fitKabsch(
     r22 = 1 - 2 * (x * x + y * y);
   const centroidS = meanS.map((value, i) => value + baseS[i]);
   const centroidR = meanR.map((value, i) => value + baseR[i]);
-  const tx = translate
-    ? centroidR[0] -
-      (r00 * centroidS[0] + r01 * centroidS[1] + r02 * centroidS[2])
-    : 0;
-  const ty = translate
-    ? centroidR[1] -
-      (r10 * centroidS[0] + r11 * centroidS[1] + r12 * centroidS[2])
-    : 0;
-  const tz = translate
-    ? centroidR[2] -
-      (r20 * centroidS[0] + r21 * centroidS[1] + r22 * centroidS[2])
-    : 0;
+  // Without translation the source centroid stays fixed and only rotates.
+  const target = translate ? centroidR : centroidS;
+  const tx = target[0] -
+    (r00 * centroidS[0] + r01 * centroidS[1] + r02 * centroidS[2]);
+  const ty = target[1] -
+    (r10 * centroidS[0] + r11 * centroidS[1] + r12 * centroidS[2]);
+  const tz = target[2] -
+    (r20 * centroidS[0] + r21 * centroidS[1] + r22 * centroidS[2]);
   const matrix = Float64Array.of(
     r00,
     r10,
