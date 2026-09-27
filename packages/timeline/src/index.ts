@@ -169,12 +169,39 @@ export function createCurve(
       (!Array.isArray(controls) || controls.length !== 4 ||
         controls.some((x) => !Number.isFinite(x)))
     ) throw new TypeError("bezier ease needs four finite controls");
+    let knots: Knots | undefined;
+    if (frame.knots !== undefined) {
+      const controls = frame.knots as unknown;
+      if (!Array.isArray(controls) || controls.length !== 2) {
+        throw new TypeError(`frame ${i} knots must contain two controls`);
+      }
+      const normalized = controls.map((control: unknown) => {
+        if (shape === 0) {
+          finite(control, `frame ${i} knot`);
+          return control;
+        }
+        if (!Array.isArray(control) && !ArrayBuffer.isView(control)) {
+          throw new TypeError(`frame ${i} knot must match its value shape`);
+        }
+        const vector = Array.from(control as ArrayLike<number>);
+        if (
+          vector.length !== width ||
+          vector.some((component) => !Number.isFinite(component))
+        ) {
+          throw new TypeError(
+            `frame ${i} knot must match its value shape and be finite`,
+          );
+        }
+        return vector;
+      });
+      knots = [normalized[0] as Value, normalized[1] as Value];
+    }
     return {
       time: frame.time,
       value: clone(value),
       ease: frame.ease,
       bezier: frame.bezier,
-      knots: frame.knots as Knots | undefined,
+      knots,
     };
   });
   if (auto && input.some((frame) => frame.ease || frame.knots)) {
