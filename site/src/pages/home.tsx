@@ -19,7 +19,7 @@ const packages = [
   ],
   [
     "@molgpu/io",
-    "BinaryCIF ingestion and molecular-surface fields.",
+    "Mol* parsers adapted to GPU-native structures, maps, charges, and selections.",
     packageReadme("io"),
   ],
   [
