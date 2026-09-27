@@ -117,6 +117,76 @@ Deno.test("helix cross-section is wider than coil (RIBBON_WIDTH by secondary str
   );
 });
 
+Deno.test("beta sheet ends widen into an arrow shoulder and converge to a point", () => {
+  const guide = Float32Array.from([
+    0,
+    0,
+    0,
+    1,
+    0,
+    0,
+    2,
+    0,
+    0,
+    3,
+    0,
+    0,
+    4,
+    0,
+    0,
+    5,
+    0,
+    0,
+  ]);
+  const kind = ["sheet", "sheet", "sheet", "sheet", "sheet", "coil"] as const;
+  const ss = {
+    count: 6,
+    direction: Float32Array.from(
+      Array.from({ length: 6 }, () => [0, 0, 1]).flat(),
+    ),
+    kind,
+    first: Uint8Array.from([1, 0, 0, 0, 1, 1]),
+    last: Uint8Array.from([0, 0, 0, 0, 1, 1]),
+  };
+  const mesh = buildRibbonGeometry(
+    {
+      guide,
+      residue: Uint32Array.from([0, 1, 2, 3, 4, 5]),
+      runs: Uint32Array.from([0, 6]),
+    },
+    ss,
+    4,
+  );
+
+  const maxRingDiameter = (residue: number) => {
+    let max = 0;
+    for (let start = 0; start < mesh.vertexCount; start += 4) {
+      if (mesh.residue[start] !== residue) continue;
+      for (let a = 0; a < 4; a++) {
+        for (let b = a + 1; b < 4; b++) {
+          const dx = mesh.positions[(start + a) * 3] -
+            mesh.positions[(start + b) * 3];
+          const dy = mesh.positions[(start + a) * 3 + 1] -
+            mesh.positions[(start + b) * 3 + 1];
+          const dz = mesh.positions[(start + a) * 3 + 2] -
+            mesh.positions[(start + b) * 3 + 2];
+          max = Math.max(max, Math.hypot(dx, dy, dz));
+        }
+      }
+    }
+    return max;
+  };
+
+  assert(
+    maxRingDiameter(3) > maxRingDiameter(2),
+    "the penultimate sheet residue should widen into the arrow shoulder",
+  );
+  assert(
+    maxRingDiameter(4) < 1e-4,
+    "the terminal sheet residue should converge to the arrow point",
+  );
+});
+
 Deno.test("empty trace (no runs) produces zero geometry", () => {
   const mesh = buildRibbonGeometry({
     guide: new Float32Array(),
