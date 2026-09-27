@@ -217,10 +217,15 @@ export function constant(value: number | string | Color): Field {
   });
 }
 
-/** Read a numeric table column as a scalar field on that column's domain. */
+/**
+ * Read a numeric table column as a scalar field on that column's domain. A
+ * custom `<ns>:<name>` column needs `options.domain`; `lift: true` reads a
+ * residue column onto atoms through `atoms.residue` (implicit for built-in
+ * residue columns).
+ */
 export function attribute(
   name: string,
-  options: { domain?: Domain } = {},
+  options: { domain?: Domain; lift?: boolean } = {},
 ): Field {
   const known = Object.hasOwn(KNOWN_DOMAINS, name)
     ? KNOWN_DOMAINS[name]
@@ -235,7 +240,12 @@ export function attribute(
     fail("attribute", `custom column ${name} requires options.domain`);
   }
   const domain = options.domain ?? known!;
-  const lift = known === "residue" && domain === "atom";
+  // Built-in residue columns lift implicitly; a custom column declares that it
+  // is residue-domain with `lift`, because its domain is only known from data.
+  const lift = options.lift ?? (known === "residue" && domain === "atom");
+  if (lift && (domain !== "atom" || (known && known !== "residue"))) {
+    fail("attribute", `lift reads a residue column ${name} onto atoms`);
+  }
   if (known && domain !== known && !lift) {
     fail("attribute", `column ${name} has domain ${known}`);
   }
@@ -937,7 +947,7 @@ function bakeAnnotation(
 export { sampleVolumeWgsl } from "./volume.ts";
 
 // Built-in colour presets composed from the primitives above.
-export { byBfactor, byChain, byElement, bySeq } from "./builtins.ts";
+export { byBfactor, byChain, byCharge, byElement, bySeq } from "./builtins.ts";
 
 // Identity-keyed annotation joins that produce annotation fields.
 export {

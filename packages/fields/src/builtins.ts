@@ -24,6 +24,13 @@ const COOL_WARM: Stops = [[0, [0.23, 0.30, 0.75, 1]], [0.5, [
   0.95,
   1,
 ]], [1, [0.75, 0.20, 0.20, 1]]];
+// Mol*'s 'red-white-blue' list (0xBF2222, 0xFFFFFF, 0x3361E1), as its
+// partial-charge theme uses it.
+const RED_WHITE_BLUE: Stops = [
+  [0, [191 / 255, 34 / 255, 34 / 255, 1]],
+  [0.5, [1, 1, 1, 1]],
+  [1, [51 / 255, 97 / 255, 225 / 255, 1]],
+];
 const RAINBOW: Stops = [
   [0, [0.80, 0.15, 0.15, 1]],
   [0.25, [0.90, 0.70, 0.15, 1]],
@@ -87,5 +94,37 @@ export function byChain(
     attribute("atomChain"),
     Object.fromEntries(palette.map((c, i) => [i, c])),
     fallback,
+  );
+}
+
+/**
+ * Colour atoms by charge in elementary charges over `domain` (default
+ * [-1, 1]) on Mol*'s partial-charge scale: red negative, white 0, blue
+ * positive. `column` reads another charge column, such as `formalCharge` or a
+ * custom residue net-charge column with `lift: true`.
+ */
+export function byCharge(
+  options: {
+    domain?: readonly [number, number];
+    stops?: ReadonlyArray<readonly [number, Color]>;
+    column?: string;
+    lift?: boolean;
+  } = {},
+): Field {
+  const {
+    domain = [-1, 1],
+    stops = RED_WHITE_BLUE,
+    column = "partialCharge",
+    lift,
+  } = options;
+  if (!(domain[0] < domain[1])) {
+    throw new TypeError("@molgpu/fields byCharge: expected domain [lo, hi]");
+  }
+  return colormap(
+    linear(attribute(column, { domain: "atom", lift }), {
+      domain,
+      overflow: "clamp",
+    }),
+    stops,
   );
 }

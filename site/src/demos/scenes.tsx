@@ -1,7 +1,13 @@
 /** @jsx LiveReact.createElement */
 import { React as LiveReact, useResource } from "@use-gpu/live";
 import type { StructureData } from "@molgpu/table";
-import { byElement, colormap, curve, volumeSample } from "@molgpu/fields";
+import {
+  byCharge,
+  byElement,
+  colormap,
+  curve,
+  volumeSample,
+} from "@molgpu/fields";
 import { comp, element, resolve, toAtoms, within } from "@molgpu/select";
 import { frameCurve } from "@molgpu/timeline";
 import {
@@ -176,6 +182,13 @@ export const renderDemoScene = (
         />,
       ];
     }
+    case "charge":
+      return (
+        <Spacefill
+          scale={0.6}
+          color={byCharge({ domain: [-0.8, 0.8] })}
+        />
+      );
     case "figure":
       return [
         <Ribbon color={[0.86, 0.55, 0.35, 1]} />,

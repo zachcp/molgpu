@@ -120,3 +120,45 @@ export interface SurfaceField extends VolumeData {
   /** Absolute isovalue of the surface; always equals `probeRadius`. */
   readonly level: number;
 }
+
+/** Why a PQR import failed, stable enough to branch on. */
+export type PqrErrorCode =
+  /** The input was not a string or `Uint8Array`. */
+  | "INVALID_INPUT"
+  /** A record is malformed, or the records do not form a valid structure. */
+  | "INVALID_PQR"
+  /** The file has no ATOM or HETATM records. */
+  | "NO_ATOMS"
+  /** The PQR has no chain IDs and a residue key spans several chains. */
+  | "AMBIGUOUS_CHAIN"
+  /** The optional Mol* element guesser failed to load. */
+  | "PARSER_UNAVAILABLE";
+
+/** What `structureFromPqr` substituted while building the structure. */
+export interface PqrStructureReport {
+  readonly atoms: number;
+  /** Atoms whose PQR radius was 0 and whose display radius is the element's. */
+  readonly radiusFallbacks: number;
+}
+
+/** How `applyPqr` matched records to a structure. */
+export interface PqrApplyReport {
+  /** Structure atoms that received a record's charge. */
+  readonly matched: number;
+  /** Structure atoms with no record, as `chain:seq:insertion:name`; they get 0. */
+  readonly unmatchedAtoms: readonly string[];
+  /** Records with no atom and no heavy atom to fold onto, same key format. */
+  readonly unmatchedRecords: readonly string[];
+  /**
+   * Residue copies, per model and altloc conformer, whose assigned sum differs
+   * from the PQR residue sum by > 1e-3 e. `altloc` is "" when the residue has
+   * no alternate locations.
+   */
+  readonly residueDelta: readonly {
+    readonly residue: string;
+    readonly model: number;
+    readonly altloc: string;
+    readonly pqr: number;
+    readonly assigned: number;
+  }[];
+}

@@ -8,6 +8,7 @@ import { chromium } from "playwright";
 import {
   annotation,
   attribute,
+  byCharge,
   categorical,
   COLOR,
   colormap,
@@ -47,6 +48,24 @@ Deno.test("fields GPU parity", async () => {
         (_, i) => i % 3,
       ),
     },
+    partialCharge: {
+      domain: "atom",
+      kind: "scalar",
+      provenance: "user",
+      values: Float32Array.from(
+        { length: base.topology.atoms.count },
+        (_, i) => (i % 5) * 0.6 - 1.2,
+      ),
+    },
+    "charge:residueNet": {
+      domain: "residue",
+      kind: "scalar",
+      provenance: "computed:test",
+      values: Float32Array.from(
+        { length: base.topology.residues.count },
+        (_, i) => i - 1,
+      ),
+    },
   });
   const atoms = data.topology.atoms.count;
 
@@ -58,6 +77,11 @@ Deno.test("fields GPU parity", async () => {
     },
     liftedResidueCode: {
       field: attribute("ssCode", { domain: "atom" }),
+      domain: "atom",
+    },
+    byCharge: { field: byCharge(), domain: "atom" },
+    liftedCustomResidueNet: {
+      field: byCharge({ column: "charge:residueNet", lift: true }),
       domain: "atom",
     },
     byElement: {

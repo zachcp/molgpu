@@ -166,8 +166,8 @@ compute pass, no use.gpu). Type-checked contract tests run under
 
 ## Built-ins and annotation joins
 
-`byElement`, `byBfactor`, `bySeq`, and `byChain` are a small closed set of
-colour presets composed from the primitives (no expression language);
+`byElement`, `byBfactor`, `bySeq`, `byChain` and `byCharge` are a small closed
+set of colour presets composed from the primitives (no expression language);
 `columnRange(data,
 name)` auto-ranges a domain from a column's min/max.
 
@@ -211,6 +211,7 @@ before 0.1.0. _advanced_: for renderer integrations (the viewer), not app code.
 | `byBfactor`        | experimental | B-factor on a cool-to-warm ramp.                                                                         |
 | `bySeq`            | experimental | Residue index on a rainbow ramp.                                                                         |
 | `byChain`          | experimental | Chain index from a cyclic palette.                                                                       |
+| `byCharge`         | experimental | Charge on Mol*'s red-white-blue scale over `[-1, 1]` e; `column` and `lift` read other charge columns.   |
 | `columnRange`      | experimental | Min/max of a column, for auto-ranging a domain.                                                          |
 | `joinAnnotation`   | experimental | Join external records onto the table by identity; returns an annotation field.                           |
 | `JoinOptions`      | experimental | Options for `joinAnnotation` (identity fields, value, policies, lift).                                   |

@@ -14,7 +14,8 @@ export type DemoId =
   | "figure"
   | "coordinates"
   | "trajectory"
-  | "volume";
+  | "volume"
+  | "charge";
 export interface DemoDefinition {
   readonly id: DemoId;
   readonly title: string;
@@ -136,6 +137,15 @@ export const demos: readonly DemoDefinition[] = [
     assertion:
       "the isosurface, slice, and atom colours share one uploaded VolumeData",
     options: { oit: true },
+  },
+  {
+    id: "charge",
+    title: "Partial charge",
+    summary:
+      "PDB2PQR's AMBER charges for 1CRN are applied to the heavy-atom structure, folding each hydrogen onto its atom, and coloured on Mol*'s red-white-blue charge scale.",
+    fixture: "1crn",
+    assertion:
+      "imported partial charges colour atoms through a field, with the charge column uploaded once",
   },
   {
     id: "figure",

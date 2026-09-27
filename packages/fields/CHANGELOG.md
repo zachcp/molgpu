@@ -6,6 +6,12 @@ All notable changes to `@molgpu/fields` are recorded here. The format follows
 
 ## [Unreleased]
 
+- `byCharge(options)` colours by charge on Mol*'s partial-charge scale
+  (red-white-blue over `[-1, 1]` e). By default it reads `partialCharge`;
+  `column` reads another charge column (Phase 14, 1to.6).
+- `attribute(name, { domain: "atom", lift: true })` lifts a custom residue
+  column onto atoms through `atoms.residue`, as built-in residue columns already
+  lift.
 - `attribute` and `columnRange` now use the shared table resolver. Namespaced
   custom columns require a domain; residue columns can be lifted to atoms.
 

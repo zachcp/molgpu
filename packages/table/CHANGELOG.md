@@ -6,6 +6,8 @@ All notable changes to `@molgpu/table` are recorded here. The format follows
 
 ## [Unreleased]
 
+- `Atoms.formalCharge` is deprecated. Set the derived `formalCharge` attribute
+  with `withAttributes`; `@molgpu/io` now writes only that (Phase 14).
 - Derived attribute channels (Phase 10): `withAttributes` validates and copies
   atom or residue columns, advancing the attribute revision. `attributeColumn`
   and `attributeNames` resolve built-in and derived columns with provenance.

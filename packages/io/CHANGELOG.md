@@ -6,6 +6,26 @@ All notable changes to `@molgpu/io` are recorded here. The format follows
 
 ## [Unreleased]
 
+- PQR import (Phase 14, 1to.4). New experimental `structureFromPqr`, `applyPqr`
+  and `PqrParseError`, with the `PqrErrorCode`, `PqrStructureReport` and
+  `PqrApplyReport` types. Records are tokenised by whitespace, so PDB2PQR output
+  with widened fields reads correctly; Mol*'s fixed-column PQR reader stays the
+  test oracle. PDB2PQR force-field names (CYX, CYM, N/C terminal variants, AMBER
+  nucleotides) classify as polymer residues in PQR structures only. `applyPqr`
+  folds a PQR hydrogen into each model and altloc copy that lacks it, and
+  `residueDelta` lists every model and conformer copy (with `model` and
+  `altloc`) whose charge still differs from the PQR residue (1to.10). Chain-less
+  records raise `AMBIGUOUS_CHAIN` only for residues that are in the PQR
+  (1to.11).
+- **Changed:** `structureFromBcif` no longer writes
+  `topology.atoms.formalCharge`. Formal charge is now the derived `formalCharge`
+  attribute (read it with `attributeColumn(data,
+  "formalCharge")`). Its
+  provenance is `imported:mmcif` when at least one `pdbx_formal_charge` row has
+  a value, and otherwise it holds zeros with provenance `default`. Every
+  structure from io therefore resolves `formalCharge`, and
+  `pdbx_formal_charge = 0` selects uncharged atoms instead of throwing, as Mol*
+  does (Phase 14, 1to.3).
 - Trajectories (Phase 12). New experimental `openTrajectory`,
   `trajectoryFromDcd`, `trajectoryFromXtc`, `trajectoryFromTrr`,
   `trajectoryFormat`, `byteSource`, `urlByteSource`, `MAX_FULL_DOWNLOAD`,
