@@ -92,12 +92,14 @@ map imported with `<Volume>` is the solver's answer.
 - **No cutoff in Phase 16.** The direct sum is exact. A cell-list cutoff needs a
   switching function to stay smooth; it is a follow-up.
 - **Grid.** Axis-aligned. It is placed around the structure's own positions of
-  the summed atoms, on the CPU. That is synchronous, reproducible, and needs no
-  readback (finding 10). `padding` defaults to 8 Å and absorbs provider motion.
-  `spacing` defaults to 1 Å. An explicit `box` is the exact extent, with no
-  padding, for trajectories that travel. The grid changes only with `select`,
-  `spacing`, `padding`, `box` or the topology. Grids are kept by value
-  (`useStableGrid`), so samplers never recompile for an equal grid (finding 16).
+  the nonzero charged atoms when CPU charges are available, or all selected
+  active atoms for GPU-produced charges. That is synchronous, reproducible, and
+  needs no readback (finding 10). `padding` defaults to 8 Å and absorbs provider
+  motion. `spacing` defaults to 1 Å. An explicit `box` is the exact extent, with
+  no padding, for trajectories that travel. The grid changes only with `select`,
+  `spacing`, `padding`, `box`, the charge column or the topology. Grids are kept
+  by value (`useStableGrid`), so samplers never recompile for an equal grid
+  (finding 16).
 - **Two budgets.**
   - `maxSamples`: default 128³.
   - `maxPairs`: samples × charged atoms per computation, default 2³⁴ ≈ 1.7e10
@@ -199,10 +201,11 @@ Phase 16 builds nothing called `<MField>`. The egp.8 spike
 - **Coalesced, latest-wins.** At most one computation is in flight. Newer inputs
   mark it pending, and completion runs the newest. Completion is a queue fence
   (`onSubmittedWorkDone`), not a readback (finding 18).
-- **Settling.** After a new upstream buffer the provider recomputes at 50, 150,
-  400 and 1000 ms. A coordinate kernel's pipeline compiles asynchronously, so
-  the first dispatch can read an unfilled buffer. That is the race `Published`
-  covers for drawing with timed wakeups; it was found while building.
+- **Settling.** After a new kernel-produced upstream buffer the provider
+  recomputes at 50, 150, 400 and 1000 ms. A coordinate kernel's pipeline
+  compiles asynchronously, so the first dispatch can read an unfilled buffer.
+  That is the race `Published` covers for drawing with timed wakeups; it was
+  found while building.
 - `maxHz` optionally caps the rate.
 - GPU consumers (slice, `volumeSample`, lines, arrows) read the live buffer; the
   loop has no readback. CPU consumers (`<Isosurface>`) get snapshots at their

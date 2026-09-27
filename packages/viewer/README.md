@@ -294,8 +294,9 @@ charges include it.
   and `model="vacuum"` is plain Coulomb. Values are in kT/e at 298.15 K, which
   makes the default display range ±15 (±2 for Debye). This is not
   Poisson–Boltzmann: import an APBS map with `<Volume>` for that.
-- **Grid.** The grid is placed around the structure's own positions, padded by 8
-  Å at 1 Å spacing, or set with `box`. It stays fixed while coordinates move.
+- **Grid.** The grid is placed around selected atoms with nonzero CPU charges,
+  padded by 8 Å at 1 Å spacing, or set with `box`. GPU-produced charges use all
+  selected active atoms for bounds. It stays fixed while coordinates move.
 - **Cost.** Direct summation runs at about 2e10 pairs per second on an Apple
   silicon laptop. `maxPairs` (samples × charged atoms, default 2³⁴) refuses
   larger sums and names a spacing that fits.

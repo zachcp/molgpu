@@ -184,6 +184,23 @@ Deno.test("electric fields", async () => {
     report.states.grid = { dims: grid.dims, unit: grid.unit };
     assert.equal(grid.unit, "kcal/mol/e");
 
+    // A ready root buffer needs no timed settling recomputations.
+    let before = await counters();
+    await page.waitForTimeout(1150);
+    let now = await counters();
+    assert.equal(delta(now, before, "gathers:efield:dispatch"), 0);
+
+    // A distant neutral atom does not expand the automatic charge grid.
+    await update({ mode: "none", physics: {} });
+    await update({ mode: "sparse" });
+    await ready();
+    assert.deepEqual(await page.evaluate(() => window.__efield.grid.dims), [
+      17,
+      17,
+      17,
+    ]);
+    await parity("sparse", {});
+
     // 2. Altloc B copies are not summed (first model, primary conformer).
     await update({ mode: "none", physics: {} });
     await update({ mode: "altloc" });
@@ -193,7 +210,7 @@ Deno.test("electric fields", async () => {
     // 3. Under a coordinate provider the potential follows each generation on
     //    the GPU: no coordinate snapshot and no volume readback.
     await update({ mode: "none" });
-    let before = await counters();
+    before = await counters();
     await update({ mode: "wobble", phase: 0 });
     await ready();
     await parity("wobble", { phase: 0 });
@@ -202,7 +219,7 @@ Deno.test("electric fields", async () => {
       await update({ phase });
       await parity("wobble", { phase });
     }
-    let now = await counters();
+    now = await counters();
     assert.deepEqual(
       await page.evaluate(() => window.__efield.grid.dims),
       gridBefore,

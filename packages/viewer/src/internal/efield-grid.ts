@@ -14,6 +14,37 @@ export type Box = {
   readonly max: readonly [number, number, number];
 };
 
+const SPACING_STEP = 0.05;
+
+/** Smallest 0.05 Å spacing whose three minimum-two-sample axes fit. */
+function fittingSpacing(
+  spans: readonly number[],
+  current: number,
+  maxSamples: number,
+): number | null {
+  if (maxSamples < 8) return null;
+  const fits = (ticks: number) => {
+    const spacing = ticks * SPACING_STEP;
+    return spans.reduce(
+      (count, span) =>
+        count * Math.max(2, Math.ceil(span / spacing - 1e-9) + 1),
+      1,
+    ) <= maxSamples;
+  };
+  let low = Math.max(1, Math.ceil(current / SPACING_STEP));
+  let high = low;
+  while (!fits(high)) {
+    high *= 2;
+    if (!Number.isSafeInteger(high)) return null;
+  }
+  while (low < high) {
+    const middle = Math.floor((low + high) / 2);
+    if (fits(middle)) high = middle;
+    else low = middle + 1;
+  }
+  return low * SPACING_STEP;
+}
+
 /** Axis-aligned grid over `box` padded by `padding`, `spacing` apart. */
 export function efieldGrid(
   box: Box,
@@ -31,12 +62,14 @@ export function efieldGrid(
   ) as [number, number, number];
   const samples = dims[0] * dims[1] * dims[2];
   if (samples > maxSamples) {
-    // The spacing at which the same box fits, rounded up to 0.05 Å.
-    const fit = Math.ceil(spacing * Math.cbrt(samples / maxSamples) * 20) / 20;
+    const spans = [0, 1, 2].map((a) => box.max[a] - box.min[a] + 2 * padding);
+    const fit = fittingSpacing(spans, spacing, maxSamples);
     throw new RangeError(
       `<EField>: a ${dims.join("×")} grid (${samples} samples) exceeds ` +
-        `maxSamples ${maxSamples}; use spacing ≥ ${fit} Å, a smaller padding ` +
-        "or box, or raise maxSamples",
+        `maxSamples ${maxSamples}; ` +
+        (fit === null
+          ? "at least 8 samples are required; raise maxSamples"
+          : `use spacing ≥ ${fit} Å, a smaller padding or box, or raise maxSamples`),
     );
   }
   return createVolumeGrid({
@@ -86,12 +119,14 @@ export function checkPairBudget(
     grid.transform[1],
     grid.transform[2],
   );
-  const fit = Math.ceil(spacing * Math.cbrt(samples * atoms / maxPairs) * 20) /
-    20;
+  const spans = grid.dims.map((n) => (n - 1) * spacing);
+  const fit = fittingSpacing(spans, spacing, maxPairs / atoms);
   throw new RangeError(
     `<EField>: ${samples} samples × ${atoms} charged atoms = ` +
       `${samples * atoms} pair evaluations exceeds maxPairs ${maxPairs}; ` +
-      `use spacing ≥ ${fit} Å, a smaller box or select, or raise maxPairs`,
+      (fit === null
+        ? "at least 8 samples are required; raise maxPairs or reduce charged atoms"
+        : `use spacing ≥ ${fit} Å, a smaller box or select, or raise maxPairs`),
   );
 }
 

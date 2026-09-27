@@ -316,18 +316,18 @@ const EFieldCompute: LC<{
   useResource(() => {
     requestRepaint();
   }, [generation]);
-  // A new upstream buffer may be filled by a kernel whose pipeline compiles
-  // asynchronously, after our first dispatch read it (the same race
-  // Published's wakeups cover for drawing). Recompute a few times while it
-  // settles; the coalescing above folds these into the work in flight.
+  // A new kernel-produced upstream buffer may be filled after our first
+  // dispatch because its pipeline compiles asynchronously. Root Structure
+  // buffers are uploaded before rendering and need no settling work.
   useResource((dispose) => {
+    if (!coordinates.mayStartUnfilled) return;
     const timers = [50, 150, 400, 1000].map((delay) =>
       setTimeout(() => {
         if (alive.current) setWake((w) => w + 1);
       }, delay)
     );
     dispose(() => timers.forEach(clearTimeout));
-  }, [coordinates.source.buffer]);
+  }, [coordinates.source.buffer, coordinates.mayStartUnfilled]);
 
   const source = useMemo<StorageSource>(() => ({
     buffer: buffers.phi,
@@ -417,7 +417,8 @@ const positive = (value: number, name: string) => {
  * φ in kT/e (or kcal/mol/e) on an axis-aligned grid: the summed atoms' bounds
  * at the first coordinates available, padded, `spacing` apart, or `box`. The
  * grid then stays fixed while coordinates move, so samplers never recompile;
- * it changes only with `select`, `spacing`, `padding`, `box` or the topology.
+ * it changes with the selected charged rows, `spacing`, `padding`, `box`,
+ * the charge column or the topology.
  *
  * Each coordinate generation (a trajectory frame, a coordinate provider's
  * output) or charge change recomputes on the GPU with no CPU round trip. At
@@ -500,12 +501,15 @@ const EFieldInner: LC<EFieldProps & { coordinates: Coordinates }> = (
   const { sources } = useAttributeSources(resource.data, [charge]);
   const charges = sources[`attr:${charge}`] as StorageSource;
 
-  // The grid is placed around the structure's own positions of the summed
-  // atoms (synchronous and reproducible, unlike the first live frame), or
+  // The grid is placed around the structure's own positions of charged rows
+  // (or all active rows when a GPU producer has no CPU charge values), or
   // `box`. Padding absorbs provider motion; pass `box` for large moves.
   const boxKey = box ? `${box.min.join()}:${box.max.join()}` : "";
   const grid = useMemo(() => {
-    const bounds = box ?? rowBounds(resource.data.positions, active);
+    const bounds = box ?? rowBounds(
+      resource.data.positions,
+      column && rows.length ? rows : active,
+    );
     if (!bounds) {
       throw new TypeError("<EField> has no atoms to place its grid around");
     }
@@ -521,6 +525,7 @@ const EFieldInner: LC<EFieldProps & { coordinates: Coordinates }> = (
     resource.identity,
     resource.topologyRevision,
     active,
+    rows,
     spacing,
     padding,
     boxKey,

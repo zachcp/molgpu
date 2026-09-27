@@ -8,6 +8,8 @@ export interface Coordinates {
   readonly count: number;
   readonly generation: number;
   readonly resource: StructureResource;
+  /** A kernel may fill this buffer after its first consumer render. */
+  readonly mayStartUnfilled?: boolean;
 }
 
 /** Undefined means no Structure ancestor; null means an empty Structure. */

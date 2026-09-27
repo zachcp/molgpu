@@ -142,6 +142,7 @@ const RANDOM = charged(CLOUD.positions, CLOUD.charges);
 const DIPOLE = charged([-3, 0, 0, 3, 0, 0], [1, -1]);
 // One +1 e charge at the origin.
 const UNIT = charged([0, 0, 0], [1]);
+const SPARSE = charged([0, 0, 0, 10_000, 0, 0], [1, 0]);
 // Altloc B copy of the positive charge must not be summed.
 const ALTLOC = charged([-3, 0, 0, 3, 0, 0, -3, 0.5, 0], [1, -1, 1], [
   "A",
@@ -197,6 +198,7 @@ function chainSelection(id: string): Selection {
 type Mode =
   | "none"
   | "random"
+  | "sparse"
   | "altloc"
   | "wobble"
   | "trajectory"
@@ -348,6 +350,10 @@ probe.cpuPotential = (which, extra = {}) => {
     case "random":
       positions = CLOUD.positions;
       charges = CLOUD.charges;
+      break;
+    case "sparse":
+      positions = SPARSE.positions;
+      charges = SPARSE.attributes!.partialCharge.values;
       break;
     case "altloc":
       positions = ALTLOC.positions;
@@ -545,6 +551,14 @@ const Scene = ({ state }: { state: State }): LiveElement => {
     case "random":
       return (
         <Structure data={RANDOM}>
+          <EField {...field}>
+            <VolumeProbe />
+          </EField>
+        </Structure>
+      );
+    case "sparse":
+      return (
+        <Structure data={SPARSE}>
           <EField {...field}>
             <VolumeProbe />
           </EField>

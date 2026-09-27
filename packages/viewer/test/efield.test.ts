@@ -116,6 +116,25 @@ Deno.test("efieldGrid pads the bounds and names a spacing that fits", () => {
       .dims,
     [64, 64, 64],
   );
+  const long = { min: [0, 0, 0], max: [1000, 0, 0] } as const;
+  const error = assertThrows(
+    () => efieldGrid(long, 1, 0, "kT/e", 100),
+    RangeError,
+  );
+  const suggested = Number(error.message.match(/spacing ≥ ([\d.]+) Å/)?.[1]);
+  assert(Number.isFinite(suggested));
+  assertEquals(
+    efieldGrid(long, suggested, 0, "kT/e", 100).dims.reduce(
+      (product, n) => product * n,
+      1,
+    ) <= 100,
+    true,
+  );
+  assertThrows(
+    () => efieldGrid(long, 1, 0, "kT/e", 7),
+    RangeError,
+    "at least 8 samples are required",
+  );
 });
 
 Deno.test("checkPairBudget bounds samples × atoms", () => {
@@ -131,6 +150,32 @@ Deno.test("checkPairBudget bounds samples × atoms", () => {
     () => checkPairBudget(grid, 1001, 1e6),
     RangeError,
     "1000 samples × 1001 charged atoms",
+  );
+  const longGrid = efieldGrid(
+    { min: [0, 0, 0], max: [1000, 0, 0] },
+    1,
+    0,
+    "kT/e",
+    5000,
+  );
+  const error = assertThrows(
+    () => checkPairBudget(longGrid, 2, 200),
+    RangeError,
+  );
+  const suggested = Number(error.message.match(/spacing ≥ ([\d.]+) Å/)?.[1]);
+  assert(Number.isFinite(suggested));
+  const fit = efieldGrid(
+    { min: [0, 0, 0], max: [1000, 0, 0] },
+    suggested,
+    0,
+    "kT/e",
+    5000,
+  );
+  checkPairBudget(fit, 2, 200);
+  assertThrows(
+    () => checkPairBudget(longGrid, 30, 200),
+    RangeError,
+    "at least 8 samples are required",
   );
 });
 
