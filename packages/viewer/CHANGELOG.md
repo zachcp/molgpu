@@ -11,7 +11,8 @@ All notable changes to `@molgpu/viewer` are recorded here. The format follows
   structure positions; selection masks stay in topology atom order.
 - Add experimental `<NormalMode mode amplitude frequency phase>` for precomputed
   guide-node modes. Its animation changes a uniform and composes with
-  Trajectory.
+  Trajectory. Only a zero `amplitude` passes through; an animated scale that
+  lands on zero keeps the kernel and its mode buffers mounted (9g3.10).
 - `<Ribbon secondaryStructure="dssp">` runs DSSP on each coordinate snapshot it
   draws, so codes always come from the displayed coordinates (under a
   `<Trajectory>` or any coordinate provider). DSSP covers every model the drawn

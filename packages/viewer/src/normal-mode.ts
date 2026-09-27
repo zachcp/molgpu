@@ -32,8 +32,11 @@ const COPY_DST = 0x0008;
 const Mode: LC<{
   mode: NormalModeData;
   scale: number;
+  /** False only for zero amplitude. A scale that crosses zero while animating
+   * keeps the kernel and its buffers mounted. */
+  active: boolean;
   children: LiveElement;
-}> = ({ mode, scale, children }) => {
+}> = ({ mode, scale, active, children }) => {
   const upstream = useCoordinates();
   const device = useDeviceContext();
   useMemo(() => {
@@ -41,7 +44,7 @@ const Mode: LC<{
     return true;
   }, [mode, mode.version, upstream?.count]);
   const sources = useMemo<readonly StorageSource[] | null>(() => {
-    if (!upstream || scale === 0) return null;
+    if (!upstream || !active) return null;
     const make = (
       data: Float32Array | Uint32Array,
       format: "f32" | "u32",
@@ -67,7 +70,7 @@ const Mode: LC<{
       make(mode.atomToNode, "u32", "coords:normal-mode:map"),
       make(mode.vectors, "f32", "coords:normal-mode:vectors"),
     ];
-  }, [device, upstream?.count, mode, mode.version, scale === 0]);
+  }, [device, upstream?.count, mode, mode.version, active]);
   useResource((dispose) => {
     if (sources) {
       dispose(() => {
@@ -109,5 +112,12 @@ export const NormalMode: ViewerComponent<NormalModeProps> = (
   if (!Number.isFinite(scale)) {
     throw new RangeError("normal mode scale overflows");
   }
-  return viewer(use(Mode, { mode, scale, children: live(children) }));
+  return viewer(
+    use(Mode, {
+      mode,
+      scale,
+      active: amplitude !== 0,
+      children: live(children),
+    }),
+  );
 };

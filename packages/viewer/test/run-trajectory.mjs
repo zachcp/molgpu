@@ -695,6 +695,20 @@ Deno.test("trajectory components", async () => {
       (await counters()).detail["uploadBytes:structure:positions"] ?? 0;
     await update({ time: 0.75 });
     await expectRead(modal(pageFrames[1], 1, -2), "normal mode reverse");
+    // Landing on an exact zero of the sine (t = 0) keeps the kernel mounted:
+    // no mode buffer is uploaded again (9g3.10).
+    const vectorUploads = async () =>
+      (await counters()).detail["uploadBytes:coords:normal-mode:vectors"] ?? 0;
+    const beforeZero = await vectorUploads();
+    await update({ time: 0 });
+    await expectRead(modal(pageFrames[1], 1, 0), "normal mode at a zero");
+    await update({ time: 0.25 });
+    await expectRead(modal(pageFrames[1], 1, 2), "normal mode after a zero");
+    assert.equal(
+      await vectorUploads(),
+      beforeZero,
+      "a zero crossing does not re-upload mode buffers",
+    );
     await update({ time: 0.25, modeVersion: 2 });
     await expectRead(modal(pageFrames[1], 2, 2), "normal mode swap");
     await update({ amplitude: 0 });
