@@ -24,6 +24,7 @@ declare global {
       bridges: number;
       residues: number;
       milliseconds: number;
+      aborted?: boolean;
     }>;
   }
 }
@@ -325,6 +326,25 @@ window.runGpuDssp = async (id: string, model: "first" | number = "first") => {
       mismatch.push([r, expected[r], result.codes[r]]);
     }
   }
+  let aborted: boolean | undefined;
+  if (id === "1crn") {
+    const controller = new AbortController();
+    const pending = gpuDssp(device, coordinates, {
+      data,
+      rows,
+      layout,
+      generation: 2,
+      signal: controller.signal,
+    });
+    controller.abort();
+    try {
+      const stale = await pending;
+      stale.codeBuffer.destroy();
+      aborted = false;
+    } catch (error) {
+      aborted = error instanceof DOMException && error.name === "AbortError";
+    }
+  }
   result.codeBuffer.destroy();
   coordinates.destroy();
   device.destroy();
@@ -334,5 +354,6 @@ window.runGpuDssp = async (id: string, model: "first" | number = "first") => {
     bridges: result.bridgeCount,
     residues: layout.residueCount,
     milliseconds,
+    aborted,
   };
 };

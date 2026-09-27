@@ -95,6 +95,8 @@ export interface GpuDsspOptions {
   /** Static calculations throw by name; live frames read one full frame on overflow. */
   readonly overflow?: "static" | "frame";
   readonly maxBridges?: number;
+  /** Cancels a superseded coordinate generation before another GPU pass. */
+  readonly signal?: AbortSignal;
 }
 
 /** Compute DSSP directly from packed GPU coordinates of one model. */
@@ -104,6 +106,15 @@ export async function gpuDssp(
   options: GpuDsspOptions,
 ): Promise<GpuDsspResult> {
   const { data, rows, layout, generation } = options;
+  const checkCurrent = () => {
+    if (options.signal?.aborted) {
+      throw new DOMException(
+        "GPU DSSP coordinate generation was replaced",
+        "AbortError",
+      );
+    }
+  };
+  checkCurrent();
   const m = layout.residueCount;
   if (layout.atomCount !== data.topology.atoms.count) {
     throw new TypeError("GPU DSSP layout belongs to another topology");
@@ -178,6 +189,7 @@ export async function gpuDssp(
     return copy;
   };
   const frameFallback = async (stage: string): Promise<GpuDsspResult> => {
+    checkCurrent();
     if (options.overflow !== "frame") throw new GpuDsspOverflowError(stage);
     const buffer = await read(positions, data.topology.atoms.count * 12);
     const snapshot = withPositions(data, new Float32Array(buffer));
@@ -277,6 +289,7 @@ export async function gpuDssp(
     await boundStage.mapAsync(MAP_READ);
     const values = new Float32Array(boundStage.getMappedRange().slice(0));
     boundStage.unmap();
+    checkCurrent();
     let plan;
     try {
       plan = planCellList(
@@ -453,6 +466,7 @@ export async function gpuDssp(
       read(flagsA, m * 4),
     ]);
     const status = new Uint32Array(stateData);
+    checkCurrent();
     if (status[1]) return await frameFallback("H-bond list (8 donors)");
     if (status[2]) return await frameFallback("bridge list");
     if (status[3]) return await frameFallback("cell candidates");
@@ -460,6 +474,7 @@ export async function gpuDssp(
     const bridgeData = bridgeCount
       ? new Uint32Array(await read(bridges, bridgeCount * 24))
       : new Uint32Array(0);
+    checkCurrent();
     const bridgeList: DsspBridge[] = [];
     for (let i = 0; i < bridgeCount; i++) {
       bridgeList.push({

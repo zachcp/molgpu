@@ -63,6 +63,13 @@ Deno.test("GPU DSSP agrees with CPU on the pinned protein corpus", async () => {
         } ms`,
       );
       assert.deepEqual(result.mismatch, [], `${id} GPU/CPU mismatch`);
+      if (id === "1crn") {
+        assert.equal(
+          result.aborted,
+          true,
+          "superseded frame must stop before the next GPU pass",
+        );
+      }
     }
     for (const model of [1, 58, 116]) {
       const result = await page.evaluate(

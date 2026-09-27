@@ -105,6 +105,7 @@ const Provider: LC<GpuDsspProps & { children: LiveElement }> = ({
   useResource((dispose) => {
     if (!coordinates || !root || !rows || !layout) return;
     let alive = true;
+    const controller = new AbortController();
     // The upstream coordinate provider submits during rendering. Defer the
     // read until its command buffer is queued for this generation.
     const timer = setTimeout(() => {
@@ -114,6 +115,7 @@ const Provider: LC<GpuDsspProps & { children: LiveElement }> = ({
         layout,
         generation: coordinates.generation,
         overflow: overflowPolicy,
+        signal: controller.signal,
       }).then((result) => {
         if (!alive) {
           result.codeBuffer.destroy();
@@ -143,6 +145,7 @@ const Provider: LC<GpuDsspProps & { children: LiveElement }> = ({
     }, 0);
     dispose(() => {
       alive = false;
+      controller.abort();
       clearTimeout(timer);
     });
   }, [
