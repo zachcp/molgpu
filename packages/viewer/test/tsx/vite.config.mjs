@@ -7,6 +7,7 @@ const here = (p) => fileURLToPath(new URL(p, import.meta.url));
  * check runs against bundled output rather than a dev server's module graph. */
 export default {
   root: here("."),
+  define: { "import.meta.env.MOLGPU_TEST_GUARD": "true" },
   build: {
     outDir: here("dist"),
     emptyOutDir: true,

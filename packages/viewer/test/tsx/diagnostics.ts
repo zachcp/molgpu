@@ -45,6 +45,7 @@ export interface Probe {
   /** Atom count seen through useStructureResource() when the subtree was ready. */
   atoms: number | null;
   missingCoordinatesError: string | null;
+  rootPositionReads: { cpu: string; gpu: string } | null;
   coordinateSource: StorageSource | null;
   bondSource: StorageSource | null;
   coordinateSnapshot: {
@@ -92,6 +93,7 @@ export const probe: Probe = {
   failure: null,
   atoms: null,
   missingCoordinatesError: null,
+  rootPositionReads: null,
   coordinateSource: null,
   bondSource: null,
   coordinateSnapshot: null,

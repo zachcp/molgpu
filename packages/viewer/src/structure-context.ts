@@ -38,6 +38,57 @@ export interface StructureContextValue {
 export const StructureContext: LiveContext<StructureContextValue | undefined> =
   makeContext<StructureContextValue | undefined>(undefined, "StructureContext");
 
+const ROOT_POSITION_ERROR =
+  "Root positions are stale under a coordinate provider; useCoordinates() or useCoordinateSnapshot() instead";
+const buildEnv = (import.meta as ImportMeta & {
+  env?: { DEV?: boolean; MOLGPU_TEST_GUARD?: boolean };
+}).env;
+const guardRootPositions = buildEnv === undefined || !!(
+  buildEnv.DEV || buildEnv.MOLGPU_TEST_GUARD
+);
+const guardedContexts = new WeakMap<
+  StructureResource,
+  { sources: StructureSources | null; value: StructureContextValue }
+>();
+
+function guardedStructure(
+  context: StructureContextValue,
+): StructureContextValue {
+  const { resource, sources } = context;
+  const cached = guardedContexts.get(resource);
+  if (cached?.sources === sources) return cached.value;
+  // These objects are frozen; a Proxy may not replace a non-configurable
+  // property's value. Keep stable, shallow facades for the dev-only guard.
+  const data = Object.freeze({
+    ...resource.data,
+    get positions(): Float32Array {
+      throw new Error(ROOT_POSITION_ERROR);
+    },
+  });
+  const guardedResource: StructureResource = Object.freeze({
+    data,
+    identity: resource.identity,
+    topologyRevision: resource.topologyRevision,
+    positionsRevision: resource.positionsRevision,
+    get bounds() {
+      return resource.bounds;
+    },
+    dispose: () => resource.dispose(),
+  });
+  const guardedSources: StructureSources | null = sources && Object.freeze({
+    get positions(): ShaderSource {
+      throw new Error(ROOT_POSITION_ERROR);
+    },
+    radii: sources.radii,
+  });
+  const value = Object.freeze({
+    resource: guardedResource,
+    sources: guardedSources,
+  });
+  guardedContexts.set(resource, { sources, value });
+  return value;
+}
+
 const provideSources = (
   resource: StructureResource,
   sources: StructureSources | null,
@@ -121,5 +172,11 @@ export function useStructure(): StructureContextValue {
   if (!context) {
     throw new Error("useStructure() requires a <Structure> ancestor");
   }
+  const coordinates = useContext(CoordinatesContext);
+  if (
+    guardRootPositions && coordinates && context.sources &&
+    (coordinates.source !== context.sources.positions ||
+      coordinates.generation !== context.resource.positionsRevision)
+  ) return guardedStructure(context);
   return context;
 }

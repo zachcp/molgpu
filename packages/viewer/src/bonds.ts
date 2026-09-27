@@ -10,7 +10,7 @@ import { type LC, type LiveElement, use, useMemo, useRef } from "@use-gpu/live";
 import type { ShaderSource } from "@use-gpu/shader";
 import { LineLayer } from "@use-gpu/workbench";
 import { byElement } from "@molgpu/fields";
-import { useStructure } from "./structure-context.ts";
+import { useStructure, useStructureResource } from "./structure-context.ts";
 import { useField } from "./use-field.ts";
 import {
   checkAtomSelection,
@@ -237,6 +237,8 @@ export const Bonds: ViewerComponent<
   useRepaint();
   useBindingProbe("bonds", color, opacity, width);
   const { resource } = useStructure();
+  // Bond inference belongs to root topology even beneath a live provider.
+  const rootData = useStructureResource().data;
   const coordinates = useCoordinates();
   const { data } = resource;
 
@@ -269,7 +271,7 @@ export const Bonds: ViewerComponent<
     : resource.positionsRevision;
   // Endpoint rows depend on topology/selection, never provider coordinates.
   const built = useMemo(
-    () => buildBondRows(data, indices, endpoints, defaultColor),
+    () => buildBondRows(rootData, indices, endpoints, defaultColor),
     [
       resource.identity,
       resource.topologyRevision,
