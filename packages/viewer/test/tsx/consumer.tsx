@@ -31,7 +31,11 @@ import {
   useStructureResource,
 } from "@molgpu/viewer";
 import type { StructureLoader, StructureProps } from "@molgpu/viewer";
-import { IdentityCoordinates, useCoordinates } from "@molgpu/viewer/advanced";
+import {
+  IdentityCoordinates,
+  useCoordinates,
+  useStructure,
+} from "@molgpu/viewer/advanced";
 import { OffsetCoordinates } from "./offset-coordinates.ts";
 import { BondVertexProbe } from "./bond-vertex-probe.ts";
 import { probe } from "./diagnostics.ts";
@@ -217,6 +221,23 @@ const CoordinateProbe = (): LiveElement => {
   return <Spacefill />;
 };
 
+const RootPositionProbe = (): LiveElement => {
+  const { resource, sources } = useStructure();
+  const read = (value: () => unknown): string => {
+    try {
+      value();
+      return "ok";
+    } catch (failure) {
+      return String(failure);
+    }
+  };
+  probe.rootPositionReads = {
+    cpu: read(() => resource.data.positions),
+    gpu: read(() => sources?.positions),
+  };
+  return null;
+};
+
 const SnapshotProbe = (): LiveElement => {
   const snapshot = useCoordinateSnapshot({ maxHz: 4 });
   probe.coordinateBounds = useCoordinateBounds();
@@ -248,6 +269,7 @@ const Scene = (
   if (mode === "preloaded") {
     return (
       <Structure data={left}>
+        <RootPositionProbe />
         <Spacefill />
       </Structure>
     );
@@ -265,6 +287,7 @@ const Scene = (
         <OffsetCoordinates offset={[offsetX, 0, 0]}>
           <IdentityCoordinates>
             <OffsetCoordinates offset={[-2, 1, 0]}>
+              <RootPositionProbe />
               <CoordinateProbe />
             </OffsetCoordinates>
           </IdentityCoordinates>

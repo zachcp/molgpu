@@ -237,6 +237,11 @@ Deno.test("viewer components", async () => {
       "useCoordinates outside Structure reports a composition error",
     );
     assert.equal(molstar(), 0, "a preloaded dataset must not load Mol*");
+    assert.deepEqual(
+      await page.evaluate(() => window.__viewer.rootPositionReads),
+      { cpu: "ok", gpu: "ok" },
+      "root-only trees may read root positions",
+    );
     report.states.preloaded = { blobs: preloaded, molstarRequests: 0 };
 
     const ownedBefore = await page.evaluate(() =>
@@ -256,6 +261,17 @@ Deno.test("viewer components", async () => {
       positions,
       expectedCoordinates,
       "the two offsets compose exactly in the GPU buffer",
+    );
+    const guardedReads = await page.evaluate(() =>
+      window.__viewer.rootPositionReads
+    );
+    assert.match(
+      guardedReads.cpu,
+      /useCoordinates\(\) or useCoordinateSnapshot\(\)/,
+    );
+    assert.match(
+      guardedReads.gpu,
+      /useCoordinates\(\) or useCoordinateSnapshot\(\)/,
     );
     let offsetBlobs = await blobs("offset", "components-offset");
     for (let attempt = 0; attempt < 12; attempt++) {
