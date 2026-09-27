@@ -5,6 +5,8 @@
 import { render, use, useState } from "@use-gpu/live";
 import { AutoCanvas, WebGPU } from "@use-gpu/webgpu";
 import {
+  AmbientLight,
+  DirectionalLight,
   FontLoader,
   OrbitCamera,
   Pass,
@@ -14,9 +16,7 @@ import {
 import { createStructure } from "@molgpu/table";
 import { resolve, where } from "@molgpu/select";
 import {
-  AmbientLight,
   centroid,
-  DirectionalLight,
   Distance,
   Label,
   Spacefill,
@@ -136,8 +136,8 @@ const Scene = ({ labelSel }) =>
     children: use(Pass, {
       lights: true,
       children: [
-        use(AmbientLight, {}),
-        use(DirectionalLight, {}),
+        use(AmbientLight, { intensity: 0.3 }),
+        use(DirectionalLight, { direction: [-1, -2, -1.5], intensity: 1 }),
         use(Structure, {
           data,
           children: [

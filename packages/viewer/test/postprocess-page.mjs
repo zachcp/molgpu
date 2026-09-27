@@ -1,5 +1,5 @@
-// hj0.2 browser proof: the @molgpu/viewer <Pass> wrapper draws a transparent
-// molecular surface under the viewer light wrappers, and a pass constructed with
+// hj0.2 browser proof: a use.gpu <Pass lights> draws a transparent molgpu
+// molecular surface under workbench lights, and a pass constructed with
 // ssao + outline + oit compiles the extra full-screen render pipelines and
 // allocates the extra offscreen targets those passes need — all with zero
 // WebGPU errors. OIT is the pass that matters for the transparent surface.
@@ -10,17 +10,16 @@
 // path (the cached shaded pipeline would keep the old PASS bind-group layout).
 import { render, use, useState } from "@use-gpu/live";
 import { AutoCanvas, WebGPU } from "@use-gpu/webgpu";
-import { OrbitCamera, useDeviceContext } from "@use-gpu/workbench";
-import { coordinateBounds } from "@molgpu/table";
-import { structureFromBcif } from "@molgpu/io";
 import {
   AmbientLight,
   DirectionalLight,
+  OrbitCamera,
   Pass,
-  Spacefill,
-  Structure,
-  Surface,
-} from "../src/index.ts";
+  useDeviceContext,
+} from "@use-gpu/workbench";
+import { coordinateBounds } from "@molgpu/table";
+import { structureFromBcif } from "@molgpu/io";
+import { Spacefill, Structure, Surface } from "../src/index.ts";
 
 const probe = window.__probe = {
   storage: [],
@@ -68,8 +67,8 @@ const extent = Math.max(...bounds.max.map((v, i) => v - bounds.min[i]));
 
 // A translucent surface is the OIT case; a coarse resolution keeps it fast.
 const Body = () => [
-  use(AmbientLight, {}),
-  use(DirectionalLight, {}),
+  use(AmbientLight, { intensity: 0.3 }),
+  use(DirectionalLight, { direction: [-1, -2, -1.5], intensity: 1 }),
   use(Structure, {
     data,
     children: [
@@ -80,9 +79,15 @@ const Body = () => [
 ];
 
 // Two distinct components so switching mode remounts a fresh <Pass>.
-const PlainScene = () => use(Pass, { children: use(Body, {}) });
+const PlainScene = () => use(Pass, { lights: true, children: use(Body, {}) });
 const PostScene = () =>
-  use(Pass, { ssao: true, outline: true, oit: true, children: use(Body, {}) });
+  use(Pass, {
+    lights: true,
+    ssao: true,
+    outline: true,
+    oit: true,
+    children: use(Body, {}),
+  });
 
 const App = () => {
   useDeviceContext();

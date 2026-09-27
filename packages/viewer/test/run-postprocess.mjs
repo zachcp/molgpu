@@ -1,9 +1,8 @@
-// hj0.2 acceptance: the @molgpu/viewer <Pass> wrapper draws a transparent
-// molecular surface under the viewer light wrappers with no WebGPU errors, and
-// enabling ssao + outline + oit compiles the extra full-screen render pipelines
-// and allocates the extra offscreen targets those passes need — proving the
-// postprocessing flags wire through the wrapper. OIT is the transparent-surface
-// pass.
+// hj0.2 acceptance: a use.gpu <Pass lights> draws a transparent molgpu
+// molecular surface with no WebGPU errors, and enabling ssao + outline + oit
+// compiles the extra full-screen render pipelines and allocates the extra
+// offscreen targets those passes need, with molgpu layers in the pass. OIT is
+// the transparent-surface pass.
 import { assert, assertEquals } from "@std/assert";
 import { fromFileUrl } from "@std/path";
 import { createServer } from "vite";

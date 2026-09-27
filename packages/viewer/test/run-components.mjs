@@ -1,5 +1,5 @@
 /**
- * Acceptance runner for <Molecule>/<Structure>/<Spacefill>.
+ * Acceptance runner for <Structure>/<Spacefill>.
  *
  * It typechecks the .tsx consumer, builds it with vite, serves the bundle, and
  * drives every state the components claim to support in a real Chrome WebGPU

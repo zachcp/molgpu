@@ -72,3 +72,15 @@ Deno.test("a non-spec, non-function value throws", () => {
     /spec object, a wrapper function, or null/,
   );
 });
+
+Deno.test("the spec accepts pbr, basic and normal; shader materials use the function form", () => {
+  assertEquals([...materialTypes], ["pbr", "basic", "normal"]);
+  for (const type of ["flat", "lit"]) {
+    assertThrows(
+      // @ts-expect-error: flat and lit are not spec types
+      () => resolveMaterial({ type }),
+      TypeError,
+      `Unknown material type '${type}'`,
+    );
+  }
+});

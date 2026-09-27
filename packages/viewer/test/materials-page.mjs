@@ -4,14 +4,15 @@
 // really reaches the shaded layer) without rebuilding geometry buffers.
 import { render, use, useState } from "@use-gpu/live";
 import { AutoCanvas, WebGPU } from "@use-gpu/webgpu";
-import { OrbitCamera, Pass, useDeviceContext } from "@use-gpu/workbench";
-import { createStructure } from "@molgpu/table";
 import {
   AmbientLight,
   DirectionalLight,
-  Spacefill,
-  Structure,
-} from "../src/index.ts";
+  OrbitCamera,
+  Pass,
+  useDeviceContext,
+} from "@use-gpu/workbench";
+import { createStructure } from "@molgpu/table";
+import { Spacefill, Structure } from "../src/index.ts";
 
 const probe = window.__probe = {
   storage: [],
@@ -138,8 +139,8 @@ const Scene = ({ material }) =>
     children: use(Pass, {
       lights: true,
       children: [
-        use(AmbientLight, {}),
-        use(DirectionalLight, {}),
+        use(AmbientLight, { intensity: 0.3 }),
+        use(DirectionalLight, { direction: [-1, -2, -1.5], intensity: 1 }),
         use(Structure, {
           data,
           children: use(Spacefill, { material, scale: 1 }),

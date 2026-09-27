@@ -6,6 +6,21 @@ All notable changes to `@molgpu/viewer` are recorded here. The format follows
 
 ## [Unreleased]
 
+- **Removed (experimental):** the scene-level wrappers over
+  `@use-gpu/workbench`. Build the pass, lights and camera from workbench
+  directly (`<Pass lights>`, `AmbientLight`, `DirectionalLight`, …), as the site
+  does. Removed from `.`: `Pass`, `PassProps`, `SSAOOptions`, `OutlineOptions`,
+  `OverscanOptions`, `AmbientLight`, `DirectionalLight`, `PointLight`,
+  `SpotLight`, `DomeLight`, `Environment` and their `*Props`,
+  `ShadowMapOptions`, `KEY_LIGHT_DIRECTION`, `PBRMaterial`, `BasicMaterial`,
+  `NormalMaterial`, `FresnelMaterialEffect` and their `*Props`, `MaterialProps`,
+  `materialTypes`, `withMaterial` and `Molecule`. Removed from `./advanced`:
+  `FlatMaterial`, `LitMaterial`.
+- **Changed (experimental):** `MaterialType` is `"pbr" | "basic" | "normal"`.
+  Use the function form of `material` for shader materials (upstream
+  `ShaderFlatMaterial` / `ShaderLitMaterial`). The `pbr` spec keeps its matte,
+  non-metallic defaults.
+
 - `<GpuDssp>` freezes each coordinate generation before its first GPU submit,
   keeps one run in flight (latest generation wins) during playback, waits for a
   kernel stream's first dispatch, and holds its last codes for up to 1 s while a

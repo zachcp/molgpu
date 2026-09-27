@@ -30,7 +30,7 @@ import {
   flatAlpha,
   modeProps,
 } from "./internal/opacity.ts";
-import { withMaterial } from "./materials.ts";
+import { withMaterial } from "./internal/with-material.ts";
 import { useGeometryJob } from "./use-geometry-job.ts";
 import { buildSurfaceGeometry } from "./internal/surface-geometry.ts";
 import { useRepaint } from "./internal/use-repaint.ts";

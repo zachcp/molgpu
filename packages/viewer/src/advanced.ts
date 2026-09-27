@@ -22,5 +22,4 @@ export { TimelineContext } from "./timeline-context.ts";
 export { TrajectoryContext } from "./trajectory.ts";
 export { useVolume, VolumeContext } from "./volume-context.ts";
 export type { VolumeContextValue } from "./volume-context.ts";
-export { FlatMaterial, LitMaterial } from "./materials.ts";
 export { useField } from "./use-field.ts";

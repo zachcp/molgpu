@@ -59,7 +59,7 @@ export interface StructureBounds {
 }
 
 /** Material `type` names accepted by a representation's `material` prop. */
-export type MaterialType = "pbr" | "basic" | "normal" | "flat" | "lit";
+export type MaterialType = "pbr" | "basic" | "normal";
 
 /**
  * A representation's `material` prop. Either a spec object — `{ type?, ...props }`
@@ -391,124 +391,6 @@ export interface PointLayerOptions {
   depthWrite?: boolean;
   alphaToCoverage?: boolean;
   alphaToDiscard?: boolean;
-}
-
-// --- Materials --------------------------------------------------------------
-// Thin wrappers over @use-gpu/workbench materials with molecular defaults. A
-// material provides the shading model that `shaded` layers beneath it read; use
-// as a wrapping element, or via a representation's `material` prop.
-
-/** Props shared by the material wrappers. Texture maps and `render` callbacks
- *  forward at runtime but are typed only upstream (@use-gpu/workbench). */
-export interface MaterialProps {
-  children?: ViewerElement;
-}
-export interface PBRMaterialProps extends MaterialProps {
-  albedo?: ColorLike;
-  metalness?: number;
-  roughness?: number;
-  emissive?: VectorLike;
-}
-export interface BasicMaterialProps extends MaterialProps {
-  color?: ColorLike;
-}
-export type NormalMaterialProps = MaterialProps;
-export interface FresnelMaterialEffectProps extends MaterialProps {
-  opacity?: number;
-}
-
-/** Shadow-map settings for a shadow-casting light (needs `<Pass shadows>`). */
-export interface ShadowMapOptions {
-  size?: readonly number[];
-  depth?: readonly number[];
-  bias?: readonly number[];
-  span?: readonly number[];
-  up?: readonly number[];
-  blur?: number;
-  resolution?: number;
-  fov?: number;
-}
-export interface AmbientLightProps {
-  color?: ColorLike;
-  intensity?: number;
-}
-export interface DirectionalLightProps {
-  position?: VectorLike;
-  direction?: VectorLike;
-  color?: ColorLike;
-  intensity?: number;
-  shadowMap?: ShadowMapOptions;
-  debug?: boolean;
-}
-export interface PointLightProps {
-  position?: VectorLike;
-  color?: ColorLike;
-  intensity?: number;
-  cutoff?: number;
-  shadowMap?: ShadowMapOptions;
-  infinite?: boolean;
-  debug?: boolean;
-}
-export interface SpotLightProps extends PointLightProps {
-  direction?: VectorLike;
-  fov?: number;
-  feather?: number;
-}
-export interface DomeLightProps {
-  direction?: VectorLike;
-  horizon?: ColorLike;
-  zenith?: ColorLike;
-  intensity?: number;
-  bleed?: number;
-}
-/** A custom environment `map` (a shader source) forwards at runtime but is
- *  typed only upstream; use a named `preset` here. */
-export interface EnvironmentProps {
-  preset?: string;
-  gain?: number;
-  children?: ViewerElement;
-}
-
-export interface SSAOOptions {
-  opacity: number;
-  indirect: number;
-  radius: number;
-  depthRamp: number;
-  normalRamp: number;
-  temporalBlend: number;
-}
-export interface OutlineOptions {
-  inner: number;
-  outer: number;
-  color: VectorLike;
-  blend: BlendMode;
-  depthRamp: number;
-  normalRamp: number;
-}
-export interface OverscanOptions {
-  range: number;
-  all: boolean;
-}
-
-/** <Pass> props: render-pass flags plus the postprocessing options. */
-export interface PassProps {
-  children?: ViewerElement;
-  mode?: "forward" | "deferred" | "fullscreen";
-  /** Defaults to true (unlike upstream). */
-  lights?: boolean;
-  shadows?: boolean;
-  picking?: boolean;
-  facets?: boolean;
-  color?: boolean;
-  overlay?: boolean | { color?: boolean; picking?: boolean };
-  merge?: boolean;
-  /** Order-independent transparency, for transparent surfaces. */
-  oit?: boolean;
-  ssao?: boolean | number | Partial<SSAOOptions>;
-  outline?: boolean | number | Partial<OutlineOptions>;
-  overscan?: number | Partial<OverscanOptions>;
-  debug?: string;
-  debugIndex?: number;
 }
 
 // --- Picking ----------------------------------------------------------------

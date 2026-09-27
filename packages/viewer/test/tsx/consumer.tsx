@@ -1,6 +1,6 @@
 /**
  * The typed consumer fixture: a real .tsx application that composes
- * <Molecule>/<Structure>/<Spacefill> inside one caller-owned use.gpu scene,
+ * <Structure>/<Spacefill> inside one caller-owned use.gpu scene,
  * with no canvas or device of its own beyond the <AutoCanvas> it mounts.
  *
  * `deno task typecheck:components` compiles it; `deno task test:components` builds it with
@@ -23,7 +23,6 @@ import { attribute, byChain, colormap, linear } from "@molgpu/fields";
 import type { StructureData } from "@molgpu/table";
 import {
   Bonds,
-  Molecule,
   Spacefill,
   Structure,
   useAttributeSnapshot,
@@ -468,13 +467,11 @@ const App = (): LiveElement => {
         />
         {state.mounted
           ? (
-            <Molecule>
-              <Scene
-                mode={state.mode}
-                src={state.src}
-                offsetX={state.offsetX}
-              />
-            </Molecule>
+            <Scene
+              mode={state.mode}
+              src={state.src}
+              offsetX={state.offsetX}
+            />
           )
           : null}
       </Pass>

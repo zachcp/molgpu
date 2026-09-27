@@ -147,7 +147,9 @@ survive data swaps and trajectory frames.
 ### 7. Materials, lights and postprocessing are first-class
 
 We have committed to a shading model, so we are allowed to name it. PBR
-materials, real lights, SSAO / outline / DoF / OIT all exist upstream.
+materials, real lights, SSAO / outline / DoF / OIT all exist upstream, and we
+use them from there: the caller's scene owns `<Pass>`, lights and camera from
+`@use-gpu/workbench`, and each representation takes a `material` prop.
 
 ### 8. Picking wires back into the timeline
 
@@ -159,14 +161,12 @@ Hover yields a tooltip field; click seeks to a beat. That subsumes MVS's
 Illustrative, not settled:
 
 ```jsx
-<Molecule>
-  <Structure id="cyp" src="1tqn.bcif">
-    <Cartoon select="polymer" color={byPlddt} />
-    <BallAndStick select={site} color={byElement} material={glossy} />
-    <Surface select="polymer" opacity={fade} />
-  </Structure>
+<Structure id="cyp" src="1tqn.bcif">
+  <Cartoon select="polymer" color={byPlddt} />
+  <BallAndStick select={site} color={byElement} material={glossy} />
+  <Surface select="polymer" opacity={fade} />
   <Focus on={site} at={4000} />
-</Molecule>;
+</Structure>;
 ```
 
 Note what is _absent_: no modifier child nodes. `color`, `opacity` and `clip`
