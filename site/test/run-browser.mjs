@@ -232,6 +232,20 @@ Deno.test("site landing page and maintained gallery routes", async () => {
         );
       }
     }
+    await page.getByRole("link", { name: "Overview" }).click();
+    await page.waitForSelector("#molecule-canvas", { state: "detached" });
+    assertStrictEquals(
+      await page.locator("canvas").count(),
+      0,
+      "leaving the demo page disposes its canvas root",
+    );
+    await page.getByRole("link", { name: "Demos" }).click();
+    await page.waitForSelector('#molecule-canvas[data-demo="scene"]');
+    assertStrictEquals(
+      await page.locator("#molecule-canvas canvas").count(),
+      1,
+      "returning to demos creates one fresh viewer root",
+    );
     assertEquals(errors, [], "page has no JavaScript errors");
   } finally {
     await browser?.close();

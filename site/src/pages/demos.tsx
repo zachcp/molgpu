@@ -14,7 +14,7 @@ import {
   renderDemoScene,
   type SurfaceMode,
 } from "../demos/scenes.tsx";
-import { mountViewer } from "../demos/viewer.tsx";
+import { disposeViewer, mountViewer } from "../demos/viewer.tsx";
 
 /** Demos whose scene is driven by the scrub slider's seconds. */
 const scrubbed = (id: DemoId): boolean =>
@@ -39,6 +39,7 @@ export const DemosPage = () => {
     addEventListener("hashchange", update);
     return () => removeEventListener("hashchange", update);
   }, []);
+  useEffect(() => () => disposeViewer("#molecule-canvas"), []);
   useEffect(() => {
     setTime(0);
     setPlaying(false);

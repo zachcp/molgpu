@@ -215,3 +215,12 @@ export const mountViewer = (
   const fiber = render(use(ViewerRoot, next));
   roots.set(host, { key, fiber });
 };
+
+/** Release the live root and its canvas when the page owning the host unmounts. */
+export const disposeViewer = (host: string) => {
+  const root = roots.get(host);
+  if (!root) return;
+  unmount(root.fiber);
+  roots.delete(host);
+  updates.delete(host);
+};
