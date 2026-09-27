@@ -80,6 +80,30 @@ deno add jsr:@molgpu/dynamics
 | `GasteigerReport`        | experimental | Assigned count and refused components.                                                   |
 | `GasteigerRefusal`       | experimental | Component residue keys, refusal reason and detail.                                       |
 | `GasteigerRefusalReason` | experimental | Named reason an unsupported component was not charged.                                   |
+| `electrostatics`         | experimental | Validate dielectric options and derive κ, kT and the output scale.                       |
+| `ElectrostaticsOptions`  | experimental | Model (`vacuum`, `distance`, `debye`), ε, ionic strength, temperature, clamp and unit.   |
+| `Electrostatics`         | experimental | Normalised physics shared by the CPU reference and the WGSL uniform.                     |
+| `DielectricModel`        | experimental | `vacuum`, `distance` (ε = D·r) or `debye`.                                               |
+| `PotentialUnit`          | experimental | `kT/e` or `kcal/mol/e`.                                                                  |
+| `coulombPotential`       | experimental | f64 potential at packed-xyz points from packed-xyzq charges.                             |
+| `coulombField`           | experimental | f64 closed-form field E = −∇φ at packed-xyz points.                                      |
+| `coulombGrid`            | experimental | f64 potential on every sample of an index-to-world grid.                                 |
+| `CoulombGrid`            | experimental | Grid dims and column-major index-to-world affine.                                        |
+| `gridPoints`             | experimental | World position of every grid sample, x-fastest.                                          |
+| `packCharges`            | experimental | Pack `(x, y, z, q)` for nonzero-charge rows.                                             |
+| `debyeKappa`             | experimental | Inverse Debye length (1/Å) for an ionic strength, permittivity and temperature.          |
+| `COULOMB_CONSTANT`       | experimental | e²N_A/(4πε₀) in kcal·Å/(mol·e²), from CODATA 2018.                                       |
+| `GAS_CONSTANT_KCAL`      | experimental | R in kcal/(mol·K).                                                                       |
+| `coulombWgsl`            | experimental | WGSL for tiled direct Coulomb sums: `packAtoms`, `sumGrid` and `sumPoints`.              |
+| `coulombParams`          | experimental | Encode the 112-byte uniform for one `coulombWgsl` dispatch.                              |
+| `CoulombDispatch`        | experimental | One dispatch's sample range, atom range and grid.                                        |
+| `COULOMB_PARAMS_BYTES`   | experimental | Size of the `coulombWgsl` uniform (112 bytes).                                           |
+| `COULOMB_WORKGROUP`      | experimental | Invocations per workgroup and atoms per tile (64).                                       |
+| `COULOMB_MODEL_CODE`     | experimental | Model code in the uniform: vacuum 0, distance 1, debye 2.                                |
+
+`coulombPotential`/`coulombField` are the f64 oracle for `coulombWgsl`, which
+the viewer's `<EField>` dispatches. The physics and budgets are recorded in
+[the electric-field plan](../../docs/findings/2026-09-27-efield-plan.md).
 
 The CPU function returns a new array. Unselected rows retain their exact input
 values. The viewer compiles the WGSL strings and owns every GPU resource.

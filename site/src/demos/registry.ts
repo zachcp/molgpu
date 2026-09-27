@@ -15,7 +15,8 @@ export type DemoId =
   | "coordinates"
   | "trajectory"
   | "volume"
-  | "charge";
+  | "charge"
+  | "efield";
 export interface DemoDefinition {
   readonly id: DemoId;
   readonly title: string;
@@ -146,6 +147,16 @@ export const demos: readonly DemoDefinition[] = [
     fixture: "1crn",
     assertion:
       "imported partial charges colour atoms through a field, with the charge column uploaded once",
+  },
+  {
+    id: "efield",
+    title: "Electrostatic potential",
+    summary:
+      "The Coulomb potential of 1CRN's PQR charges is summed on the GPU into a volume, read just off the molecular surface on the red-white-blue kT/e scale, with field lines between the charges.",
+    fixture: "1crn",
+    assertion:
+      "a computed Volume colours the surface and seeds field lines without a CPU round trip",
+    options: { oit: true },
   },
   {
     id: "figure",

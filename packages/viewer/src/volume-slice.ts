@@ -1,5 +1,5 @@
 import { sampleVolumeWgsl } from "@molgpu/fields";
-import { type VolumeData, volumeInverseTransform } from "@molgpu/table";
+import { type VolumeGrid, volumeInverseTransform } from "@molgpu/table";
 import type { Translucency, VectorLike, ViewerComponent } from "./types.ts";
 import { use, useMemo } from "@use-gpu/live";
 import {
@@ -15,6 +15,7 @@ import { checkOpacity, modeProps } from "./internal/opacity.ts";
 import { type SlicePlane, slicePlaneFrame } from "./internal/slice-plane.ts";
 import { useRepaint } from "./internal/use-repaint.ts";
 import { useBindingProbe } from "./internal/use-binding-probe.ts";
+import { count } from "./internal/instrumentation.ts";
 
 export type { SlicePlane } from "./internal/slice-plane.ts";
 
@@ -46,7 +47,7 @@ const f32 = (x: number): string => {
 const vec4 = (c: readonly number[]) => `vec4<f32>(${c.map(f32).join(", ")})`;
 
 /** Fragment WGSL: sample the volume at the interpolated world position. */
-function sliceFragment(volume: VolumeData, stops: SliceStops): string {
+function sliceFragment(volume: VolumeGrid, stops: SliceStops): string {
   const m = volumeInverseTransform(volume);
   const t = volume.transform;
   const [nx, ny, nz] = volume.dims;
@@ -87,14 +88,17 @@ ${ramp}
 }
 
 /**
- * A planar cross-section through the nearest `<Volume>`, coloured per fragment
+ * A planar cross-section through the nearest `<Volume>` or `<EField>`, coloured per fragment
  * by sampling the volume's shared GPU samples (trilinear, the same WGSL as
  * `volumeSample`) through a piecewise-linear colour ramp. `plane` is a grid
  * plane (`{ axis, index }`, which follows the grid's shear) or a world plane
  * (`{ normal, point }`); only the part inside the grid is drawn. `range` maps
- * values to 0–1 (default: the volume's min and max) and `stops` colour that
+ * values to 0–1 (default: the volume's display range, min to max for a loaded
+ * volume and ±range for `<EField>`) and `stops` colour that
  * interval. Moving the plane, changing `range` or `opacity` updates uniforms
- * only: no geometry is rebuilt and the volume is never re-uploaded.
+ * only: no geometry is rebuilt and the volume is never re-uploaded. The shader
+ * depends only on the grid, so a computed volume's new samples are drawn live
+ * without a recompile.
  */
 export const VolumeSlice: ViewerComponent<
   {
@@ -113,7 +117,7 @@ export const VolumeSlice: ViewerComponent<
   useRepaint();
   useBindingProbe("slice", color, opacity);
   checkOpacity(opacity, "VolumeSlice");
-  const { volume, source } = useVolume();
+  const { grid: volume, source, range: fallback } = useVolume();
   if (!Array.isArray(stops) || stops.length < 2) {
     throw new TypeError("VolumeSlice: stops needs at least two [t, color]");
   }
@@ -125,8 +129,7 @@ export const VolumeSlice: ViewerComponent<
     volume,
     plane ?? { axis: 2, index: (volume.dims[2] - 1) / 2 },
   );
-  const { min, max } = volume.stats;
-  const [lo, hi] = range ?? [min, max > min ? max : min + 1];
+  const [lo, hi] = range ?? fallback;
   if (!Number.isFinite(lo) || !Number.isFinite(hi) || lo === hi) {
     throw new TypeError(
       "VolumeSlice: range must be two distinct finite numbers",
@@ -138,12 +141,12 @@ export const VolumeSlice: ViewerComponent<
   const rangeRef = useShaderRef([lo, hi]);
   const corners = useShader(CORNERS, [center, u, v]);
   const module = useMemo(
-    () =>
+    () => (count("shaderBuilds", "slice:module"),
       loadModuleWithCache(
         sliceFragment(volume, sorted),
         "molgpu-volume-slice",
         "auto",
-      ),
+      )),
     [volume, sorted],
   );
   const fragment = useShader(module, [source, rangeRef]);

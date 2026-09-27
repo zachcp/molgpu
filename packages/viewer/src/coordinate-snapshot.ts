@@ -11,16 +11,11 @@ import {
   useResource,
   useState,
 } from "@use-gpu/live";
-import { useDeviceContext } from "@use-gpu/workbench";
 import { bondTopology, type StructureData, withPositions } from "@molgpu/table";
 import type { Coordinates } from "./coordinates-context.ts";
 import type { StructureResource } from "./types.ts";
 import { createStructureResource } from "./internal/structure-resource.ts";
-import {
-  count,
-  releaseOwnedBuffer,
-  trackOwnedBuffer,
-} from "./internal/instrumentation.ts";
+import { ThrottledReadback } from "./internal/throttled-readback.ts";
 
 export interface CoordinateSnapshot {
   readonly data: StructureData;
@@ -41,8 +36,6 @@ export const CoordinateSnapshotContext: LiveContext<
 );
 
 const noop = () => {};
-const MAP_READ = 0x0001;
-const COPY_DST = 0x0008;
 
 /** Root coordinates already exist on the CPU and need no readback. */
 export function rootSnapshot(
@@ -84,107 +77,6 @@ interface Request {
   maxHz: number;
   onPause: boolean;
 }
-
-const SnapshotReadback: LC<{
-  coordinates: Coordinates;
-  maxHz: number;
-  onPause: boolean;
-  publish: (data: Float32Array, generation: number) => void;
-}> = ({ coordinates, maxHz, onPause, publish }) => {
-  const device = useDeviceContext();
-  const latest = useRef({ coordinates, publish, maxHz, onPause });
-  latest.current = { coordinates, publish, maxHz, onPause };
-  const inFlight = useRef(false);
-  const published = useRef(-1);
-  const lastDispatch = useRef(-Infinity);
-  const nextBuffer = useRef(0);
-  const staging = useMemo(() =>
-    [0, 1].map(() =>
-      device.createBuffer({
-        size: Math.max(4, coordinates.count * 12),
-        usage: COPY_DST | MAP_READ,
-        label: "molgpu:coords:snapshot",
-      })
-    ), [device, coordinates.count, coordinates.source.buffer]);
-  useResource((dispose) => {
-    for (const buffer of staging) trackOwnedBuffer(buffer, "coords:snapshot");
-    dispose(() => {
-      for (const buffer of staging) {
-        releaseOwnedBuffer(buffer);
-        buffer.destroy();
-      }
-    });
-  }, [staging]);
-  // A readback can outlive the effect that started it: a new generation
-  // disposes the effect while the copy is in flight. The copy then publishes
-  // if it is still current, and hands off to the latest effect's scheduler;
-  // otherwise nothing would ever schedule the new generation.
-  const mounted = useRef(true);
-  const kick = useRef<() => void>(noop);
-  useResource((dispose) => {
-    mounted.current = true;
-    dispose(() => {
-      mounted.current = false;
-    });
-  }, []);
-  useResource((dispose) => {
-    let alive = true;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const schedule = () => {
-      if (!alive || inFlight.current) return;
-      const { coordinates: current, maxHz: rate, onPause: pause } =
-        latest.current;
-      if (current.generation === published.current) return;
-      const remaining = 1000 / rate -
-        (performance.now() - lastDispatch.current);
-      // The pause request supplies the last frame after motion stops.
-      const delay = pause
-        ? Math.min(Math.max(0, remaining), 34)
-        : Math.max(0, remaining);
-      timer = setTimeout(async () => {
-        if (!alive || inFlight.current) return;
-        const { coordinates: target } = latest.current;
-        const generation = target.generation;
-        const buffer = staging[nextBuffer.current++ % staging.length];
-        inFlight.current = true;
-        lastDispatch.current = performance.now();
-        count("gathers", "coords:snapshot:dispatch");
-        try {
-          const encoder = device.createCommandEncoder();
-          encoder.copyBufferToBuffer(
-            target.source.buffer,
-            0,
-            buffer,
-            0,
-            target.count * 12,
-          );
-          device.queue.submit([encoder.finish()]);
-          await buffer.mapAsync(MAP_READ);
-          const values = new Float32Array(buffer.getMappedRange().slice(0));
-          buffer.unmap();
-          if (!mounted.current) return;
-          if (generation === latest.current.coordinates.generation) {
-            published.current = generation;
-            latest.current.publish(values, generation);
-            count("gathers", "coords:snapshot:publish");
-          } else count("gathers", "coords:snapshot:discard");
-        } catch {
-          if (mounted.current) count("gathers", "coords:snapshot:error");
-        } finally {
-          inFlight.current = false;
-          if (mounted.current) kick.current();
-        }
-      }, Math.max(0, delay));
-    };
-    kick.current = schedule;
-    schedule();
-    dispose(() => {
-      alive = false;
-      if (timer) clearTimeout(timer);
-    });
-  }, [device, staging, coordinates.generation, maxHz, onPause]);
-  return null;
-};
 
 /** One demand-driven readback shared by CPU consumers below a provider. */
 export const CoordinateSnapshotBoundary: LC<{
@@ -260,7 +152,15 @@ export const CoordinateSnapshotBoundary: LC<{
   const onPause = demand.some((request) => request.onPause);
   return provide(CoordinateSnapshotContext, context, [
     demand.length
-      ? use(SnapshotReadback, { coordinates, maxHz, onPause, publish })
+      ? use(ThrottledReadback, {
+        buffer: coordinates.source.buffer,
+        bytes: coordinates.count * 12,
+        generation: coordinates.generation,
+        maxHz,
+        onPause,
+        label: "coords:snapshot",
+        publish,
+      })
       : null,
     children,
   ]);

@@ -4,6 +4,14 @@
 
 AffineMatrix
   export type AffineMatrix = ArrayLike<number>;
+COULOMB_CONSTANT
+  export const COULOMB_CONSTANT: number;
+COULOMB_MODEL_CODE
+  export const COULOMB_MODEL_CODE: Readonly<Record<string, number>>;
+COULOMB_PARAMS_BYTES
+  export const COULOMB_PARAMS_BYTES = 112;
+COULOMB_WORKGROUP
+  export const COULOMB_WORKGROUP = 64;
 CellList
   export interface CellList { readonly cellSize: number; readonly origin: readonly [number, number, number]; readonly dims: readonly [number, number, number]; readonly counts: Uint32Array; readonly offsets: Uint32Array; readonly rows: Uint32Array; /** Visit exact neighbours within `cutoff`, stopping when visitor returns true. */ near(x: number, y: number, z: number, cutoff: number, visit: (row: number) => boolean | void): boolean; /** Flattened, lexicographically sorted unordered row pairs within cutoff. */ pairsWithin(cutoff: number, maxPairs?: number): Uint32Array }
 CellListBoundsReadback
@@ -16,6 +24,12 @@ ChargeAssignment
   export interface ChargeAssignment<R> { readonly values: Float32Array; readonly assigned: Uint8Array; readonly report: R }
 ChargeUnmatched
   export interface ChargeUnmatched { readonly comp: string; readonly name: string; readonly count: number; readonly residues: readonly string[] }
+CoulombDispatch
+  export interface CoulombDispatch { /** Invocations that write: grid samples, points, or rows to pack. */ readonly count: number; /** First grid sample or point this dispatch writes (default 0). */ readonly offset?: number; /** Packed atom range summed by this dispatch. */ readonly atomStart: number; readonly atomEnd: number; /** Add to the output instead of overwriting it. */ readonly accumulate: boolean; /** Invocations per dispatch row (groups in x × 64). */ readonly rowWidth: number; /** Grid dims and column-major index-to-world affine (`grid` only). */ readonly dims?: readonly [number, number, number]; readonly transform?: ArrayLike<number> }
+CoulombGrid
+  export interface CoulombGrid { readonly dims: readonly [number, number, number]; /** Column-major 4×4 index-to-world affine. */ readonly transform: ArrayLike<number> }
+DielectricModel
+  export type DielectricModel = "vacuum" | "distance" | "debye";
 DsspBridge
   export interface DsspBridge { readonly partner1: number; readonly partner2: number; readonly type: number; /** Generating H-bond edge and bridge test, restoring CPU generation order. */ readonly acceptor: number; readonly donor: number; readonly pattern: number }
 DsspLayout
@@ -26,6 +40,12 @@ ElasticNetwork
   export interface ElasticNetwork { readonly rows: Uint32Array; readonly pairs: Uint32Array; readonly directions: Float32Array }
 ElasticSolveOptions
   export interface ElasticSolveOptions { /** * `"dense"` is exact Jacobi and limited to `MAX_ELASTIC_DIM`; `"lanczos"` is * sparse and matrix-free. `"auto"` (the default) picks dense up to the * limit and Lanczos above it. */ readonly method?: "auto" | "dense" | "lanczos"; /** Lanczos basis vectors kept (default: about 320 MB of f64 basis). */ readonly maxIterations?: number }
+Electrostatics
+  export interface Electrostatics { readonly model: DielectricModel; readonly epsilon: number; readonly ionicStrength: number; readonly temperature: number; readonly minDistance: number; readonly unit: PotentialUnit; /** Inverse Debye length in 1/Å (0 unless `debye`). */ readonly kappa: number; /** kT in kcal/mol at `temperature`. */ readonly kT: number; /** C / (ε or D) / (kT or 1): potential = scale · Σ q g(r). */ readonly scale: number }
+ElectrostaticsOptions
+  export interface ElectrostaticsOptions { /** Defaults to `"distance"` (ε = 4r, as ChimeraX's coulombic default). */ readonly model?: DielectricModel; /** * Relative permittivity: ε for `vacuum` (default 1) and `debye` (default * 78.54), or D in ε = D·r for `distance` (default 4). */ readonly epsilon?: number; /** Ionic strength in mol/L for `debye`; defaults to 0.15. */ readonly ionicStrength?: number; /** Kelvin; sets kT and the Debye length. Defaults to 298.15. */ readonly temperature?: number; /** Distances below this (Å) are clamped to it; defaults to 1. */ readonly minDistance?: number; /** Defaults to `"kT/e"`. */ readonly unit?: PotentialUnit }
+GAS_CONSTANT_KCAL
+  export const GAS_CONSTANT_KCAL: number;
 GasteigerOptions
   export interface GasteigerOptions { /** Exclude already assigned atoms; defaults to the AMBER template mask. */ readonly exclude?: Uint8Array; /** RDKit's default is 12 iterations. */ readonly iterations?: number }
 GasteigerRefusal
@@ -44,6 +64,8 @@ PbcSearchLimitError
   export class PbcSearchLimitError extends RangeError { constructor(candidates: number, limit: number) }
 PeriodicBox
   export interface PeriodicBox { /** Column-major 3×3 box vectors (a, b, c as columns). */ readonly matrix: readonly number[]; /** Row-major inverse: fractional = inverse · Cartesian. */ readonly inverse: readonly number[]; /** Frobenius norm of the inverse, which bounds the exact image search. */ readonly inverseNorm: number }
+PotentialUnit
+  export type PotentialUnit = "kT/e" | "kcal/mol/e";
 SUPERPOSE_FIT_BYTES
   export const SUPERPOSE_FIT_BYTES = 144;
 TemplateChargeOptions
@@ -70,18 +92,34 @@ buildElasticNetwork
   export function buildElasticNetwork(positions: Float32Array, guideRows: ArrayLike<number>, cutoff: number, maxContacts?: number, maxCandidates?: number): ElasticNetwork;
 cellListWgsl
   export const cellListWgsl: Readonly<{ bounds: string; mergeBounds: string; count: string; scanCounts: string; scanValues: string; addOffsets: string; scatter: string; pairs: string; scanBlockSize: number; boundsBlockSize: number }>;
+coulombField
+  export function coulombField(points: ArrayLike<number>, atoms: ArrayLike<number>, options?: ElectrostaticsOptions | Electrostatics): Float64Array;
+coulombGrid
+  export function coulombGrid(grid: CoulombGrid, atoms: ArrayLike<number>, options?: ElectrostaticsOptions | Electrostatics): Float64Array;
+coulombParams
+  export function coulombParams(physics: { readonly model: string; readonly scale: number; readonly kappa: number; readonly minDistance: number }, dispatch: CoulombDispatch): ArrayBuffer;
+coulombPotential
+  export function coulombPotential(points: ArrayLike<number>, atoms: ArrayLike<number>, options?: ElectrostaticsOptions | Electrostatics): Float64Array;
+coulombWgsl
+  export const coulombWgsl: string;
 createCellList
   export function createCellList(positions: Float32Array, cellSize: number, options?: CellListOptions): CellList;
 createUnwrapForest
   export function createUnwrapForest(topology: Topology): UnwrapForest;
+debyeKappa
+  export function debyeKappa(ionicStrength: number, epsilon: number, temperature: number): number;
 dsspWgsl
   export const dsspWgsl: Readonly<{ gather: string; hbonds: string; turns: string; helix: string; bends: string; bridges: string }>;
+electrostatics
+  export function electrostatics(options?: ElectrostaticsOptions): Electrostatics;
 finishDssp
   export function finishDssp(layout: DsspLayout, gpuFlags: Uint32Array, bridges: readonly DsspBridge[]): Uint8Array;
 fitKabsch
   export function fitKabsch(source: Float32Array, reference: Float32Array, rows?: ArrayLike<number> | null, translate?: boolean): KabschFit;
 gasteigerCharges
   export function gasteigerCharges(data: StructureData, options?: GasteigerOptions): ChargeAssignment<GasteigerReport>;
+gridPoints
+  export function gridPoints(grid: CoulombGrid): Float64Array;
 isIdentityAffine
   export function isIdentityAffine(matrix: AffineMatrix): boolean;
 minimumImage
@@ -90,6 +128,8 @@ normalModeFromElastic
   export function normalModeFromElastic(mode: ElasticMode, atomToNode: Uint32Array, version: number): NormalModeData;
 normalModeWgsl
   export const normalModeWgsl: string;
+packCharges
+  export function packCharges(positions: ArrayLike<number>, charges: ArrayLike<number>, rows?: ArrayLike<number> | null): Float32Array;
 periodicBox
   export function periodicBox(box: ArrayLike<number>): PeriodicBox;
 planCellList

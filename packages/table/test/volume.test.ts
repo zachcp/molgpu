@@ -7,10 +7,13 @@ import {
 } from "@std/assert";
 import {
   createVolume,
+  createVolumeGrid,
   MAX_VOLUME_SAMPLES,
   sampleVolume,
+  sampleVolumeGradient,
   validateVolume,
   volumeComponent,
+  volumeGradientStep,
   volumeIndexToWorld,
   volumeLevel,
   volumeWorldToIndex,
@@ -259,4 +262,58 @@ Deno.test("volumeLevel: absolute or mean + k·sigma, and a flat map gives its me
   assertEquals(volumeLevel(flat, { sigma: 3 }), 7);
   assertThrows(() => volumeLevel(volume, NaN), TypeError);
   assertThrows(() => volumeLevel(volume, { sigma: Infinity }), TypeError);
+});
+
+const IDENTITY = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+
+Deno.test("createVolumeGrid validates geometry without samples", () => {
+  const grid = createVolumeGrid({
+    dims: [3, 4, 5],
+    transform: [2, 0, 0, 0, 0, 2, 0, 0, 0, 0, 2, 0, 1, 1, 1, 1],
+    unit: "kT/e",
+  });
+  assertEquals(grid.dims, [3, 4, 5]);
+  assertEquals(grid.components, 1);
+  assertEquals(grid.unit, "kT/e");
+  assert(Object.isFrozen(grid));
+  assertEquals(volumeWorldToIndex(grid, 3, 5, 7), [1, 2, 3]);
+  assertThrows(
+    () => createVolumeGrid({ dims: [2, 2, 0], transform: IDENTITY }),
+    TypeError,
+  );
+  assertThrows(
+    () =>
+      createVolumeGrid({ dims: [64, 64, 64], transform: IDENTITY }, {
+        maxSamples: 1000,
+      }),
+    RangeError,
+  );
+});
+
+Deno.test("sampleVolumeGradient differentiates the trilinear sampler", () => {
+  // A linear map is reproduced exactly by trilinear interpolation, so its
+  // central-difference gradient is exact inside the grid.
+  const dims = [6, 5, 4] as const;
+  const values = new Float32Array(6 * 5 * 4);
+  for (let k = 0; k < 4; k++) {
+    for (let j = 0; j < 5; j++) {
+      for (let i = 0; i < 6; i++) {
+        values[i + 6 * (j + 5 * k)] = 3 * i - 2 * j + 0.5 * k;
+      }
+    }
+  }
+  // Spacing 0.5 Å along x, 1 Å along y and z.
+  const volume = createVolume({
+    values,
+    dims,
+    transform: [0.5, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, -1, 0, 0, 1],
+  });
+  assertEquals(volumeGradientStep(volume), 0.25);
+  const g = sampleVolumeGradient(volume, 0.3, 2.2, 1.7);
+  assertAlmostEquals(g[0], 6, 1e-4);
+  assertAlmostEquals(g[1], -2, 1e-4);
+  assertAlmostEquals(g[2], 0.5, 1e-4);
+  // Too close to a face for a central difference: unknown, reported as zero.
+  assertEquals(sampleVolumeGradient(volume, -1, 2, 2), [0, 0, 0]);
+  assertEquals(sampleVolumeGradient(volume, 0, 2, 3.9), [0, 0, 0]);
 });

@@ -6,6 +6,13 @@ All notable changes to `@molgpu/fields` are recorded here. The format follows
 
 ## [Unreleased]
 
+- `volumeSample()` without an argument samples the nearest viewer volume
+  (`volume:nearest`). `compile` takes its grid as `options.volume`, and
+  `evaluate` takes CPU samples as `{ volume }`. Add `readsNearestVolume`.
+- Add `byPotential({ range, stops, volume })`, red-white-blue electrostatic
+  potential, and `sampleVolumeGradientWgsl`.
+- `sampleVolumeWgsl` accepts a samples-free `VolumeGrid`.
+
 - `bySecondaryStructure(fallback)` colours atoms by their residue's `ssCode`
   with Mol*'s secondary-structure theme colours (Phase 15, efv.6).
 - `byCharge(options)` colours by charge on Mol*'s partial-charge scale

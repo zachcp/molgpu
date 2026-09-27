@@ -4,6 +4,7 @@ import type { StructureData } from "@molgpu/table";
 import {
   byCharge,
   byElement,
+  byPotential,
   colormap,
   curve,
   volumeSample,
@@ -13,6 +14,8 @@ import { frameCurve } from "@molgpu/timeline";
 import {
   BallAndStick,
   Bonds,
+  EField,
+  FieldLines,
   Isosurface,
   Ribbon,
   Spacefill,
@@ -188,6 +191,20 @@ export const renderDemoScene = (
           scale={0.6}
           color={byCharge({ domain: [-0.8, 0.8] })}
         />
+      );
+    case "efield":
+      // Coulomb potential (ε = 4r, kT/e) of the PQR charges on a 1 Å grid,
+      // read 1.4 Å off the surface; field lines trace E between the charges.
+      return (
+        <EField>
+          <Surface color={byPotential({ range: 5 })} opacity={0.85} />
+          <FieldLines
+            seeds={{ spacing: 6 }}
+            steps={80}
+            color={[1, 1, 1, 0.8]}
+            width={1.5}
+          />
+        </EField>
       );
     case "figure":
       return [

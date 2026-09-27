@@ -62,6 +62,8 @@ ViewPolicy
   export interface ViewPolicy { readonly model?: "first" | "all" | number; readonly altloc?: "primary" | "all" }
 VolumeData
   export interface VolumeData { readonly values: Float32Array; readonly dims: readonly [number, number, number]; /** Column-major 4×4 affine from grid index to Å. */ readonly transform: Float32Array; readonly stats: VolumeStats; readonly components: 1 | 3; readonly unit?: string }
+VolumeGrid
+  export interface VolumeGrid { readonly dims: readonly [number, number, number]; /** Column-major 4×4 affine from grid index to Å. */ readonly transform: Float32Array; readonly components: 1 | 3; readonly unit?: string }
 VolumeInput
   export interface VolumeInput { /** * Samples laid out x-fastest: grid point `(i, j, k)` is at * `i + dims[0] * (j + dims[1] * k)`, times `components` when interleaved. */ readonly values: Float32Array; readonly dims: readonly [number, number, number]; /** Column-major 4×4 affine from grid index to Å; may rotate and shear. */ readonly transform: ArrayLike<number>; /** Interleaved components per sample. Default 1. */ readonly components?: 1 | 3; /** Unit label for the values, e.g. "e/Å³" or "kT/e". */ readonly unit?: string }
 VolumeLevel
@@ -86,6 +88,8 @@ createTrajectory
   export function createTrajectory(input: TrajectoryInput): TrajectoryData;
 createVolume
   export function createVolume(input: VolumeInput, options?: { maxSamples?: number }): VolumeData;
+createVolumeGrid
+  export function createVolumeGrid(input: Omit<VolumeInput, "values">, options?: { maxSamples?: number }): VolumeGrid;
 dssp
   export function dssp(data: StructureData, options?: DsspOptions): Uint8Array;
 elementRadius
@@ -98,6 +102,8 @@ residueKey
   export function residueKey(data: StructureData, row: number): string;
 sampleVolume
   export function sampleVolume(volume: VolumeData, x: number, y: number, z: number): number;
+sampleVolumeGradient
+  export function sampleVolumeGradient(volume: VolumeData, x: number, y: number, z: number, h?: number): [number, number, number];
 secondaryStructureTrace
   export function secondaryStructureTrace(data: StructureData, atomIndices: Uint32Array, trace: Trace): SecondaryStructureTrace;
 selectBonds
@@ -120,14 +126,16 @@ validateVolume
   export function validateVolume<T extends VolumeInput>(input: T, options?: { maxSamples?: number }): T;
 volumeComponent
   export function volumeComponent(volume: VolumeData, component: 0 | 1 | 2 | "magnitude"): VolumeData;
+volumeGradientStep
+  export function volumeGradientStep(volume: VolumeGrid): number;
 volumeIndexToWorld
-  export function volumeIndexToWorld(volume: VolumeData, i: number, j: number, k: number): [number, number, number];
+  export function volumeIndexToWorld(volume: VolumeGrid, i: number, j: number, k: number): [number, number, number];
 volumeInverseTransform
-  export function volumeInverseTransform(volume: VolumeData): Float64Array;
+  export function volumeInverseTransform(volume: VolumeGrid): Float64Array;
 volumeLevel
   export function volumeLevel(volume: VolumeData, level: VolumeLevel): number;
 volumeWorldToIndex
-  export function volumeWorldToIndex(volume: VolumeData, x: number, y: number, z: number): [number, number, number];
+  export function volumeWorldToIndex(volume: VolumeGrid, x: number, y: number, z: number): [number, number, number];
 withAttributes
   export function withAttributes(data: StructureData, changes: Readonly<Record<string, AttributeColumnInput | null>>): StructureData;
 withPositions

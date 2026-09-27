@@ -200,6 +200,10 @@ and ribbon geometry.
 | `validateVolume`          | experimental | Throw a `TypeError` naming the malformed field, or a `RangeError` over `maxSamples`; returns the input.                               |
 | `MAX_VOLUME_SAMPLES`      | experimental | Default `createVolume` ceiling: 256³ samples (64 MiB of scalar f32).                                                                  |
 | `sampleVolume`            | experimental | Trilinear sample at a world position; 0 outside the grid, clamped on its faces.                                                       |
+| `sampleVolumeGradient`    | experimental | World-space gradient of `sampleVolume` by central differences; zero within a step of the grid boundary.                               |
+| `volumeGradientStep`      | experimental | Default central-difference step: half the shortest grid axis.                                                                         |
+| `createVolumeGrid`        | experimental | Validate a samples-free grid (dims, transform, components, unit) for a GPU-computed volume.                                           |
+| `VolumeGrid`              | experimental | A volume's geometry without samples; every `VolumeData` is one.                                                                       |
 | `volumeIndexToWorld`      | experimental | World position of a fractional grid index.                                                                                            |
 | `volumeWorldToIndex`      | experimental | Fractional grid index of a world position.                                                                                            |
 | `volumeInverseTransform`  | experimental | Cached double-precision world-to-index affine.                                                                                        |

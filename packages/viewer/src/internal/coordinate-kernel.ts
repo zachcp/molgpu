@@ -66,6 +66,7 @@ export const Published: LC<{
     count: upstream.count,
     generation,
     resource: upstream.resource,
+    mayStartUnfilled: true,
   });
   return provide(
     CoordinatesContext,

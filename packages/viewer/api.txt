@@ -42,10 +42,18 @@ DomeLightProps
   export interface DomeLightProps { direction?: VectorLike; horizon?: ColorLike; zenith?: ColorLike; intensity?: number; bleed?: number }
 DrawMode
   export type DrawMode = "opaque" | "transparent";
+EField
+  export const EField: ViewerComponent<EFieldProps>;
+EFieldProps
+  export interface EFieldProps { children?: ViewerElement; /** Summed atoms (∩ first model, primary altloc); default every active atom. */ select?: Selection | null; /** Charge column (e per atom); defaults to `partialCharge`. */ charge?: string; /** `vacuum`, `distance` (ε = D·r, the default) or `debye`. */ model?: DielectricModel; /** ε for vacuum (1) and debye (78.54); D for distance (4). */ epsilon?: number; /** mol/L, debye only; defaults to 0.15. */ ionicStrength?: number; /** Kelvin; defaults to 298.15. */ temperature?: number; /** Å below which distances clamp; defaults to 1. */ minDistance?: number; /** Output unit; defaults to `kT/e`. */ unit?: PotentialUnit; /** Grid spacing in Å; defaults to 1. */ spacing?: number; /** Å added around the summed atoms' bounds; defaults to 8. */ padding?: number; /** Explicit axis-aligned grid extent in Å (no padding), instead of padded bounds. */ box?: { readonly min: readonly [number, number, number]; readonly max: readonly [number, number, number] }; /** Sample ceiling; defaults to 128³. A larger grid throws a RangeError. */ maxSamples?: number; /** * Ceiling on samples × charged atoms per computation; defaults to 2³⁴ * (about 1.7e10, some tens of ms to a few hundred ms on an integrated GPU). * A larger sum throws a RangeError naming a spacing that fits. */ maxPairs?: number; /** * Display interval ±range (a slice's default). Defaults to 15 kT/e, or 2 * kT/e for `debye` (the same values in kcal/mol/e when that is the unit). */ range?: number; /** Cap recomputation per second; default: every coordinate generation. */ maxHz?: number }
 Environment
   export const Environment: ViewerComponent<EnvironmentProps>;
 EnvironmentProps
   export interface EnvironmentProps { preset?: string; gain?: number; children?: ViewerElement }
+FieldArrows
+  export const FieldArrows: ViewerComponent<{ plane?: SlicePlane; spacing?: number; scale?: number; maxLength?: number; minField?: number; color?: VectorLike; colorRange?: readonly [number, number]; stops?: SliceStops; /** Line width in pixels; default 3. */ width?: number } & Translucency>;
+FieldLines
+  export const FieldLines: ViewerComponent<{ seeds?: Float32Array | { readonly spacing?: number }; maxLines?: number; step?: number; steps?: number; minField?: number; maxPotential?: number; color?: VectorLike; colorRange?: readonly [number, number]; stops?: SliceStops; /** Line width in pixels; default 2. */ width?: number } & Translucency>;
 FocusCameraFrame
   export type FocusCameraFrame = Omit<CameraFrame, "target" | "radius"> & { readonly focus: SelectionQuery; readonly target?: never; readonly radius?: never };
 FocusOptions
@@ -147,7 +155,7 @@ SuperposeProps
 SuperposeStatus
   export interface SuperposeStatus { readonly status: "solved" | "passthrough"; /** Fitted RMSD in Å, or null when a collinear frame passed through. */ readonly rmsd: number | null; readonly generation: number }
 Surface
-  export const Surface: ViewerComponent<{ /** A @molgpu/select atom Selection; without one, active model/primary-altloc atoms are used. */ select?: Selection | null; /** Ångström probe radius; defaults to 1.4 (water). */ probeRadius?: number; /** Grid spacing in Ångströms; defaults to 0.5. Smaller is finer and slower. */ resolution?: number; /** Grid byte budget override; defaults to 256 MiB. */ maxBytes?: number; color?: VectorLike; /** Wraps the shaded face layer; without one, the ambient scene material. */ material?: MaterialSpec; loading?: ViewerElement | (() => ViewerElement); error?: ViewerElement | ((failure: unknown) => ViewerElement) } & Translucency>;
+  export const Surface: ViewerComponent<{ /** A @molgpu/select atom Selection; without one, active model/primary-altloc atoms are used. */ select?: Selection | null; /** Ångström probe radius; defaults to 1.4 (water). */ probeRadius?: number; /** Grid spacing in Ångströms; defaults to 0.5. Smaller is finer and slower. */ resolution?: number; /** Grid byte budget override; defaults to 256 MiB. */ maxBytes?: number; /** A flat colour, or a position-only Field such as `byPotential()`. */ color?: VectorLike | Field; /** Å along the vertex normal where a colour field samples; default 1.4. */ sampleOffset?: number; /** Wraps the shaded face layer; without one, the ambient scene material. */ material?: MaterialSpec; loading?: ViewerElement | (() => ViewerElement); error?: ViewerElement | ((failure: unknown) => ViewerElement) } & Translucency>;
 TimelineProvider
   export const TimelineProvider: ViewerComponent<{ time: number; children?: ViewerElement }>;
 Trajectory
@@ -230,6 +238,8 @@ useTimelineTime
   export function useTimelineTime(): number;
 useTrajectoryFrame
   export function useTrajectoryFrame(): TrajectoryFrameState | null;
+useVolumeSnapshot
+  export function useVolumeSnapshot(options?: { maxHz?: number; onPause?: boolean }): VolumeData | null;
 withMaterial
   export function withMaterial(material: MaterialSpec | null | undefined, element: ViewerElement): ViewerElement;
 
@@ -244,7 +254,7 @@ Attributes
 AttributesContext
   export const AttributesContext: LiveContext<Attributes | undefined>;
 Coordinates
-  export interface Coordinates { readonly source: StorageSource; readonly count: number; readonly generation: number; readonly resource: StructureResource }
+  export interface Coordinates { readonly source: StorageSource; readonly count: number; readonly generation: number; readonly resource: StructureResource; /** A kernel may fill this buffer after its first consumer render. */ readonly mayStartUnfilled?: boolean }
 CoordinatesContext
   export const CoordinatesContext: LiveContext<Coordinates | null | undefined>;
 FlatMaterial
@@ -272,9 +282,9 @@ TimelineContext
 TrajectoryContext
   export const TrajectoryContext: LiveContext<TrajectoryFrameState | null>;
 VolumeContext
-  export const VolumeContext: LiveContext<VolumeContextValue | undefined>;
+  export const VolumeContext: LiveContext<VolumeContextValue | null>;
 VolumeContextValue
-  export interface VolumeContextValue { readonly volume: VolumeData; /** Scalar samples, x-fastest, as an f32 storage source. */ readonly source: StorageSource }
+  export interface VolumeContextValue { /** Dims, index-to-world transform, components and unit. Stable while the grid is. */ readonly grid: VolumeGrid; /** Scalar samples, x-fastest, as a live f32 storage source. */ readonly source: StorageSource; /** Bumps whenever `source` holds new samples; 1 for a loaded volume. */ readonly generation: number; /** Default display interval (a slice's colour range). */ readonly range: readonly [number, number]; /** The CPU samples, when they exist without a readback: `<Volume>` only. */ readonly volume: VolumeData | null; /** Latest published CPU snapshot (the volume itself for `<Volume>`). */ readonly snapshot: VolumeData | null; /** Request snapshots at up to `maxHz`; returns the release. */ readonly subscribe: (maxHz: number, onPause: boolean) => () => void }
 WobbleCoordinates
   export const WobbleCoordinates: LC<{ phase: number; amplitude?: number; children?: LiveElement }>;
 WorldSpacePointLayer
