@@ -38,7 +38,7 @@ import {
   useCoordinateSnapshot,
   useTrajectoryFrame,
 } from "@molgpu/viewer";
-import { useCoordinates } from "@molgpu/viewer/advanced";
+import { useCoordinates, WobbleCoordinates } from "@molgpu/viewer/advanced";
 import {
   enableInstrumentation,
   instrumentDevice,
@@ -326,6 +326,15 @@ const DEEP_STRUCTURE = atoms(
   ),
   Array.from({ length: 33 }, (_, i) => [i, i + 1] as [number, number]),
 );
+// First-dispatch race (molgpu-sept-usx): the same inputs as root positions,
+// so a static kernel provider (Wobble at amplitude 0) sits between the root and
+// the CoordinatePasses consumer with no further upstream generations.
+const SUP_STATIC = atoms(SUP_ATOMS, Float32Array.from(SUP_FRAMES[2]));
+const UNW_STATIC = atoms(
+  UNW_WHOLE.length,
+  Float32Array.from(UNW_FRAMES[0]),
+  UNW_BONDS,
+);
 const recordUnwrap = (status: UnwrapStatus) => {
   probe.unwrap.statuses.push(status);
 };
@@ -426,6 +435,8 @@ type Mode =
   | "unwrap"
   | "unwrap-limit"
   | "unwrap-deep"
+  | "static-superpose"
+  | "static-unwrap"
   | "gate";
 interface State {
   mode: Mode;
@@ -718,6 +729,26 @@ const Scene = ({ state }: { state: State }): LiveElement => {
         </Structure>
       );
     }
+    case "static-superpose":
+      return (
+        <Structure data={SUP_STATIC}>
+          <WobbleCoordinates phase={0} amplitude={0}>
+            <Superpose to={SUP_FIXED}>
+              <Probe />
+            </Superpose>
+          </WobbleCoordinates>
+        </Structure>
+      );
+    case "static-unwrap":
+      return (
+        <Structure data={UNW_STATIC}>
+          <WobbleCoordinates phase={0} amplitude={0}>
+            <Unwrap box={UNW_BOXES[0]}>
+              <Probe />
+            </Unwrap>
+          </WobbleCoordinates>
+        </Structure>
+      );
     case "unwrap-limit":
       return (
         <Structure data={LIMIT_STRUCTURE}>

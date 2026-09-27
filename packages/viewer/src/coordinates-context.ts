@@ -7,9 +7,9 @@ export interface Coordinates {
   readonly source: StorageSource;
   readonly count: number;
   readonly generation: number;
+  /** False until an asynchronous coordinate kernel has dispatched its first output. */
+  readonly ready?: boolean;
   readonly resource: StructureResource;
-  /** A kernel may fill this buffer after its first consumer render. */
-  readonly mayStartUnfilled?: boolean;
 }
 
 /** Undefined means no Structure ancestor; null means an empty Structure. */

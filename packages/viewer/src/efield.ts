@@ -261,6 +261,9 @@ const EFieldCompute: LC<{
   const next = useRef(0);
   const current = useRef(0);
   const generation = useMemo(() => {
+    // A kernel-produced upstream holds zeros until its first dispatch; its
+    // ready generation re-runs this memo.
+    if (coordinates.ready === false) return current.current;
     const state = flight.current;
     if (state.busy) {
       state.pending = true;
@@ -307,6 +310,7 @@ const EFieldCompute: LC<{
     return current.current;
   }, [
     coordinates.generation,
+    coordinates.ready,
     coordinates.source.buffer,
     charges,
     packGroup,
@@ -316,18 +320,6 @@ const EFieldCompute: LC<{
   useResource(() => {
     requestRepaint();
   }, [generation]);
-  // A new kernel-produced upstream buffer may be filled after our first
-  // dispatch because its pipeline compiles asynchronously. Root Structure
-  // buffers are uploaded before rendering and need no settling work.
-  useResource((dispose) => {
-    if (!coordinates.mayStartUnfilled) return;
-    const timers = [50, 150, 400, 1000].map((delay) =>
-      setTimeout(() => {
-        if (alive.current) setWake((w) => w + 1);
-      }, delay)
-    );
-    dispose(() => timers.forEach(clearTimeout));
-  }, [coordinates.source.buffer, coordinates.mayStartUnfilled]);
 
   const source = useMemo<StorageSource>(() => ({
     buffer: buffers.phi,

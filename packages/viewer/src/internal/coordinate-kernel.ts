@@ -1,4 +1,5 @@
 import {
+  gather,
   type LC,
   type LiveElement,
   provide,
@@ -7,6 +8,8 @@ import {
   useMemo,
   useRef,
   useResource,
+  useState,
+  yeet,
 } from "@use-gpu/live";
 import type { StorageSource, StorageTarget } from "@use-gpu/core";
 import type { ShaderModule } from "@use-gpu/shader";
@@ -35,8 +38,9 @@ export const Published: LC<{
   upstream: Coordinates;
   source: Pick<StorageTarget, "buffer">;
   generation: number;
+  ready: boolean;
   children: LiveElement;
-}> = ({ upstream, source, generation, children }) => {
+}> = ({ upstream, source, generation, ready, children }) => {
   const requestRepaint = useContext(LoopContext);
   // ComputeBuffer's f32 target is packed; the vec3to4 accessor reconstructs
   // logical vec3 rows without imposing WGSL's 16-byte array<vec3> stride.
@@ -65,8 +69,8 @@ export const Published: LC<{
     source: packed,
     count: upstream.count,
     generation,
+    ready,
     resource: upstream.resource,
-    mayStartUnfilled: true,
   });
   return provide(
     CoordinatesContext,
@@ -100,18 +104,41 @@ export const CoordinateKernel: LC<{
     parameterKey,
     ...sources,
   ]);
+  const [dispatchedGeneration, setDispatchedGeneration] = useState(-1);
+  const notified = useRef(-1);
+  const ready = dispatchedGeneration === generation;
   const output = () => {
     return use(Compute, {
       immediate: true,
-      children: use(Kernel, {
-        shader,
-        source: upstream.source,
-        sources: linked,
-        args,
-        initial: true,
-        version: generation,
-        size: [upstream.count, 1],
-      }),
+      children: upstream.ready === false ? null : gather(
+        use(Kernel, {
+          shader,
+          source: upstream.source,
+          sources: linked,
+          args,
+          initial: true,
+          version: generation,
+          size: [upstream.count, 1],
+        }),
+        // Kernel yields one compute call, and only once its pipeline has
+        // compiled. Wrap it to learn when this generation's dispatch lands;
+        // Compute's multiGather needs a single object, not an array.
+        (calls: { compute?: (...args: unknown[]) => unknown }[]) => {
+          const call = calls.find((item) => item?.compute);
+          return call?.compute
+            ? yeet({
+              compute: (...args: unknown[]) => {
+                const result = call.compute!(...args);
+                if (notified.current !== generation) {
+                  notified.current = generation;
+                  queueMicrotask(() => setDispatchedGeneration(generation));
+                }
+                return result;
+              },
+            })
+            : null;
+        },
+      ),
     });
   };
   return use(ComputeBuffer, {
@@ -121,6 +148,12 @@ export const CoordinateKernel: LC<{
     label: "molgpu:coords:provider",
     children: output,
     then: (source: StorageTarget) =>
-      use(Published, { upstream, source, generation, children }),
+      use(Published, {
+        upstream,
+        source,
+        generation: generation * 2 + Number(ready),
+        ready,
+        children,
+      }),
   });
 };
