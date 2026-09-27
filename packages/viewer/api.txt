@@ -56,6 +56,12 @@ FresnelMaterialEffect
   export const FresnelMaterialEffect: ViewerComponent<FresnelMaterialEffectProps>;
 FresnelMaterialEffectProps
   export interface FresnelMaterialEffectProps extends MaterialProps { opacity?: number }
+GpuDssp
+  export const GpuDssp: ViewerComponent<GpuDsspProps>;
+GpuDsspProps
+  export interface GpuDsspProps { /** Active primary-altloc atoms from this model; defaults to the first model. */ readonly model?: "first" | number; /** On bounded-list overflow, a live frame reads its coordinates and reruns CPU DSSP. */ readonly overflow?: "static" | "frame"; readonly onStatus?: (status: GpuDsspStatus) => void; readonly children?: ViewerElement }
+GpuDsspStatus
+  export interface GpuDsspStatus { readonly generation: number; readonly nearThresholdResidues: number; readonly bridgeCount: number; readonly fallback: boolean }
 Isosurface
   export const Isosurface: ViewerComponent<{ /** Absolute isovalue, or `{ sigma: k }`. Defaults to `{ sigma: 1 }`. */ level?: VolumeLevel; color?: VectorLike; /** Wraps the shaded face layer; without one, the ambient scene material. */ material?: MaterialSpec; loading?: ViewerElement | (() => ViewerElement); error?: ViewerElement | ((failure: unknown) => ViewerElement) } & Translucency>;
 KEY_LIGHT_DIRECTION
@@ -243,6 +249,12 @@ CoordinatesContext
   export const CoordinatesContext: LiveContext<Coordinates | null | undefined>;
 FlatMaterial
   export const FlatMaterial: LC<ShaderFlatMaterialProps>;
+GpuDsspOptions
+  export interface GpuDsspOptions { readonly generation: number; readonly data: StructureData; readonly rows: ArrayLike<number>; readonly layout: DsspLayout; /** Static calculations throw by name; live frames read one full frame on overflow. */ readonly overflow?: "static" | "frame"; readonly maxBridges?: number; /** Cancels a superseded coordinate generation before another GPU pass. */ readonly signal?: AbortSignal }
+GpuDsspOverflowError
+  export class GpuDsspOverflowError extends RangeError { constructor(stage: string) }
+GpuDsspResult
+  export interface GpuDsspResult { readonly codes: Uint8Array; /** f32 residue codes for AttributesContext GPU consumers; caller owns it. */ readonly codeBuffer: GPUBuffer; readonly generation: number; readonly nearThresholdResidues: number; readonly bridgeCount: number; readonly fallback: boolean; /** Peak temporary allocation owned by this call, excluding input and output. */ readonly workingBytes: number; /** GPU-to-CPU bytes copied for this generation. */ readonly readbackBytes: number }
 IdentityCoordinates
   export const IdentityCoordinates: LC<{ children?: LiveElement }>;
 LitMaterial
@@ -267,6 +279,8 @@ WobbleCoordinates
   export const WobbleCoordinates: LC<{ phase: number; amplitude?: number; children?: LiveElement }>;
 WorldSpacePointLayer
   export const WorldSpacePointLayer: LC<{ positions: ShaderSource; colors?: ShaderSource; radii: ShaderSource; count: number; scale?: number } & Omit<PointLayerProps, "positions" | "colors" | "sizes" | "count" | "depth">>;
+gpuDssp
+  export function gpuDssp(device: GPUDevice, positions: GPUBuffer, options: GpuDsspOptions): Promise<GpuDsspResult>;
 useAttributeSnapshot
   export function useAttributeSnapshot(name: string, options?: { maxHz?: number; onPause?: boolean; enabled?: boolean }): AttributeSnapshot | null;
 useCoordinates

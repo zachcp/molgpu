@@ -34,6 +34,11 @@ deno add jsr:@molgpu/dynamics
 | `CellList`               | experimental | Grid arrays and bounded query methods.                                                   |
 | `CellListOptions`        | experimental | Selection and allocation limits for a cell grid.                                         |
 | `cellListWgsl`           | experimental | WGSL stages for bounds, count, scan, scatter and exact pair queries.                     |
+| `prepareDsspLayout`      | experimental | Pack one model's active protein rows into chain-ordered GPU descriptors.                 |
+| `DsspLayout`             | experimental | Descriptor, CA map and residue mapping for one model.                                    |
+| `dsspWgsl`               | experimental | WGSL stages for GPU DSSP backbone, H-bonds, turns, helices, bends and bridges.           |
+| `DsspBridge`             | experimental | Compact bridge entry with canonical generation order.                                    |
+| `finishDssp`             | experimental | Complete ladders and sheets from GPU flags and bridge readback.                          |
 | `planCellList`           | experimental | Validate generation-tagged bounds and device limits before GPU allocation.               |
 | `CellListPlan`           | experimental | Grid dimensions and buffer budget returned by `planCellList`.                            |
 | `CellListBoundsReadback` | experimental | Compact 32-byte GPU bounds result tagged with source generation.                         |
@@ -78,6 +83,16 @@ deno add jsr:@molgpu/dynamics
 
 The CPU function returns a new array. Unselected rows retain their exact input
 values. The viewer compiles the WGSL strings and owns every GPU resource.
+
+## GPU DSSP
+
+GPU DSSP uses `prepareDsspLayout(data, rows)` to pack one model's protein
+residues in chain and sequence order. `dsspWgsl` supplies H placement, bounded
+H-bond search over the CA cell list, turns, three ordered helix passes, bends,
+and bridge emission. `finishDssp(layout, flags, bridges)` restores canonical
+bridge order and completes sequential ladders and sheets on the CPU. The viewer
+owns the WebGPU buffers and dispatches; no renderer object crosses into this
+package.
 
 ## Cell grid buffer contract
 

@@ -13,10 +13,12 @@ import {
   secondaryStructureTrace,
   type Trace,
   traceTable,
+  withAttributes,
   withSecondaryStructure,
 } from "@molgpu/table";
 import { useStructure } from "./structure-context.ts";
 import { useCoordinateSnapshot } from "./coordinate-snapshot.ts";
+import { useAttributeSnapshot } from "./attribute-snapshot.ts";
 import {
   type ColumnSpec,
   useActiveRows,
@@ -108,7 +110,11 @@ export const Ribbon: ViewerComponent<
   ]);
   const drawMode = modeProps(mode, flatAlpha(color, false) * opacity);
   const { resource } = useStructure();
-  const snapshot = useCoordinateSnapshot()?.data;
+  const coordinateSnapshot = useCoordinateSnapshot();
+  const snapshot = coordinateSnapshot?.data;
+  const attributeSnapshot = useAttributeSnapshot("ssCode", {
+    enabled: secondaryStructure === "model",
+  });
   if (secondaryStructure !== "model" && secondaryStructure !== "dssp") {
     throw new TypeError("Ribbon secondaryStructure must be model or dssp");
   }
@@ -125,12 +131,24 @@ export const Ribbon: ViewerComponent<
   // DSSP rides on the snapshot object itself: its codes and the coordinates
   // the ribbon draws share one generation, and nothing replaces root data.
   const data = useMemo(
-    () =>
-      snapshot && dsspRows
-        ? (count("geometryBuilds", "ribbon:dssp"),
-          withSecondaryStructure(snapshot, { mode: "dssp", rows: dsspRows }))
-        : snapshot,
-    [snapshot, dsspRows],
+    () => {
+      if (!snapshot) return null;
+      if (dsspRows) {
+        count("geometryBuilds", "ribbon:dssp");
+        return withSecondaryStructure(snapshot, {
+          mode: "dssp",
+          rows: dsspRows,
+        });
+      }
+      if (attributeSnapshot?.generation === coordinateSnapshot?.generation) {
+        const column = attributeColumn(attributeSnapshot.data, "ssCode");
+        if (column?.provenance === "gpu:dssp") {
+          return withAttributes(snapshot, { ssCode: column });
+        }
+      }
+      return snapshot;
+    },
+    [snapshot, dsspRows, attributeSnapshot, coordinateSnapshot?.generation],
   );
 
   const trace = useMemo(
