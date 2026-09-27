@@ -86,7 +86,14 @@ export const Tube: ViewerComponent<
       data
         ? (count("geometryBuilds", "tube:trace"), traceTable(data, indices))
         : null,
-    [data, indices],
+    // Topology and coordinates only: an attribute change (charges, ssCode)
+    // makes a new StructureData but no new trace.
+    [
+      data?.identity,
+      data?.revision.topology,
+      data?.revision.positions,
+      indices,
+    ],
   );
   const built = useMemo(() => trace ? buildTubeGeometry(trace, smooth) : null, [
     trace,

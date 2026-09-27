@@ -20,9 +20,12 @@ import {
   useDeviceContext,
 } from "@use-gpu/workbench";
 import {
+  attributeColumn,
   bondTopology,
   coordinateBounds,
   createStructure,
+  ssKind,
+  withAttributes,
   withPositions,
 } from "@molgpu/table";
 import { resolve, where } from "@molgpu/select";
@@ -67,19 +70,23 @@ const raw = await structureFromBcif(bytes);
 const withBonds = (data, keep) => {
   const inferred = bondTopology(raw);
   const rows = [...Array(inferred.count).keys()].filter(keep);
-  return createStructure({
-    positions: data.positions,
-    topology: {
-      ...data.topology,
-      bonds: {
-        count: rows.length,
-        a: Uint32Array.from(rows, (r) => inferred.a[r]),
-        b: Uint32Array.from(rows, (r) => inferred.b[r]),
-        order: new Uint8Array(rows.length).fill(1),
-        source: rows.map(() => "explicit"),
+  // createStructure keeps only topology; carry io's derived columns across.
+  return withAttributes(
+    createStructure({
+      positions: data.positions,
+      topology: {
+        ...data.topology,
+        bonds: {
+          count: rows.length,
+          a: Uint32Array.from(rows, (r) => inferred.a[r]),
+          b: Uint32Array.from(rows, (r) => inferred.b[r]),
+          order: new Uint8Array(rows.length).fill(1),
+          source: rows.map(() => "explicit"),
+        },
       },
-    },
-  });
+    }),
+    data.attributes ?? {},
+  );
 };
 const base = withBonds(raw, () => true);
 const moved = withPositions(
@@ -109,7 +116,43 @@ const pulled = withPositions(
   inferred,
   inferred.positions.map((v, i) => i < 3 ? v + 50 : v),
 );
-const DATA = { base, moved, rebonded, inferred, nudged, pulled };
+// Attribute edits: a new StructureData with base's topology and positions.
+// `charged` adds an unrelated column; `ssSame` rewrites ssCode without moving
+// its cartoon projection (coil -> T, H -> G); `ssCoil` makes everything coil.
+const ss = attributeColumn(base, "ssCode").values;
+const ssColumn = (values) => ({
+  ssCode: {
+    domain: "residue",
+    kind: "code",
+    provenance: "computed:test",
+    values,
+  },
+});
+const charged = withAttributes(base, {
+  "user:test": {
+    domain: "atom",
+    kind: "scalar",
+    provenance: "user",
+    values: new Float32Array(base.topology.atoms.count),
+  },
+});
+const ssSame = withAttributes(
+  base,
+  ssColumn(Uint8Array.from(ss, (c) => c === 0 ? 6 : c === 1 ? 4 : c)),
+);
+if (!ss.some((c) => ssKind(c) !== "coil")) throw new Error("1crn has no SS");
+const ssCoil = withAttributes(base, ssColumn(new Uint8Array(ss.length)));
+const DATA = {
+  base,
+  moved,
+  rebonded,
+  inferred,
+  nudged,
+  pulled,
+  charged,
+  ssSame,
+  ssCoil,
+};
 
 // Selections resolve per dataset identity; `moved` shares base's identity.
 const residueRange = (label, lo, hi) =>

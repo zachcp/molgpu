@@ -15,6 +15,7 @@ import type {
 export type * from "./types.ts";
 export { traceTable } from "./trace.ts";
 export { secondaryStructureTrace } from "./secondary-structure.ts";
+export { SS_CODES, ssKind } from "./ss-codes.ts";
 export { type SpatialGrid, spatialGrid } from "./spatial-grid.ts";
 export {
   createVolume,
@@ -36,6 +37,7 @@ export {
 } from "./trajectory.ts";
 
 import { spatialGrid } from "./spatial-grid.ts";
+import { legacySsCodes } from "./ss-codes.ts";
 
 /** Bond type bits for `bonds.flags` and `links.flags`, with Mol*'s BondType values. */
 export const BOND_FLAGS: Readonly<{
@@ -395,6 +397,15 @@ const BUILT_INS = {
     domain: "atom",
     kind: "code",
     read: (d: StructureData) => d.topology.atoms.formalCharge,
+  },
+  // Hand-built structures' 3-state column, as codes (helix H, sheet E).
+  ssCode: {
+    domain: "residue",
+    kind: "code",
+    read: (d: StructureData) => {
+      const kinds = d.topology.residues.secondaryStructure;
+      return kinds ? legacySsCodes(kinds) : undefined;
+    },
   },
 } as const;
 const VALUE_TYPES = [

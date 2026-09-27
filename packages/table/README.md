@@ -176,6 +176,8 @@ and ribbon geometry.
 | `selectBonds`             | experimental | Bond row indices whose endpoints are both (or either) in an atom selection.                                                           |
 | `traceTable`              | experimental | Segmented polymer trace (guide points, tangent/normal/binormal frames, runs) for a selection.                                         |
 | `secondaryStructureTrace` | experimental | Per-sample direction vectors, helix/sheet/coil labels and block-boundary flags over a `Trace`.                                        |
+| `SS_CODES`                | experimental | DSSP letters in `ssCode` order: 0 coil, H, B, E, G, I, T, S, P (reserved).                                                            |
+| `ssKind`                  | experimental | Cartoon kind of an `ssCode` value: H/G/I helix, E/B sheet, otherwise coil.                                                            |
 | `StructureInput`          | experimental | Unvalidated `{ topology, positions }` input to `createStructure`.                                                                     |
 | `Topology`                | experimental | The five column domains of a structure.                                                                                               |
 | `Atoms`                   | experimental | Per-atom columns (names, altloc, residue FK, element, occupancy, B-factor, optional radius).                                          |

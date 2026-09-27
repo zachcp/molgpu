@@ -375,6 +375,28 @@ const inferredBondsChanged = Object.assign((s) => {
   );
 }, { rebuilds: true });
 
+// An attribute edit (a new StructureData, same topology and positions):
+// exactly the listed builds happen, and nothing else is rebuilt or uploaded.
+const attributesOnly = (built) =>
+  Object.assign((s) => {
+    noErrors(s);
+    assert.equal(
+      s.topologyBuilds,
+      0,
+      `topology rebuilt on an attribute edit: ${brief(s)}`,
+    );
+    assert.deepEqual(
+      keysOf(s, /^geometryBuilds:/).sort(),
+      built.map((k) => `geometryBuilds:${k}`).sort(),
+      `unexpected geometry builds on an attribute edit: ${brief(s)}`,
+    );
+    assert.deepEqual(
+      keysOf(s, /structure:/),
+      [],
+      `shared Structure columns re-uploaded on an attribute edit: ${brief(s)}`,
+    );
+  }, { rebuilds: built.length > 0 });
+
 // ---- the matrix ------------------------------------------------------------
 
 const GREY = [0.7, 0.7, 0.7, 1], RED = [1, 0, 0, 1];
@@ -612,6 +634,16 @@ const MATRIX = {
         "geometryBuilds:tube:trace",
       ]),
     },
+    "unrelated attribute": {
+      from: { props: { color: GREY } },
+      to: { props: { color: GREY }, dataKey: "charged" },
+      expect: attributesOnly([]),
+    },
+    "ssCode change": {
+      from: { props: { color: GREY } },
+      to: { props: { color: GREY }, dataKey: "ssCoil" },
+      expect: attributesOnly([]),
+    },
   },
   ribbon: {
     color: {
@@ -662,6 +694,23 @@ const MATRIX = {
         "geometryBuilds:ribbon:trace",
         "geometryBuilds:ribbon:ss",
       ]),
+    },
+    "unrelated attribute": {
+      from: { props: { color: GREY } },
+      to: { props: { color: GREY }, dataKey: "charged" },
+      expect: attributesOnly([]),
+    },
+    // ssCode is a geometry input for the cartoon (INVARIANT 4): a new column
+    // rebuilds the SS trace, and the mesh only when the projection moves.
+    "ssCode, same projection": {
+      from: { props: { color: GREY } },
+      to: { props: { color: GREY }, dataKey: "ssSame" },
+      expect: attributesOnly(["ribbon:ss"]),
+    },
+    "ssCode, new projection": {
+      from: { props: { color: GREY } },
+      to: { props: { color: GREY }, dataKey: "ssCoil" },
+      expect: attributesOnly(["ribbon:mesh", "ribbon:ss"]),
     },
   },
   surface: {

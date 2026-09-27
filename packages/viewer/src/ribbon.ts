@@ -5,9 +5,15 @@ import type {
   VectorLike,
   ViewerComponent,
 } from "./types.ts";
-import { use, useMemo } from "@use-gpu/live";
+import { use, useMemo, useRef } from "@use-gpu/live";
 import { FaceLayer } from "@use-gpu/workbench";
-import { secondaryStructureTrace, traceTable } from "@molgpu/table";
+import {
+  attributeColumn,
+  type SecondaryStructureTrace,
+  secondaryStructureTrace,
+  type Trace,
+  traceTable,
+} from "@molgpu/table";
 import { useStructure } from "./structure-context.ts";
 import { useCoordinateSnapshot } from "./coordinate-snapshot.ts";
 import {
@@ -26,6 +32,26 @@ import { buildRibbonGeometry } from "./internal/ribbon-geometry.ts";
 import { useRepaint } from "./internal/use-repaint.ts";
 import { count } from "./internal/instrumentation.ts";
 import { useBindingProbe } from "./internal/use-binding-probe.ts";
+
+/**
+ * Keep the previous SS trace while the trace is unchanged and its cartoon
+ * projection (kinds and block flags) is equal: a new ssCode that only moves
+ * T/S/- codes, or G/H within a helix, rebuilds no ribbon geometry.
+ */
+function useStableProjection(
+  trace: Trace | null,
+  ss: SecondaryStructureTrace | null,
+): SecondaryStructureTrace | null {
+  const previous = useRef<
+    { trace: Trace | null; ss: SecondaryStructureTrace | null } | null
+  >(null);
+  const p = previous.current;
+  const same = p && p.trace === trace && p.ss && ss &&
+    p.ss.count === ss.count &&
+    p.ss.kind.every((k, i) => k === ss.kind[i]);
+  if (!same) previous.current = { trace, ss };
+  return previous.current!.ss;
+}
 
 /**
  * Draw the polymer backbone as a flat, oriented ribbon: a CPU-extruded
@@ -80,15 +106,27 @@ export const Ribbon: ViewerComponent<
       data
         ? (count("geometryBuilds", "ribbon:trace"), traceTable(data, indices))
         : null,
-    [data, indices],
+    // Topology and coordinates only: an attribute change (charges, ssCode)
+    // makes a new StructureData but no new trace.
+    [
+      data?.identity,
+      data?.revision.topology,
+      data?.revision.positions,
+      indices,
+    ],
   );
-  const ss = useMemo(
-    () =>
-      data && trace
-        ? (count("geometryBuilds", "ribbon:ss"),
-          secondaryStructureTrace(data, indices, trace))
-        : null,
-    [data, indices, trace],
+  // Phase 10 keeps an unchanged column's object across attribute revisions.
+  const ssColumn = data ? attributeColumn(data, "ssCode") : undefined;
+  const ss = useStableProjection(
+    trace,
+    useMemo(
+      () =>
+        data && trace
+          ? (count("geometryBuilds", "ribbon:ss"),
+            secondaryStructureTrace(data, indices, trace))
+          : null,
+      [trace, ssColumn],
+    ),
   );
   const built = useMemo(
     () => trace && ss ? buildRibbonGeometry(trace, ss, smooth) : null,

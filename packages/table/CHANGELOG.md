@@ -6,6 +6,12 @@ All notable changes to `@molgpu/table` are recorded here. The format follows
 
 ## [Unreleased]
 
+- Secondary-structure codes (Phase 15, efv.3). `SS_CODES` lists the DSSP letters
+  in `ssCode` order (0 coil, H, B, E, G, I, T, S, P) and `ssKind(code)` projects
+  a code to helix, sheet or coil. `secondaryStructureTrace` reads the `ssCode`
+  attribute, and a hand-built structure's `residues.secondaryStructure` resolves
+  as `ssCode` with provenance `legacy`. `Residues.secondaryStructure` is
+  deprecated.
 - `Atoms.formalCharge` is deprecated. Set the derived `formalCharge` attribute
   with `withAttributes`; `@molgpu/io` now writes only that (Phase 14).
 - Derived attribute channels (Phase 10): `withAttributes` validates and copies

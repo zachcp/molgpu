@@ -6,6 +6,9 @@ All notable changes to `@molgpu/select` are recorded here. The format follows
 
 ## [Unreleased]
 
+- `secondary-structure-flags` reads the `ssCode` attribute (through
+  `attributeColumn`) with an `attributes` dependency, so a new secondary-
+  structure assignment re-resolves selections.
 - `within` looks up seed atoms through `@molgpu/table`'s `spatialGrid` instead
   of comparing every atom with every seed. Results are unchanged (corpus and
   randomized brute-force checks); 1a4y queries run in about half the time.

@@ -29,7 +29,12 @@ export interface Residues {
   readonly insertionCode: readonly string[];
   readonly comp: readonly string[];
   readonly polymer: readonly ("protein" | "rna" | "dna" | "other")[];
-  /** Imported annotation (mmCIF struct_conf/struct_sheet_range) when the source provided one; absent otherwise. */
+  /**
+   * 3-state secondary structure on hand-built structures; resolves as `ssCode`
+   * (helix H, sheet E) with provenance `legacy`. @deprecated Set the derived
+   * `ssCode` attribute with `withAttributes`; `@molgpu/io` no longer writes
+   * this column.
+   */
   readonly secondaryStructure?: readonly ("helix" | "sheet" | "coil")[];
   /** 1 when the residue's first atom is not a group_PDB ATOM record (a HETATM). Absent when the source has no group_PDB. */
   readonly het?: Uint8Array;

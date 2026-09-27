@@ -637,6 +637,10 @@ export async function structureFromBcif(
     residues,
     chains,
   );
+  // Mol* always has model secondary structure for mmCIF: the annotation, or
+  // all none when the file has neither category.
+  const ssAnnotated = !!(categories.struct_conf ||
+    categories.struct_sheet_range);
   const data = createStructure({
     positions,
     topology: {
@@ -660,7 +664,6 @@ export async function structureFromBcif(
         insertionCode: residues.map((r) => r.insertion),
         comp: residues.map((r) => r.comp),
         polymer: residues.map((r) => polymerKind(r.comp)),
-        secondaryStructure,
         ...(hasGroup ? { het: Uint8Array.from(residues, (r) => r.het) } : {}),
       },
       chains: {
@@ -708,6 +711,16 @@ export async function structureFromBcif(
       kind: "code",
       values: formalCharge,
       provenance: chargeImported ? "imported:mmcif" : "default",
+    },
+    ssCode: {
+      domain: "residue",
+      kind: "code",
+      // ssCode codes: helix H (1), sheet E (3), coil 0.
+      values: Uint8Array.from(
+        secondaryStructure,
+        (k) => k === "helix" ? 1 : k === "sheet" ? 3 : 0,
+      ),
+      provenance: ssAnnotated ? "imported:mmcif" : "default",
     },
   });
 }

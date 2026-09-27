@@ -6,9 +6,13 @@ import {
   assertThrows,
 } from "@std/assert";
 import {
+  attributeColumn,
   createStructure,
   secondaryStructureTrace,
+  SS_CODES,
+  ssKind,
   traceTable,
+  withAttributes,
 } from "../src/index.ts";
 import type { Residues, StructureData, StructureInput } from "../src/index.ts";
 import type { Mutable } from "../../../test/support/mutable.ts";
@@ -246,4 +250,64 @@ Deno.test("with no residues.secondaryStructure column at all, every sample is co
   const trace = traceTable(data, selection);
   const ss = secondaryStructureTrace(data, selection, trace);
   assert(ss.kind.every((k) => k === "coil"));
+});
+
+Deno.test("SS_CODES and ssKind project DSSP codes onto the cartoon's three kinds", () => {
+  assertEquals(SS_CODES.join(""), "-HBEGITSP");
+  const kinds = SS_CODES.map((_, code) => ssKind(code));
+  assertEquals(kinds, [
+    "coil", // -
+    "helix", // H
+    "sheet", // B
+    "sheet", // E
+    "helix", // G
+    "helix", // I
+    "coil", // T
+    "coil", // S
+    "coil", // P (reserved)
+  ]);
+});
+
+Deno.test("a legacy 3-state column resolves as ssCode with provenance legacy", () => {
+  const data = createStructure(fixture());
+  const column = attributeColumn(data, "ssCode")!;
+  assertStrictEquals(column.provenance, "legacy");
+  assertStrictEquals(column.domain, "residue");
+  assertEquals([...column.values], [1, 1, 0, 0, 0, 0]);
+  assertStrictEquals(
+    attributeColumn(
+      createStructure(fixture({ withAnnotation: false })),
+      "ssCode",
+    ),
+    undefined,
+  );
+});
+
+Deno.test("a derived ssCode wins over the legacy column in the SS trace", () => {
+  const legacy = createStructure(fixture());
+  // G (3-10) on res0, E on res1 and res2: helix, sheet, sheet.
+  const data = withAttributes(legacy, {
+    ssCode: {
+      domain: "residue",
+      kind: "code",
+      provenance: "computed:dssp",
+      values: Uint8Array.of(4, 3, 3, 0, 0, 0),
+    },
+  });
+  const selection = all(data);
+  const trace = traceTable(data, selection);
+  const ss = secondaryStructureTrace(data, selection, trace);
+  const start = trace.residue.indexOf(0);
+  assertEquals(ss.kind.slice(start, start + 3), ["helix", "sheet", "sheet"]);
+  // Turn and bend codes draw as coil.
+  const turns = withAttributes(legacy, {
+    ssCode: {
+      domain: "residue",
+      kind: "code",
+      provenance: "computed:dssp",
+      values: Uint8Array.of(6, 7, 0, 0, 0, 0),
+    },
+  });
+  const tt = secondaryStructureTrace(turns, selection, trace);
+  assertEquals(tt.kind.slice(start, start + 3), ["coil", "coil", "coil"]);
 });

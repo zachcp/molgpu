@@ -487,10 +487,20 @@ Deno.test("secondary-structure flags need the column", () => {
       sq("type.secondary-structure-flags", ["helix"]),
     ]),
   );
-  assertThrows(() => rows(helix), TypeError, "residues.secondaryStructure");
+  assertThrows(() => rows(helix), TypeError, "ssCode column");
   const input = fixture();
   input.topology.residues.secondaryStructure = ["helix", "coil", "sheet"];
   assertEquals(rows(helix, createStructure(input)), [0, 1]);
+  // A derived ssCode wins over the legacy column: G is a helix, T is not.
+  const derived = withAttributes(createStructure(input), {
+    ssCode: {
+      domain: "residue",
+      kind: "code",
+      provenance: "computed:dssp",
+      values: Uint8Array.of(6, 4, 3),
+    },
+  });
+  assertEquals(rows(helix, derived), [2, 3]);
 });
 
 Deno.test("anything outside the language is a compile-time error", () => {

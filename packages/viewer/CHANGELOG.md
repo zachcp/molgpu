@@ -12,6 +12,9 @@ All notable changes to `@molgpu/viewer` are recorded here. The format follows
 - Add experimental `<NormalMode mode amplitude frequency phase>` for precomputed
   guide-node modes. Its animation changes a uniform and composes with
   Trajectory.
+- `<Ribbon>` and `<Tube>` key their trace on topology and coordinates only, so
+  an attribute edit (charges, a new `ssCode`) no longer rebuilds it. `<Ribbon>`
+  rebuilds its mesh only when the cartoon projection of `ssCode` changes.
 - Derived attribute channels (Phase 10): shared GPU column uploads across
   representations, an advanced `AttributeProducer` for kernel-written columns,
   and demand-driven `useAttributeSnapshot` CPU readback. `byChain()` now reads

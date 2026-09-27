@@ -17,6 +17,7 @@ import {
   attributeColumn,
   BOND_FLAGS,
   spatialGrid,
+  ssKind,
   type StructureData,
 } from "@molgpu/table";
 import {
@@ -549,14 +550,12 @@ const SPECS: Readonly<Record<string, Spec>> = {
     "attributes",
   ),
   [`${AP}macromolecular.secondary-structure-flags`]: atomProp((ctx, i) => {
-    const ss = ctx.data.topology.residues.secondaryStructure;
+    const ss = attributeColumn(ctx.data, "ssCode")?.values;
     if (!ss) {
-      fail(
-        "secondary-structure-flags needs residues.secondaryStructure on the structure",
-      );
+      fail("secondary-structure-flags needs an ssCode column on the structure");
     }
-    return RESIDUE_SS[ss![residueOf(ctx, i)]] ?? 0;
-  }),
+    return RESIDUE_SS[ssKind(ss![residueOf(ctx, i)])] ?? 0;
+  }, "attributes"),
 
   // ---- structure-query: bond properties (inside a bond-test) ----
   [`${SQ}bond-property.order`]: bondProp((_, bonds, r) => bonds.order[r]),
