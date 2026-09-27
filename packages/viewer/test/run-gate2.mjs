@@ -73,8 +73,14 @@ Deno.test("viewer gate 2", async () => {
         errors: [...window.__probe.errors],
       }));
 
-    await settle();
-    await settle();
+    // Wait until first-time allocations stop: a software adapter compiles
+    // pipelines slowly, and late startup buffers are not recolour work.
+    for (let i = 0, seen = -1; i < 40; i++) {
+      await settle();
+      const count = await page.evaluate(() => window.__probe.storage.length);
+      if (count === seen) break;
+      seen = count;
+    }
     const before = await snap();
     const beforeShot = await shot();
     assert.ok(
@@ -107,7 +113,7 @@ Deno.test("viewer gate 2", async () => {
     assert.equal(
       newBuffers.length,
       0,
-      `recolour allocated storage buffers: ${newBuffers}`,
+      `recolour allocated storage buffers: ${JSON.stringify(newBuffers)}`,
     );
     const geometryWrites = newWrites.filter(({ label }) =>
       label === "molgpu:positions" || label === "molgpu:endpoints" ||
