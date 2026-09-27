@@ -79,6 +79,19 @@ Deno.test("site landing page and maintained gallery routes", async () => {
       "every public package is presented",
     );
 
+    for (const link of await page.locator(".package-grid a").all()) {
+      assertMatch(
+        await link.getAttribute("href"),
+        /^https:\/\/github\.com\/zachcp\/molgpu\/blob\/main\/packages\/[\w-]+\/README\.md$/,
+        "package documentation links work from deployed pages",
+      );
+    }
+    assertMatch(
+      await page.getByRole("link", { name: "API", exact: true })
+        .getAttribute("href"),
+      /^https:\/\/github\.com\/zachcp\/molgpu\/blob\/main\/packages\/viewer\/README\.md$/,
+    );
+
     for (
       const [id, title, fixture] of [
         ["scene", "Composed scene", "1crn"],

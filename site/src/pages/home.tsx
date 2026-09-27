@@ -1,40 +1,41 @@
 import React from "react";
+import { packageReadme } from "../links.ts";
 
 const packages = [
   [
     "@molgpu/table",
     "Validated molecular structure data and traces.",
-    "../packages/table/README.md",
+    packageReadme("table"),
   ],
   [
     "@molgpu/select",
     "Selections, set operations, and domain conversion.",
-    "../packages/select/README.md",
+    packageReadme("select"),
   ],
   [
     "@molgpu/fields",
     "Typed colour, scalar, and label fields.",
-    "../packages/fields/README.md",
+    packageReadme("fields"),
   ],
   [
     "@molgpu/io",
     "BinaryCIF ingestion and molecular-surface fields.",
-    "../packages/io/README.md",
+    packageReadme("io"),
   ],
   [
     "@molgpu/geo",
     "Curve and surface geometry kernels.",
-    "../packages/geo/README.md",
+    packageReadme("geo"),
   ],
   [
     "@molgpu/timeline",
     "Scrubbable named beats and keyframes.",
-    "../packages/timeline/README.md",
+    packageReadme("timeline"),
   ],
   [
     "@molgpu/viewer",
     "Composable use.gpu visualization components.",
-    "../packages/viewer/README.md",
+    packageReadme("viewer"),
   ],
 ] as const;
 
@@ -51,7 +52,7 @@ export const HomePage = () => (
       </p>
       <div className="actions">
         <a className="button primary" href="#demos">Explore the demo</a>
-        <a className="button" href="../packages/viewer/README.md">
+        <a className="button" href={packageReadme("viewer")}>
           Read the viewer API
         </a>
       </div>
