@@ -17,6 +17,16 @@ import type {
 export type * from "./types.ts";
 export { volumeFromCcp4, VolumeParseError } from "./ccp4.ts";
 export {
+  byteSource,
+  MAX_FULL_DOWNLOAD,
+  TrajectoryParseError,
+  urlByteSource,
+} from "./byte-source.ts";
+export { AKMA_PS, trajectoryFromDcd } from "./dcd.ts";
+export { trajectoryFromXtc } from "./xtc.ts";
+export { trajectoryFromTrr } from "./trr.ts";
+export { openTrajectory, trajectoryFormat } from "./trajectory.ts";
+export {
   parseSelection,
   type ParseSelectionOptions,
   type SelectionExpr,

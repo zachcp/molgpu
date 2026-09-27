@@ -10,6 +10,8 @@ CurveOptions
   export interface CurveOptions { /** `'angle'` interpolates along the short arc. Default `'number'`. */ readonly type?: "number" | "angle"; /** Derive smooth knots and easing; frames must not set `ease` or `knots`. */ readonly automatic?: boolean; /** Out-of-range samples clamp (default) or wrap. */ readonly extrapolate?: "clamp" | "loop" }
 CurveValue
   export type CurveValue = number | readonly number[];
+FramePlayback
+  export interface FramePlayback { readonly frames: number; readonly fps: number; /** Seconds at which frame 0 starts. Default 0. */ readonly start?: number; /** Repeat after the last frame. Default false (hold the last frame). */ readonly loop?: boolean }
 Keyframe
   export interface Keyframe<T extends number | readonly number[] | Float32Array | Float64Array = CurveValue> { readonly time: number; readonly value: T; readonly ease?: "linear" | "cosine" | "hold" | "bezier"; readonly bezier?: readonly [number, number, number, number]; readonly knots?: readonly [T, T] }
 Timeline
@@ -19,5 +21,9 @@ createCurve
   export function createCurve(frames: readonly Keyframe<readonly number[] | Float32Array | Float64Array>[], options?: CurveOptions): Curve<number[]>;
 createTimeline
   export function createTimeline(beats: readonly Beat[]): Timeline;
+frameCurve
+  export function frameCurve(playback: FramePlayback): Curve<number>;
+frameTime
+  export function frameTime(playback: { readonly fps: number; readonly start?: number }, frame: number): number;
 sample
   export function sample<T extends CurveValue>(curve: Curve<T>, time: number): T;

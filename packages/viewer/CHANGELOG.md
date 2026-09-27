@@ -6,6 +6,17 @@ All notable changes to `@molgpu/viewer` are recorded here. The format follows
 
 ## [Unreleased]
 
+- Trajectories (Phase 12). New experimental `<Trajectory data|src frame>`
+  coordinate provider, `useTrajectoryFrame` and `<UnitCell>`, with the
+  `TrajectoryProps`, `PreloadedTrajectoryProps`, `LoadedTrajectoryProps`,
+  `TrajectoryPlayback`, `TrajectoryLoader` and `TrajectoryFrameState` types; new
+  advanced `TrajectoryContext`. Frames stream through a byte-capped CPU cache
+  with prefetch into a four-slot GPU window; one kernel interpolates the
+  displayed pair (`interpolate`, `pbc="minimum-image"`) and scatters a subset
+  through `atomMap`. `frame` takes a timeline curve.
+- Fixed: a snapshot readback in flight when a new coordinate generation landed
+  never rescheduled, so `<Ribbon>`, `<Tube>`, `<Surface>` and annotations below
+  a provider could stay empty until the next change.
 - Volumes (Phase 11). New experimental `<Volume data|src>`, `<Isosurface level>`
   and `<VolumeSlice plane>`, with the `VolumeProps`, `VolumeLoader`,
   `SlicePlane` and `SliceStops` types; new advanced `VolumeContext` and

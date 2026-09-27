@@ -82,25 +82,39 @@ isosurface.
 
 ## API
 
-| Export                  | Stability    | Description                                                                                                     |
-| ----------------------- | ------------ | --------------------------------------------------------------------------------------------------------------- |
-| `structureFromBcif`     | stable       | Parse BinaryCIF bytes and lower them to a `@molgpu/table` `StructureData`.                                      |
-| `BcifParseError`        | stable       | Error thrown by `structureFromBcif`, with a `code: BcifErrorCode`.                                              |
-| `BcifErrorCode`         | stable       | Union of `structureFromBcif` failure codes.                                                                     |
-| `molecularSurfaceField` | experimental | Solvent-excluded-surface scalar grid over plain atom columns, via Mol*.                                         |
-| `SurfaceFieldError`     | experimental | Error thrown by `molecularSurfaceField`, with a `code: SurfaceFieldErrorCode`.                                  |
-| `SurfaceFieldErrorCode` | experimental | Union of `molecularSurfaceField` failure codes.                                                                 |
-| `SurfaceFieldAtoms`     | experimental | Input atom columns: `count` and `Float32Array` `x`/`y`/`z`/`radius`.                                            |
-| `SurfaceFieldOptions`   | experimental | `probeRadius`, `resolution` and `probePositions`.                                                               |
-| `SurfaceField`          | experimental | `VolumeData` plus surface metadata: `resolution`, `maxRadius`, `level`.                                         |
-| `volumeFromCcp4`        | experimental | CCP4/MRC map (modes 0–2, either endianness) to a scalar `VolumeData` with Mol*'s full grid-to-Cartesian affine. |
-| `VolumeParseError`      | experimental | Error thrown by `volumeFromCcp4`, with a `code: VolumeErrorCode`.                                               |
-| `VolumeErrorCode`       | experimental | Union of `volumeFromCcp4` failure codes, including `VOLUME_TOO_LARGE`.                                          |
-| `parseSelection`        | experimental | Parse MolScript, PyMOL, VMD or Jmol selection text into a plain MolQL tree for `@molgpu/select`'s `compile`.    |
-| `SelectionParseError`   | experimental | Error thrown by `parseSelection`, with the `language` and `text` that failed.                                   |
-| `SelectionExpr`         | experimental | Type: a MolQL expression as plain JSON; the same shape as `@molgpu/select`'s.                                   |
-| `SelectionLanguage`     | experimental | Type: `"mol-script" \| "pymol" \| "vmd" \| "jmol"`.                                                             |
-| `ParseSelectionOptions` | experimental | `symbols`: reject any symbol outside this list at parse time, e.g. `supportedSymbols`.                          |
+| Export                  | Stability    | Description                                                                                                                          |
+| ----------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `structureFromBcif`     | stable       | Parse BinaryCIF bytes and lower them to a `@molgpu/table` `StructureData`.                                                           |
+| `BcifParseError`        | stable       | Error thrown by `structureFromBcif`, with a `code: BcifErrorCode`.                                                                   |
+| `BcifErrorCode`         | stable       | Union of `structureFromBcif` failure codes.                                                                                          |
+| `molecularSurfaceField` | experimental | Solvent-excluded-surface scalar grid over plain atom columns, via Mol*.                                                              |
+| `SurfaceFieldError`     | experimental | Error thrown by `molecularSurfaceField`, with a `code: SurfaceFieldErrorCode`.                                                       |
+| `SurfaceFieldErrorCode` | experimental | Union of `molecularSurfaceField` failure codes.                                                                                      |
+| `SurfaceFieldAtoms`     | experimental | Input atom columns: `count` and `Float32Array` `x`/`y`/`z`/`radius`.                                                                 |
+| `SurfaceFieldOptions`   | experimental | `probeRadius`, `resolution` and `probePositions`.                                                                                    |
+| `SurfaceField`          | experimental | `VolumeData` plus surface metadata: `resolution`, `maxRadius`, `level`.                                                              |
+| `volumeFromCcp4`        | experimental | CCP4/MRC map (modes 0–2, either endianness) to a scalar `VolumeData` with Mol*'s full grid-to-Cartesian affine.                      |
+| `VolumeParseError`      | experimental | Error thrown by `volumeFromCcp4`, with a `code: VolumeErrorCode`.                                                                    |
+| `VolumeErrorCode`       | experimental | Union of `volumeFromCcp4` failure codes, including `VOLUME_TOO_LARGE`.                                                               |
+| `parseSelection`        | experimental | Parse MolScript, PyMOL, VMD or Jmol selection text into a plain MolQL tree for `@molgpu/select`'s `compile`.                         |
+| `SelectionParseError`   | experimental | Error thrown by `parseSelection`, with the `language` and `text` that failed.                                                        |
+| `SelectionExpr`         | experimental | Type: a MolQL expression as plain JSON; the same shape as `@molgpu/select`'s.                                                        |
+| `SelectionLanguage`     | experimental | Type: `"mol-script" \| "pymol" \| "vmd" \| "jmol"`.                                                                                  |
+| `ParseSelectionOptions` | experimental | `symbols`: reject any symbol outside this list at parse time, e.g. `supportedSymbols`.                                               |
+| `openTrajectory`        | experimental | Open a DCD/XTC/TRR trajectory for streaming from bytes, a `Blob`/`File`, a `ByteSource` or a URL; format from an option or the name. |
+| `trajectoryFromDcd`     | experimental | Stream a CHARMM/NAMD/X-PLOR DCD: fixed-stride index, own frame decode, cells to box vectors, AKMA times to ps.                       |
+| `trajectoryFromXtc`     | experimental | Stream a GROMACS XTC: header index scanned in 4 MiB blocks, each frame decoded by Mol* on a one-frame slice.                         |
+| `trajectoryFromTrr`     | experimental | Stream a GROMACS TRR (single/double); frames without positions skipped; velocities opt-in.                                           |
+| `trajectoryFormat`      | experimental | The format a file name or URL implies (`dcd`, `xtc`, `trr`), or null.                                                                |
+| `byteSource`            | experimental | A `ByteSource` over a `Uint8Array` (zero-copy views) or a `Blob`/`File`.                                                             |
+| `urlByteSource`         | experimental | A `ByteSource` over HTTP Range requests; a server without Range support is downloaded whole up to `maxDownload`.                     |
+| `MAX_FULL_DOWNLOAD`     | experimental | Default `maxDownload`: 256 MiB.                                                                                                      |
+| `AKMA_PS`               | experimental | One AKMA time unit (CHARMM DELTA) in picoseconds.                                                                                    |
+| `TrajectoryParseError`  | experimental | Error with a stable `code` (`TrajectoryErrorCode`).                                                                                  |
+| `TrajectoryErrorCode`   | experimental | Why a trajectory import or frame read failed.                                                                                        |
+| `TrajectoryFormat`      | experimental | `"dcd"`, `"xtc"` or `"trr"`.                                                                                                         |
+| `TrajectoryReadOptions` | experimental | `velocities` (TRR, default false) and an open-time `signal`.                                                                         |
+| `ByteSource`            | experimental | Random access to a file's bytes: `size` and `read(offset, length, signal?)`.                                                         |
 
 The surface exports are experimental while the result shape settles.
 
@@ -133,3 +147,10 @@ so only through dynamic `import()` inside its functions. It must not import
 `deno task test` from the repository root runs this package's suites, which
 compare against Mol* directly; `deno task test:corpus` runs the curated
 structure corpus.
+
+Trajectory readers have no committed binary fixtures.
+`test/trajectory-fixture.ts` writes DCD, XTC and TRR bytes from known
+coordinates (the 2k39 NMR models), so each reader is checked against those
+coordinates, within the format's precision, and against Mol*'s whole-file parse.
+The XTC writer implements the xdr3dfcoord bit packing with fixed-size
+small-difference runs.

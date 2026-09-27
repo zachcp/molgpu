@@ -106,6 +106,11 @@ Sketch of the contract. The settled version is
 
 ### Trajectory
 
+Settled, with its counter-review and gate, in
+[the trajectory plan](2026-09-26-trajectory-plan.md), which supersedes this
+sketch where they differ (the box travels with each frame, and the GPU window is
+four pinned slots).
+
 - `TrajectoryData`: `atomCount`, `frameCount`, `time: Float64Array`, optional
   per-frame `box` (3x3), optional `atomMap: Uint32Array` for trajectories that
   cover a subset of the topology, and a `FrameSource` with

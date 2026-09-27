@@ -10,6 +10,10 @@ import {
 } from "../demos/scenes.tsx";
 import { mountViewer } from "../demos/viewer.tsx";
 
+/** Demos whose scene is driven by the scrub slider's seconds. */
+const scrubbed = (id: DemoId): boolean =>
+  id === "timeline" || id === "coordinates" || id === "trajectory";
+
 const demoFromHash = (): DemoId =>
   demoById(location.hash.replace(/^#demos\/?/, "")).id;
 
@@ -62,9 +66,7 @@ export const DemosPage = () => {
           data,
           scene,
           demoCamera(data, demo.id),
-          demo.id === "timeline" || demo.id === "coordinates"
-            ? { ...demo.options, time }
-            : demo.options,
+          scrubbed(demo.id) ? { ...demo.options, time } : demo.options,
         );
       } catch (error) {
         if (status) {
@@ -87,7 +89,7 @@ export const DemosPage = () => {
         <p className="demo-assertion" data-demo-assertion={demo.id}>
           Behavior: {demo.assertion}.
         </p>
-        {(demo.id === "timeline" || demo.id === "coordinates") && (
+        {(scrubbed(demo.id)) && (
           <label className="timeline-control">
             Scrub{" "}
             <input

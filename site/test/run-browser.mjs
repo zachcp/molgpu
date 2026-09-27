@@ -79,6 +79,7 @@ Deno.test("site landing page and maintained gallery routes", async () => {
         ["timeline", "Controlled timeline", "1crn"],
         ["bonds", "Bond topology", "1crn"],
         ["coordinates", "Coordinate stream", "1crn"],
+        ["trajectory", "Trajectory playback", "1crn"],
         ["tube", "Backbone tube", "1crn"],
         ["ribbon", "Secondary-structure ribbon", "1crn"],
         ["surface", "Solvent-excluded surface", "1crn"],
@@ -138,7 +139,26 @@ Deno.test("site landing page and maintained gallery routes", async () => {
           await page.locator("#molecule-canvas").getAttribute("data-focus-y"),
         );
       }
-      if (id === "timeline" || id === "coordinates") {
+      if (id === "trajectory") {
+        // Scrubbing seeks: frames stream in and the displayed frame follows
+        // the looping 15 fps curve (2 s → frame 30, 3.5 s → frame 52.5).
+        for (const [seconds, frame] of [[2, 30], [3.5, 52.5], [0.5, 7.5]]) {
+          await page.getByLabel("Timeline time in seconds").fill(
+            String(seconds),
+          );
+          await page.waitForFunction(
+            (want) =>
+              Math.abs(
+                Number(
+                  document.querySelector("#molecule-canvas")?.dataset.frame,
+                ) - want,
+              ) < 1e-3,
+            frame,
+            { timeout: 15000 },
+          );
+        }
+      }
+      if (id === "timeline" || id === "coordinates" || id === "trajectory") {
         await page.getByLabel("Timeline time in seconds").fill("2");
         assert.match(
           await page.locator(".timeline-control output").textContent(),

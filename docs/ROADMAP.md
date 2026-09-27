@@ -216,6 +216,17 @@ io wall, then TRR, NetCDF and multi-model BCIF. `<Trajectory>` keeps a GPU
 window of frames and interpolates at a fractional frame index, so `frame`
 accepts a timeline curve and playback is scrubbing.
 
+Gate 12 passed on 2026-09-26. `TrajectoryData` in `@molgpu/table` streams frames
+through a `FrameSource`; `openTrajectory` reads DCD, XTC and TRR over bytes,
+Blobs or HTTP Range requests from a header index (XTC decodes 100k atoms in 6.3
+ms, so no worker), and `trajectoryFromModels` plays NMR ensembles.
+`<Trajectory>` streams through a capped CPU cache into a four-slot GPU window
+with pinned slots, interpolates (optionally by minimum image) in one kernel, and
+re-displays resident frames with no uploads; `frameCurve` drives it from the
+timeline. The gate also fixed a Phase 9 snapshot stall that kept ribbons empty
+below providers. NetCDF (5td.15) stays deferred; see the
+[trajectory plan](findings/2026-09-26-trajectory-plan.md).
+
 ## Phase 13 — `@molgpu/dynamics` and pure transforms
 
 A renderer-free package, shaped like `@molgpu/fields`: CPU reference

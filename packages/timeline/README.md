@@ -53,17 +53,20 @@ with `extrapolate: 'loop'`. Invalid beats or frames throw `TypeError` or
 
 ## API
 
-| Export           | Stability    | Description                                                                       |
-| ---------------- | ------------ | --------------------------------------------------------------------------------- |
-| `createTimeline` | stable       | Build an immutable set of named beats with strictly increasing times in seconds.  |
-| `createCurve`    | stable       | Build an immutable keyframe curve over numbers or fixed-width vectors.            |
-| `sample`         | stable       | Pure sample of a curve at an arbitrary time in seconds; vectors are fresh arrays. |
-| `Curve`          | stable       | Opaque curve value returned by `createCurve`; read it only through `sample`.      |
-| `CurveValue`     | stable       | A sampled value: `number` or `readonly number[]`.                                 |
-| `Beat`           | stable       | A named instant, `{ name, time }`.                                                |
-| `Timeline`       | stable       | Result of `createTimeline`: `unit`, `beats`, and `time(name)`.                    |
-| `Keyframe`       | experimental | One curve frame: `time`, `value`, and optional `ease`, `bezier`, `knots`.         |
-| `CurveOptions`   | experimental | `createCurve` options: `type`, `automatic`, `extrapolate`.                        |
+| Export           | Stability    | Description                                                                                                                                 |
+| ---------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `createTimeline` | stable       | Build an immutable set of named beats with strictly increasing times in seconds.                                                            |
+| `createCurve`    | stable       | Build an immutable keyframe curve over numbers or fixed-width vectors.                                                                      |
+| `sample`         | stable       | Pure sample of a curve at an arbitrary time in seconds; vectors are fresh arrays.                                                           |
+| `Curve`          | stable       | Opaque curve value returned by `createCurve`; read it only through `sample`.                                                                |
+| `CurveValue`     | stable       | A sampled value: `number` or `readonly number[]`.                                                                                           |
+| `Beat`           | stable       | A named instant, `{ name, time }`.                                                                                                          |
+| `Timeline`       | stable       | Result of `createTimeline`: `unit`, `beats`, and `time(name)`.                                                                              |
+| `Keyframe`       | experimental | One curve frame: `time`, `value`, and optional `ease`, `bezier`, `knots`.                                                                   |
+| `CurveOptions`   | experimental | `createCurve` options: `type`, `automatic`, `extrapolate`.                                                                                  |
+| `frameCurve`     | experimental | Linear curve from seconds to frames: frame `i` starts at `start + i/fps`; every frame, the last included, shows for `1/fps`; optional loop. |
+| `frameTime`      | experimental | Seconds at which a frame starts, for placing beats at frames.                                                                               |
+| `FramePlayback`  | experimental | `frameCurve` options: `frames`, `fps`, `start`, `loop`.                                                                                     |
 
 ## Using it with the viewer
 

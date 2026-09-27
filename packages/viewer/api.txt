@@ -62,6 +62,8 @@ Label
   export const Label: ViewerComponent<{ select?: Selection | null; /** Explicit [x, y, z] anchor, overriding the selection centroid. */ at?: readonly number[]; text?: string; size?: number; color?: VectorLike; offset?: readonly number[]; family?: string; /** 0–1, multiplied into the text colour's alpha (text always blends). */ opacity?: number }>;
 LoadedStructureProps
   export interface LoadedStructureProps { children?: ViewerElement; src: string; data?: undefined; /** Defaults to fetch + BCIF lowering through @molgpu/io. Its identity is a * reload dependency alongside `src`, so pass a stable or memoized function. */ loader?: StructureLoader; loading?: ViewerElement | (() => ViewerElement); error?: ViewerElement | ((failure: unknown) => ViewerElement) }
+LoadedTrajectoryProps
+  export interface LoadedTrajectoryProps extends TrajectoryPlayback { src: string; data?: undefined; /** Defaults to `openTrajectory(src)` (HTTP Range reads). Pass a stable function. */ loader?: TrajectoryLoader }
 MaterialProps
   export interface MaterialProps { children?: ViewerElement }
 MaterialSpec
@@ -98,6 +100,8 @@ PointLightProps
   export interface PointLightProps { position?: VectorLike; color?: ColorLike; intensity?: number; cutoff?: number; shadowMap?: ShadowMapOptions; infinite?: boolean; debug?: boolean }
 PreloadedStructureProps
   export interface PreloadedStructureProps { children?: ViewerElement; data: StructureData; src?: undefined; loader?: undefined; loading?: undefined; error?: undefined }
+PreloadedTrajectoryProps
+  export interface PreloadedTrajectoryProps extends TrajectoryPlayback { data: TrajectoryData; src?: undefined; loader?: undefined }
 Ribbon
   export const Ribbon: ViewerComponent<{ /** A @molgpu/select atom Selection; without one, active model/primary-altloc atoms are used. */ select?: Selection | null; /** Samples per guide segment; defaults to 8. */ smooth?: number; color?: VectorLike; /** Wraps the shaded ribbon layer; without one, the ambient scene material. */ material?: MaterialSpec } & Translucency>;
 SSAOOptions
@@ -128,12 +132,24 @@ Surface
   export const Surface: ViewerComponent<{ /** A @molgpu/select atom Selection; without one, active model/primary-altloc atoms are used. */ select?: Selection | null; /** Ångström probe radius; defaults to 1.4 (water). */ probeRadius?: number; /** Grid spacing in Ångströms; defaults to 0.5. Smaller is finer and slower. */ resolution?: number; /** Grid byte budget override; defaults to 256 MiB. */ maxBytes?: number; color?: VectorLike; /** Wraps the shaded face layer; without one, the ambient scene material. */ material?: MaterialSpec; loading?: ViewerElement | (() => ViewerElement); error?: ViewerElement | ((failure: unknown) => ViewerElement) } & Translucency>;
 TimelineProvider
   export const TimelineProvider: ViewerComponent<{ time: number; children?: ViewerElement }>;
+Trajectory
+  export const Trajectory: ViewerComponent<TrajectoryProps>;
+TrajectoryFrameState
+  export interface TrajectoryFrameState { readonly trajectory: TrajectoryData; /** The clamped frame asked for (after sampling a curve). */ readonly requested: number; /** * Frames on screen, `a + t (b - a)`. It trails `requested` while frames * load, and is null before the first frame lands (upstream coordinates show). */ readonly displayed: { readonly a: number; readonly b: number; readonly t: number } | null; /** `a + t (b - a)` of `displayed`, or null. */ readonly frame: number | null; /** Interpolated column-major box of the displayed frames, if both have one. */ readonly box: Float32Array | null }
+TrajectoryLoader
+  export type TrajectoryLoader = (src: string, cancelled: () => boolean) => TrajectoryData | null | Promise<TrajectoryData | null>;
+TrajectoryPlayback
+  export interface TrajectoryPlayback { children?: ViewerElement; /** * Fractional frame index, or a curve from timeline seconds to frames (see * `frameCurve` in @molgpu/timeline). Clamped to `[0, frameCount - 1]`. */ frame: number | Curve<number>; /** `"linear"` (default) blends neighbouring frames; `"nearest"` rounds. */ interpolate?: "linear" | "nearest"; /** * `"minimum-image"` interpolates each atom along the shortest periodic * displacement when both frames carry a box, so atoms that wrap do not * cross the box on screen. Default `"none"`. */ pbc?: "none" | "minimum-image" }
+TrajectoryProps
+  export type TrajectoryProps = PreloadedTrajectoryProps | LoadedTrajectoryProps;
 Translucency
   export interface Translucency { /** 0–1, multiplied into the colour's alpha. A uniform: changing it (a fade, * a timeline curve) never rebuilds or re-uploads geometry. Defaults to 1. */ opacity?: number; /** Draw mode override. By default it is 'transparent' whenever the effective * alpha (colour alpha × opacity) is below 1, else the layer's opaque mode. * Pair translucent representations with <Pass oit>. */ mode?: DrawMode }
 Tube
   export const Tube: ViewerComponent<{ /** A @molgpu/select atom Selection; without one, active model/primary-altloc atoms are used. */ select?: Selection | null; /** Ångström tube radius; defaults to 0.3. */ radius?: number; /** Samples per guide segment; defaults to 6. */ smooth?: number; color?: VectorLike; sides?: number; join?: "tangent" | "bevel" | "miter" | "round"; /** Wraps the shaded tube layer; without one, the ambient scene material. */ material?: MaterialSpec } & Translucency>;
 TypedArray
   export type TypedArray = Int8Array | Uint8Array | Uint8ClampedArray | Int16Array | Uint16Array | Int32Array | Uint32Array | Float32Array | Float64Array;
+UnitCell
+  export const UnitCell: ViewerComponent<{ color?: VectorLike; width?: number; opacity?: number }>;
 VectorLike
   export type VectorLike = readonly number[] | TypedArray;
 ViewerComponent
@@ -182,6 +198,8 @@ useTimelineSample
   export function useTimelineSample<T extends CurveValue>(curve: Curve<T>): T;
 useTimelineTime
   export function useTimelineTime(): number;
+useTrajectoryFrame
+  export function useTrajectoryFrame(): TrajectoryFrameState | null;
 withMaterial
   export function withMaterial(material: MaterialSpec | null | undefined, element: ViewerElement): ViewerElement;
 
@@ -205,6 +223,8 @@ StructureSources
   export interface StructureSources { /** @deprecated Read the nearest stream with useCoordinates().source. */ readonly positions: ShaderSource; readonly radii: ShaderSource }
 TimelineContext
   export const TimelineContext: LiveContext<number | null>;
+TrajectoryContext
+  export const TrajectoryContext: LiveContext<TrajectoryFrameState | null>;
 VolumeContext
   export const VolumeContext: LiveContext<VolumeContextValue | undefined>;
 VolumeContextValue

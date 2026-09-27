@@ -6,6 +6,14 @@ All notable changes to `@molgpu/io` are recorded here. The format follows
 
 ## [Unreleased]
 
+- Trajectories (Phase 12). New experimental `openTrajectory`,
+  `trajectoryFromDcd`, `trajectoryFromXtc`, `trajectoryFromTrr`,
+  `trajectoryFormat`, `byteSource`, `urlByteSource`, `MAX_FULL_DOWNLOAD`,
+  `AKMA_PS` and `TrajectoryParseError`, with the `TrajectoryErrorCode`,
+  `TrajectoryFormat`, `TrajectoryReadOptions` and `ByteSource` types. Readers
+  stream frames over bytes, Blobs or HTTP Range requests from a header index;
+  XTC frames decode through Mol*, DCD and TRR frames here (TRR velocities are
+  opt-in).
 - `volumeFromCcp4(bytes, { maxSamples })` reads CCP4/MRC maps (modes 0, 1, 2;
   little- or big-endian) into `VolumeData`. It covers non-orthogonal cells,
   `MAPC/MAPR/MAPS` axis order, `N[CRS]START` and the MRC `ORIGIN` record.
