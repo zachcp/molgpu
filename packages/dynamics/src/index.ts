@@ -40,3 +40,18 @@ export {
   unwrapFrame,
   type UnwrapResult,
 } from "./pbc.ts";
+export {
+  type ChargeAssignment,
+  type ChargeUnmatched,
+  residueNetCharge,
+  type TemplateChargeOptions,
+  type TemplateChargeReport,
+  templateCharges,
+} from "./template-charges.ts";
+export {
+  gasteigerCharges,
+  type GasteigerOptions,
+  type GasteigerRefusal,
+  type GasteigerRefusalReason,
+  type GasteigerReport,
+} from "./gasteiger.ts";

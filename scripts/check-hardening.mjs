@@ -370,10 +370,14 @@ function checkPackage(dir, { update = false } = {}) {
   if (m.version && !/^\d+\.\d+\.\d+(-[\w.]+)?$/.test(m.version)) {
     fail("H1", `version "${m.version}" is not semver`);
   }
-  if (m.license && m.license !== "MIT") {
-    fail("H1", `license must be "MIT", got "${m.license}"`);
+  const expectedLicense = isDynamics ? "MIT AND BSD-3-Clause" : "MIT";
+  if (m.license && m.license !== expectedLicense) {
+    fail("H1", `license must be "${expectedLicense}", got "${m.license}"`);
   }
   if (!exists(join(dir, "LICENSE"))) fail("H1", "missing LICENSE file");
+  if (isDynamics && !exists(join(dir, "LICENSE-PDB2PQR"))) {
+    fail("H1", "missing LICENSE-PDB2PQR file");
+  }
   if (m.private) fail("H1", '"private": true');
   if (m.type !== "module") fail("H1", '"type" must be "module"');
   if (!("sideEffects" in m)) fail("H1", 'missing "sideEffects"');
