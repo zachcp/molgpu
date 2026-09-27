@@ -54,6 +54,7 @@ export interface Selection {
   readonly domain: Domain;
   /** The originating StructureData identity; compared by reference for set ops. */
   readonly dataset: StructureData["identity"];
+  /** Sorted unique rows. Treat as immutable; `id` and viewer caches assume it. */
   readonly indices: Uint32Array;
   /** Revision of each stream the resolution read, for staleness and set-op checks. */
   readonly deps: Readonly<
@@ -483,12 +484,8 @@ function toAtomRows(
 ): ArrayLike<number> & Iterable<number> {
   if (domain === "atom") return rows;
   if (domain === "residue") {
-    const want = new Set(rows);
     const out: number[] = [];
-    const residue = data.topology.atoms.residue;
-    for (let i = 0; i < data.topology.atoms.count; i++) {
-      if (want.has(residue[i])) out.push(i);
-    }
+    forEachResidueAtom(rows, data, (atom) => out.push(atom));
     return out;
   }
   if (domain === "bond") {
@@ -500,6 +497,19 @@ function toAtomRows(
   return fail("domain", `cannot expand ${domain} to atoms`);
 }
 
+/** Visit selected residue members once, shared by query and public conversions. */
+function forEachResidueAtom(
+  rows: Iterable<number>,
+  data: StructureData,
+  visit: (atom: number, residue: number) => void,
+): void {
+  const want = new Set(rows);
+  const residue = data.topology.atoms.residue;
+  for (let atom = 0; atom < data.topology.atoms.count; atom++) {
+    if (want.has(residue[atom])) visit(atom, residue[atom]);
+  }
+}
+
 /**
  * Expand a selection to atoms. A residue->atom expansion retains a source map:
  * `source.rows[k]` is the residue row that atom `indices[k]` came from, so picking
@@ -509,15 +519,11 @@ export function toAtoms(sel: Selection, data: StructureData): Selection {
   assertOwns(sel, data);
   if (sel.domain === "atom") return sel;
   if (sel.domain === "residue") {
-    const want = new Set(sel.indices);
-    const residue = data.topology.atoms.residue;
     const rows: number[] = [], srcRows: number[] = [];
-    for (let i = 0; i < data.topology.atoms.count; i++) {
-      if (want.has(residue[i])) {
-        rows.push(i);
-        srcRows.push(residue[i]);
-      }
-    }
+    forEachResidueAtom(sel.indices, data, (atom, sourceResidue) => {
+      rows.push(atom);
+      srcRows.push(sourceResidue);
+    });
     const selection = makeSelection(
       "atom",
       data,
