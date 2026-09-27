@@ -250,7 +250,7 @@ CoordinatesContext
 FlatMaterial
   export const FlatMaterial: LC<ShaderFlatMaterialProps>;
 GpuDsspOptions
-  export interface GpuDsspOptions { readonly generation: number; readonly data: StructureData; readonly rows: ArrayLike<number>; readonly layout: DsspLayout; /** Static calculations throw by name; live frames read one full frame on overflow. */ readonly overflow?: "static" | "frame"; readonly maxBridges?: number }
+  export interface GpuDsspOptions { readonly generation: number; readonly data: StructureData; readonly rows: ArrayLike<number>; readonly layout: DsspLayout; /** Static calculations throw by name; live frames read one full frame on overflow. */ readonly overflow?: "static" | "frame"; readonly maxBridges?: number; /** Cancels a superseded coordinate generation before another GPU pass. */ readonly signal?: AbortSignal }
 GpuDsspOverflowError
   export class GpuDsspOverflowError extends RangeError { constructor(stage: string) }
 GpuDsspResult

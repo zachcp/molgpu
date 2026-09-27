@@ -17,7 +17,7 @@ ChargeAssignment
 ChargeUnmatched
   export interface ChargeUnmatched { readonly comp: string; readonly name: string; readonly count: number; readonly residues: readonly string[] }
 DsspBridge
-  export interface DsspBridge { readonly partner1: number; readonly partner2: number; readonly type: number; /** k * 32 + donor slot * 4 + pattern, restoring the CPU's generation order. */ readonly order: number }
+  export interface DsspBridge { readonly partner1: number; readonly partner2: number; readonly type: number; /** Generating H-bond edge and bridge test, restoring CPU generation order. */ readonly acceptor: number; readonly donor: number; readonly pattern: number }
 DsspLayout
   export interface DsspLayout { readonly descriptors: Int32Array; readonly caMap: Uint32Array; readonly residues: Uint32Array; readonly unitStarts: Uint32Array; readonly residueCount: number; readonly atomCount: number; readonly totalResidues: number }
 ElasticMode
