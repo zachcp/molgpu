@@ -6,6 +6,12 @@ All notable changes to `@molgpu/io` are recorded here. The format follows
 
 ## [Unreleased]
 
+- PQR import (Phase 14, 1to.4). New experimental `structureFromPqr`, `applyPqr`
+  and `PqrParseError`, with the `PqrErrorCode`, `PqrStructureReport` and
+  `PqrApplyReport` types. Records are tokenised by whitespace, so PDB2PQR output
+  with widened fields reads correctly; Mol*'s fixed-column PQR reader stays the
+  test oracle. PDB2PQR force-field names (CYX, CYM, N/C terminal variants, AMBER
+  nucleotides) classify as polymer residues in PQR structures only.
 - **Changed:** `structureFromBcif` no longer writes
   `topology.atoms.formalCharge`. Formal charge is now the derived `formalCharge`
   attribute (read it with `attributeColumn(data,

@@ -14,6 +14,14 @@ MAX_FULL_DOWNLOAD
   export const MAX_FULL_DOWNLOAD: number;
 ParseSelectionOptions
   export interface ParseSelectionOptions { /** * Symbol names the caller can evaluate, for example `@molgpu/select`'s * `supportedSymbols`. When given, any other symbol is a SelectionParseError * that names the source language, rather than a later compile error. */ readonly symbols?: readonly string[] }
+PqrApplyReport
+  export interface PqrApplyReport { /** Structure atoms that received a record's charge. */ readonly matched: number; /** Structure atoms with no record, as `chain:seq:insertion:name`; they get 0. */ readonly unmatchedAtoms: readonly string[]; /** Records with no atom and no heavy atom to fold onto, same key format. */ readonly unmatchedRecords: readonly string[]; /** Residues whose assigned sum differs from the PQR residue sum by > 1e-3 e. */ readonly residueDelta: readonly { readonly residue: string; readonly pqr: number; readonly assigned: number }[] }
+PqrErrorCode
+  export type PqrErrorCode = /** The input was not a string or `Uint8Array`. */ "INVALID_INPUT" /** A record is malformed, or the records do not form a valid structure. */ | "INVALID_PQR" /** The file has no ATOM or HETATM records. */ | "NO_ATOMS" /** The PQR has no chain IDs and a residue key spans several chains. */ | "AMBIGUOUS_CHAIN" /** The optional Mol* element guesser failed to load. */ | "PARSER_UNAVAILABLE";
+PqrParseError
+  export class PqrParseError extends Error { readonly name: "PqrParseError"; readonly code: PqrErrorCode; constructor(message: string, code: PqrErrorCode, cause?: unknown) }
+PqrStructureReport
+  export interface PqrStructureReport { readonly atoms: number; /** Atoms whose PQR radius was 0 and whose display radius is the element's. */ readonly radiusFallbacks: number }
 SelectionExpr
   export type SelectionExpr = string | number | boolean | { readonly name: string } | { readonly head: SelectionExpr; readonly args?: readonly SelectionExpr[] | { readonly [name: string]: SelectionExpr } };
 SelectionLanguage
@@ -42,6 +50,8 @@ VolumeErrorCode
   export type VolumeErrorCode = /** `bytes` was not a `Uint8Array`. */ "INVALID_INPUT" /** The header or data is malformed or truncated, or Mol* rejected it. */ | "INVALID_MAP" /** The map's value mode is not one the reader supports. */ | "UNSUPPORTED_MODE" /** The map has more samples than `maxSamples`. */ | "VOLUME_TOO_LARGE" /** The optional Mol* reader is absent or failed to load. */ | "PARSER_UNAVAILABLE";
 VolumeParseError
   export class VolumeParseError extends Error { readonly name: "VolumeParseError"; readonly code: VolumeErrorCode; constructor(message: string, code: VolumeErrorCode, cause?: unknown) }
+applyPqr
+  export function applyPqr(data: StructureData, input: string | Uint8Array): { data: StructureData; report: PqrApplyReport };
 byteSource
   export function byteSource(input: Uint8Array | Blob | ByteSource): ByteSource;
 molecularSurfaceField
@@ -52,6 +62,8 @@ parseSelection
   export function parseSelection(language: SelectionLanguage, text: string, options?: ParseSelectionOptions): Promise<SelectionExpr>;
 structureFromBcif
   export function structureFromBcif(bytes: Uint8Array): Promise<StructureData>;
+structureFromPqr
+  export function structureFromPqr(input: string | Uint8Array): Promise<{ data: StructureData; report: PqrStructureReport }>;
 trajectoryFormat
   export function trajectoryFormat(name: string): TrajectoryFormat | null;
 trajectoryFromDcd
