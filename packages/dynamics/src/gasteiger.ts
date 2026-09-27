@@ -1,6 +1,7 @@
 import {
   attributeColumn,
   BOND_FLAGS,
+  elementSymbolForAtomicNumber,
   residueKey,
   type StructureData,
 } from "@molgpu/table";
@@ -41,21 +42,26 @@ const PARAMETERS: Readonly<Record<string, readonly [number, number, number]>> =
     "Al:sp3": [5.375, 4.953, 0.867],
     "Al:sp2": [5.795, 5.02, 0.695],
   };
-const ELEMENT: Readonly<Record<number, string>> = {
-  1: "H",
-  5: "B",
-  6: "C",
-  7: "N",
-  8: "O",
-  9: "F",
-  12: "Mg",
-  13: "Al",
-  14: "Si",
-  15: "P",
-  16: "S",
-  17: "Cl",
-  35: "Br",
-  53: "I",
+// Gasteiger parameter coverage, independent of the shared periodic identity map.
+const SUPPORTED_ELEMENTS = new Set([
+  1,
+  5,
+  6,
+  7,
+  8,
+  9,
+  12,
+  13,
+  14,
+  15,
+  16,
+  17,
+  35,
+  53,
+]);
+const elementName = (atomicNumber: number): string => {
+  const symbol = elementSymbolForAtomicNumber(atomicNumber);
+  return symbol ? symbol[0] + symbol.slice(1).toLowerCase() : "";
 };
 // Allowed valences of neutral atoms, lowest first, from RDKit's periodic
 // table. A charged atom uses its isoelectronic neighbour (N+ as C, O- as F).
@@ -217,7 +223,7 @@ export function gasteigerCharges(
       }
     }
     const z = molecule.map((i) => atoms.element[i]);
-    const unknown = z.find((e) => !ELEMENT[e]);
+    const unknown = z.find((e) => !SUPPORTED_ELEMENTS.has(e));
     if (unknown !== undefined) {
       return [
         "missing-parameters",
@@ -238,14 +244,14 @@ export function gasteigerCharges(
       if (!allowed) {
         return [
           "unsupported-valence",
-          `no implicit-H valence for ${ELEMENT[z[p]]}`,
+          `no implicit-H valence for ${elementName(z[p])}`,
         ];
       }
       const target = allowed.find((v) => v >= degree);
       if (target === undefined || target - degree > 4) {
         return [
           "unsupported-valence",
-          `${ELEMENT[z[p]]} has bond-order sum ${degree}`,
+          `${elementName(z[p])} has bond-order sum ${degree}`,
         ];
       }
       hydrogens[p] = target - degree;
@@ -282,7 +288,7 @@ export function gasteigerCharges(
     }
     const params: (readonly [number, number, number])[] = [];
     for (let p = 0; p < m; p++) {
-      const symbol = ELEMENT[z[p]];
+      const symbol = elementName(z[p]);
       let mode = "*";
       if (z[p] !== 1) {
         // RDKit numBondsPlusLonePairs hybridization.
@@ -470,7 +476,7 @@ function kekulize(
     if (!allowed) {
       return [
         "unsupported-valence",
-        `no aromatic valence for ${ELEMENT[z[p]]}`,
+        `no aromatic valence for ${elementName(z[p])}`,
       ];
     }
     const single = neighbors[p].reduce(

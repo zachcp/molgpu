@@ -30,6 +30,11 @@ export type {
   VolumeLevel,
   VolumeStats,
 } from "./types.ts";
+export {
+  atomicNumberForSymbol,
+  ELEMENT_SYMBOL,
+  elementSymbolForAtomicNumber,
+} from "./elements.ts";
 export { activeAtoms, coordinateBounds, residueKey } from "./structure-view.ts";
 export {
   atomRadii,
@@ -38,6 +43,7 @@ export {
   elementRadius,
 } from "./bond-topology.ts";
 export {
+  ATTRIBUTE_DOMAINS,
   attributeColumn,
   attributeNames,
   withAttributes,

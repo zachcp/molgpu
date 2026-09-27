@@ -24,39 +24,67 @@ const finite = (value: number, path: string): void => {
 const ATTRIBUTE_NAMES = /^[a-z][a-z0-9-]*:[A-Za-z][A-Za-z0-9_-]*$/;
 const PROVENANCE =
   /^(legacy|default|user|(?:imported|template|computed|gpu):[A-Za-z0-9][A-Za-z0-9._-]*)$/;
+/** Domains shared by table's built-in columns and fields' attribute builder. */
+export const ATTRIBUTE_DOMAINS = Object.freeze(
+  {
+    element: "atom",
+    occupancy: "atom",
+    bfactor: "atom",
+    radius: "atom",
+    residue: "atom",
+    atomChain: "atom",
+    formalCharge: "atom",
+    partialCharge: "atom",
+    labelSeq: "residue",
+    chain: "residue",
+    ssCode: "residue",
+  } as const satisfies Readonly<Record<string, AttributeDomain>>,
+);
 const WELL_KNOWN = {
-  formalCharge: { domain: "atom", Type: Int8Array, kind: "code" },
-  partialCharge: { domain: "atom", Type: Float32Array, kind: "scalar" },
-  ssCode: { domain: "residue", Type: Uint8Array, kind: "code" },
+  formalCharge: {
+    domain: ATTRIBUTE_DOMAINS.formalCharge,
+    Type: Int8Array,
+    kind: "code",
+  },
+  partialCharge: {
+    domain: ATTRIBUTE_DOMAINS.partialCharge,
+    Type: Float32Array,
+    kind: "scalar",
+  },
+  ssCode: {
+    domain: ATTRIBUTE_DOMAINS.ssCode,
+    Type: Uint8Array,
+    kind: "code",
+  },
 } as const;
 const BUILT_INS = {
   element: {
-    domain: "atom",
+    domain: ATTRIBUTE_DOMAINS.element,
     kind: "code",
     read: (d: StructureData) => d.topology.atoms.element,
   },
   occupancy: {
-    domain: "atom",
+    domain: ATTRIBUTE_DOMAINS.occupancy,
     kind: "scalar",
     read: (d: StructureData) => d.topology.atoms.occupancy,
   },
   bfactor: {
-    domain: "atom",
+    domain: ATTRIBUTE_DOMAINS.bfactor,
     kind: "scalar",
     read: (d: StructureData) => d.topology.atoms.bfactor,
   },
   radius: {
-    domain: "atom",
+    domain: ATTRIBUTE_DOMAINS.radius,
     kind: "scalar",
     read: (d: StructureData) => d.topology.atoms.radius,
   },
   residue: {
-    domain: "atom",
+    domain: ATTRIBUTE_DOMAINS.residue,
     kind: "code",
     read: (d: StructureData) => d.topology.atoms.residue,
   },
   atomChain: {
-    domain: "atom",
+    domain: ATTRIBUTE_DOMAINS.atomChain,
     kind: "code",
     read: (d: StructureData) =>
       Uint32Array.from(
@@ -65,23 +93,23 @@ const BUILT_INS = {
       ),
   },
   labelSeq: {
-    domain: "residue",
+    domain: ATTRIBUTE_DOMAINS.labelSeq,
     kind: "code",
     read: (d: StructureData) => d.topology.residues.labelSeq,
   },
   chain: {
-    domain: "residue",
+    domain: ATTRIBUTE_DOMAINS.chain,
     kind: "code",
     read: (d: StructureData) => d.topology.residues.chain,
   },
   formalCharge: {
-    domain: "atom",
+    domain: ATTRIBUTE_DOMAINS.formalCharge,
     kind: "code",
     read: (d: StructureData) => d.topology.atoms.formalCharge,
   },
   // Hand-built structures' 3-state column, as codes (helix H, sheet E).
   ssCode: {
-    domain: "residue",
+    domain: ATTRIBUTE_DOMAINS.ssCode,
     kind: "code",
     read: (d: StructureData) => {
       const kinds = d.topology.residues.secondaryStructure;

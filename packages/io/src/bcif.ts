@@ -1,4 +1,5 @@
 import {
+  atomicNumberForSymbol,
   createStructure,
   elementRadius,
   type Links,
@@ -8,7 +9,7 @@ import {
 import type { CifFrame } from "molstar/lib/mol-io/reader/cif.js";
 import { errorFor, IoError } from "./error.ts";
 import { type FileInput, readInput } from "./input.ts";
-import { ELEMENT, polymerKind } from "./residues.ts";
+import { polymerKind } from "./residues.ts";
 
 const bcifError = errorFor("bcif");
 
@@ -376,7 +377,7 @@ export async function structureFromBcif(
     ids.push(str(atom, "id", i, String(i + 1)));
     names.push(str(atom, "label_atom_id", i, ""));
     altloc.push(str(atom, "label_alt_id", i));
-    const atomic = ELEMENT[str(atom, "type_symbol", i).toUpperCase()] ?? 0;
+    const atomic = atomicNumberForSymbol(str(atom, "type_symbol", i));
     element[i] = atomic;
     radius[i] = elementRadius(atomic);
     positions[i * 3] = num(atom, "Cartn_x", i);

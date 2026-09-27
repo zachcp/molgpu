@@ -5,8 +5,8 @@ CPU columns (atoms, residues, chains, bonds, assembly instances) plus packed XYZ
 positions. This package validates those columns, gives each dataset a stable
 identity and revision counters, and derives the pure values that the rest of the
 library builds on: the default atom view, residue join keys, coordinate bounds,
-bond topology and polymer traces. It has no GPU, parser or Mol* code; importers
-(`@molgpu/io`) lower into it and the viewer reads from it.
+bond topology and polymer traces. It has no GPU, parser or Mol* runtime
+dependency; importers (`@molgpu/io`) lower into it and the viewer reads from it.
 
 ## Install
 
@@ -149,15 +149,42 @@ and ribbon geometry.
 
 ## Source modules
 
-`structure.ts` owns validation, copies, identity and revisions. `attributes.ts`
-owns derived and built-in columns; `structure-view.ts` owns atom views, residue
-keys and coordinate bounds; `bond-topology.ts` owns radii and inferred bonds.
-`trace.ts`, `secondary-structure.ts`, `volume.ts` and `trajectory.ts` each own
-their matching derivation or value model. Domain types live alongside those
-responsibilities in `structure-types.ts`, `trace-types.ts`, `volume-types.ts`
-and `trajectory-types.ts`; `types.ts` only re-exports them for internal import
-compatibility. The package entrypoint remains the curated public API. Helpers
-needed only by focused tests are marked `@internal` and are not re-exported.
+`elements.ts` owns atomic-number/symbol identity; `attributes.ts` owns derived
+and built-in columns and the shared attribute-domain registry. `structure.ts`
+owns validation, copies, identity and revisions; `structure-view.ts` owns atom
+views, residue keys and coordinate bounds; `bond-topology.ts` owns display radii
+and inferred bonds. `trace.ts`, `secondary-structure.ts`, `volume.ts` and
+`trajectory.ts` each own their matching derivation or value model. Domain types
+live alongside those responsibilities in `structure-types.ts`, `trace-types.ts`,
+`volume-types.ts` and `trajectory-types.ts`; `types.ts` only re-exports them for
+internal import compatibility. The package entrypoint remains the curated public
+API. Helpers needed only by focused tests are marked `@internal` and are not
+re-exported.
+
+### Chemical data sources and semantics
+
+| Data                     | Source and consumers                                                           | Meaning                                                                                                                               |
+| ------------------------ | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Atomic number and symbol | `elements.ts`; IO decoders, selection's MolQL symbol property, dynamics labels | Atomic identity, with 0/empty for unknown; D/T and modern superheavy spellings are input aliases.                                     |
+| Selection atomic mass    | `@molgpu/select/src/elements.ts`; MolQL query evaluation                       | Mol* atomic-weight query values with the package's documented corrections; no other package currently consumes these query semantics. |
+| Selection VDW radius     | `@molgpu/select/src/elements.ts`; MolQL query evaluation                       | Mol* `ElementVdwRadii` values and Mol* query default; `NaN` preserves an absent Mol* value.                                           |
+| Display fallback radius  | `bond-topology.ts`; `atomRadii` and IO's zero-PQR-radius fallback              | Common-element display radius, default 1.7 Å. A positive input `atoms.radius` overrides it.                                           |
+| PQR radius               | `@molgpu/io` PQR attributes and `pqr:radius`                                   | Value carried by the PQR file; zero remains in `pqr:radius`, while display radius falls back to the table default.                    |
+| Covalent radius          | `bond-topology.ts`                                                             | Small-element radii used only to infer covalent connectivity.                                                                         |
+| Mol* bond thresholds     | `@molgpu/select/src/bond-graph.ts` and MolQL within evaluators                 | Query-specific search and pair thresholds; not display or covalent radii.                                                             |
+| CPK colors               | `@molgpu/fields` element-color preset                                          | Visualization policy, independent of chemical identity.                                                                               |
+
+`ATTRIBUTE_DOMAINS` is the single domain registry for built-in and well-known
+column names. `attributes.ts` uses it when resolving table columns, and
+`@molgpu/fields` uses the same exported map when constructing attribute fields.
+
+Element identity exports:
+
+| Export                         | Description                                                                |
+| ------------------------------ | -------------------------------------------------------------------------- |
+| `ELEMENT_SYMBOL`               | MolQL-compatible uppercase symbols indexed by atomic number (0 = unknown). |
+| `atomicNumberForSymbol`        | Atomic number lookup for symbols and accepted aliases (0 = unknown).       |
+| `elementSymbolForAtomicNumber` | MolQL-compatible uppercase symbol lookup (empty for unknown numbers).      |
 
 ## API
 
@@ -168,6 +195,7 @@ needed only by focused tests are marked `@internal` and are not re-exported.
 | `withAttributes`          | experimental | Add, replace or remove validated atom or residue columns while preserving structure identity.                                         |
 | `attributeColumn`         | experimental | Resolve built-in and derived columns through one provenance-aware view.                                                               |
 | `attributeNames`          | experimental | List resolvable column names for a structure.                                                                                         |
+| `ATTRIBUTE_DOMAINS`       | experimental | Shared atom/residue domain registry for built-in and well-known columns.                                                              |
 | `AttributeDomain`         | experimental | Atom or residue row domain for an attribute.                                                                                          |
 | `AttributeValues`         | experimental | Supported numeric typed arrays for attribute values.                                                                                  |
 | `AttributeProvenance`     | experimental | Origin label for an attribute column.                                                                                                 |

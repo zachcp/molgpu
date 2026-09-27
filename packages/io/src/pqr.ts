@@ -3,12 +3,13 @@
 // PDB2PQR's fields drift out of the fixed columns once coordinates or serials
 // widen, and Mol*'s PQR variant reads only the charge.
 import {
+  atomicNumberForSymbol,
   createStructure,
   elementRadius,
   type StructureData,
   withAttributes,
 } from "@molgpu/table";
-import { AMINO_ACID_NAMES, ELEMENT, polymerKind } from "./residues.ts";
+import { AMINO_ACID_NAMES, polymerKind } from "./residues.ts";
 import type { PqrApplyReport, PqrStructureReport } from "./types.ts";
 import { errorFor, type IoErrorCode } from "./error.ts";
 
@@ -231,7 +232,7 @@ export async function structureFromPqr(
       });
     }
     atomResidue[i] = residue;
-    element[i] = ELEMENT[guess(rec.name[i], rec.comp[i]).toUpperCase()] ?? 0;
+    element[i] = atomicNumberForSymbol(guess(rec.name[i], rec.comp[i]));
     if (rec.radius[i] > 0) radius[i] = rec.radius[i];
     else {
       radius[i] = elementRadius(element[i]);
