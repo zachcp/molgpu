@@ -17,7 +17,7 @@
 // a computed assignment, or the legacy residues.secondaryStructure of a
 // hand-built structure. Without any of them every residue is 'coil'.
 import type { SecondaryStructureTrace, StructureData, Trace } from "./types.ts";
-import { attributeColumn } from "./index.ts";
+import { attributeColumn } from "./structure.ts";
 import { ssKind } from "./ss-codes.ts";
 
 type SSKind = SecondaryStructureTrace["kind"][number];

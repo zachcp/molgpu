@@ -21,7 +21,7 @@
 // angles are computed but unused and are not ported.
 import type { StructureData } from "./types.ts";
 import { spatialGrid } from "./spatial-grid.ts";
-import { activeAtoms, attributeColumn, withAttributes } from "./index.ts";
+import { activeAtoms, attributeColumn, withAttributes } from "./structure.ts";
 
 // Mol*'s DSSPType flags.
 const F_H = 1, F_B = 2, F_E = 4, F_G = 8, F_I = 16, F_S = 32, F_T = 64;

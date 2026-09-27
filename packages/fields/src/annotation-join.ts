@@ -4,7 +4,7 @@
 // lifted to a per-atom `annotation` field that is indistinguishable from any
 // other field. This is pure CPU work; there is no WGSL compilation here.
 import type { StructureData } from "@molgpu/table";
-import { annotation, COLOR, SCALAR } from "./index.ts";
+import { annotation, COLOR, SCALAR } from "./primitives.ts";
 import type {
   ChainIdentity,
   Color,

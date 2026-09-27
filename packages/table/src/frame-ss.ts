@@ -2,7 +2,7 @@
 // integer frames read from TrajectoryData.source, cached with a byte cap. The
 // same cache serves the cartoon of a paused frame and SS-vs-time plots.
 import type { StructureData, TrajectoryData } from "./types.ts";
-import { activeAtoms, withPositions } from "./index.ts";
+import { activeAtoms, withPositions } from "./structure.ts";
 import { dssp } from "./dssp.ts";
 
 /** Per-frame `ssCode` values over one structure and trajectory. */

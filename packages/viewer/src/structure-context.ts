@@ -20,7 +20,7 @@ import { AttributesContext, EMPTY_ATTRIBUTES } from "./attributes-context.ts";
 import {
   AttributeSnapshotContext,
   EMPTY_ATTRIBUTE_SNAPSHOTS,
-} from "./attribute-snapshot.ts";
+} from "./attribute-snapshot-context.ts";
 import {
   CoordinateSnapshotContext,
   rootSnapshot,
