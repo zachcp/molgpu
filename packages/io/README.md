@@ -120,7 +120,7 @@ isosurface.
 | `PqrParseError`         | experimental | Error thrown by `structureFromPqr` and `applyPqr`, with a `code: PqrErrorCode`.                                                                                                                       |
 | `PqrErrorCode`          | experimental | Why a PQR import failed, including `AMBIGUOUS_CHAIN` for chain-less records.                                                                                                                          |
 | `PqrStructureReport`    | experimental | `atoms` and `radiusFallbacks` from `structureFromPqr`.                                                                                                                                                |
-| `PqrApplyReport`        | experimental | `matched`, `unmatchedAtoms`, `unmatchedRecords` and `residueDelta` from `applyPqr`.                                                                                                                   |
+| `PqrApplyReport`        | experimental | `matched`, `unmatchedAtoms`, `unmatchedRecords` and per-model, per-altloc `residueDelta` from `applyPqr`.                                                                                             |
 
 The surface exports are experimental while the result shape settles.
 

@@ -335,10 +335,12 @@ const DELTA_TOLERANCE = 1e-3;
  * Set `partialCharge` on an existing structure from PQR records, matched by
  * (auth chain, auth seq, insertion code, atom name). PDB2PQR may rename
  * residues (HIS→HIE, CYS→CYX), so the component is not part of the match. A
- * record applies in every model and to every altloc copy of its atom. A PQR
- * hydrogen the structure lacks folds its charge onto the nearest matched heavy
- * atom of its residue within 1.3 Å (in the PQR's coordinates), which keeps
- * residue net charge on heavy-atom structures. Unmatched structure atoms get 0.
+ * record applies in every model and to every altloc copy of its atom. In each
+ * model and altloc copy that lacks a PQR hydrogen, its charge folds onto the
+ * nearest heavy atom of that copy within 1.3 Å (in the PQR's coordinates), which
+ * keeps residue net charge on heavy-atom structures. Chain-less records throw
+ * `AMBIGUOUS_CHAIN` only when their own residue spans several chains.
+ * Unmatched structure atoms get 0.
  */
 export function applyPqr(
   data: StructureData,
@@ -357,22 +359,6 @@ export function applyPqr(
     if (!rows) residueIndex.set(key, rows = []);
     rows.push(r);
   }
-  if (chainless) {
-    // Without chain IDs a key may only span copies of one chain (models).
-    for (const [key, rows] of residueIndex) {
-      const labels = new Set(
-        rows.map((r) => chains.labelId[residues.chain[r]]),
-      );
-      if (labels.size > 1) {
-        throw new PqrParseError(
-          `PQR has no chain IDs and residue ${key.slice(1)} is in chains ${
-            [...labels].join(", ")
-          }`,
-          "AMBIGUOUS_CHAIN",
-        );
-      }
-    }
-  }
   const residueAtoms = new Map<number, Map<string, number[]>>();
   for (let i = 0; i < atoms.count; i++) {
     const r = atoms.residue[i];
@@ -382,6 +368,19 @@ export function applyPqr(
     if (rows) rows.push(i);
     else byName.set(atoms.name[i], [i]);
   }
+  // Each residue row's conformers: its altloc codes, or "" when it has none.
+  // An atom with no altloc belongs to every conformer of its row.
+  const conformers = (r: number): string[] => {
+    const codes = new Set<string>();
+    for (const rows of residueAtoms.get(r)?.values() ?? []) {
+      for (const i of rows) if (atoms.altloc[i]) codes.add(atoms.altloc[i]);
+    }
+    return codes.size ? [...codes] : [""];
+  };
+  const inCopy = (r: number, name: string, alt: string): number[] =>
+    (residueAtoms.get(r)?.get(name) ?? []).filter((i) =>
+      !atoms.altloc[i] || atoms.altloc[i] === alt
+    );
   const values = new Float32Array(atoms.count);
   const assigned = new Uint8Array(atoms.count);
   const unmatchedRecords: string[] = [];
@@ -397,9 +396,24 @@ export function applyPqr(
     const key = `${rec.chain[k]}:${rec.seq[k]}:${rec.insertion[k]}`;
     let group = pqrResidues.get(key);
     if (!group) {
+      const rows = residueIndex.get(key) ?? [];
+      if (chainless) {
+        // Without chain IDs a key may only span copies of one chain (models).
+        const labels = new Set(
+          rows.map((r) => chains.labelId[residues.chain[r]]),
+        );
+        if (labels.size > 1) {
+          throw new PqrParseError(
+            `PQR has no chain IDs and residue ${key.slice(1)} is in chains ${
+              [...labels].join(", ")
+            }`,
+            "AMBIGUOUS_CHAIN",
+          );
+        }
+      }
       group = {
         sum: 0,
-        rows: residueIndex.get(key) ?? [],
+        rows,
         hydrogens: [],
         heavy: [],
       };
@@ -414,13 +428,14 @@ export function applyPqr(
         hit = true;
       }
     }
+    // A hydrogen may be present in some model or altloc copies and missing
+    // from others, so folding decides per copy below.
     const isHydrogen = /^\d*H/i.test(rec.name[k]);
-    if (hit) {
-      if (!isHydrogen) group.heavy.push(k);
-    } else if (isHydrogen && group.rows.length) group.hydrogens.push(k);
+    if (isHydrogen && group.rows.length) group.hydrogens.push(k);
+    else if (hit) group.heavy.push(k);
     else unmatchedRecords.push(`${key}:${rec.name[k]}`);
   }
-  // Fold each missing hydrogen onto its nearest matched heavy atom.
+  // Fold each hydrogen onto its nearest heavy atom in every copy lacking it.
   const d2 = (a: number, b: number): number => {
     const dx = rec.xyz[a * 3] - rec.xyz[b * 3],
       dy = rec.xyz[a * 3 + 1] - rec.xyz[b * 3 + 1],
@@ -429,20 +444,24 @@ export function applyPqr(
   };
   for (const [key, group] of pqrResidues) {
     for (const h of group.hydrogens) {
-      let best = -1, bestD = FOLD_DISTANCE * FOLD_DISTANCE;
-      for (const k of group.heavy) {
-        const d = d2(h, k);
-        if (d <= bestD) [best, bestD] = [k, d];
-      }
-      if (best < 0) {
-        unmatchedRecords.push(`${key}:${rec.name[h]}`);
-        continue;
-      }
+      const targets = new Set<number>();
+      let lost = false;
       for (const r of group.rows) {
-        for (const i of residueAtoms.get(r)?.get(rec.name[best]) ?? []) {
-          values[i] += rec.charge[h];
+        for (const alt of conformers(r)) {
+          if (inCopy(r, rec.name[h], alt).length) continue;
+          let best = -1, bestD = FOLD_DISTANCE * FOLD_DISTANCE;
+          for (const k of group.heavy) {
+            if (!inCopy(r, rec.name[k], alt).length) continue;
+            const d = d2(h, k);
+            if (d <= bestD) [best, bestD] = [k, d];
+          }
+          if (best < 0) lost = true;
+          else for (const i of inCopy(r, rec.name[best], alt)) targets.add(i);
         }
       }
+      if (lost) unmatchedRecords.push(`${key}:${rec.name[h]}`);
+      // A shared (no-altloc) heavy atom takes the charge once.
+      for (const i of targets) values[i] += rec.charge[h];
     }
   }
   const unmatchedAtoms: string[] = [];
@@ -462,21 +481,25 @@ export function applyPqr(
   const residueDelta: PqrApplyReport["residueDelta"][number][] = [];
   for (const [key, group] of pqrResidues) {
     for (const r of group.rows) {
-      // Sum one copy per atom name, so altloc copies don't double-count.
-      let assignedSum = 0;
-      for (const rows of residueAtoms.get(r)?.values() ?? []) {
-        assignedSum += values[rows[0]];
+      for (const alt of conformers(r)) {
+        // One atom per name in this model and conformer.
+        let assignedSum = 0;
+        for (const name of residueAtoms.get(r)?.keys() ?? []) {
+          const copy = inCopy(r, name, alt);
+          if (copy.length) assignedSum += values[copy[0]];
+        }
+        if (Math.abs(assignedSum - group.sum) > DELTA_TOLERANCE) {
+          residueDelta.push(
+            Object.freeze({
+              residue: key,
+              model: chains.model[residues.chain[r]],
+              altloc: alt,
+              pqr: group.sum,
+              assigned: assignedSum,
+            }),
+          );
+        }
       }
-      if (Math.abs(assignedSum - group.sum) > DELTA_TOLERANCE) {
-        residueDelta.push(
-          Object.freeze({
-            residue: key,
-            pqr: group.sum,
-            assigned: assignedSum,
-          }),
-        );
-      }
-      break; // Model copies repeat the same assignment.
     }
   }
   return {

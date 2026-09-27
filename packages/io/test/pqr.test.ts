@@ -232,7 +232,137 @@ Deno.test("applyPqr reports unmatched atoms, records and residue deltas", () => 
   assertEquals(report.unmatchedAtoms.length, 4);
   assertEquals(report.unmatchedAtoms[0], "A:1::CA");
   assertEquals(report.unmatchedRecords, ["A:1::OXT"]);
-  assertEquals(report.residueDelta.length, 1);
-  assertAlmostEquals(report.residueDelta[0].pqr, -1.2157, 1e-4);
-  assertAlmostEquals(report.residueDelta[0].assigned, -0.4157, 1e-4);
+  // Every model and altloc copy of the residue is short by OXT.
+  assertEquals(
+    report.residueDelta.map((d) => `${d.residue}/${d.model}/${d.altloc}`),
+    ["A:1:/1/A", "A:1:/1/B", "A:1:/2/A", "A:1:/2/B"],
+  );
+  for (const d of report.residueDelta) {
+    assertAlmostEquals(d.pqr, -1.2157, 1e-4);
+    assertAlmostEquals(d.assigned, -0.4157, 1e-4);
+  }
+});
+
+// Residue copies as [model, chain, seq, atoms as "NAME" or "NAME/altloc"].
+function copies(
+  list: readonly [number, string, string, readonly string[]][],
+): StructureInput {
+  const names: string[] = [], alt: string[] = [], residue: number[] = [];
+  list.forEach(([, , , atoms], r) => {
+    for (const atom of atoms) {
+      const [name, code = ""] = atom.split("/");
+      names.push(name);
+      alt.push(code);
+      residue.push(r);
+    }
+  });
+  // One chain row per (model, chain) pair.
+  const chainKeys: string[] = [];
+  const chainOf = list.map(([model, chain]) => {
+    const key = `${model}/${chain}`;
+    if (!chainKeys.includes(key)) chainKeys.push(key);
+    return chainKeys.indexOf(key);
+  });
+  const n = names.length, m = list.length;
+  return {
+    positions: new Float32Array(n * 3),
+    topology: {
+      atoms: {
+        count: n,
+        id: Array.from({ length: n }, (_, i) => String(i + 1)),
+        name: names,
+        altloc: alt,
+        residue: Uint32Array.from(residue),
+        element: Uint8Array.from(names, (x) => x.startsWith("H") ? 1 : 6),
+        occupancy: new Float32Array(n).fill(1),
+        bfactor: new Float32Array(n),
+      },
+      residues: {
+        count: m,
+        chain: Uint32Array.from(chainOf),
+        labelSeq: Int32Array.from(list, ([, , seq]) => +seq),
+        authSeq: list.map(([, , seq]) => seq),
+        insertionCode: list.map(() => ""),
+        comp: list.map(() => "ALA"),
+        polymer: list.map(() => "protein"),
+      },
+      chains: {
+        count: chainKeys.length,
+        model: Int32Array.from(chainKeys, (k) => +k.split("/")[0]),
+        labelId: chainKeys.map((k) => k.split("/")[1]),
+        authId: chainKeys.map((k) => k.split("/")[1]),
+      },
+      bonds: {
+        count: 0,
+        a: new Uint32Array(),
+        b: new Uint32Array(),
+        order: new Uint8Array(),
+        source: [],
+      },
+      instances: {
+        count: 0,
+        chain: new Uint32Array(),
+        operatorId: [],
+        transform: new Float64Array(),
+      },
+    },
+  };
+}
+
+const CH_PQR =
+  "ATOM 1 CA ALA A 1 0.000 0.000 0.000 0.2 1.9\nATOM 2 HA ALA A 1 1.000 0.000 0.000 0.1 1.1\n";
+const charges = (data: ReturnType<typeof applyPqr>["data"]): number[] =>
+  [...attributeColumn(data, "partialCharge")!.values].map((v) => +v.toFixed(4));
+
+Deno.test("applyPqr folds a hydrogen only into the models that lack it", () => {
+  const { data, report } = applyPqr(
+    createStructure(copies([[1, "A", "1", ["CA", "HA"]], [2, "A", "1", [
+      "CA",
+    ]]])),
+    CH_PQR,
+  );
+  assertEquals(charges(data), [0.2, 0.1, 0.3]);
+  assertEquals(report.unmatchedRecords, []);
+  assertEquals(report.residueDelta, []);
+});
+
+Deno.test("applyPqr folds a hydrogen only into the altloc conformers that lack it", () => {
+  const { data, report } = applyPqr(
+    createStructure(copies([[1, "A", "1", ["CA/A", "HA/A", "CA/B"]]])),
+    CH_PQR,
+  );
+  assertEquals(charges(data), [0.2, 0.1, 0.3]);
+  assertEquals(report.residueDelta, []);
+});
+
+Deno.test("applyPqr reports the conformer a shared heavy atom cannot balance", () => {
+  // CA has no altloc, so folding B's missing HA onto it overcharges A.
+  const { data, report } = applyPqr(
+    createStructure(copies([[1, "A", "1", ["CA", "HA/A", "N/B"]]])),
+    CH_PQR,
+  );
+  assertEquals(charges(data), [0.3, 0.1, 0]);
+  assertEquals(
+    report.residueDelta.map((d) => [d.model, d.altloc, +d.assigned.toFixed(4)]),
+    [[1, "A", 0.4]],
+  );
+});
+
+Deno.test("applyPqr checks chain-less ambiguity only for residues in the PQR", () => {
+  const input = createStructure(copies([
+    [1, "A", "1", ["CA"]],
+    [1, "A", "2", ["CA"]],
+    [1, "B", "1", ["CA"]],
+  ]));
+  const { data, report } = applyPqr(
+    input,
+    "ATOM 1 CA ALA 2 0.000 0.000 0.000 0.25 1.9\n",
+  );
+  assertEquals(charges(data), [0, 0.25, 0]);
+  assertEquals(report.matched, 1);
+  assertThrows(
+    () => applyPqr(input, "ATOM 1 CA ALA 1 0.000 0.000 0.000 0.25 1.9\n"),
+    PqrParseError,
+    "no chain IDs",
+  );
 });

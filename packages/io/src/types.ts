@@ -149,9 +149,15 @@ export interface PqrApplyReport {
   readonly unmatchedAtoms: readonly string[];
   /** Records with no atom and no heavy atom to fold onto, same key format. */
   readonly unmatchedRecords: readonly string[];
-  /** Residues whose assigned sum differs from the PQR residue sum by > 1e-3 e. */
+  /**
+   * Residue copies, per model and altloc conformer, whose assigned sum differs
+   * from the PQR residue sum by > 1e-3 e. `altloc` is "" when the residue has
+   * no alternate locations.
+   */
   readonly residueDelta: readonly {
     readonly residue: string;
+    readonly model: number;
+    readonly altloc: string;
     readonly pqr: number;
     readonly assigned: number;
   }[];
