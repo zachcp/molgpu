@@ -7,6 +7,7 @@ import {
 } from "@std/assert";
 import { createStructure } from "@molgpu/table";
 import {
+  COLOR,
   type Color,
   colormap,
   compile,
@@ -15,7 +16,6 @@ import {
   joinAnnotation,
   linear,
 } from "../src/index.ts";
-import { COLOR } from "../src/primitives.ts";
 import { residueIdentity } from "../src/annotation-join.ts";
 import { fixture } from "./fixture.ts";
 

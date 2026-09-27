@@ -10,6 +10,7 @@ import {
   annotation,
   attribute,
   categorical,
+  COLOR,
   colormap,
   compile,
   constant,
@@ -18,10 +19,10 @@ import {
   linear,
   readsNearestVolume,
   sampleVolumeGradientWgsl,
+  SCALAR,
   volumeSample,
 } from "../src/index.ts";
 import { byPotential } from "../src/index.ts";
-import { COLOR, SCALAR, STRING } from "../src/primitives.ts";
 import type { Color } from "../src/index.ts";
 import { createVolume, createVolumeGrid, withAttributes } from "@molgpu/table";
 import { structure } from "./fixture.ts";

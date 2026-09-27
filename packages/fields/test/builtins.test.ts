@@ -14,10 +14,11 @@ import {
   byElement,
   bySecondaryStructure,
   bySeq,
+  COLOR,
+  columnRange,
   compile,
   evaluate,
 } from "../src/index.ts";
-import { COLOR, columnRange } from "../src/primitives.ts";
 import { fixture } from "./fixture.ts";
 
 // The base fixture: 4 atoms C/N/O/S, residues 0,0,1,1, bfactor 10..40, one chain.
