@@ -5,9 +5,16 @@ import type {
   VectorLike,
   ViewerComponent,
 } from "./types.ts";
-import { use, useMemo } from "@use-gpu/live";
+import { use, useMemo, useRef } from "@use-gpu/live";
 import { FaceLayer } from "@use-gpu/workbench";
-import { secondaryStructureTrace, traceTable } from "@molgpu/table";
+import {
+  attributeColumn,
+  type SecondaryStructureTrace,
+  secondaryStructureTrace,
+  type Trace,
+  traceTable,
+  withSecondaryStructure,
+} from "@molgpu/table";
 import { useStructure } from "./structure-context.ts";
 import { useCoordinateSnapshot } from "./coordinate-snapshot.ts";
 import {
@@ -23,9 +30,30 @@ import {
 } from "./internal/opacity.ts";
 import { withMaterial } from "./materials.ts";
 import { buildRibbonGeometry } from "./internal/ribbon-geometry.ts";
+import { ribbonDsspRows } from "./internal/ribbon-dssp.ts";
 import { useRepaint } from "./internal/use-repaint.ts";
 import { count } from "./internal/instrumentation.ts";
 import { useBindingProbe } from "./internal/use-binding-probe.ts";
+
+/**
+ * Keep the previous SS trace while the trace is unchanged and its cartoon
+ * projection (kinds and block flags) is equal: a new ssCode that only moves
+ * T/S/- codes, or G/H within a helix, rebuilds no ribbon geometry.
+ */
+function useStableProjection(
+  trace: Trace | null,
+  ss: SecondaryStructureTrace | null,
+): SecondaryStructureTrace | null {
+  const previous = useRef<
+    { trace: Trace | null; ss: SecondaryStructureTrace | null } | null
+  >(null);
+  const p = previous.current;
+  const same = p && p.trace === trace && p.ss && ss &&
+    p.ss.count === ss.count &&
+    p.ss.kind.every((k, i) => k === ss.kind[i]);
+  if (!same) previous.current = { trace, ss };
+  return previous.current!.ss;
+}
 
 /**
  * Draw the polymer backbone as a flat, oriented ribbon: a CPU-extruded
@@ -51,11 +79,19 @@ export const Ribbon: ViewerComponent<
     color?: VectorLike;
     /** Wraps the shaded ribbon layer; without one, the ambient scene material. */
     material?: MaterialSpec;
+    /**
+     * `"model"` (default) draws the structure's `ssCode`. `"dssp"` runs DSSP
+     * on each coordinate snapshot the ribbon draws, over the primary-altloc
+     * atoms of every model the drawn atoms belong to, so codes always come
+     * from the displayed coordinates of the displayed models.
+     */
+    secondaryStructure?: "model" | "dssp";
   } & Translucency
 > = (
   {
     select,
     smooth = 8,
+    secondaryStructure = "model",
     color = [0.85, 0.55, 0.35, 1],
     opacity = 1,
     mode,
@@ -72,23 +108,57 @@ export const Ribbon: ViewerComponent<
   ]);
   const drawMode = modeProps(mode, flatAlpha(color, false) * opacity);
   const { resource } = useStructure();
-  const data = useCoordinateSnapshot()?.data;
-
+  const snapshot = useCoordinateSnapshot()?.data;
+  if (secondaryStructure !== "model" && secondaryStructure !== "dssp") {
+    throw new TypeError("Ribbon secondaryStructure must be model or dssp");
+  }
   const indices = useActiveRows(resource, select, "Ribbon");
+  // DSSP covers the whole of each model the ribbon draws (efv.10), not only
+  // the first model: a selection of model 2 gets model 2's codes.
+  const dsspRows = useMemo(
+    () =>
+      secondaryStructure === "dssp"
+        ? ribbonDsspRows(resource.data, indices)
+        : null,
+    [indices, secondaryStructure, resource.identity, resource.topologyRevision],
+  );
+  // DSSP rides on the snapshot object itself: its codes and the coordinates
+  // the ribbon draws share one generation, and nothing replaces root data.
+  const data = useMemo(
+    () =>
+      snapshot && dsspRows
+        ? (count("geometryBuilds", "ribbon:dssp"),
+          withSecondaryStructure(snapshot, { mode: "dssp", rows: dsspRows }))
+        : snapshot,
+    [snapshot, dsspRows],
+  );
+
   const trace = useMemo(
     () =>
       data
         ? (count("geometryBuilds", "ribbon:trace"), traceTable(data, indices))
         : null,
-    [data, indices],
+    // Topology and coordinates only: an attribute change (charges, ssCode)
+    // makes a new StructureData but no new trace.
+    [
+      data?.identity,
+      data?.revision.topology,
+      data?.revision.positions,
+      indices,
+    ],
   );
-  const ss = useMemo(
-    () =>
-      data && trace
-        ? (count("geometryBuilds", "ribbon:ss"),
-          secondaryStructureTrace(data, indices, trace))
-        : null,
-    [data, indices, trace],
+  // Phase 10 keeps an unchanged column's object across attribute revisions.
+  const ssColumn = data ? attributeColumn(data, "ssCode") : undefined;
+  const ss = useStableProjection(
+    trace,
+    useMemo(
+      () =>
+        data && trace
+          ? (count("geometryBuilds", "ribbon:ss"),
+            secondaryStructureTrace(data, indices, trace))
+          : null,
+      [trace, ssColumn],
+    ),
   );
   const built = useMemo(
     () => trace && ss ? buildRibbonGeometry(trace, ss, smooth) : null,

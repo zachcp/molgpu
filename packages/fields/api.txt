@@ -48,6 +48,8 @@ byCharge
   export function byCharge(options?: { domain?: readonly [number, number]; stops?: ReadonlyArray<readonly [number, Color]>; column?: string; lift?: boolean }): Field;
 byElement
   export function byElement(fallback?: Color): Field;
+bySecondaryStructure
+  export function bySecondaryStructure(fallback?: Color): Field;
 bySeq
   export function bySeq(options?: { domain?: readonly [number, number]; stops?: ReadonlyArray<readonly [number, Color]> }): Field;
 categorical

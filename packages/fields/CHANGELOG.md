@@ -6,6 +6,8 @@ All notable changes to `@molgpu/fields` are recorded here. The format follows
 
 ## [Unreleased]
 
+- `bySecondaryStructure(fallback)` colours atoms by their residue's `ssCode`
+  with Mol*'s secondary-structure theme colours (Phase 15, efv.6).
 - `byCharge(options)` colours by charge on Mol*'s partial-charge scale
   (red-white-blue over `[-1, 1]` e). By default it reads `partialCharge`;
   `column` reads another charge column (Phase 14, 1to.6).

@@ -12,14 +12,13 @@
 // substantially more machinery than a first correct baseline needs, and
 // this project's established pattern is to defer such refinements until a
 // correct baseline exists (see 0sj.6's WGSL-extrusion note for the same
-// kind of call). Labels come from imported annotation (residues.
-// secondaryStructure, populated by @molgpu/io from mmCIF struct_conf /
-// struct_sheet_range) when the source structure carries one; a structure
-// with no annotation — or this field entirely absent, e.g. a hand-built
-// fixture — reports every residue as 'coil'. This project does not (yet)
-// compute secondary structure from geometry alone (no DSSP); that is
-// tracked as separate follow-up work, not silently approximated here.
+// kind of call). Labels are the `ssCode` residue column projected by ssKind:
+// imported annotation (@molgpu/io from mmCIF struct_conf/struct_sheet_range),
+// a computed assignment, or the legacy residues.secondaryStructure of a
+// hand-built structure. Without any of them every residue is 'coil'.
 import type { SecondaryStructureTrace, StructureData, Trace } from "./types.ts";
+import { attributeColumn } from "./index.ts";
+import { ssKind } from "./ss-codes.ts";
 
 type SSKind = SecondaryStructureTrace["kind"][number];
 
@@ -66,12 +65,14 @@ export function secondaryStructureTrace(
   }
 
   const { count } = trace;
-  const label = residues.secondaryStructure;
+  // The ssCode column (imported, computed or a legacy 3-state view), projected
+  // to the cartoon's three kinds; all coil without one.
+  const codes = attributeColumn(data, "ssCode")?.values;
   const direction = new Float32Array(count * 3);
   const kind = new Array<SSKind>(count);
   for (let k = 0; k < count; k++) {
     const r = trace.residue[k];
-    kind[k] = label ? label[r] : "coil";
+    kind[k] = codes ? ssKind(codes[r]) : "coil";
     const from = fromAtom[r], to = toAtom[r];
     let dx: number, dy: number, dz: number;
     if (from >= 0 && to >= 0) {

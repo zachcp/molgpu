@@ -109,7 +109,7 @@ PreloadedStructureProps
 PreloadedTrajectoryProps
   export interface PreloadedTrajectoryProps extends TrajectoryPlayback { data: TrajectoryData; src?: undefined; loader?: undefined }
 Ribbon
-  export const Ribbon: ViewerComponent<{ /** A @molgpu/select atom Selection; without one, active model/primary-altloc atoms are used. */ select?: Selection | null; /** Samples per guide segment; defaults to 8. */ smooth?: number; color?: VectorLike; /** Wraps the shaded ribbon layer; without one, the ambient scene material. */ material?: MaterialSpec } & Translucency>;
+  export const Ribbon: ViewerComponent<{ /** A @molgpu/select atom Selection; without one, active model/primary-altloc atoms are used. */ select?: Selection | null; /** Samples per guide segment; defaults to 8. */ smooth?: number; color?: VectorLike; /** Wraps the shaded ribbon layer; without one, the ambient scene material. */ material?: MaterialSpec; /** * `"model"` (default) draws the structure's `ssCode`. `"dssp"` runs DSSP * on each coordinate snapshot the ribbon draws, over the primary-altloc * atoms of every model the drawn atoms belong to, so codes always come * from the displayed coordinates of the displayed models. */ secondaryStructure?: "model" | "dssp" } & Translucency>;
 SSAOOptions
   export interface SSAOOptions { opacity: number; indirect: number; radius: number; depthRamp: number; normalRamp: number; temporalBlend: number }
 ShadowMapOptions

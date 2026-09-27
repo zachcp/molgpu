@@ -128,3 +128,36 @@ export function byCharge(
     stops,
   );
 }
+
+const hex = (c: number): Color => [
+  ((c >> 16) & 255) / 255,
+  ((c >> 8) & 255) / 255,
+  (c & 255) / 255,
+  1,
+];
+// Mol*'s secondary-structure theme colours, by ssCode (table's SS_CODES).
+const SECONDARY_STRUCTURE: Record<number, Color> = {
+  0: hex(0xffffff), // coil
+  1: hex(0xff0080), // H alpha helix
+  2: hex(0xffc800), // B bridge
+  3: hex(0xffc800), // E strand
+  4: hex(0xa00080), // G 3-10 helix
+  5: hex(0x600080), // I pi helix
+  6: hex(0x00b266), // T turn
+  7: hex(0x66d8c9), // S bend
+};
+
+/**
+ * Colour atoms by their residue's `ssCode` with Mol*'s secondary-structure
+ * theme colours: alpha, 3-10 and pi helices, strands, turns, bends and white
+ * coil. Codes without a colour take `fallback` (Mol*'s default grey).
+ */
+export function bySecondaryStructure(
+  fallback: Color = hex(0x808080),
+): Field {
+  return categorical(
+    attribute("ssCode", { domain: "atom" }),
+    SECONDARY_STRUCTURE,
+    fallback,
+  );
+}

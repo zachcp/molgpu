@@ -6,6 +6,17 @@ All notable changes to `@molgpu/io` are recorded here. The format follows
 
 ## [Unreleased]
 
+- Imported secondary structure keeps its finer types (Phase 15, efv.4):
+  `pdbx_PDB_helix_class` 5 → G (3-10) and 3 → I (pi), then `conf_type_id` (3-10
+  and pi helix types, `TURN_*` → T, `STRN` → B, `BEND` → S), with sheet ranges
+  applied last, in Mol*'s order. Every corpus entry matches Mol*'s model
+  secondary structure per residue. Helix classes other than 3 and 5 read as H.
+- **Changed:** `structureFromBcif` writes secondary structure as the derived
+  `ssCode` attribute (helix H, sheet E) instead of
+  `residues.secondaryStructure`. Its provenance is `imported:mmcif` when the
+  file has `struct_conf` or `struct_sheet_range`, and otherwise it holds zeros
+  marked `default`, as Mol* always has model secondary structure (Phase 15,
+  efv.3).
 - PQR import (Phase 14, 1to.4). New experimental `structureFromPqr`, `applyPqr`
   and `PqrParseError`, with the `PqrErrorCode`, `PqrStructureReport` and
   `PqrApplyReport` types. Records are tokenised by whitespace, so PDB2PQR output

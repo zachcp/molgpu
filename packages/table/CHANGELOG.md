@@ -6,6 +6,22 @@ All notable changes to `@molgpu/table` are recorded here. The format follows
 
 ## [Unreleased]
 
+- `frameSecondaryStructure(data, trajectory, { rows, maxBytes })` runs DSSP on
+  integer trajectory frames read from `TrajectoryData.source`, cached with a
+  byte cap; `timeline(frames)` returns an SS-vs-time matrix (Phase 15, efv.8).
+- DSSP (Phase 15, efv.5). `dssp(data, { rows })` ports Mol* 5.11's DSSP (per
+  chain and model, Mol*'s default options) and returns `ssCode` values per
+  residue. `withSecondaryStructure(data, { mode })` sets `ssCode` with
+  provenance `computed:dssp` by Mol*'s modes: `auto` (the default) keeps an
+  imported, legacy or user column and computes when it is absent or `default`,
+  `dssp` always computes, `model` keeps the data. The port fixes Mol*'s bend
+  bug, so bends (S) are also assigned outside a model's first chain.
+- Secondary-structure codes (Phase 15, efv.3). `SS_CODES` lists the DSSP letters
+  in `ssCode` order (0 coil, H, B, E, G, I, T, S, P) and `ssKind(code)` projects
+  a code to helix, sheet or coil. `secondaryStructureTrace` reads the `ssCode`
+  attribute, and a hand-built structure's `residues.secondaryStructure` resolves
+  as `ssCode` with provenance `legacy`. `Residues.secondaryStructure` is
+  deprecated.
 - `Atoms.formalCharge` is deprecated. Set the derived `formalCharge` attribute
   with `withAttributes`; `@molgpu/io` now writes only that (Phase 14).
 - Derived attribute channels (Phase 10): `withAttributes` validates and copies

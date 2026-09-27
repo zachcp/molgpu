@@ -2,7 +2,9 @@ import { assert, assertStrictEquals } from "@std/assert";
 import { readFile } from "node:fs/promises";
 import {
   activeAtoms,
+  attributeColumn,
   secondaryStructureTrace,
+  ssKind,
   traceTable,
 } from "@molgpu/table";
 import { structureFromBcif } from "../src/index.ts";
@@ -57,17 +59,23 @@ for (const fixture of corpus.filter((f) => f.models === 1)) {
     const { categories, data } = await loadFixture(fixture.id);
     const oracle = oracleSecondaryStructure(categories);
     const { residues, chains } = data.topology;
-    assert(
-      residues.secondaryStructure,
-      "expected an imported secondaryStructure column",
+    const column = attributeColumn(data, "ssCode");
+    assert(column, "expected an imported ssCode column");
+    const hasCategory = !!(categories.struct_conf ||
+      categories.struct_sheet_range);
+    assertStrictEquals(
+      column.provenance,
+      hasCategory ? "imported:mmcif" : "default",
     );
+    // io no longer writes the deprecated topology column.
+    assertStrictEquals(residues.secondaryStructure, undefined);
     let helixOrSheet = 0;
     for (let r = 0; r < residues.count; r++) {
       const chainLabel = chains.labelId[residues.chain[r]];
       const expected = oracle.get(`${chainLabel}:${residues.labelSeq[r]}`) ??
         "coil";
       assertStrictEquals(
-        residues.secondaryStructure[r],
+        ssKind(column.values[r]),
         expected,
         `residue ${r} (${chainLabel}:${residues.labelSeq[r]})`,
       );
@@ -88,7 +96,9 @@ for (const fixture of corpus.filter((f) => f.models === 1)) {
 
 Deno.test("1bna (nucleic, no struct_conf/struct_sheet_range) reports every residue as coil", async () => {
   const { data } = await loadFixture("1bna");
-  assert(data.topology.residues.secondaryStructure?.every((k) => k === "coil"));
+  const column = attributeColumn(data, "ssCode")!;
+  assertStrictEquals(column.provenance, "default");
+  assert(column.values.every((code) => code === 0));
 });
 
 for (const fixture of corpus.filter((f) => f.models === 1)) {

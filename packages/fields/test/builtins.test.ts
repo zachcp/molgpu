@@ -12,6 +12,7 @@ import {
   byChain,
   byCharge,
   byElement,
+  bySecondaryStructure,
   bySeq,
   COLOR,
   columnRange,
@@ -173,5 +174,26 @@ Deno.test("byCharge maps charge onto Mol*'s red-white-blue scale", () => {
     () => byCharge({ column: "bfactor", lift: true }),
     TypeError,
     "lift",
+  );
+});
+
+Deno.test("bySecondaryStructure colours atoms by their residue's ssCode", () => {
+  // 4 atoms on residues 0,0,1,1: residue 0 a 3-10 helix (G), residue 1 P.
+  const coded = withAttributes(data, {
+    ssCode: {
+      domain: "residue",
+      kind: "code",
+      provenance: "computed:dssp",
+      values: Uint8Array.of(4, 8),
+    },
+  });
+  const out = evaluate(bySecondaryStructure([0, 0, 0, 1]), coded);
+  near(out, 0, [0xa0 / 255, 0, 0x80 / 255, 1]);
+  near(out, 1, [0xa0 / 255, 0, 0x80 / 255, 1]);
+  near(out, 2, [0, 0, 0, 1]); // P has no colour: fallback
+  assertThrows(
+    () => evaluate(bySecondaryStructure(), data),
+    TypeError,
+    "ssCode",
   );
 });
