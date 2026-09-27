@@ -48,6 +48,11 @@ deno add jsr:@molgpu/dynamics
 | `validateNormalMode`     | experimental | Validate mode vectors, mapping and structural version.                                   |
 | `applyNormalMode`        | experimental | Pure sinusoidal mode addition to upstream positions.                                     |
 | `normalModeWgsl`         | experimental | WGSL for additive guide-node displacement.                                               |
+| `buildElasticNetwork`    | experimental | Exact-cutoff guide contacts through `table.spatialGrid`.                                 |
+| `solveElasticModes`      | experimental | Bounded dense CPU GNM/ANM eigensolver with residual checks.                              |
+| `ElasticNetwork`         | experimental | Sparse contact pairs and ANM directions.                                                 |
+| `ElasticMode`            | experimental | Eigenvalue, vector, residual and GNM/ANM kind.                                           |
+| `MAX_ELASTIC_DIM`        | experimental | Dense eigensolver dimension limit (192).                                                 |
 
 The CPU function returns a new array. Unselected rows retain their exact input
 values. The viewer compiles the WGSL strings and owns every GPU resource.
@@ -123,5 +128,14 @@ may share a CA guide node. `applyNormalMode` adds
 `amplitude * sin(2*pi*frequency*time + phase) * vector` to each mapped upstream
 row, so the same time always reproduces the same positions. The live
 `<NormalMode>` viewer provider uses `normalModeWgsl` and uploads mode vectors
-and mapping only when their structural version changes. Mode computation is
-still a separate Phase 13 step.
+and mapping only when their structural version changes.
+
+`buildElasticNetwork(positions, guideRows, cutoff)` uses `table.spatialGrid` to
+find exact guide-node contacts.
+`solveElasticModes(network, "gnm" | "anm",
+count)` builds the Kirchhoff matrix
+or ANM Hessian, skips zero modes, fixes each mode's sign, and checks its
+eigenpair residual. The dense CPU reference is limited to 192 scalar dimensions
+(up to 64 ANM nodes) to bound memory and work; larger production systems still
+need a sparse iterative solver. An ANM mode's packed xyz vector can be supplied
+to `<NormalMode>` with an atom-to-guide map.

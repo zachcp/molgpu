@@ -20,6 +20,13 @@ export {
 } from "./cell-list-plan.ts";
 export { fitKabsch, type KabschFit } from "./kabsch.ts";
 export {
+  buildElasticNetwork,
+  type ElasticMode,
+  type ElasticNetwork,
+  MAX_ELASTIC_DIM,
+  solveElasticModes,
+} from "./elastic-network.ts";
+export {
   applyNormalMode,
   type NormalModeData,
   normalModeWgsl,
