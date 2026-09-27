@@ -78,6 +78,10 @@ NormalMaterial
   export const NormalMaterial: ViewerComponent<NormalMaterialProps>;
 NormalMaterialProps
   export type NormalMaterialProps = MaterialProps;
+NormalMode
+  export const NormalMode: ViewerComponent<NormalModeProps>;
+NormalModeProps
+  export interface NormalModeProps { children?: ViewerElement; mode: NormalModeData; amplitude: number; /** Cycles per second; a nonzero value requires a TimelineProvider. */ frequency?: number; /** Radians at time zero. */ phase?: number }
 OutlineOptions
   export interface OutlineOptions { inner: number; outer: number; color: VectorLike; blend: BlendMode; depthRamp: number; normalRamp: number }
 OverscanOptions

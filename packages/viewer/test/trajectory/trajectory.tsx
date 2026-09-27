@@ -23,6 +23,7 @@ import {
 import { createCurve, frameCurve } from "@molgpu/timeline";
 import { where } from "@molgpu/select";
 import {
+  NormalMode,
   Spacefill,
   Structure,
   TimelineProvider,
@@ -134,6 +135,19 @@ const MATRIX_CURVE = createCurve([
 const SELECT_ROWS = [0, 1, 2].map((wanted) =>
   where("atom", `row=${wanted}`, (_data, row) => row === wanted)
 );
+const MODE_MAP = Uint32Array.of(0, 0, 1);
+const MODES = [
+  {
+    atomToNode: MODE_MAP,
+    vectors: Float32Array.of(1, 0, 0, 0, 2, 0),
+    version: 1,
+  },
+  {
+    atomToNode: MODE_MAP,
+    vectors: Float32Array.of(0, 0, 3, 0, -1, 0),
+    version: 2,
+  },
+];
 // A source that answers after `delay` ms, for streaming states.
 const slow = (delay: number): TrajectoryData =>
   createTrajectory({
@@ -164,7 +178,8 @@ type Mode =
   | "src"
   | "transform"
   | "transform-selected"
-  | "transform-curve";
+  | "transform-curve"
+  | "normal-mode";
 interface State {
   mode: Mode;
   frame: number;
@@ -175,6 +190,8 @@ interface State {
   latency: number;
   matrix: number[];
   selectedRow: number;
+  modeVersion: number;
+  amplitude: number;
 }
 
 interface Probe {
@@ -326,6 +343,23 @@ const Scene = ({ state }: { state: State }): LiveElement => {
           </Structure>
         </TimelineProvider>
       );
+    case "normal-mode":
+      return (
+        <TimelineProvider time={state.time}>
+          <Structure data={STRUCTURE}>
+            <Trajectory data={WHOLE} frame={state.frame}>
+              <NormalMode
+                mode={MODES[state.modeVersion - 1]}
+                amplitude={state.amplitude}
+                frequency={1}
+              >
+                <Spacefill />
+                <Probe />
+              </NormalMode>
+            </Trajectory>
+          </Structure>
+        </TimelineProvider>
+      );
   }
 };
 
@@ -340,6 +374,8 @@ const App = (): LiveElement => {
     latency: 0,
     matrix: IDENTITY,
     selectedRow: 0,
+    modeVersion: 1,
+    amplitude: 0,
   });
   probe.update = (patch) => setState((previous) => ({ ...previous, ...patch }));
   probe.mounted = true;

@@ -673,7 +673,40 @@ Deno.test("trajectory components", async () => {
     await expectRead(shifted(rootPositions, 2), "affine curve t=1");
     await update({ mode: "none" });
 
-    // 12. The shared GPU cell list agrees with the CPU counting-sort oracle.
+    // 12. Normal-mode displacement is additive to the trajectory, reversible
+    // under scrubbing, and a fixed-time mode swap refreshes structural inputs.
+    const modal = (base, version, scale) =>
+      base.map((v, i) => {
+        const row = Math.floor(i / 3), axis = i % 3;
+        const one = [[1, 0, 0], [1, 0, 0], [0, 2, 0]];
+        const two = [[0, 0, 3], [0, 0, 3], [0, -1, 0]];
+        return v + scale * (version === 1 ? one : two)[row][axis];
+      });
+    await update({
+      mode: "normal-mode",
+      frame: 1,
+      time: 0.25,
+      amplitude: 2,
+      modeVersion: 1,
+    });
+    await displayed({ a: 1, b: 1, t: 0 });
+    await expectRead(modal(pageFrames[1], 1, 2), "normal mode forward");
+    const modeUpload =
+      (await counters()).detail["uploadBytes:structure:positions"] ?? 0;
+    await update({ time: 0.75 });
+    await expectRead(modal(pageFrames[1], 1, -2), "normal mode reverse");
+    await update({ time: 0.25, modeVersion: 2 });
+    await expectRead(modal(pageFrames[1], 2, 2), "normal mode swap");
+    await update({ amplitude: 0 });
+    await expectRead(pageFrames[1], "normal mode zero amplitude");
+    assert.equal(
+      (await counters()).detail["uploadBytes:structure:positions"] ?? 0,
+      modeUpload,
+      "normal-mode animation does not re-upload root positions",
+    );
+    await update({ mode: "none" });
+
+    // 13. The shared GPU cell list agrees with the CPU counting-sort oracle.
     // The second case crosses a 256-cell scan block boundary.
     report.cellList = [];
     const smallPoints = [-2, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0];

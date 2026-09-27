@@ -20,6 +20,12 @@ export {
 } from "./cell-list-plan.ts";
 export { fitKabsch, type KabschFit } from "./kabsch.ts";
 export {
+  applyNormalMode,
+  type NormalModeData,
+  normalModeWgsl,
+  validateNormalMode,
+} from "./normal-mode.ts";
+export {
   createUnwrapForest,
   minimumImage,
   PbcSearchLimitError,

@@ -44,6 +44,10 @@ deno add jsr:@molgpu/dynamics
 | `PbcSearchLimitError`    | experimental | Named error for an excessive exact-image search.                                         |
 | `UnwrapForest`           | experimental | Parent traversal, components and ring edges for one topology.                            |
 | `UnwrapResult`           | experimental | Per-frame positions and ambiguity or box status.                                         |
+| `NormalModeData`         | experimental | Precomputed guide-node displacements and atom mapping.                                   |
+| `validateNormalMode`     | experimental | Validate mode vectors, mapping and structural version.                                   |
+| `applyNormalMode`        | experimental | Pure sinusoidal mode addition to upstream positions.                                     |
+| `normalModeWgsl`         | experimental | WGSL for additive guide-node displacement.                                               |
 
 The CPU function returns a new array. Unselected rows retain their exact input
 values. The viewer compiles the WGSL strings and owns every GPU resource.
@@ -110,3 +114,14 @@ it for each displayed frame, makes each molecule whole, checks non-tree ring
 edges for closure, and can move each selected component's centroid into the
 primary box. Missing or invalid boxes pass positions through with an explicit
 status. This CPU path is the reference for the planned live unwrap provider.
+
+## Mode application
+
+`NormalModeData` holds a precomputed xyz displacement for each guide node and an
+atom-to-node mapping (`0xffffffff` means no displacement). Atoms in one residue
+may share a CA guide node. `applyNormalMode` adds
+`amplitude * sin(2*pi*frequency*time + phase) * vector` to each mapped upstream
+row, so the same time always reproduces the same positions. The live
+`<NormalMode>` viewer provider uses `normalModeWgsl` and uploads mode vectors
+and mapping only when their structural version changes. Mode computation is
+still a separate Phase 13 step.
