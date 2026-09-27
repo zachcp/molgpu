@@ -3,7 +3,7 @@
  * `deno task test:components` builds it with vite and drives every mode from
  * run-efield.mjs through `window.__efield`.
  */
-import { React, render, useState } from "@use-gpu/live";
+import { type React, render, useState } from "@use-gpu/live";
 import type { LiveElement } from "@use-gpu/live";
 import { AutoCanvas, WebGPU } from "@use-gpu/webgpu";
 import {
@@ -34,7 +34,6 @@ import {
   FieldArrows,
   FieldLines,
   Isosurface,
-  Spacefill,
   Structure,
   Surface,
   Trajectory,
@@ -264,16 +263,16 @@ const probe: Probe = {
   counters: snapshotCounters,
   update: () => {},
   load: async () => {},
-  readPotential: async () => [],
+  readPotential: () => Promise.resolve([]),
   cpuPotential: () => [],
-  readLines: async () => ({ vertices: [], generation: 0 }),
+  readLines: () => Promise.resolve({ vertices: [], generation: 0 }),
   hold: () => {},
   release: () => {},
   dispatchPairs: () => {},
-  surfaceStats: async () => ({ mean: 0, count: 0 }),
-  arrowEnds: async () => ({ side: 0, ends: [] }),
+  surfaceStats: () => Promise.resolve({ mean: 0, count: 0 }),
+  arrowEnds: () => Promise.resolve({ side: 0, ends: [] }),
   center: [0, 0, 0],
-  timeRecompute: async () => 0,
+  timeRecompute: () => Promise.resolve(0),
 };
 (globalThis as unknown as { __efield: Probe }).__efield = probe;
 
@@ -742,7 +741,7 @@ const App = (): LiveElement => {
       pitch={0.3}
       target={state.target}
     >
-      <Pass lights={true}>
+      <Pass lights>
         <AmbientLight color={[1, 1, 1]} intensity={0.6} />
         <DirectionalLight
           position={[0.3, 0.5, 1]}

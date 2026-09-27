@@ -24,7 +24,7 @@ import { WorldSpacePointLayer } from "../src/world-space-points.ts";
 import { useField } from "../src/use-field.ts";
 import { TimelineProvider, useTimelineTime } from "../src/timeline-context.ts";
 
-const probe = window.__probe = {
+const probe = globalThis.__probe = {
   storage: 0,
   storageBuffers: [],
   storageWrites: [],

@@ -56,7 +56,7 @@ Deno.test("viewer materials", async () => {
       "http://127.0.0.1:5211/packages/viewer/test/materials.html",
     );
     await page.waitForFunction(
-      () => window.__probe?.mounted && document.querySelector("canvas"),
+      () => globalThis.__probe?.mounted && document.querySelector("canvas"),
       null,
       { timeout: 30000 },
     )
@@ -74,12 +74,12 @@ Deno.test("viewer materials", async () => {
     // The shaded points read Structure's shared GPU radii column.
     const snap = () =>
       page.evaluate(() => ({
-        storage: window.__probe.storage.length,
-        geometryBuffers: window.__probe.storageBuffers.filter((b) =>
+        storage: globalThis.__probe.storage.length,
+        geometryBuffers: globalThis.__probe.storageBuffers.filter((b) =>
           b.label === "molgpu:radii"
         ).length,
-        pipelines: window.__probe.pipelines,
-        errors: [...window.__probe.errors],
+        pipelines: globalThis.__probe.pipelines,
+        errors: [...globalThis.__probe.errors],
       }));
 
     // Default mount is the matte PBR material. It must draw shaded geometry.
@@ -103,9 +103,7 @@ Deno.test("viewer materials", async () => {
     // Change a PBR PARAMETER (matte -> metal, same material type). The wrappers
     // bind albedo/metalness/roughness as shader uniforms, so this must be a plain
     // uniform write: no new render pipeline and no rebuilt geometry.
-    await page.evaluate(() =>
-      window.__probe.setMaterial("metal")
-    );
+    await page.evaluate(() => globalThis.__probe.setMaterial("metal"));
     await settle();
     await settle();
     const metal = await snap();
@@ -128,7 +126,7 @@ Deno.test("viewer materials", async () => {
     // Switch to a different SHADING MODEL (unlit basic vs lit PBR). That changes
     // the layer's fragment/surface shader, so it must compile a new render
     // pipeline — proving the material really reaches the shaded layer.
-    await page.evaluate(() => window.__probe.setMaterial("basic"));
+    await page.evaluate(() => globalThis.__probe.setMaterial("basic"));
     await settle();
     await settle();
     const basic = await snap();
@@ -145,7 +143,7 @@ Deno.test("viewer materials", async () => {
     // The normal-debug material, the function-wrapper escape hatch, and the
     // no-material default must each mount and draw without WebGPU errors.
     for (const name of ["normal", "wrapper", "none"]) {
-      await page.evaluate((n) => window.__probe.setMaterial(n), name);
+      await page.evaluate((n) => globalThis.__probe.setMaterial(n), name);
       await settle();
       await settle();
       const s = await snap();

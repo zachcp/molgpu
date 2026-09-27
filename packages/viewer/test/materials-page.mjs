@@ -14,7 +14,7 @@ import {
 import { createStructure } from "@molgpu/table";
 import { Spacefill, Structure } from "../src/index.ts";
 
-const probe = window.__probe = {
+const probe = globalThis.__probe = {
   storage: [],
   storageBuffers: [],
   pipelines: 0,

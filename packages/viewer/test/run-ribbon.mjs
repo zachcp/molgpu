@@ -54,7 +54,7 @@ Deno.test("viewer ribbon", async () => {
     });
     await page.goto("http://127.0.0.1:5209/packages/viewer/test/ribbon.html");
     await page.waitForFunction(
-      () => window.__probe?.mounted && document.querySelector("canvas"),
+      () => globalThis.__probe?.mounted && document.querySelector("canvas"),
       null,
       { timeout: 30000 },
     )
@@ -65,7 +65,7 @@ Deno.test("viewer ribbon", async () => {
       });
     await page.waitForFunction(
       () =>
-        window.__probe.storageBuffers.some((b) =>
+        globalThis.__probe.storageBuffers.some((b) =>
           b.label === "molgpu:positions"
         ),
       null,
@@ -86,9 +86,9 @@ Deno.test("viewer ribbon", async () => {
     const shot = () => page.locator("canvas").screenshot();
     const snap = () =>
       page.evaluate(() => ({
-        storage: window.__probe.storage.length,
-        storageLabels: window.__probe.storageBuffers.map((b) => b.label),
-        errors: [...window.__probe.errors],
+        storage: globalThis.__probe.storage.length,
+        storageLabels: globalThis.__probe.storageBuffers.map((b) => b.label),
+        errors: [...globalThis.__probe.errors],
       }));
 
     await settle();
@@ -114,7 +114,7 @@ Deno.test("viewer ribbon", async () => {
     );
 
     // Color is a style edit: the image changes, geometry does not.
-    await page.evaluate(() => window.__probe.setColor([0.2, 0.6, 0.9, 1]));
+    await page.evaluate(() => globalThis.__probe.setColor([0.2, 0.6, 0.9, 1]));
     await settle();
     await settle();
     const styled = await snap();
@@ -131,7 +131,7 @@ Deno.test("viewer ribbon", async () => {
     );
 
     // Empty input (a selection that matches no atoms): renders nothing, no crash.
-    await page.evaluate(() => window.__probe.setMode("empty"));
+    await page.evaluate(() => globalThis.__probe.setMode("empty"));
     await settle();
     await settle();
     const empty = await snap();
@@ -156,16 +156,16 @@ Deno.test("viewer ribbon", async () => {
       "empty selection must allocate no new ribbon geometry buffers",
     );
 
-    await page.evaluate(() => window.__probe.setMode("gpu"));
-    await page.waitForFunction(() => window.__probe.dsspStatus !== null)
+    await page.evaluate(() => globalThis.__probe.setMode("gpu"));
+    await page.waitForFunction(() => globalThis.__probe.dsspStatus !== null)
       .catch(async (failure) => {
         throw new Error(
           `GPU DSSP did not publish: ${
             JSON.stringify({
               errors,
               probe: await page.evaluate(() => ({
-                status: window.__probe.dsspStatus,
-                gpuErrors: window.__probe.errors,
+                status: globalThis.__probe.dsspStatus,
+                gpuErrors: globalThis.__probe.errors,
               })),
             })
           }`,
@@ -178,20 +178,23 @@ Deno.test("viewer ribbon", async () => {
       [],
       "GPU DSSP ribbon produced WebGPU errors",
     );
-    const status = await page.evaluate(() => window.__probe.dsspStatus);
+    const status = await page.evaluate(() => globalThis.__probe.dsspStatus);
     assertStrictEquals(status.fallback, false);
     assert(status.bridgeCount > 0);
-    const snapshot = await page.evaluate(() => window.__probe.dsspSnapshot);
+    const snapshot = await page.evaluate(() => globalThis.__probe.dsspSnapshot);
     assertEquals(snapshot, {
       generation: status.generation,
       provenance: "gpu:dssp",
     });
     const gpuBuffers = (await snap()).storageLabels;
-    await page.evaluate(() => window.__probe.setColor([0.7, 0.3, 0.5, 1]));
+    await page.evaluate(() => globalThis.__probe.setColor([0.7, 0.3, 0.5, 1]));
     await settle();
     const afterGpuStyle = await snap();
     assertEquals(afterGpuStyle.errors, []);
-    assertStrictEquals(await page.evaluate(() => window.__probe.dsspRuns), 1);
+    assertStrictEquals(
+      await page.evaluate(() => globalThis.__probe.dsspRuns),
+      1,
+    );
     assertEquals(
       afterGpuStyle.storageLabels.slice(gpuBuffers.length).filter((label) =>
         ["molgpu:positions", "molgpu:normals", "molgpu:indices"].includes(label)
@@ -199,51 +202,52 @@ Deno.test("viewer ribbon", async () => {
       [],
       "GPU DSSP ribbon style edit must not rebuild geometry",
     );
-    await page.evaluate(() => window.__probe.setShift(2));
+    await page.evaluate(() => globalThis.__probe.setShift(2));
     await page.waitForFunction(
-      (previous) => window.__probe.dsspStatus?.generation > previous,
+      (previous) => globalThis.__probe.dsspStatus?.generation > previous,
       status.generation,
     );
     await page.waitForFunction(() =>
-      window.__probe.dsspSnapshot?.generation ===
-        window.__probe.dsspStatus?.generation
+      globalThis.__probe.dsspSnapshot?.generation ===
+        globalThis.__probe.dsspStatus?.generation
     );
     assertEquals((await snap()).errors, []);
 
     // A kernel-backed coordinate source may compile after its buffer appears.
     // One static generation must publish codes only after its first dispatch.
     await page.evaluate(() => {
-      window.__probe.dsspStatus = null;
-      window.__probe.setMode("wobble");
+      globalThis.__probe.dsspStatus = null;
+      globalThis.__probe.setMode("wobble");
     });
     await page.waitForFunction(() =>
-      window.__probe.dsspStatus !== null && window.__probe.dsspCodes !== null
+      globalThis.__probe.dsspStatus !== null &&
+      globalThis.__probe.dsspCodes !== null
     );
     assertEquals(
-      await page.evaluate(() => window.__probe.dsspCodes),
-      await page.evaluate(() => window.__probe.expectedWobbleCodes),
+      await page.evaluate(() => globalThis.__probe.dsspCodes),
+      await page.evaluate(() => globalThis.__probe.expectedWobbleCodes),
       "static WobbleCoordinates must publish DSSP for its computed positions",
     );
 
     // Continuous playback keeps one run in flight and publishes intermediate
     // results even when the coordinate generation advances during a readback.
     const runsBeforePlayback = await page.evaluate(() =>
-      window.__probe.dsspRuns
+      globalThis.__probe.dsspRuns
     );
     await page.evaluate(() => {
       let phase = 0.7;
-      window.__probe.playback = setInterval(
-        () => window.__probe.setPhase(phase += 0.08),
+      globalThis.__probe.playback = setInterval(
+        () => globalThis.__probe.setPhase(phase += 0.08),
         16,
       );
     });
     await page.waitForTimeout(700);
     const duringPlayback = await page.evaluate(() => ({
-      runs: window.__probe.dsspRuns,
-      inFlight: window.__probe.counters().gauges["dssp:in-flight"],
-      codes: window.__probe.dsspCodes,
+      runs: globalThis.__probe.dsspRuns,
+      inFlight: globalThis.__probe.counters().gauges["dssp:in-flight"],
+      codes: globalThis.__probe.dsspCodes,
     }));
-    await page.evaluate(() => clearInterval(window.__probe.playback));
+    await page.evaluate(() => clearInterval(globalThis.__probe.playback));
     assert(
       duringPlayback.runs >= runsBeforePlayback + 2,
       "continuous playback must publish GPU DSSP at a bounded rate",

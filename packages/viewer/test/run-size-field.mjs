@@ -56,7 +56,7 @@ Deno.test("viewer size field", async () => {
       "http://127.0.0.1:5193/packages/viewer/test/size-field.html",
     );
     await page.waitForFunction(
-      () => window.__probe?.mounted && document.querySelector("canvas"),
+      () => globalThis.__probe?.mounted && document.querySelector("canvas"),
       null,
       { timeout: 30000 },
     );
@@ -68,14 +68,14 @@ Deno.test("viewer size field", async () => {
     const shot = () => page.locator("canvas").screenshot();
     const snap = () =>
       page.evaluate(() => ({
-        storage: window.__probe.storage,
-        storageLabels: window.__probe.storageBuffers.map((buffer) =>
+        storage: globalThis.__probe.storage,
+        storageLabels: globalThis.__probe.storageBuffers.map((buffer) =>
           buffer.label
         ),
-        storageWrites: [...window.__probe.storageWrites],
-        uniform: window.__probe.uniform,
-        camera: window.__probe.camera,
-        errors: [...window.__probe.errors],
+        storageWrites: [...globalThis.__probe.storageWrites],
+        uniform: globalThis.__probe.uniform,
+        camera: globalThis.__probe.camera,
+        errors: [...globalThis.__probe.errors],
       }));
     const geometryWrites = (after, before) =>
       after.storageWrites.slice(before.storageWrites.length)
@@ -104,7 +104,7 @@ Deno.test("viewer size field", async () => {
 
     // A style-only scale change. Larger spheres must appear, but no per-atom
     // (STORAGE) column may be reallocated — only the scale uniform is written.
-    await page.evaluate(() => window.__probe.setScale(2.5));
+    await page.evaluate(() => globalThis.__probe.setScale(2.5));
     await settle();
     await settle();
     const after = await snap();
@@ -123,7 +123,7 @@ Deno.test("viewer size field", async () => {
 
     // Colour field: swapping the byElement palette recompiles the shader module but
     // must re-upload no per-atom column (the element source is reused).
-    await page.evaluate(() => window.__probe.setPalette(1));
+    await page.evaluate(() => globalThis.__probe.setPalette(1));
     await settle();
     await settle();
     const afterPalette = await snap();
@@ -141,12 +141,12 @@ Deno.test("viewer size field", async () => {
 
     // Time field: switch to the time-driven colour, then advance t. The colour
     // must change from a uniform write with no per-atom re-upload.
-    await page.evaluate(() => window.__probe.setPalette(2));
+    await page.evaluate(() => globalThis.__probe.setPalette(2));
     await settle();
     await settle();
     const timeBase = await snap();
     const timeBaseShot = await shot();
-    await page.evaluate(() => window.__probe.setTime(0.85));
+    await page.evaluate(() => globalThis.__probe.setTime(0.85));
     await settle();
     await settle();
     const afterTime = await snap();
@@ -174,7 +174,7 @@ Deno.test("viewer size field", async () => {
 
     // The next beat moves the camera with the same controlled t. Rewind through
     // the style beat and back to zero; no per-atom data is allocated on either leg.
-    await page.evaluate(() => window.__probe.setTime(2));
+    await page.evaluate(() => globalThis.__probe.setTime(2));
     await settle();
     await settle();
     const orbit = await snap();
@@ -195,7 +195,7 @@ Deno.test("viewer size field", async () => {
       "camera scrub rewrote geometry",
     );
 
-    await page.evaluate(() => window.__probe.setTime(0.85));
+    await page.evaluate(() => globalThis.__probe.setTime(0.85));
     await settle();
     await settle();
     const rewind = await snap();
@@ -216,7 +216,7 @@ Deno.test("viewer size field", async () => {
       "reverse scrub rewrote geometry",
     );
 
-    await page.evaluate(() => window.__probe.setTime(0));
+    await page.evaluate(() => globalThis.__probe.setTime(0));
     await settle();
     await settle();
     const reset = await snap();

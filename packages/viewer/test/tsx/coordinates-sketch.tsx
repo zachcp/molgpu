@@ -13,7 +13,7 @@ import type { StructureData } from "@molgpu/table";
 import type { SelectionQuery } from "@molgpu/select";
 import { Ribbon, Spacefill, Structure } from "@molgpu/viewer";
 import type { ViewerComponent, ViewerElement } from "@molgpu/viewer";
-import { type StructureResource } from "@molgpu/viewer/advanced";
+import type { StructureResource } from "@molgpu/viewer/advanced";
 
 void React;
 

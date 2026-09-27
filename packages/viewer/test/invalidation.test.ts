@@ -20,7 +20,6 @@ import { focusSelection } from "../src/camera-curve.ts";
 import { geometryDeps } from "../src/internal/geometry-job.ts";
 import {
   count,
-  countOnce,
   disableInstrumentation,
   enableInstrumentation,
   gauge,

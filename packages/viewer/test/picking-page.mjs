@@ -24,7 +24,7 @@ import {
   usePicking,
 } from "../src/index.ts";
 
-const probe = window.__probe = {
+const probe = globalThis.__probe = {
   errors: [],
   mounted: false,
   hover: null,

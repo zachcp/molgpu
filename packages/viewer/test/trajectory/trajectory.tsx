@@ -3,7 +3,7 @@
  * builds it with vite and drives every mode from run-trajectory.mjs through
  * `window.__trajectory`.
  */
-import { React, render, useState } from "@use-gpu/live";
+import { type React, render, useState } from "@use-gpu/live";
 import type { LiveElement } from "@use-gpu/live";
 import type { StorageSource } from "@use-gpu/core";
 import { AutoCanvas, WebGPU } from "@use-gpu/webgpu";
@@ -792,7 +792,7 @@ const App = (): LiveElement => {
   probe.mounted = true;
   return (
     <OrbitCamera radius={40} bearing={0} pitch={0} target={[4, 4, 0]}>
-      <Pass lights={true}>
+      <Pass lights>
         <AmbientLight color={[1, 1, 1]} intensity={0.6} />
         <DirectionalLight
           position={[0.3, 0.5, 1]}

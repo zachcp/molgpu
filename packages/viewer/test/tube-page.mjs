@@ -14,7 +14,7 @@ import { createStructure } from "@molgpu/table";
 import { resolve, where } from "@molgpu/select";
 import { Structure, Tube } from "../src/index.ts";
 
-const probe = window.__probe = {
+const probe = globalThis.__probe = {
   storage: [],
   storageBuffers: [],
   storageWrites: [],

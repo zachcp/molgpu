@@ -48,7 +48,7 @@ Deno.test("viewer gate 2", async () => {
     page.on("pageerror", (e) => errors.push(String(e)));
     await page.goto("http://127.0.0.1:5195/packages/viewer/test/gate2.html");
     await page.waitForFunction(
-      () => window.__probe?.mounted && document.querySelector("canvas"),
+      () => globalThis.__probe?.mounted && document.querySelector("canvas"),
       null,
       { timeout: 30000 },
     )
@@ -64,19 +64,21 @@ Deno.test("viewer gate 2", async () => {
     const shot = () => page.locator("canvas").screenshot();
     const snap = () =>
       page.evaluate(() => ({
-        storage: [...window.__probe.storage],
-        storageLabels: window.__probe.storageBuffers.map((buffer) =>
+        storage: [...globalThis.__probe.storage],
+        storageLabels: globalThis.__probe.storageBuffers.map((buffer) =>
           buffer.label
         ),
-        storageWrites: [...window.__probe.storageWrites],
-        errors: [...window.__probe.errors],
+        storageWrites: [...globalThis.__probe.storageWrites],
+        errors: [...globalThis.__probe.errors],
       }));
 
     // Wait until first-time allocations stop: a software adapter compiles
     // pipelines slowly, and late startup buffers are not recolour work.
     for (let i = 0, seen = -1; i < 40; i++) {
       await settle();
-      const count = await page.evaluate(() => window.__probe.storage.length);
+      const count = await page.evaluate(() =>
+        globalThis.__probe.storage.length
+      );
       if (count === seen) break;
       seen = count;
     }
@@ -97,7 +99,7 @@ Deno.test("viewer gate 2", async () => {
     );
 
     // Recolour by swapping the field on all three consumers at once.
-    await page.evaluate(() => window.__probe.setPalette(1));
+    await page.evaluate(() => globalThis.__probe.setPalette(1));
     await settle();
     await settle();
     const after = await snap();
@@ -125,7 +127,7 @@ Deno.test("viewer gate 2", async () => {
     );
     assertEquals(after.errors, [], "uncaptured WebGPU errors");
     // Exercise the default Bonds appearance in the same real WebGPU scene.
-    await page.evaluate(() => window.__probe.setMode("bonds"));
+    await page.evaluate(() => globalThis.__probe.setMode("bonds"));
     await settle();
     await settle();
     const defaultBondPng = await shot();
@@ -157,12 +159,12 @@ Deno.test("viewer gate 2", async () => {
     // The same controlled clock now samples a focused camera curve. Rewind must
     // reproduce the earlier frame without touching molecular geometry.
     const beforeFocus = await snap();
-    await page.evaluate(() => window.__probe.setTime(2));
+    await page.evaluate(() => globalThis.__probe.setTime(2));
     await settle();
     await settle();
     const focused = await snap();
     const focusedShot = await shot();
-    assertEquals(await page.evaluate(() => window.__probe.camera.target), [
+    assertEquals(await page.evaluate(() => globalThis.__probe.camera.target), [
       1,
       0,
       0,
@@ -184,7 +186,7 @@ Deno.test("viewer gate 2", async () => {
       [],
       "focus rewrote geometry",
     );
-    await page.evaluate(() => window.__probe.setTime(0));
+    await page.evaluate(() => globalThis.__probe.setTime(0));
     await settle();
     await settle();
     const rewound = await snap();

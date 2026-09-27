@@ -8,7 +8,7 @@
  * control surface, imported from ./diagnostics.ts so this file keeps consumer
  * shape: state in, Live elements out.
  */
-import { React, render, useOne, useState } from "@use-gpu/live";
+import { type React, render, useOne, useState } from "@use-gpu/live";
 import type { LiveElement } from "@use-gpu/live";
 import { AutoCanvas, WebGPU } from "@use-gpu/webgpu";
 import {
@@ -237,7 +237,7 @@ const report = (next: Phase, failure: unknown = null): null => {
 /** Reports readiness from inside the loaded subtree, then draws it. */
 const Ready = (): LiveElement => {
   probe.atoms = useStructureResource().data.topology.atoms.count;
-  return [report("ready"), <Spacefill />];
+  return [report("ready"), <Spacefill key="ready-spacefill" />];
 };
 
 const CoordinateProbe = (): LiveElement => {
@@ -318,7 +318,7 @@ const Scene = (
   }
   if (mode === "offset") {
     return (
-      <Structure data={left}>
+      <Structure key="left" data={left}>
         <OffsetCoordinates offset={[offsetX, 0, 0]}>
           <IdentityCoordinates>
             <OffsetCoordinates offset={[-2, 1, 0]}>
@@ -400,10 +400,10 @@ const Scene = (
   // <Structure>, so the clusters differ in radius as well as in position.
   if (mode === "siblings") {
     return [
-      <Structure data={left}>
+      <Structure key="left" data={left}>
         <Spacefill />
       </Structure>,
-      <Structure data={right}>
+      <Structure key="right" data={right}>
         <Spacefill />
       </Structure>,
     ];
@@ -458,7 +458,7 @@ const App = (): LiveElement => {
       pitch={0.25}
       target={state.mode === "remote" ? protein : [0, 0, 0]}
     >
-      <Pass lights={true}>
+      <Pass lights>
         <AmbientLight color={[1, 1, 1]} intensity={0.4} />
         <DirectionalLight
           position={[1, 2, 1.5]}

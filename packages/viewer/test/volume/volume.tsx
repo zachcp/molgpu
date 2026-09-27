@@ -3,7 +3,7 @@
  * colouring. `deno task test:components` builds it with vite and drives every
  * mode from run-volume.mjs through `window.__volume`.
  */
-import { React, render, useState } from "@use-gpu/live";
+import { type React, render, useState } from "@use-gpu/live";
 import type { LiveElement } from "@use-gpu/live";
 import type { StorageSource } from "@use-gpu/core";
 import { AutoCanvas, WebGPU } from "@use-gpu/webgpu";
@@ -256,10 +256,10 @@ const Scene = ({ state }: { state: State }): LiveElement => {
     case "shared":
       // The same VolumeData through <Volume> and a field: one GPU copy.
       return [
-        <Volume data={GRADIENT}>
+        <Volume key="volume" data={GRADIENT}>
           <VolumeProbe />
         </Volume>,
-        <Structure data={COLOURED}>
+        <Structure key="structure" data={COLOURED}>
           <Spacefill color={BY_X} />
         </Structure>,
       ];
@@ -275,10 +275,10 @@ const Scene = ({ state }: { state: State }): LiveElement => {
       );
     case "slice":
       return [
-        <Volume data={BLOB}>
+        <Volume key="surface" data={BLOB}>
           <Isosurface level={2} color={[0.9, 0.9, 0.2, 1]} />
         </Volume>,
-        <Volume data={GRADIENT}>
+        <Volume key="slice" data={GRADIENT}>
           <VolumeSlice
             plane={{ axis: 0, index: state.index }}
             range={[-10, 10]}
@@ -289,16 +289,16 @@ const Scene = ({ state }: { state: State }): LiveElement => {
     case "depth":
       // A red atom in front of a z-plane slice and one behind it.
       return [
-        <Volume data={GRADIENT}>
+        <Volume key="slice" data={GRADIENT}>
           <VolumeSlice
             plane={{ normal: [0, 0, 1], point: [0, 0, 0] }}
             stops={[[0, [0.2, 0.9, 0.2, 1]], [1, [0.2, 0.9, 0.2, 1]]]}
           />
         </Volume>,
-        <Structure data={FRONT}>
+        <Structure key="front" data={FRONT}>
           <Spacefill color={[1, 0, 0, 1]} />
         </Structure>,
-        <Structure data={BEHIND}>
+        <Structure key="behind" data={BEHIND}>
           <Spacefill color={[1, 0, 0, 1]} />
         </Structure>,
       ];
@@ -341,7 +341,7 @@ const App = (): LiveElement => {
       pitch={0}
       target={[0, 0, 0]}
     >
-      <Pass lights={true}>
+      <Pass lights>
         <AmbientLight color={[1, 1, 1]} intensity={0.6} />
         <DirectionalLight
           position={[0.3, 0.5, 1]}

@@ -15,7 +15,7 @@ import { coordinateBounds } from "@molgpu/table";
 import { structureFromBcif } from "@molgpu/io";
 import { Structure, Surface } from "../src/index.ts";
 
-const probe = window.__probe = {
+const probe = globalThis.__probe = {
   storage: [],
   storageBuffers: [],
   storageWrites: [],

@@ -45,22 +45,22 @@ Deno.test("viewer GPU smoke", async () => {
       if (m.type() === "error") errors.push(m.text());
     });
     await page.goto("http://127.0.0.1:5186/packages/viewer/test/index.html");
-    await page.waitForFunction(() => window.__adapter?.mounted, null, {
+    await page.waitForFunction(() => globalThis.__adapter?.mounted, null, {
       timeout: 30000,
     });
-    const settle = async () =>
+    const settle = () =>
       page.evaluate(async () => {
         for (let i = 0; i < 5; i++) await new Promise(requestAnimationFrame);
-        await window.__adapter.drain();
+        await globalThis.__adapter.drain();
       });
     await settle();
-    const snapshot = () => page.evaluate(() => window.__adapter.snapshot());
+    const snapshot = () => page.evaluate(() => globalThis.__adapter.snapshot());
     const update = async (patch) => {
-      await page.evaluate((patch) => window.__adapter.update(patch), patch);
+      await page.evaluate((patch) => globalThis.__adapter.update(patch), patch);
       await settle();
     };
     const read = (key, elements, type) =>
-      page.evaluate(([k, n, t]) => window.__adapter.read(k, n, t), [
+      page.evaluate(([k, n, t]) => globalThis.__adapter.read(k, n, t), [
         key,
         elements,
         type,
@@ -142,7 +142,7 @@ Deno.test("viewer GPU smoke", async () => {
     assertStrictEquals((await screenshot("three-strokes")).length, 3);
     await update({ trace: true });
     assertStrictEquals((await screenshot("two-traces")).length, 2);
-    await page.evaluate(() => window.__adapter.mutate());
+    await page.evaluate(() => globalThis.__adapter.mutate());
     await settle();
     assertEquals(await read("f32", 2, "f32"), [11.25, 2.5]);
     const changed = await snapshot();

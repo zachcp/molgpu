@@ -6,13 +6,12 @@ import {
   LineLayer,
   OrbitCamera,
   Pass,
-  RawData,
   useDeviceContext,
   useRawSource,
 } from "@use-gpu/workbench";
 import { ColumnSource } from "../src/internal/column-source.ts";
 
-const probe = window.__adapter = {
+const probe = globalThis.__adapter = {
   errors: [],
   sources: {},
   buffers: [],

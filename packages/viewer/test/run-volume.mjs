@@ -76,7 +76,7 @@ Deno.test("volume components", async () => {
       }
     });
     await page.goto(`http://127.0.0.1:${PORT}/`);
-    await page.waitForFunction(() => window.__volume?.mounted, null, {
+    await page.waitForFunction(() => globalThis.__volume?.mounted, null, {
       timeout: 30000,
     }).catch((failure) => {
       throw new Error(`not mounted: ${JSON.stringify(errors)}`, {
@@ -89,10 +89,10 @@ Deno.test("volume components", async () => {
         for (let i = 0; i < 8; i++) await new Promise(requestAnimationFrame);
       });
     const update = async (patch) => {
-      await page.evaluate((p) => window.__volume.update(p), patch);
+      await page.evaluate((p) => globalThis.__volume.update(p), patch);
       await settle();
     };
-    const counters = () => page.evaluate(() => window.__volume.counters());
+    const counters = () => page.evaluate(() => globalThis.__volume.counters());
     const shot = () => page.locator("canvas").screenshot();
     // A frame that equals its successor, so transient work has finished.
     // `drawn` also waits for a non-black frame, so two identical frames from
@@ -164,14 +164,14 @@ Deno.test("volume components", async () => {
 
     const baseline = await counters();
     const volumeBytes = await page.evaluate(() =>
-      window.__volume.values("gradient").length * 4
+      globalThis.__volume.values("gradient").length * 4
     );
 
     // 1. <Volume data> uploads once to a buffer holding exactly its values.
     await update({ mode: "volume" });
-    await page.waitForFunction(() => window.__volume.phase === "ready");
+    await page.waitForFunction(() => globalThis.__volume.phase === "ready");
     const readback = await page.evaluate(async () => {
-      const { source, device } = window.__volume;
+      const { source, device } = globalThis.__volume;
       const size = source.length * 4;
       const staging = device.createBuffer({
         size,
@@ -188,7 +188,7 @@ Deno.test("volume components", async () => {
     });
     assertEquals(
       readback,
-      await page.evaluate(() => window.__volume.values("gradient")),
+      await page.evaluate(() => globalThis.__volume.values("gradient")),
       "the GPU buffer holds the volume's values",
     );
     let now = await counters();
@@ -298,7 +298,7 @@ Deno.test("volume components", async () => {
     assert(
       !sliceB.equals(sliceA),
       `moving the plane changes the draw ${
-        JSON.stringify(await page.evaluate(() => window.__volume.errors))
+        JSON.stringify(await page.evaluate(() => globalThis.__volume.errors))
       } ${JSON.stringify(errors)}`,
     );
     assertStrictEquals(
@@ -342,7 +342,7 @@ Deno.test("volume components", async () => {
     //    GPU copy and releases it.
     await update({ mode: "big" });
     await page.waitForFunction(
-      () => window.__volume.volume?.dims[0] === 256,
+      () => globalThis.__volume.volume?.dims[0] === 256,
       null,
       { timeout: 30000 },
     );
@@ -356,23 +356,33 @@ Deno.test("volume components", async () => {
 
     // 8. <Volume src> loads CCP4/MRC with loading → ready, and reports errors.
     await update({ mode: "src", src: "/map.mrc" });
-    await page.waitForFunction(() => window.__volume.phase === "ready", null, {
-      timeout: 30000,
-    });
-    const dims = await page.evaluate(() => [...window.__volume.volume.dims]);
+    await page.waitForFunction(
+      () => globalThis.__volume.phase === "ready",
+      null,
+      {
+        timeout: 30000,
+      },
+    );
+    const dims = await page.evaluate(
+      () => [...globalThis.__volume.volume.dims],
+    );
     assertEquals(dims, [8, 6, 5]);
     await update({ src: "/missing.mrc" });
-    await page.waitForFunction(() => window.__volume.phase === "error", null, {
-      timeout: 30000,
-    });
+    await page.waitForFunction(
+      () => globalThis.__volume.phase === "error",
+      null,
+      {
+        timeout: 30000,
+      },
+    );
     assertMatch(
-      await page.evaluate(() => window.__volume.failure),
+      await page.evaluate(() => globalThis.__volume.failure),
       /volume 404/,
     );
     await update({ mode: "none" });
 
     assertEquals(
-      await page.evaluate(() => window.__volume.errors),
+      await page.evaluate(() => globalThis.__volume.errors),
       [],
       "no WebGPU errors",
     );

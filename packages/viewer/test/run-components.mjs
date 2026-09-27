@@ -110,18 +110,18 @@ Deno.test("viewer components", async () => {
       requests.filter((url) => url.includes("/molstar-")).length;
 
     await page.goto(`http://127.0.0.1:${PORT}/`);
-    await page.waitForFunction(() => window.__viewer?.mounted, null, {
+    await page.waitForFunction(() => globalThis.__viewer?.mounted, null, {
       timeout: 30000,
     });
     const settle = () =>
       page.evaluate(async () => {
         for (let i = 0; i < 8; i++) await new Promise(requestAnimationFrame);
       });
-    const snapshot = () => page.evaluate(() => window.__viewer.snapshot());
+    const snapshot = () => page.evaluate(() => globalThis.__viewer.snapshot());
     const shot = () => page.locator("canvas").screenshot();
     const readCoordinates = () =>
       page.evaluate(async () => {
-        const { coordinateSource: source, device } = window.__viewer;
+        const { coordinateSource: source, device } = globalThis.__viewer;
         if (!source || !device) throw new Error("missing coordinate source");
         const staging = device.createBuffer({
           size: source.length * 12,
@@ -146,7 +146,7 @@ Deno.test("viewer components", async () => {
       });
     const readBondVertices = () =>
       page.evaluate(async () => {
-        const { bondSource: source, device } = window.__viewer;
+        const { bondSource: source, device } = globalThis.__viewer;
         if (!source || !device) throw new Error("missing bond vertex source");
         const bytes = source.length * 4;
         const staging = device.createBuffer({
@@ -166,12 +166,12 @@ Deno.test("viewer components", async () => {
       });
     const update = async (patch, keepHistory = false) => {
       await page.evaluate(([p, keep]) => {
-        if (!keep) window.__viewer.reset();
-        window.__viewer.update(p);
+        if (!keep) globalThis.__viewer.reset();
+        globalThis.__viewer.update(p);
       }, [patch, keepHistory]);
       await settle();
     };
-    const until = async (predicate) =>
+    const until = (predicate) =>
       page.waitForFunction(predicate, null, { timeout: 30000 }).then(settle);
 
     // Count lit blobs on the canvas itself; PNG bytes and DOM state prove nothing.
@@ -246,20 +246,20 @@ Deno.test("viewer components", async () => {
       "preloaded structure draws one cluster",
     );
     assertMatch(
-      await page.evaluate(() => window.__viewer.missingCoordinatesError),
+      await page.evaluate(() => globalThis.__viewer.missingCoordinatesError),
       /Required context 'CoordinatesContext' was used without being provided/,
       "useCoordinates outside Structure reports a composition error",
     );
     assertStrictEquals(molstar(), 0, "a preloaded dataset must not load Mol*");
     assertEquals(
-      await page.evaluate(() => window.__viewer.rootPositionReads),
+      await page.evaluate(() => globalThis.__viewer.rootPositionReads),
       { cpu: "ok", gpu: "ok" },
       "root-only trees may read root positions",
     );
     report.states.preloaded = { blobs: preloaded, molstarRequests: 0 };
 
     const ownedBefore = await page.evaluate(() =>
-      window.__viewer.counters().ownedBuffers.live
+      globalThis.__viewer.counters().ownedBuffers.live
     );
     await update({ mode: "offset" });
     let positions = [];
@@ -277,7 +277,7 @@ Deno.test("viewer components", async () => {
       "the two offsets compose exactly in the GPU buffer",
     );
     const guardedReads = await page.evaluate(() =>
-      window.__viewer.rootPositionReads
+      globalThis.__viewer.rootPositionReads
     );
     assertMatch(
       guardedReads.cpu,
@@ -308,19 +308,19 @@ Deno.test("viewer components", async () => {
       "the chained offset moves the Spacefill draw",
     );
     const firstDispatches = await page.evaluate(() =>
-      window.__viewer.dispatches
+      globalThis.__viewer.dispatches
     );
     assertStrictEquals(firstDispatches, 2, "one dispatch per offset provider");
     await settle();
     assertStrictEquals(
-      await page.evaluate(() => window.__viewer.dispatches),
+      await page.evaluate(() => globalThis.__viewer.dispatches),
       firstDispatches,
       "unchanged content does not redispatch",
     );
     const uploadsBefore = await page.evaluate(() =>
-      window.__viewer.counters().uploadBytes
+      globalThis.__viewer.counters().uploadBytes
     );
-    await page.evaluate(() => window.__viewer.update({ offsetX: 6 }));
+    await page.evaluate(() => globalThis.__viewer.update({ offsetX: 6 }));
     let visibilityFrame = null;
     const observed = [];
     for (let frame = 1; frame <= 10; frame++) {
@@ -345,18 +345,20 @@ Deno.test("viewer components", async () => {
       "changing a parameter republishes both provider generations",
     );
     assertStrictEquals(
-      await page.evaluate(() => window.__viewer.dispatches),
+      await page.evaluate(() => globalThis.__viewer.dispatches),
       firstDispatches + 2,
       "each changed provider dispatches once",
     );
     assertStrictEquals(
-      await page.evaluate(() => window.__viewer.counters().uploadBytes),
+      await page.evaluate(() => globalThis.__viewer.counters().uploadBytes),
       uploadsBefore,
       "coordinate updates do not upload topology or style data",
     );
     await update({ mode: "preloaded" });
     assertStrictEquals(
-      await page.evaluate(() => window.__viewer.counters().ownedBuffers.live),
+      await page.evaluate(() =>
+        globalThis.__viewer.counters().ownedBuffers.live
+      ),
       ownedBefore,
       "provider teardown returns owned GPU buffers to baseline",
     );
@@ -414,7 +416,7 @@ Deno.test("viewer components", async () => {
       );
     }
     const bondBuilds = await page.evaluate(() =>
-      window.__viewer.counters().detail["geometryBuilds:bonds:columns"] ?? 0
+      globalThis.__viewer.counters().detail["geometryBuilds:bonds:columns"] ?? 0
     );
     await update({ offsetX: 6 }, true);
     const movedBondVertices = await readBondVertices();
@@ -429,7 +431,8 @@ Deno.test("viewer components", async () => {
     }
     assertStrictEquals(
       await page.evaluate(() =>
-        window.__viewer.counters().detail["geometryBuilds:bonds:columns"] ?? 0
+        globalThis.__viewer.counters().detail["geometryBuilds:bonds:columns"] ??
+          0
       ),
       bondBuilds,
       "moving coordinates does not rebuild CPU bond columns",
@@ -443,7 +446,7 @@ Deno.test("viewer components", async () => {
 
     await update({ mode: "attributes" });
     const attributeBytes = await page.evaluate(() =>
-      window.__viewer.counters().detail["uploadBytes:attr:atomChain"] ?? 0
+      globalThis.__viewer.counters().detail["uploadBytes:attr:atomChain"] ?? 0
     );
     assertStrictEquals(
       attributeBytes,
@@ -453,7 +456,7 @@ Deno.test("viewer components", async () => {
     await update({ offsetX: 7 });
     assertStrictEquals(
       await page.evaluate(() =>
-        window.__viewer.counters().detail["uploadBytes:attr:atomChain"] ?? 0
+        globalThis.__viewer.counters().detail["uploadBytes:attr:atomChain"] ?? 0
       ),
       attributeBytes,
       "a style-neutral rerender does not re-upload the column",
@@ -462,13 +465,13 @@ Deno.test("viewer components", async () => {
 
     await update({ mode: "attribute-revision", offsetX: 0 });
     const unrelatedBytes = await page.evaluate(() =>
-      window.__viewer.counters().detail["uploadBytes:attr:user:a"] ?? 0
+      globalThis.__viewer.counters().detail["uploadBytes:attr:user:a"] ?? 0
     );
     assertStrictEquals(unrelatedBytes, 12);
     await update({ offsetX: 1 });
     assertStrictEquals(
       await page.evaluate(() =>
-        window.__viewer.counters().detail["uploadBytes:attr:user:a"] ?? 0
+        globalThis.__viewer.counters().detail["uploadBytes:attr:user:a"] ?? 0
       ),
       unrelatedBytes,
       "changing column B preserves column A's GPU upload",
@@ -477,7 +480,7 @@ Deno.test("viewer components", async () => {
 
     await update({ mode: "attribute-producer", offsetX: 5 });
     await page.waitForFunction(
-      () => window.__viewer.attributeSnapshot?.values.join(",") === "5,6,7",
+      () => globalThis.__viewer.attributeSnapshot?.values.join(",") === "5,6,7",
       null,
       { timeout: 10000 },
     ).catch(async (failure) => {
@@ -485,29 +488,29 @@ Deno.test("viewer components", async () => {
         "attribute diagnostics",
         JSON.stringify(
           await page.evaluate(() => ({
-            snapshot: window.__viewer.attributeSnapshot,
-            errors: window.__viewer.errors,
-            dispatches: window.__viewer.dispatches,
-            pipelines: window.__viewer.computePipelines,
-            submissions: window.__viewer.submissions,
-            counters: window.__viewer.counters(),
+            snapshot: globalThis.__viewer.attributeSnapshot,
+            errors: globalThis.__viewer.errors,
+            dispatches: globalThis.__viewer.dispatches,
+            pipelines: globalThis.__viewer.computePipelines,
+            submissions: globalThis.__viewer.submissions,
+            counters: globalThis.__viewer.counters(),
           })),
         ),
       );
       throw failure;
     });
     const firstAttribute = await page.evaluate(() =>
-      window.__viewer.attributeSnapshot
+      globalThis.__viewer.attributeSnapshot
     );
     const attributeBefore = await shot();
     await update({ offsetX: 6 });
     await page.waitForFunction(
-      () => window.__viewer.attributeSnapshot?.values.join(",") === "6,7,8",
+      () => globalThis.__viewer.attributeSnapshot?.values.join(",") === "6,7,8",
       null,
       { timeout: 10000 },
     );
     const nextAttribute = await page.evaluate(() =>
-      window.__viewer.attributeSnapshot
+      globalThis.__viewer.attributeSnapshot
     );
     assert(nextAttribute.generation > firstAttribute.generation);
     assert(
@@ -517,16 +520,17 @@ Deno.test("viewer components", async () => {
     await update({ offsetX: 8 });
     await update({ offsetX: 9 });
     await page.waitForFunction(
-      () => window.__viewer.attributeSnapshot?.values.join(",") === "9,10,11",
+      () =>
+        globalThis.__viewer.attributeSnapshot?.values.join(",") === "9,10,11",
       null,
       { timeout: 10000 },
     );
     const finalAttribute = await page.evaluate(() =>
-      window.__viewer.attributeSnapshot
+      globalThis.__viewer.attributeSnapshot
     );
     assert(finalAttribute.generation > nextAttribute.generation);
     const attributeOwned = await page.evaluate(() =>
-      window.__viewer.counters().ownedBuffers.bytes
+      globalThis.__viewer.counters().ownedBuffers.bytes
     );
     assertStrictEquals(attributeOwned["attr:producer:gpu:test"], 12);
     assertStrictEquals(attributeOwned["attr:snapshot:gpu:test"], 24);
@@ -550,7 +554,7 @@ Deno.test("viewer components", async () => {
 
     await update({ mode: "snapshot", offsetX: 5 });
     await page.waitForFunction(
-      () => window.__viewer.coordinateSnapshot?.positions[0] === -13,
+      () => globalThis.__viewer.coordinateSnapshot?.positions[0] === -13,
       null,
       { timeout: 10000 },
     ).catch(async (failure) => {
@@ -558,24 +562,24 @@ Deno.test("viewer components", async () => {
         "snapshot diagnostics",
         JSON.stringify(
           await page.evaluate(() => ({
-            snapshot: window.__viewer.coordinateSnapshot,
-            errors: window.__viewer.errors,
-            counters: window.__viewer.counters(),
+            snapshot: globalThis.__viewer.coordinateSnapshot,
+            errors: globalThis.__viewer.errors,
+            counters: globalThis.__viewer.counters(),
           })),
         ),
       );
       throw failure;
     });
     const firstSnapshot = await page.evaluate(() =>
-      window.__viewer.coordinateSnapshot
+      globalThis.__viewer.coordinateSnapshot
     );
     await page.waitForFunction(
-      () => window.__viewer.coordinateBounds?.centroid[0] === -10,
+      () => globalThis.__viewer.coordinateBounds?.centroid[0] === -10,
       null,
       { timeout: 10000 },
     );
     const firstBounds = await page.evaluate(() =>
-      window.__viewer.coordinateBounds
+      globalThis.__viewer.coordinateBounds
     );
     assertEquals(firstBounds.min, [-13, 1, 0]);
     assertEquals(firstBounds.max, [-7, 1, 0]);
@@ -583,7 +587,7 @@ Deno.test("viewer components", async () => {
     // Memory budget (contract section 4): root, two providers and snapshot
     // staging at 1M atoms, plus the 12 B/atom CPU copy, stay within 92 MB.
     const ownedBytes = await page.evaluate(() =>
-      window.__viewer.counters().ownedBuffers.bytes
+      globalThis.__viewer.counters().ownedBuffers.bytes
     );
     const atoms = 3;
     assertStrictEquals(
@@ -606,42 +610,42 @@ Deno.test("viewer components", async () => {
     );
     report.states.budget = { ownedBytes, projectedMBAt1M: projected / 1e6 };
     await page.waitForFunction(
-      () => window.__viewer.selectedBounds?.centroid[0] === -11.5,
+      () => globalThis.__viewer.selectedBounds?.centroid[0] === -11.5,
       null,
       { timeout: 10000 },
     );
     const selectedBounds = await page.evaluate(() =>
-      window.__viewer.selectedBounds
+      globalThis.__viewer.selectedBounds
     );
     assertEquals(selectedBounds.min, [-13, 1, 0]);
     assertEquals(selectedBounds.max, [-10, 1, 0]);
     assertStrictEquals(selectedBounds.count, 2);
     assertStrictEquals(
-      await page.evaluate(() => window.__viewer.emptyBounds),
+      await page.evaluate(() => globalThis.__viewer.emptyBounds),
       null,
     );
     await page.waitForFunction(
-      () => window.__viewer.coordinateFocus?.target[0] === -10,
+      () => globalThis.__viewer.coordinateFocus?.target[0] === -10,
       null,
       { timeout: 10000 },
     );
     assertEquals(firstSnapshot.positions, [-13, 1, 0, -10, 1, 0, -7, 1, 0]);
     await update({ offsetX: 6 }, true);
     await page.waitForFunction(
-      () => window.__viewer.coordinateSnapshot?.positions[0] === -12,
+      () => globalThis.__viewer.coordinateSnapshot?.positions[0] === -12,
       null,
       { timeout: 10000 },
     );
     const secondSnapshot = await page.evaluate(() =>
-      window.__viewer.coordinateSnapshot
+      globalThis.__viewer.coordinateSnapshot
     );
     await page.waitForFunction(
-      () => window.__viewer.coordinateBounds?.centroid[0] === -9,
+      () => globalThis.__viewer.coordinateBounds?.centroid[0] === -9,
       null,
       { timeout: 10000 },
     );
     await page.waitForFunction(
-      () => window.__viewer.coordinateFocus?.target[0] === -9,
+      () => globalThis.__viewer.coordinateFocus?.target[0] === -9,
       null,
       { timeout: 10000 },
     );
@@ -650,7 +654,7 @@ Deno.test("viewer components", async () => {
     await update({ mode: "preloaded" });
 
     // 2. The runtime rejects the same prop combinations the types reject.
-    const invalid = await page.evaluate(() => window.__viewer.invalid());
+    const invalid = await page.evaluate(() => globalThis.__viewer.invalid());
     assertMatch(invalid[0], /either data or src, not both/);
     assertMatch(invalid[1], /requires data or src/);
     assertMatch(invalid[2], /src must be a string/);
@@ -688,16 +692,16 @@ Deno.test("viewer components", async () => {
 
     // 5. A replaced source cannot mount a stale result.
     await update({ mode: "controlled", src: "/first" });
-    await until(() => window.__viewer.snapshot().pending === 1);
+    await until(() => globalThis.__viewer.snapshot().pending === 1);
     assertStrictEquals(
       (await snapshot()).phase,
       "loading",
       "an in-flight load shows the loading prop",
     );
     await update({ src: "/second" }, true);
-    await until(() => window.__viewer.snapshot().pending === 2);
+    await until(() => globalThis.__viewer.snapshot().pending === 2);
     const staleCancelled = await page.evaluate(() =>
-      window.__viewer.settle(0, "left")
+      globalThis.__viewer.settle(0, "left")
     );
     await settle();
     assertStrictEquals(
@@ -715,8 +719,8 @@ Deno.test("viewer components", async () => {
       [],
       "a stale result must not draw",
     );
-    await page.evaluate(() => window.__viewer.settle(1, "right"));
-    await until(() => window.__viewer.snapshot().phase === "ready");
+    await page.evaluate(() => globalThis.__viewer.settle(1, "right"));
+    await until(() => globalThis.__viewer.snapshot().phase === "ready");
     const replaced = await snapshot();
     assertEquals(
       replaced.history,
@@ -732,7 +736,7 @@ Deno.test("viewer components", async () => {
 
     // 6. A failing source reaches the error prop, not a permanent loading state.
     await update({ mode: "missing", src: "/fixtures/absent.bcif" });
-    await until(() => window.__viewer.snapshot().phase === "error");
+    await until(() => globalThis.__viewer.snapshot().phase === "error");
     const failed = await snapshot();
     assertEquals(
       failed.history,
@@ -753,7 +757,7 @@ Deno.test("viewer components", async () => {
 
     // 7. The pinned BCIF protein: loading, then 327 atoms through the lazy parser.
     await update({ mode: "remote", src: "/fixtures/1crn.bcif" });
-    await until(() => window.__viewer.snapshot().phase === "ready");
+    await until(() => globalThis.__viewer.snapshot().phase === "ready");
     const loaded = await snapshot();
     assertEquals(
       loaded.history,

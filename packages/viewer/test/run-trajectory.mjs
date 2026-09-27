@@ -36,7 +36,7 @@ async function runGpuCellList(page, positions, cutoff) {
   });
   const gpu = await page.evaluate(
     async ({ shaders, positions, cutoff, origin, dims }) => {
-      const device = window.__trajectory.device;
+      const device = globalThis.__trajectory.device;
       const S = GPUBufferUsage.STORAGE,
         R = GPUBufferUsage.COPY_SRC,
         W = GPUBufferUsage.COPY_DST;
@@ -227,7 +227,7 @@ async function runGpuCellList(page, positions, cutoff) {
         rows: readU32(3),
         overflow: status[1],
         pairs: pairRows.flat(),
-        errors: window.__trajectory.errors.slice(),
+        errors: globalThis.__trajectory.errors.slice(),
       };
     },
     {
@@ -320,7 +320,7 @@ Deno.test("trajectory components", async () => {
       if (m.type() === "error") errors.push(m.text());
     });
     await page.goto(`http://127.0.0.1:${PORT}/`);
-    await page.waitForFunction(() => window.__trajectory?.mounted, null, {
+    await page.waitForFunction(() => globalThis.__trajectory?.mounted, null, {
       timeout: 30000,
     }).catch((failure) => {
       throw new Error(`not mounted: ${JSON.stringify(errors)}`, {
@@ -332,15 +332,16 @@ Deno.test("trajectory components", async () => {
         for (let i = 0; i < 6; i++) await new Promise(requestAnimationFrame);
       });
     const update = async (patch) => {
-      await page.evaluate((p) => window.__trajectory.update(p), patch);
+      await page.evaluate((p) => globalThis.__trajectory.update(p), patch);
       await settle();
     };
-    const counters = () => page.evaluate(() => window.__trajectory.counters());
+    const counters = () =>
+      page.evaluate(() => globalThis.__trajectory.counters());
     // Frames land asynchronously: wait until the displayed pair is `want`.
     const displayed = (want) =>
       page.waitForFunction(
         (w) => {
-          const d = window.__trajectory.state?.displayed;
+          const d = globalThis.__trajectory.state?.displayed;
           return d && d.a === w.a && d.b === w.b && Math.abs(d.t - w.t) < 1e-6;
         },
         want,
@@ -348,7 +349,7 @@ Deno.test("trajectory components", async () => {
       ).then(settle);
     const read = () =>
       page.evaluate(async () => {
-        const { source, device } = window.__trajectory;
+        const { source, device } = globalThis.__trajectory;
         const bytes = source.length * 12;
         const staging = device.createBuffer({
           size: bytes,
@@ -391,8 +392,12 @@ Deno.test("trajectory components", async () => {
       }
       near(values, expected, what, tol);
     };
-    const pageFrames = await page.evaluate(() => window.__trajectory.frames);
-    const rootPositions = await page.evaluate(() => window.__trajectory.root);
+    const pageFrames = await page.evaluate(() =>
+      globalThis.__trajectory.frames
+    );
+    const rootPositions = await page.evaluate(() =>
+      globalThis.__trajectory.root
+    );
     const lerp = (a, b, t) =>
       Array.from(
         interpolatePositions(
@@ -402,7 +407,7 @@ Deno.test("trajectory components", async () => {
         ),
       );
     const unw = await page.evaluate(() => {
-      const { statuses: _, ...rest } = window.__trajectory.unwrap;
+      const { statuses: _, ...rest } = globalThis.__trajectory.unwrap;
       return rest;
     });
     const unwrapTopology = {
@@ -430,12 +435,12 @@ Deno.test("trajectory components", async () => {
     // pipeline compiles asynchronously.
     const fresh = async () => {
       await page.reload();
-      await page.waitForFunction(() => window.__trajectory?.mounted, null, {
+      await page.waitForFunction(() => globalThis.__trajectory?.mounted, null, {
         timeout: 30000,
       });
     };
     {
-      const sup = await page.evaluate(() => window.__trajectory.superpose);
+      const sup = await page.evaluate(() => globalThis.__trajectory.superpose);
       const upstream = Float32Array.from(sup.frames[2]);
       const fit = fitKabsch(upstream, Float32Array.from(sup.fixed), null, true);
       await update({ mode: "static-superpose" });
@@ -481,23 +486,23 @@ Deno.test("trajectory components", async () => {
     // writes a few hundred storage bytes of scene state on every redraw
     // (lights), with or without a frame change; the report records both.
     await page.evaluate(() => {
-      const queue = window.__trajectory.device.queue;
+      const queue = globalThis.__trajectory.device.queue;
       const write = queue.writeBuffer;
-      window.__writes = { window: 0, storage: 0 };
+      globalThis.__writes = { window: 0, storage: 0 };
       queue.writeBuffer = function (buffer, offset, data, ...rest) {
         const bytes = data.byteLength ?? data.length;
         if (buffer.label === "molgpu:coords:trajectory:window") {
-          window.__writes.window += bytes;
+          globalThis.__writes.window += bytes;
         } else if (buffer.usage & GPUBufferUsage.STORAGE) {
-          window.__writes.storage += bytes;
+          globalThis.__writes.storage += bytes;
         }
         return write.call(this, buffer, offset, data, ...rest);
       };
     });
     const writes = () =>
       page.evaluate(() => {
-        const w = { ...window.__writes };
-        window.__writes = { window: 0, storage: 0 };
+        const w = { ...globalThis.__writes };
+        globalThis.__writes = { window: 0, storage: 0 };
         return w;
       });
     for (const frame of [0.5, 2.75, 1, 3, 0]) await update({ frame });
@@ -555,7 +560,7 @@ Deno.test("trajectory components", async () => {
     await update({ pbc: "minimum-image" });
     await expectRead([9.75, 1, 1, ...rest], "minimum image", 1e-4);
     const box = await page.evaluate(() =>
-      Array.from(window.__trajectory.state.box)
+      Array.from(globalThis.__trajectory.state.box)
     );
     near(box, [10.5, 0, 0, 0, 10, 0, 0, 0, 10], "interpolated box");
     await update({ mode: "none", pbc: "none" });
@@ -598,7 +603,7 @@ Deno.test("trajectory components", async () => {
 
     // 7. Before the first frame lands, upstream coordinates show; no blank.
     await update({ mode: "slow", frame: 2 });
-    const early = await page.evaluate(() => window.__trajectory.state);
+    const early = await page.evaluate(() => globalThis.__trajectory.state);
     assertStrictEquals(
       early.displayed,
       null,
@@ -654,7 +659,7 @@ Deno.test("trajectory components", async () => {
     // mount, so the first frame always arrives during the first readback.
     await page.evaluate(() => {
       const map = GPUBuffer.prototype.mapAsync;
-      window.__mapAsync = map;
+      globalThis.__mapAsync = map;
       GPUBuffer.prototype.mapAsync = async function (...args) {
         if (this.label === "molgpu:coords:snapshot") {
           await new Promise((r) => setTimeout(r, 100));
@@ -667,7 +672,7 @@ Deno.test("trajectory components", async () => {
       await update({ mode: "snapshot", frame: 3, latency });
       await page.waitForFunction(
         () => {
-          const { snapshot, generation } = window.__trajectory;
+          const { snapshot, generation } = globalThis.__trajectory;
           return snapshot && generation !== null &&
             snapshot.generation === generation;
         },
@@ -679,26 +684,26 @@ Deno.test("trajectory components", async () => {
         });
       });
       near(
-        await page.evaluate(() => window.__trajectory.snapshot.positions),
+        await page.evaluate(() => globalThis.__trajectory.snapshot.positions),
         pageFrames[3],
         `snapshot after mount ${round}`,
       );
     }
     await page.evaluate(() => {
-      GPUBuffer.prototype.mapAsync = window.__mapAsync;
+      GPUBuffer.prototype.mapAsync = globalThis.__mapAsync;
     });
     await update({ frame: 0 });
     await displayed({ a: 0, b: 0, t: 0 });
     for (let round = 0; round < 3; round++) {
       await page.evaluate(async () => {
         for (const frame of [0.5, 1, 1.5, 2, 2.5, 3]) {
-          window.__trajectory.update({ frame });
+          globalThis.__trajectory.update({ frame });
           await new Promise(requestAnimationFrame);
         }
       });
       await page.waitForFunction(
         () => {
-          const { snapshot, generation } = window.__trajectory;
+          const { snapshot, generation } = globalThis.__trajectory;
           return snapshot && snapshot.generation === generation;
         },
         null,
@@ -710,7 +715,7 @@ Deno.test("trajectory components", async () => {
         );
       });
       near(
-        await page.evaluate(() => window.__trajectory.snapshot.positions),
+        await page.evaluate(() => globalThis.__trajectory.snapshot.positions),
         pageFrames[3],
         `snapshot round ${round}`,
       );
@@ -842,7 +847,7 @@ Deno.test("trajectory components", async () => {
     // Kabsch oracle, at a ~1000 Å offset, through a mirror image (still a
     // proper rotation), for fit subsets and translate=false. Scrubbing moves
     // no reference or structure bytes. A collinear frame passes through.
-    const sup = await page.evaluate(() => window.__trajectory.superpose);
+    const sup = await page.evaluate(() => globalThis.__trajectory.superpose);
     const supFrame = (frame) => {
       const a = Math.floor(frame), t = frame - a;
       const b = Math.min(a + 1, sup.frames.length - 1);
@@ -882,7 +887,7 @@ Deno.test("trajectory components", async () => {
     };
     report.superpose = [];
     await page.evaluate(() =>
-      window.__trajectory.superpose.statuses.length = 0
+      globalThis.__trajectory.superpose.statuses.length = 0
     );
     const checkFit = async (frame, options = {}) => {
       const want = oracle(frame, options);
@@ -906,10 +911,12 @@ Deno.test("trajectory components", async () => {
     await displayed({ a: 0, b: 0, t: 0 });
     await checkFit(0);
     await page.waitForFunction(() =>
-      window.__trajectory.superpose.statuses.some((s) => s.status === "solved")
+      globalThis.__trajectory.superpose.statuses.some((s) =>
+        s.status === "solved"
+      )
     );
     const initialFitStatus = await page.evaluate(() =>
-      window.__trajectory.superpose.statuses.slice(-1)[0]
+      globalThis.__trajectory.superpose.statuses.slice(-1)[0]
     );
     assertStrictEquals(initialFitStatus.status, "solved");
     assert(Math.abs(initialFitStatus.rmsd) <= 1e-3);
@@ -930,7 +937,7 @@ Deno.test("trajectory components", async () => {
     // Rapid backward scrub: one displayed frame per animation frame.
     await page.evaluate(async () => {
       for (const frame of [3, 2.75, 2.5, 2, 1.5, 1.25]) {
-        window.__trajectory.update({ frame });
+        globalThis.__trajectory.update({ frame });
         await new Promise(requestAnimationFrame);
       }
     });
@@ -948,19 +955,19 @@ Deno.test("trajectory components", async () => {
     );
     // A collinear frame has no unique rotation: it passes through.
     await page.evaluate(() =>
-      window.__trajectory.superpose.statuses.length = 0
+      globalThis.__trajectory.superpose.statuses.length = 0
     );
     await update({ frame: 4 });
     await displayed({ a: 4, b: 4, t: 0 });
     await expectRead(Array.from(supFrame(4)), "superpose collinear", 0);
     await page.waitForFunction(() =>
-      window.__trajectory.superpose.statuses.some((s) =>
+      globalThis.__trajectory.superpose.statuses.some((s) =>
         s.status === "passthrough"
       )
     );
     assertStrictEquals(
       (await page.evaluate(() =>
-        window.__trajectory.superpose.statuses.slice(-1)[0]
+        globalThis.__trajectory.superpose.statuses.slice(-1)[0]
       )).rmsd,
       null,
     );
@@ -971,15 +978,17 @@ Deno.test("trajectory components", async () => {
     await update({ supSelect: false, supTranslate: false });
     await checkFit(2, { translate: false });
     await page.evaluate(() =>
-      window.__trajectory.superpose.statuses.length = 0
+      globalThis.__trajectory.superpose.statuses.length = 0
     );
     await update({ supTranslate: true, supTo: "fixed" });
     await checkFit(2, { to: "fixed" });
     await page.waitForFunction(() =>
-      window.__trajectory.superpose.statuses.some((s) => s.status === "solved")
+      globalThis.__trajectory.superpose.statuses.some((s) =>
+        s.status === "solved"
+      )
     );
     const fixedFitStatus = await page.evaluate(() =>
-      window.__trajectory.superpose.statuses.slice(-1)[0]
+      globalThis.__trajectory.superpose.statuses.slice(-1)[0]
     );
     assert(
       Math.abs(fixedFitStatus.rmsd - oracle(2, { to: "fixed" }).rmsd) < 1e-4,
@@ -1003,7 +1012,7 @@ Deno.test("trajectory components", async () => {
         }
         return mapped;
       };
-      window.__trajectory.heldFit = {
+      globalThis.__trajectory.heldFit = {
         get pending() {
           return pending;
         },
@@ -1014,29 +1023,34 @@ Deno.test("trajectory components", async () => {
       };
     });
     await update({ mode: "superpose", frame: 2, supTo: "fixed" });
-    await page.waitForFunction(() => window.__trajectory.heldFit.pending);
+    await page.waitForFunction(() => globalThis.__trajectory.heldFit.pending);
     await page.evaluate(() =>
-      window.__trajectory.superpose.statuses.length = 0
+      globalThis.__trajectory.superpose.statuses.length = 0
     );
     await update({ supTo: "first" });
     await page.waitForFunction(() =>
-      window.__trajectory.superpose.statuses.some((s) => s.status === "solved")
+      globalThis.__trajectory.superpose.statuses.some((s) =>
+        s.status === "solved"
+      )
     );
     const freshStatuses = await page.evaluate(() =>
-      window.__trajectory.superpose.statuses.length
+      globalThis.__trajectory.superpose.statuses.length
     );
     await page.evaluate(async () => {
-      await window.__trajectory.heldFit.release();
+      await globalThis.__trajectory.heldFit.release();
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
     assertStrictEquals(
-      await page.evaluate(() => window.__trajectory.superpose.statuses.length),
+      await page.evaluate(() =>
+        globalThis.__trajectory.superpose.statuses.length
+      ),
       freshStatuses,
       "old fit readback does not report after reference buffers change",
     );
     await update({ frame: 3 });
     await page.waitForFunction(
-      (previous) => window.__trajectory.superpose.statuses.length > previous,
+      (previous) =>
+        globalThis.__trajectory.superpose.statuses.length > previous,
       freshStatuses,
     );
     await update({ mode: "none" });
@@ -1063,9 +1077,9 @@ Deno.test("trajectory components", async () => {
       );
     const wholeLengths = bondLengths(unw.root);
     const unwrapStatuses = () =>
-      page.evaluate(() => window.__trajectory.unwrap.statuses.slice(-1)[0]);
+      page.evaluate(() => globalThis.__trajectory.unwrap.statuses.slice(-1)[0]);
     await page.evaluate(() => {
-      window.__trajectory.unwrap.statuses.length = 0;
+      globalThis.__trajectory.unwrap.statuses.length = 0;
     });
     await update({
       mode: "unwrap",
@@ -1102,7 +1116,8 @@ Deno.test("trajectory components", async () => {
       "frames re-upload no forest",
     );
     await page.waitForFunction(
-      () => window.__trajectory.unwrap.statuses.slice(-1)[0]?.status === "ok",
+      () =>
+        globalThis.__trajectory.unwrap.statuses.slice(-1)[0]?.status === "ok",
     );
     // Centering: the ring's centroid lands in the primary cell.
     await update({ unwrapCenter: true, frame: 1 });
@@ -1124,7 +1139,7 @@ Deno.test("trajectory components", async () => {
     );
     await page.waitForFunction(
       (count) => {
-        const last = window.__trajectory.unwrap.statuses.slice(-1)[0];
+        const last = globalThis.__trajectory.unwrap.statuses.slice(-1)[0];
         return last?.status === "ambiguous" &&
           last.ambiguousRingEdges === count;
       },
@@ -1140,7 +1155,7 @@ Deno.test("trajectory components", async () => {
     // Without a Trajectory the probe sees the root upload itself, which is not
     // a copy source: check that no provider output is published instead.
     assertNotStrictEquals(
-      await page.evaluate(() => window.__trajectory.source.buffer.label),
+      await page.evaluate(() => globalThis.__trajectory.source.buffer.label),
       "molgpu:coords:provider",
       "no box: the root coordinates pass through",
     );
@@ -1156,7 +1171,7 @@ Deno.test("trajectory components", async () => {
       1e-4,
     );
     await page.waitForFunction(() =>
-      window.__trajectory.unwrap.statuses.slice(-1)[0]?.status ===
+      globalThis.__trajectory.unwrap.statuses.slice(-1)[0]?.status ===
         "search-limit"
     );
     assertStrictEquals((await unwrapStatuses()).ambiguousRingEdges, 0);
@@ -1184,7 +1199,7 @@ Deno.test("trajectory components", async () => {
         await update({ mode: "gate", gateAtoms: atoms, frame: 0, time: 0.1 });
         await page.waitForFunction(
           (n) => {
-            const t = window.__trajectory;
+            const t = globalThis.__trajectory;
             return t.gate?.count === n && t.state?.displayed?.a === 0;
           },
           atoms,
@@ -1212,7 +1227,7 @@ Deno.test("trajectory components", async () => {
         // The shared cell list is not mounted in this scene: add its planned
         // grid for an 8 Å cutoff over frame 0's bounds.
         const cell = await page.evaluate((n) => {
-          const t = window.__trajectory;
+          const t = globalThis.__trajectory;
           return {
             bounds: t.gateBounds(n),
             limit: t.device.limits.maxStorageBufferBindingSize,
@@ -1229,7 +1244,7 @@ Deno.test("trajectory components", async () => {
         // tick (NormalMode only) and a resident trajectory frame (all four).
         const change = (patch) =>
           page.evaluate(async (patch) => {
-            const t = window.__trajectory;
+            const t = globalThis.__trajectory;
             const before = t.gate.generation;
             const start = performance.now();
             t.update(patch);
@@ -1249,7 +1264,7 @@ Deno.test("trajectory components", async () => {
         for (const frame of [1, 2, 3, 0]) {
           await update({ frame });
           await page.waitForFunction(
-            (f) => window.__trajectory.state?.displayed?.a === f,
+            (f) => globalThis.__trajectory.state?.displayed?.a === f,
             frame,
             { timeout: 60000 },
           );
@@ -1262,7 +1277,7 @@ Deno.test("trajectory components", async () => {
           };
         };
         const ticks = [];
-        let before = await dispatches();
+        const before = await dispatches();
         for (const time of [0.15, 0.2, 0.25]) {
           ticks.push(await change({ time }));
         }
@@ -1331,7 +1346,9 @@ Deno.test("trajectory components", async () => {
       baseline.ownedBuffers.live,
       "every owned buffer released",
     );
-    const pageErrors = await page.evaluate(() => window.__trajectory.errors);
+    const pageErrors = await page.evaluate(() =>
+      globalThis.__trajectory.errors
+    );
     assertEquals(
       [...errors, ...pageErrors],
       [],

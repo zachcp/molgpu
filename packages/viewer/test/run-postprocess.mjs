@@ -58,7 +58,7 @@ Deno.test("viewer postprocess", async () => {
       "http://127.0.0.1:5212/packages/viewer/test/postprocess.html",
     );
     await page.waitForFunction(
-      () => window.__probe?.mounted && document.querySelector("canvas"),
+      () => globalThis.__probe?.mounted && document.querySelector("canvas"),
       null,
       { timeout: 30000 },
     )
@@ -68,9 +68,13 @@ Deno.test("viewer postprocess", async () => {
         );
       });
     // The surface geometry is built asynchronously; wait for it to draw.
-    await page.waitForFunction(() => window.__probe.storage.length > 0, null, {
-      timeout: 30000,
-    })
+    await page.waitForFunction(
+      () => globalThis.__probe.storage.length > 0,
+      null,
+      {
+        timeout: 30000,
+      },
+    )
       .catch((error) => {
         throw new Error(
           `Surface geometry never appeared: ${
@@ -85,9 +89,9 @@ Deno.test("viewer postprocess", async () => {
       });
     const snap = () =>
       page.evaluate(() => ({
-        pipelines: window.__probe.pipelines,
-        textures: window.__probe.textures,
-        errors: [...window.__probe.errors],
+        pipelines: globalThis.__probe.pipelines,
+        textures: globalThis.__probe.textures,
+        errors: [...globalThis.__probe.errors],
       }));
 
     // Plain pass (lights only): the transparent surface + spacefill draw cleanly.
@@ -106,7 +110,7 @@ Deno.test("viewer postprocess", async () => {
     // own offscreen target(s), so the mount must add render pipelines and
     // textures over the plain baseline — and must draw the transparent surface
     // with no WebGPU errors.
-    await page.evaluate(() => window.__probe.setMode("post"));
+    await page.evaluate(() => globalThis.__probe.setMode("post"));
     await settle();
     await settle();
     await settle();

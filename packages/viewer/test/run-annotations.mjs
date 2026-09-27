@@ -63,7 +63,7 @@ Deno.test("viewer annotations", async () => {
       "http://127.0.0.1:5214/packages/viewer/test/annotations.html",
     );
     await page.waitForFunction(
-      () => window.__probe?.mounted && document.querySelector("canvas"),
+      () => globalThis.__probe?.mounted && document.querySelector("canvas"),
       null,
       { timeout: 30000 },
     )
@@ -101,12 +101,12 @@ Deno.test("viewer annotations", async () => {
       }, (await page.locator("canvas").screenshot()).toString("base64"));
     const snap = () =>
       page.evaluate(() => ({
-        storage: window.__probe.storage,
-        textures: window.__probe.textures,
-        pipelines: window.__probe.pipelines,
-        centroidA: window.__probe.centroidA,
-        distance: window.__probe.distance,
-        errors: [...window.__probe.errors],
+        storage: globalThis.__probe.storage,
+        textures: globalThis.__probe.textures,
+        pipelines: globalThis.__probe.pipelines,
+        centroidA: globalThis.__probe.centroidA,
+        distance: globalThis.__probe.distance,
+        errors: [...globalThis.__probe.errors],
       }));
 
     await settle();
@@ -142,7 +142,7 @@ Deno.test("viewer annotations", async () => {
     );
 
     // Re-anchor the label to the other selection: no errors, still rendering.
-    await page.evaluate(() => window.__probe.setLabel("b"));
+    await page.evaluate(() => globalThis.__probe.setLabel("b"));
     await settle();
     await settle();
     const moved = await snap();
