@@ -454,15 +454,16 @@ Deno.test("electric fields", async () => {
     });
 
     // 13. Throughput at the plan's budget case: a 128³ grid (timed after
-    //     the settling recomputes, so pipelines are warm).
+    //     the settling recomputes, so pipelines are warm). A software
+    //     adapter (CI SwiftShader) sets MOLGPU_SKIP_TIMING: ~1e11 pairs there
+    //     would take hours and measure nothing about real hardware.
     report.states.timing = [];
-    for (
-      const [atoms, physics] of [
-        [5000, {}],
-        [50000, {}],
-        [50000, { model: "debye" }],
-      ]
-    ) {
+    const timingCases = Deno.env.get("MOLGPU_SKIP_TIMING") === "1" ? [] : [
+      [5000, {}],
+      [50000, {}],
+      [50000, { model: "debye" }],
+    ];
+    for (const [atoms, physics] of timingCases) {
       await update({ mode: "none", target: [0, 0, 0], radius: 40 });
       await update({ mode: "perf", perfAtoms: atoms, physics, phase: 0 });
       await ready();

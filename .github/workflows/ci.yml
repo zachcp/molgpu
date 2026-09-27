@@ -20,7 +20,10 @@ jobs:
 
   webgpu:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 60
+    env:
+      # SwiftShader: skip hardware throughput timing (correctness still runs).
+      MOLGPU_SKIP_TIMING: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: denoland/setup-deno@v2
@@ -33,7 +36,7 @@ jobs:
           for suite in packages/viewer/test/run-*.mjs \
             packages/fields/test/run-browser.mjs; do
             echo "::group::$suite"
-            deno test -A "$suite" || failed+=("$suite")
+            timeout 15m deno test -A "$suite" || failed+=("$suite")
             echo "::endgroup::"
           done
           if ((${#failed[@]})); then
