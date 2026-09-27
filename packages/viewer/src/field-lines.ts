@@ -30,6 +30,7 @@ import { useRepaint } from "./internal/use-repaint.ts";
 import { useBindingProbe } from "./internal/use-binding-probe.ts";
 import { viewer } from "./internal/elements.ts";
 import type { SliceStops } from "./volume-slice.ts";
+import { colorRampWgsl } from "./internal/color-ramp.ts";
 
 const STORAGE = 0x0080;
 const UNIFORM = 0x0040;
@@ -40,12 +41,6 @@ const COPY_DST = 0x0008;
 export const fieldLinesTesting: {
   last: { buffer: GPUBuffer; vertices: number; generation: number } | null;
 } = { last: null };
-
-const f32 = (x: number): string => {
-  const s = `${Math.fround(x)}`;
-  return /[.e]/.test(s) ? s : `${s}.0`;
-};
-const vec4 = (c: readonly number[]) => `vec4<f32>(${c.map(f32).join(", ")})`;
 
 const DEFAULT_STOPS: SliceStops = [
   [0, [0.25, 0.35, 1, 1]],
@@ -67,17 +62,7 @@ const VERTEX_WIDTHS = wgsl`
 `;
 /** Colour by |E| through the ramp, or flat; stopped vertices are clear. */
 function rampWgsl(stops: SliceStops | null): string {
-  let ramp = "  return vec4<f32>(1.0);";
-  if (stops) {
-    ramp = `  if (x <= ${f32(stops[0][0])}) { return ${vec4(stops[0][1])}; }\n`;
-    for (let i = 1; i < stops.length; i++) {
-      const [t0, c0] = stops[i - 1], [t1, c1] = stops[i];
-      ramp += `  if (x <= ${f32(t1)}) { return mix(${vec4(c0)}, ${
-        vec4(c1)
-      }, (x - ${f32(t0)}) / ${f32(Math.max(t1 - t0, 1e-12))}); }\n`;
-    }
-    ramp += `  return ${vec4(stops[stops.length - 1][1])};`;
-  }
+  const ramp = colorRampWgsl(stops);
   return `@link fn getVertex(i: u32) -> vec4<f32>;
 @link fn getRange() -> vec2<f32>;
 @link fn getTint() -> vec4<f32>;
