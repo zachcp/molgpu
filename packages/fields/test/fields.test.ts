@@ -17,12 +17,15 @@ import {
   curve,
   evaluate,
   linear,
+  readsNearestVolume,
+  sampleVolumeGradientWgsl,
   SCALAR,
   STRING,
   volumeSample,
 } from "../src/index.ts";
+import { byPotential } from "../src/index.ts";
 import type { Color } from "../src/index.ts";
-import { createVolume, withAttributes } from "@molgpu/table";
+import { createVolume, createVolumeGrid, withAttributes } from "@molgpu/table";
 import { structure } from "./fixture.ts";
 
 const RED: Color = [1, 0, 0, 1],
@@ -312,4 +315,80 @@ Deno.test("volumeSample rejects non-volumes and multi-component volumes", () => 
     components: 3,
   });
   assertThrows(() => volumeSample(vector), TypeError, "volumeComponent");
+});
+
+Deno.test("volumeSample() binds the nearest volume by grid and evaluates with { volume }", () => {
+  const data = structure();
+  const volume = createVolume({
+    values: Float32Array.from([0, 10, 20, 30, 0, 10, 20, 30]),
+    dims: [4, 2, 1],
+    transform: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, -1, 0, 0, 1],
+  });
+  const nearest = volumeSample();
+  assert(readsNearestVolume(nearest));
+  assert(readsNearestVolume(linear(nearest, { domain: [0, 1] })));
+  assert(!readsNearestVolume(volumeSample(volume)));
+  assert(!readsNearestVolume(constant(1)));
+  // Compiling needs the nearest grid; the viewer passes it.
+  assertThrows(() => compile(nearest), TypeError, "options.volume");
+  const grid = createVolumeGrid({
+    dims: volume.dims,
+    transform: volume.transform,
+  });
+  const compiled = compile(nearest, { target: "link", volume: grid });
+  assertEquals(compiled.bindings.map((b) => b.id), [
+    "positions",
+    "volume:nearest",
+  ]);
+  assertEquals(compiled.bindings[1].volume, undefined);
+  assertThrows(() => compiled.bindings[1].fill(data), TypeError, "viewer");
+  // Two samples of the nearest volume share one binding.
+  const twice = compile(
+    linear(nearest, { domain: [0, 30], range: [0, 1] }),
+    { target: "link", volume: grid },
+  );
+  assertEquals(twice.bindings.length, 2);
+  // CPU parity needs an explicit snapshot.
+  assertThrows(() => evaluate(nearest, data), TypeError, "{ volume }");
+  assertEquals(Array.from(numeric(evaluate(nearest, data, { volume }))), [
+    10,
+    20,
+    30,
+    0,
+  ]);
+});
+
+Deno.test("byPotential is red-white-blue over ±range of the sampled potential", () => {
+  const data = structure();
+  // Atoms at x = 0..3 sample -15, 0, 15 and outside (0).
+  const volume = createVolume({
+    values: Float32Array.from([-30, -15, 0, 15, -30, -15, 0, 15]),
+    dims: [4, 2, 1],
+    transform: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, -1, 0, 0, 1],
+  });
+  // byCharge's (Mol*'s) stops: red, white, blue.
+  const red = [191 / 255, 34 / 255, 34 / 255, 1].map(Math.fround);
+  const blue = [51 / 255, 97 / 255, 225 / 255, 1].map(Math.fround);
+  const colors = numeric(evaluate(byPotential({ volume }), data));
+  assertEquals(Array.from(colors.subarray(0, 4)), red);
+  assertEquals(Array.from(colors.subarray(4, 8)), [1, 1, 1, 1]);
+  assertEquals(Array.from(colors.subarray(8, 12)), blue);
+  assertEquals(Array.from(colors.subarray(12, 16)), [1, 1, 1, 1]);
+  // Half of range 30 is halfway from red to white.
+  const narrow = numeric(evaluate(byPotential({ volume, range: 30 }), data));
+  assert(near(narrow[1], (red[1] + 1) / 2, 1e-5));
+  assert(readsNearestVolume(byPotential()));
+  assertThrows(() => byPotential({ range: 0 }), TypeError);
+});
+
+Deno.test("sampleVolumeGradientWgsl declares a sampler and a zero-at-faces gradient", () => {
+  const grid = createVolumeGrid({
+    dims: [4, 3, 2],
+    transform: [0.5, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
+  });
+  const wgsl = sampleVolumeGradientWgsl(grid, "grad", "read");
+  assertMatch(wgsl, /fn grad_sample\(p: vec3<f32>\) -> f32/);
+  assertMatch(wgsl, /fn grad\(p: vec3<f32>\) -> vec3<f32>/);
+  assertMatch(wgsl, /let h = 0\.25;/);
+  assertMatch(wgsl, /return vec3<f32>\(0\.0\);/);
 });

@@ -6,6 +6,36 @@ All notable changes to `@molgpu/viewer` are recorded here. The format follows
 
 ## [Unreleased]
 
+- **Changed (advanced):** kernel-backed coordinate streams (`Trajectory`,
+  `Transform`, `NormalMode`, `WobbleCoordinates`) now publish `ready: false`
+  until their kernel's first dispatch lands, then advance `generation` again.
+  `generation` is an opaque, increasing content counter: do not map it to a
+  frame index. `<Superpose>`, `<Unwrap>` and `<EField>` wait for `ready` instead
+  of computing from a zero-filled buffer; `Coordinates.mayStartUnfilled` and
+  EField's settling timers are removed.
+
+- Add experimental `<EField>`: the Coulomb potential of the nearest coordinates
+  and a charge column (default `partialCharge`), summed exactly on the GPU onto
+  a locked grid and provided as a live Volume in kT/e. Vacuum, ε = 4r (default)
+  and Debye–Hückel models; `maxSamples` and `maxPairs` budgets throw before
+  allocation. It recomputes per coordinate generation, one computation at a time
+  (latest wins), with no readback.
+- Add experimental `<FieldLines>` (RK4 streamlines of E = −∇φ, integrated on the
+  GPU per volume generation) and `<FieldArrows>` (E arrows in a slice plane;
+  moving the plane is a uniform write).
+- `<Surface color>` accepts a position-only Field, such as `byPotential()`,
+  sampled `sampleOffset` Å (default 1.4) along each vertex normal.
+- Add `useVolumeSnapshot()`: CPU samples of the nearest volume, throttled for a
+  computed one. `<Isosurface>` meshes from it.
+- **Changed (advanced):** `VolumeContextValue` is now
+  `{ grid, source,
+  generation, range, volume, snapshot, subscribe }`; `volume`
+  is null for a computed volume, and `grid` keeps its identity for an equal
+  grid, so `<VolumeSlice>` no longer recompiles for a new `VolumeData` on the
+  same grid. `VolumeContext` defaults to null instead of being required.
+- Coordinate snapshots use a shared `ThrottledReadback`; behaviour and counter
+  names are unchanged.
+
 - Add experimental `<Transform matrix select>` with a CPU reference in
   `@molgpu/dynamics`. Matrix curves update the GPU output without re-uploading
   structure positions; selection masks stay in topology atom order.

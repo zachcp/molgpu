@@ -8,7 +8,14 @@ import {
   useAwait,
   useMemo,
 } from "@use-gpu/live";
-import { VolumeContext } from "./volume-context.ts";
+import {
+  useStableGrid,
+  VolumeContext,
+  type VolumeContextValue,
+} from "./volume-context.ts";
+
+const noop = () => {};
+const noSubscription = () => noop;
 import { useVolumeSource } from "./internal/volume-buffers.ts";
 import { live, viewer } from "./internal/elements.ts";
 
@@ -30,10 +37,22 @@ const VolumeProvider: LC<{ volume: VolumeData; children: LiveElement }> = (
   { volume, children },
 ) => {
   const source = useVolumeSource(volume);
-  const value = useMemo(() => Object.freeze({ volume, source }), [
-    volume,
-    source,
-  ]);
+  const grid = useStableGrid(volume);
+  const value = useMemo<VolumeContextValue>(() => {
+    const { min, max } = volume.stats;
+    return Object.freeze({
+      grid,
+      source,
+      generation: 1,
+      range: Object.freeze([min, max > min ? max : min + 1]) as [
+        number,
+        number,
+      ],
+      volume,
+      snapshot: volume,
+      subscribe: noSubscription,
+    });
+  }, [volume, source, grid]);
   return provide(VolumeContext, value, children);
 };
 

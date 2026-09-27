@@ -187,6 +187,18 @@ export interface VolumeInput {
   /** Unit label for the values, e.g. "e/Å³" or "kT/e". */
   readonly unit?: string;
 }
+/**
+ * The geometry of a volume without its samples: what a GPU sampler bakes in.
+ * Every `VolumeData` is a `VolumeGrid`; a computed volume (whose samples live
+ * only on the GPU) publishes just this.
+ */
+export interface VolumeGrid {
+  readonly dims: readonly [number, number, number];
+  /** Column-major 4×4 affine from grid index to Å. */
+  readonly transform: Float32Array;
+  readonly components: 1 | 3;
+  readonly unit?: string;
+}
 /** A validated, immutable grid of samples with its index-to-world affine. */
 export interface VolumeData {
   readonly values: Float32Array;

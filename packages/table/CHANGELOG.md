@@ -6,6 +6,12 @@ All notable changes to `@molgpu/table` are recorded here. The format follows
 
 ## [Unreleased]
 
+- Add `VolumeGrid` and `createVolumeGrid` for volumes whose samples live on the
+  GPU; the transform helpers accept a grid.
+- Add `sampleVolumeGradient` and `volumeGradientStep`: the world-space gradient
+  of the trilinear sampler by central differences, zero within a step of the
+  boundary.
+
 - `frameSecondaryStructure(data, trajectory, { rows, maxBytes })` runs DSSP on
   integer trajectory frames read from `TrajectoryData.source`, cached with a
   byte cap; `timeline(frames)` returns an SS-vs-time matrix (Phase 15, efv.8).

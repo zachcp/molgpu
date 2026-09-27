@@ -19,6 +19,8 @@
 // - uploadBytes: bytes handed to viewer-owned GPU sources for upload.
 // - bindingUpdates: a representation forwarded changed style values (colour,
 //   alpha, size, clock) to its layer bindings.
+// - shaderBuilds: a representation generated a new WGSL module (a volume
+//   slice's sampler, a field-line integrator), e.g. for a new grid.
 // Each is also recorded per label as `detail["<counter>:<label>"]`.
 // This module has no Live/GPU imports so pure kernels can call it under plain
 // `deno test`; the Live hook lives in ./use-binding-probe.ts.
@@ -30,6 +32,7 @@ const NAMES = [
   "allocations",
   "uploadBytes",
   "bindingUpdates",
+  "shaderBuilds",
 ] as const;
 /** One of the work counters (see the vocabulary above). */
 export type CounterName = typeof NAMES[number];

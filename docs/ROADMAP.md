@@ -287,7 +287,9 @@ cell list. Unblocks fine secondary-structure selection flags deferred from Phase
 `<EField>` computes potential and field on a grid by direct Coulomb summation
 and outputs a Volume, so isosurfaces, slices and `volumeSample` work unchanged.
 Adds `<FieldLines>` and `<FieldArrows>`; recomputes when coordinates or charges
-change.
+change. Delivered: [plan](findings/2026-09-27-efield-plan.md),
+[gate](findings/2026-09-27-phase16-gate.md). `<MField>` was dropped
+([spike](findings/2026-09-27-mfield-spike.md)).
 
 ## Phase 17 — Stateful dynamics, elastic network first
 

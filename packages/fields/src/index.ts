@@ -19,6 +19,7 @@ import {
   sampleVolume,
   type StructureData,
   type VolumeData,
+  type VolumeGrid,
 } from "@molgpu/table";
 import { sampleVolumeWgsl } from "./volume.ts";
 import type {
@@ -73,7 +74,11 @@ type FieldNode =
     readonly policy: "fallback" | "fail";
     readonly fallback: number | Color | null;
   })
-  | (Field & { readonly kind: "volumeSample"; readonly volume: VolumeData })
+  | (Field & {
+    readonly kind: "volumeSample";
+    /** Null: the nearest volume, bound by the viewer (compile's `volume` option). */
+    readonly volume: VolumeData | null;
+  })
   | (Field & {
     readonly kind: "curve";
     readonly table: readonly (readonly [number, number])[];
@@ -88,6 +93,8 @@ interface EmitContext {
   readonly bindings: PendingBinding[];
   readonly helpers: string[];
   nextHelper: number;
+  /** Grid of the nearest volume, for argument-free `volumeSample()`. */
+  readonly nearest?: VolumeGrid;
 }
 
 function fail(field: string, message: string): never {
@@ -438,8 +445,21 @@ const volumeId = (volume: VolumeData): number => {
  * inputs: `positions` (vec3 per atom; filled 4-strided for the raw target) and `volume:<n>` (the
  * samples; its binding carries the `volume`), so the viewer can bind existing
  * sources instead of uploading a per-row colour.
+ *
+ * Without an argument it samples the nearest viewer volume (`<Volume>` or
+ * `<EField>`): the binding is `volume:nearest`, `compile` takes that volume's
+ * grid as `options.volume`, and the viewer binds its live samples. That form
+ * is GPU-only; `evaluate` throws and names the explicit form.
  */
-export function volumeSample(volume: VolumeData): Field {
+export function volumeSample(volume?: VolumeData): Field {
+  if (volume === undefined) {
+    return field({
+      kind: "volumeSample",
+      type: SCALAR,
+      domain: "atom",
+      volume: null,
+    });
+  }
   if (
     !volume || !(volume.values instanceof Float32Array) ||
     !Array.isArray(volume.dims) || !volume.transform
@@ -489,10 +509,16 @@ const assertField = (f: unknown, where: string): void => {
 
 const wrap01 = (x: number): number => x - Math.floor(x);
 
+interface RowEnv {
+  readonly t?: number;
+  /** CPU samples for argument-free `volumeSample()`. */
+  readonly volume?: VolumeData;
+}
+
 function rowValue(
   node: FieldNode,
   data: StructureData,
-  t: number | undefined,
+  env: RowEnv,
   row: number,
 ): Value {
   switch (node.kind) {
@@ -507,20 +533,20 @@ function rowValue(
         node.lift ? data.topology.atoms.residue[row] : row
       ];
     case "categorical": {
-      const key = rowValue(node.input, data, t, row) as number;
+      const key = rowValue(node.input, data, env, row) as number;
       for (const [category, v] of node.table) {
         if (Math.abs(key - category) < 0.5) return v;
       }
       return node.fallback;
     }
     case "linear": {
-      let u = ((rowValue(node.input, data, t, row) as number) - node.lo) /
+      let u = ((rowValue(node.input, data, env, row) as number) - node.lo) /
         (node.hi - node.lo);
       if (u < 0 || u > 1) {
         if (node.overflow === "fail") {
           fail(
             "linear",
-            `input ${rowValue(node.input, data, t, row)} outside domain`,
+            `input ${rowValue(node.input, data, env, row)} outside domain`,
           );
         }
         u = node.overflow === "wrap" ? wrap01(u) : Math.min(1, Math.max(0, u));
@@ -530,7 +556,7 @@ function rowValue(
     case "colormap":
       return sampleColor(
         node.table,
-        rowValue(node.input, data, t, row) as number,
+        rowValue(node.input, data, env, row) as number,
       );
     case "annotation": {
       if (node.missing && !node.missing[row]) {
@@ -550,11 +576,18 @@ function rowValue(
       return node.values[row];
     }
     case "curve":
-      return sampleScalar(node.table, t ?? 0, node.overflow);
+      return sampleScalar(node.table, env.t ?? 0, node.overflow);
     case "volumeSample": {
+      const volume = node.volume ?? env.volume;
+      if (!volume) {
+        fail(
+          "volumeSample",
+          "volumeSample() samples the nearest viewer volume; evaluate it with { volume } (e.g. from useVolumeSnapshot) or pass a VolumeData",
+        );
+      }
       const p = data.positions;
       return sampleVolume(
-        node.volume,
+        volume,
         p[row * 3],
         p[row * 3 + 1],
         p[row * 3 + 2],
@@ -624,7 +657,8 @@ export function evaluate(
   ctx: EvalContext = {},
 ): Float32Array | string[] {
   const f = field as FieldNode;
-  const { t, domain } = ctx;
+  const { domain } = ctx;
+  const env: RowEnv = { t: ctx.t, volume: ctx.volume };
   assertField(f, "evaluate.field");
   const dom = reconcileDomain(f.domain, domain ?? "any", "evaluate");
   if (dom === "any") {
@@ -634,13 +668,13 @@ export function evaluate(
   if (f.type === STRING) {
     return Array.from(
       { length: n },
-      (_, row) => rowValue(f, data, t, row) as string,
+      (_, row) => rowValue(f, data, env, row) as string,
     );
   }
   const c = f.type.components;
   const out = new Float32Array(n * c);
   for (let row = 0; row < n; row++) {
-    const v = rowValue(f, data, t, row);
+    const v = rowValue(f, data, env, row);
     if (c === 1) out[row] = v as number;
     else out.set(v as Color, row * c);
   }
@@ -665,10 +699,15 @@ const vec4 = (c: readonly number[]): string =>
  */
 export function compile(
   field: Field,
-  options: { domain?: Domain; target?: Target } = {},
+  options: {
+    domain?: Domain;
+    target?: Target;
+    /** The grid argument-free `volumeSample()` samples (the viewer's nearest volume). */
+    volume?: VolumeGrid;
+  } = {},
 ): Compiled {
   const f = field as FieldNode;
-  const { domain, target = "raw" } = options;
+  const { domain, target = "raw", volume: nearest } = options;
   assertField(f, "compile.field");
   if (!numeric(f.type)) {
     fail("compile", "string fields are CPU-only and do not lower to WGSL");
@@ -677,7 +716,12 @@ export function compile(
     fail("compile.target", "expected raw or link");
   }
   const dom = reconcileDomain(f.domain, domain ?? "any", "compile");
-  const ctx: EmitContext = { bindings: [], helpers: [], nextHelper: 0 };
+  const ctx: EmitContext = {
+    bindings: [],
+    helpers: [],
+    nextHelper: 0,
+    ...(nearest ? { nearest } : {}),
+  };
   const { expr, type } = emit(f, ctx);
   const accessors = ctx.bindings.map((b) => accessorDecl(b, target)).join("\n");
   const helpers = ctx.helpers.join("\n");
@@ -898,25 +942,47 @@ function emit(
         }
         return out;
       });
-      const binding = ctx.bindings.length;
-      const read = `field_get${binding}`;
       const { volume } = node;
-      ctx.bindings.push({
-        id: `volume:${volumeId(volume)}`,
-        binding,
-        kind: "buffer",
-        wgslType: "f32",
-        fill: (() => volume.values) as Binding["fill"],
-        name: read,
-        volume,
-      });
+      const grid = volume ?? ctx.nearest;
+      if (!grid) {
+        fail(
+          "compile",
+          "volumeSample() needs the nearest volume's grid (options.volume); the viewer supplies it under <Volume> or <EField>",
+        );
+      }
+      const id = volume ? `volume:${volumeId(volume)}` : "volume:nearest";
+      const existing = ctx.bindings.find((b) => b.id === id);
+      const binding = existing?.binding ?? ctx.bindings.length;
+      const read = existing?.name ?? `field_get${binding}`;
+      if (!existing) {
+        ctx.bindings.push({
+          id,
+          binding,
+          kind: "buffer",
+          wgslType: "f32",
+          fill: (volume ? () => volume.values : () =>
+            fail(
+              "volumeSample",
+              "the nearest volume's samples are bound by the viewer, not filled",
+            )) as Binding["fill"],
+          name: read,
+          ...(volume ? { volume } : {}),
+        });
+      }
       const name = `h_volume${ctx.nextHelper++}`;
-      ctx.helpers.push(sampleVolumeWgsl(volume, name, read));
+      ctx.helpers.push(sampleVolumeWgsl(grid, name, read));
       return { expr: `${name}(${position})`, type: SCALAR };
     }
     default:
       return fail("compile", `unknown field kind ${(node as Field).kind}`);
   }
+}
+
+/** True when `field` contains an argument-free `volumeSample()`. */
+export function readsNearestVolume(field: Field): boolean {
+  const node = field as FieldNode;
+  if (node.kind === "volumeSample") return node.volume === null;
+  return "input" in node && readsNearestVolume(node.input);
 }
 
 /** Bake an annotation's values + missing policy into a dense f32 array for GPU. */
@@ -944,7 +1010,7 @@ function bakeAnnotation(
   return out;
 }
 
-export { sampleVolumeWgsl } from "./volume.ts";
+export { sampleVolumeGradientWgsl, sampleVolumeWgsl } from "./volume.ts";
 
 // Built-in colour presets composed from the primitives above.
 export {
@@ -952,6 +1018,7 @@ export {
   byChain,
   byCharge,
   byElement,
+  byPotential,
   bySecondaryStructure,
   bySeq,
 } from "./builtins.ts";

@@ -8,7 +8,7 @@ import type {
 } from "./types.ts";
 import { use, useAwait, useMemo } from "@use-gpu/live";
 import { FaceLayer } from "@use-gpu/workbench";
-import { useVolume } from "./volume-context.ts";
+import { useVolumeSnapshot } from "./volume-context.ts";
 import { type ColumnSpec, withColumns } from "./internal/representation.ts";
 import {
   applyOpacity,
@@ -23,12 +23,13 @@ import { useRepaint } from "./internal/use-repaint.ts";
 import { useBindingProbe } from "./internal/use-binding-probe.ts";
 
 /**
- * An isosurface of the nearest `<Volume>`, extracted on the CPU with
+ * An isosurface of the nearest `<Volume>` or `<EField>`, extracted on the CPU with
  * @molgpu/geo's marching cubes and placed through the volume's full
  * index-to-world affine (sheared and rotated grids included). `level` is an
  * absolute isovalue, or `{ sigma: k }` for `mean + k * sigma` of the volume's
  * statistics; it defaults to `{ sigma: 1 }`. Only the volume and the resolved
- * level schedule a remesh (cancellable, latest wins); `color`, `opacity` and
+ * level schedule a remesh (cancellable, latest wins); under a computed volume
+ * that is each CPU snapshot (4 Hz and once after it stops changing); `color`, `opacity` and
  * `material` are layer bindings and never do. Samples below the level are
  * inside, so normals face decreasing values.
  */
@@ -57,20 +58,26 @@ export const Isosurface: ViewerComponent<
   useRepaint();
   useBindingProbe("isosurface", color, opacity);
   checkOpacity(opacity, "Isosurface");
-  const { volume } = useVolume();
-  const iso = volumeLevel(volume, level);
+  // A computed volume (<EField>) reaches marching cubes through throttled
+  // snapshots; a loaded <Volume> returns its own data at once.
+  const volume = useVolumeSnapshot();
+  const iso = volume ? volumeLevel(volume, level) : null;
   const drawColor = useMemo(() => applyOpacity(color, opacity), [
     color,
     opacity,
   ]);
   const drawMode = modeProps(mode, flatAlpha(color, false) * opacity);
   const [mesh, failure, pending] = useAwait(
-    (cancelled: () => boolean) =>
-      runGeometryJob(() => buildIsosurface(volume, iso), cancelled),
+    volume && iso !== null
+      ? (cancelled: () => boolean) =>
+        runGeometryJob(() => buildIsosurface(volume, iso), cancelled)
+      : null,
     [volume, iso],
   );
 
-  if (pending) return typeof loading === "function" ? loading() : loading;
+  if (!volume || pending) {
+    return typeof loading === "function" ? loading() : loading;
+  }
   if (failure) return typeof error === "function" ? error(failure) : error;
   if (!mesh) return null;
 

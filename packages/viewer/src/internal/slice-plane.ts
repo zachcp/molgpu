@@ -1,7 +1,7 @@
 // Pure plane math for <VolumeSlice>: a world-space frame that covers the
 // volume, from a grid-axis or world plane. No Live or GPU dependency.
 import {
-  type VolumeData,
+  type VolumeGrid,
   volumeIndexToWorld,
   volumeInverseTransform,
 } from "@molgpu/table";
@@ -51,7 +51,7 @@ const finite3 = (a: unknown, what: string): readonly number[] => {
 
 /** World-space frame for `plane` over `volume`. */
 export function slicePlaneFrame(
-  volume: VolumeData,
+  volume: VolumeGrid,
   plane: SlicePlane,
 ): SliceFrame {
   const [nx, ny, nz] = volume.dims;

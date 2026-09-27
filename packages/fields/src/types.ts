@@ -24,6 +24,8 @@ export type Color = readonly [number, number, number, number];
 export interface EvalContext {
   t?: number;
   domain?: Domain;
+  /** The volume an argument-free `volumeSample()` reads on the CPU. */
+  volume?: VolumeData;
 }
 
 export type Target = "raw" | "link";

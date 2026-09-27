@@ -2,6 +2,7 @@
 // index-to-world affine. See docs/findings/2026-09-26-volume-data-plan.md.
 import type {
   VolumeData,
+  VolumeGrid,
   VolumeInput,
   VolumeLevel,
   VolumeStats,
@@ -30,10 +31,18 @@ export function validateVolume<T extends VolumeInput>(
   input: T,
   options: { maxSamples?: number } = {},
 ): T {
+  return check(input, options, true);
+}
+
+function check<T extends Omit<VolumeInput, "values"> & { values?: unknown }>(
+  input: T,
+  options: { maxSamples?: number },
+  withValues: boolean,
+): T {
   const { maxSamples = MAX_VOLUME_SAMPLES } = options;
   if (!input || typeof input !== "object") fail("volume", "expected object");
   const { values, dims, transform, components = 1 } = input;
-  if (!(values instanceof Float32Array)) {
+  if (withValues && !(values instanceof Float32Array)) {
     fail("volume.values", "expected Float32Array");
   }
   if (
@@ -52,15 +61,17 @@ export function validateVolume<T extends VolumeInput>(
         `${maxSamples}; pass a larger maxSamples to accept it (no implicit downsampling)`,
     );
   }
-  if (values.length !== samples * components) {
-    fail(
-      "volume.values",
-      `expected length ${samples * components} for dims × components`,
-    );
-  }
-  for (let i = 0; i < values.length; i++) {
-    if (!Number.isFinite(values[i])) {
-      fail(`volume.values[${i}]`, "expected finite number");
+  if (values instanceof Float32Array) {
+    if (values.length !== samples * components) {
+      fail(
+        "volume.values",
+        `expected length ${samples * components} for dims × components`,
+      );
+    }
+    for (let i = 0; i < values.length; i++) {
+      if (!Number.isFinite(values[i])) {
+        fail(`volume.values[${i}]`, "expected finite number");
+      }
     }
   }
   if (
@@ -135,13 +146,32 @@ export function createVolume(
   });
 }
 
-const inverseCache = new WeakMap<VolumeData, Float64Array>();
+/**
+ * Validate a grid without samples (dims, transform, components, unit) and wrap
+ * it as a frozen `VolumeGrid`, for a volume whose samples are computed on the
+ * GPU. Oversize grids throw a `RangeError`, as in `createVolume`.
+ */
+export function createVolumeGrid(
+  input: Omit<VolumeInput, "values">,
+  options: { maxSamples?: number } = {},
+): VolumeGrid {
+  check(input, options, false);
+  const { dims, transform, components = 1, unit } = input;
+  return Object.freeze({
+    dims: Object.freeze([dims[0], dims[1], dims[2]]) as VolumeGrid["dims"],
+    transform: Float32Array.from(transform),
+    components,
+    ...(unit === undefined ? {} : { unit }),
+  });
+}
+
+const inverseCache = new WeakMap<VolumeGrid, Float64Array>();
 
 /**
  * World (Å) to fractional grid index: the inverse of `volume.transform`,
  * column-major, computed in double precision and cached per volume.
  */
-export function volumeInverseTransform(volume: VolumeData): Float64Array {
+export function volumeInverseTransform(volume: VolumeGrid): Float64Array {
   const hit = inverseCache.get(volume);
   if (hit) return hit;
   const m = volume.transform;
@@ -166,7 +196,7 @@ export function volumeInverseTransform(volume: VolumeData): Float64Array {
 
 /** World position (Å) of fractional grid index `(i, j, k)`. */
 export function volumeIndexToWorld(
-  volume: VolumeData,
+  volume: VolumeGrid,
   i: number,
   j: number,
   k: number,
@@ -181,7 +211,7 @@ export function volumeIndexToWorld(
 
 /** Fractional grid index of world position `(x, y, z)` (Å). */
 export function volumeWorldToIndex(
-  volume: VolumeData,
+  volume: VolumeGrid,
   x: number,
   y: number,
   z: number,
@@ -233,6 +263,49 @@ export function sampleVolume(
   const c01 = lerp(at(0, 0, 1), at(1, 0, 1), t[0]);
   const c11 = lerp(at(0, 1, 1), at(1, 1, 1), t[0]);
   return lerp(lerp(c00, c10, t[1]), lerp(c01, c11, t[1]), t[2]);
+}
+
+/**
+ * Gradient of `sampleVolume` in world space (value per Å) at `(x, y, z)`, by
+ * central differences along world x, y and z with step `h` (default half the
+ * shortest grid axis). Zero when any of the six samples falls outside the
+ * grid. The WGSL `sampleVolumeGradientWgsl` in @molgpu/fields matches it.
+ */
+export function sampleVolumeGradient(
+  volume: VolumeData,
+  x: number,
+  y: number,
+  z: number,
+  h: number = volumeGradientStep(volume),
+): [number, number, number] {
+  const inside = (px: number, py: number, pz: number) => {
+    const u = volumeWorldToIndex(volume, px, py, pz);
+    return u.every((c, a) => c >= -EDGE && c <= volume.dims[a] - 1 + EDGE);
+  };
+  const p = [x, y, z];
+  const out: [number, number, number] = [0, 0, 0];
+  for (let a = 0; a < 3; a++) {
+    const plus = [...p], minus = [...p];
+    plus[a] += h;
+    minus[a] -= h;
+    if (
+      !inside(plus[0], plus[1], plus[2]) ||
+      !inside(minus[0], minus[1], minus[2])
+    ) return [0, 0, 0];
+    out[a] = (sampleVolume(volume, plus[0], plus[1], plus[2]) -
+      sampleVolume(volume, minus[0], minus[1], minus[2])) / (2 * h);
+  }
+  return out;
+}
+
+/** Default central-difference step of `sampleVolumeGradient`: half the shortest axis (Å). */
+export function volumeGradientStep(volume: VolumeGrid): number {
+  const t = volume.transform;
+  return 0.5 * Math.min(
+    Math.hypot(t[0], t[1], t[2]),
+    Math.hypot(t[4], t[5], t[6]),
+    Math.hypot(t[8], t[9], t[10]),
+  );
 }
 
 /**

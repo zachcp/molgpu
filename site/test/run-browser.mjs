@@ -86,6 +86,7 @@ Deno.test("site landing page and maintained gallery routes", async () => {
         ["materials", "Materials", "1crn"],
         ["volume", "Density volume", "1crn"],
         ["charge", "Partial charge", "1crn"],
+        ["efield", "Electrostatic potential", "1crn"],
         ["figure", "Feature composition", "1crn"],
       ]
     ) {

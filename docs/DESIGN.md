@@ -83,7 +83,10 @@ published by `<Volume>`. Imported maps and computed fields (`<EField>`) both
 produce Volumes, so isosurfaces, slices and volume-sampled fields work the same
 on either (Phases 11 and 16). A volume's samples reach the GPU once per
 `VolumeData` identity, in a buffer every consumer shares; sampling (trilinear,
-zero outside) has one CPU and one WGSL implementation that agree to 1e-5.
+zero outside) has one CPU and one WGSL implementation that agree to 1e-5. A
+computed volume keeps its samples on the GPU. Consumers read its samples-free
+`VolumeGrid` and live source, and CPU consumers ask for throttled snapshots, the
+same split coordinates use.
 
 ### 2. Selections are values, not nodes
 

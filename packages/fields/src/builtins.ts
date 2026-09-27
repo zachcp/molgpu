@@ -2,7 +2,14 @@
 // primitives. There is deliberately no user-facing expression language — these
 // are the common presets (molgpu-sept-urn.3), and callers reach for the
 // primitives (categorical/linear/colormap) directly for anything else.
-import { attribute, categorical, colormap, linear } from "./index.ts";
+import type { VolumeData } from "@molgpu/table";
+import {
+  attribute,
+  categorical,
+  colormap,
+  linear,
+  volumeSample,
+} from "./index.ts";
 import type { Color, Field } from "./types.ts";
 
 type Stops = ReadonlyArray<readonly [number, Color]>;
@@ -123,6 +130,34 @@ export function byCharge(
   return colormap(
     linear(attribute(column, { domain: "atom", lift }), {
       domain,
+      overflow: "clamp",
+    }),
+    stops,
+  );
+}
+
+/**
+ * Colour by electrostatic potential: red negative, white 0, blue positive
+ * (the APBS/PyMOL convention, `byCharge`'s stops) over ±`range` (default 15, in
+ * the volume's unit: kT/e for `<EField>`'s default distance model; use about
+ * 2 for `debye`). It samples `volume` at each
+ * row's position, or the nearest viewer volume when omitted (GPU-only), so a
+ * `<Surface>` or `<Spacefill>` under `<EField>` follows the live potential.
+ */
+export function byPotential(
+  options: {
+    range?: number;
+    stops?: ReadonlyArray<readonly [number, Color]>;
+    volume?: VolumeData;
+  } = {},
+): Field {
+  const { range = 15, stops = RED_WHITE_BLUE, volume } = options;
+  if (!Number.isFinite(range) || range <= 0) {
+    throw new TypeError("@molgpu/fields byPotential: expected range > 0");
+  }
+  return colormap(
+    linear(volumeSample(volume), {
+      domain: [-range, range],
       overflow: "clamp",
     }),
     stops,

@@ -120,6 +120,9 @@ export const CoordinateKernel: LC<{
           version: generation,
           size: [upstream.count, 1],
         }),
+        // Kernel yields one compute call, and only once its pipeline has
+        // compiled. Wrap it to learn when this generation's dispatch lands;
+        // Compute's multiGather needs a single object, not an array.
         (calls: { compute?: (...args: unknown[]) => unknown }[]) => {
           const call = calls.find((item) => item?.compute);
           return call?.compute

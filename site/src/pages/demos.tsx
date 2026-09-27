@@ -45,7 +45,7 @@ export const DemosPage = () => {
       if (status) status.textContent = "Loading real 1CRN structure…";
       try {
         const crambin = await loadCrambin(crambinUrl);
-        const data = demo.id === "charge"
+        const data = demo.id === "charge" || demo.id === "efield"
           ? await loadChargedCrambin(crambin, chargesUrl)
           : crambin;
         if (cancelled) return;

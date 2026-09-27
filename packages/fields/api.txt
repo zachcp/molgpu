@@ -15,7 +15,7 @@ Compiled
 Domain
   export type Domain = "atom" | "residue";
 EvalContext
-  export interface EvalContext { t?: number; domain?: Domain }
+  export interface EvalContext { t?: number; domain?: Domain; /** The volume an argument-free `volumeSample()` reads on the CPU. */ volume?: VolumeData }
 Field
   export interface Field { readonly kind: string; readonly type: ValueType; /** 'atom' | 'residue', or 'any' for a broadcast constant/curve. */ readonly domain: Domain | "any" }
 IdentityField
@@ -48,6 +48,8 @@ byCharge
   export function byCharge(options?: { domain?: readonly [number, number]; stops?: ReadonlyArray<readonly [number, Color]>; column?: string; lift?: boolean }): Field;
 byElement
   export function byElement(fallback?: Color): Field;
+byPotential
+  export function byPotential(options?: { range?: number; stops?: ReadonlyArray<readonly [number, Color]>; volume?: VolumeData }): Field;
 bySecondaryStructure
   export function bySecondaryStructure(fallback?: Color): Field;
 bySeq
@@ -61,7 +63,7 @@ colormap
 columnRange
   export function columnRange(data: StructureData, name: string): [number, number];
 compile
-  export function compile(field: Field, options?: { domain?: Domain; target?: Target }): Compiled;
+  export function compile(field: Field, options?: { domain?: Domain; target?: Target; /** The grid argument-free `volumeSample()` samples (the viewer's nearest volume). */ volume?: VolumeGrid }): Compiled;
 constant
   export function constant(value: number | string | Color): Field;
 curve
@@ -72,9 +74,13 @@ joinAnnotation
   export function joinAnnotation<R>(data: StructureData, records: readonly R[], options: JoinOptions<R>): Field;
 linear
   export function linear(input: Field, options: { domain: readonly [number, number]; range?: readonly [number, number]; overflow?: Overflow }): Field;
+readsNearestVolume
+  export function readsNearestVolume(field: Field): boolean;
 residueIdentity
   export function residueIdentity(data: StructureData, row: number): ResidueIdentity;
+sampleVolumeGradientWgsl
+  export function sampleVolumeGradientWgsl(volume: VolumeGrid, name?: string, read?: string, h?: number): string;
 sampleVolumeWgsl
-  export function sampleVolumeWgsl(volume: VolumeData, name?: string, read?: string): string;
+  export function sampleVolumeWgsl(volume: VolumeGrid, name?: string, read?: string): string;
 volumeSample
-  export function volumeSample(volume: VolumeData): Field;
+  export function volumeSample(volume?: VolumeData): Field;
