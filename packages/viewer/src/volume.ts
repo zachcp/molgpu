@@ -9,9 +9,9 @@ import {
   useMemo,
 } from "@use-gpu/live";
 import {
+  type NearestVolume,
   useStableGrid,
   VolumeContext,
-  type VolumeContextValue,
 } from "./volume-context.ts";
 
 const noop = () => {};
@@ -38,7 +38,7 @@ const VolumeProvider: LC<{ volume: VolumeData; children: LiveElement }> = (
 ) => {
   const source = useVolumeSource(volume);
   const grid = useStableGrid(volume);
-  const value = useMemo<VolumeContextValue>(() => {
+  const value = useMemo<NearestVolume>(() => {
     const { min, max } = volume.stats;
     return Object.freeze({
       grid,

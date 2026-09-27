@@ -135,52 +135,30 @@ AttributeProducer
   export const AttributeProducer: LC<{ name: string; domain: AttributeDomain; kind: "scalar" | "code"; kernel: ShaderModule; args?: unknown[]; sources?: readonly StorageSource[]; parameterKey?: string; children?: LiveElement }>;
 AttributeSnapshot
   export interface AttributeSnapshot { readonly data: StructureData; readonly generation: number }
-Attributes
-  export type Attributes = Readonly<Record<string, ProducedAttribute>>;
-AttributesContext
-  export const AttributesContext: LiveContext<Attributes | undefined>;
 CoordinateBounds
   export interface CoordinateBounds { readonly min: readonly [number, number, number]; readonly max: readonly [number, number, number]; readonly centroid: readonly [number, number, number]; readonly count: number; readonly generation: number }
+CoordinateKernel
+  export const CoordinateKernel: LC<CoordinateKernelProps>;
+CoordinateKernelProps
+  export interface CoordinateKernelProps { /** The coordinates to transform: `useCoordinates()` of the nearest provider. */ upstream: Coordinates; /** * A WGSL compute module run once per atom (`@workgroup_size(64)`). It links * `getSize()`, then one getter per `args` entry, one per `sources` entry, and * `getInput(i) -> vec3<f32>` for the upstream position, and writes * `output[i * 3u + k]` for k = 0, 1, 2. */ shader: ShaderModule; /** Uniform values linked in order after `getSize`. */ args?: unknown[]; /** Extra storage inputs, linked after `args` and before the upstream source. * Memoized by element identity so the kernel does not re-link per render. */ sources?: readonly StorageSource[]; /** Change it whenever `args` or `sources` change the output, so the * published generation advances and snapshots refresh. */ parameterKey: string; children: LiveElement }
 CoordinateSnapshot
   export interface CoordinateSnapshot { readonly data: StructureData; readonly generation: number; readonly resource: StructureResource }
 Coordinates
   export interface Coordinates { readonly source: StorageSource; readonly count: number; readonly generation: number; /** False until an asynchronous coordinate kernel has dispatched its first output. */ readonly ready?: boolean; readonly resource: StructureResource }
-CoordinatesContext
-  export const CoordinatesContext: LiveContext<Coordinates | null | undefined>;
-GpuDsspOptions
-  export interface GpuDsspOptions { readonly generation: number; readonly data: StructureData; readonly rows: ArrayLike<number>; readonly layout: DsspLayout; /** Static calculations throw by name; live frames read one full frame on overflow. */ readonly overflow?: "static" | "frame"; readonly maxBridges?: number; /** Cancels a superseded coordinate generation before another GPU pass. */ readonly signal?: AbortSignal }
-GpuDsspResult
-  export interface GpuDsspResult { readonly codes: Uint8Array; /** f32 residue codes for AttributesContext GPU consumers; caller owns it. */ readonly codeBuffer: GPUBuffer; readonly generation: number; /** Acceptor and bend-centre rows with a direct near-threshold comparison. */ readonly nearThresholdCenters: number; readonly bridgeCount: number; readonly fallback: boolean; /** Bounded stage that required CPU recovery, when fallback is true. */ readonly fallbackReason?: string; /** Peak temporary allocation owned by this call, excluding input and output. */ readonly workingBytes: number; /** GPU-to-CPU bytes copied for this generation. */ readonly readbackBytes: number }
-IdentityCoordinates
-  export const IdentityCoordinates: LC<{ children?: LiveElement }>;
-ProducedAttribute
-  export interface ProducedAttribute { readonly source: StorageSource; readonly domain: AttributeDomain; readonly kind: "scalar" | "code"; readonly generation: number; readonly provenance: AttributeProvenance }
+NearestStructure
+  export interface NearestStructure { readonly resource: StructureResource; /** Null for an empty structure, which owns no GPU source. */ readonly sources: StructureSources | null }
+NearestVolume
+  export interface NearestVolume { /** Dims, index-to-world transform, components and unit. Stable while the grid is. */ readonly grid: VolumeGrid; /** Scalar samples, x-fastest, as a live f32 storage source. */ readonly source: StorageSource; /** Bumps whenever `source` holds new samples; 1 for a loaded volume. */ readonly generation: number; /** Default display interval (a slice's colour range). */ readonly range: readonly [number, number]; /** The CPU samples, when they exist without a readback: `<Volume>` only. */ readonly volume: VolumeData | null; /** Latest published CPU snapshot (the volume itself for `<Volume>`). */ readonly snapshot: VolumeData | null; /** Request snapshots at up to `maxHz`; returns the release. */ readonly subscribe: (maxHz: number, onPause: boolean) => () => void }
 StructureBounds
   export interface StructureBounds { readonly min: number[]; readonly max: number[]; readonly center: number[] }
-StructureContext
-  export const StructureContext: LiveContext<StructureContextValue | undefined>;
-StructureContextValue
-  export interface StructureContextValue { readonly resource: StructureResource; /** Null for an empty structure, which owns no GPU source. */ readonly sources: StructureSources | null }
 StructureResource
   export interface StructureResource { readonly data: StructureData; readonly identity: StructureData["identity"]; readonly topologyRevision: number; readonly positionsRevision: number; readonly attributesRevision: number; /** Lazily computed and cached; throws once the resource is disposed. */ readonly bounds: StructureBounds | null; dispose(): void }
 StructureSources
   export interface StructureSources { /** @deprecated Read the nearest stream with useCoordinates().source. */ readonly positions: ShaderSource; readonly radii: ShaderSource }
-TimelineContext
-  export const TimelineContext: LiveContext<number | null>;
-TrajectoryContext
-  export const TrajectoryContext: LiveContext<TrajectoryFrameState | null>;
-VolumeContext
-  export const VolumeContext: LiveContext<VolumeContextValue | null>;
-VolumeContextValue
-  export interface VolumeContextValue { /** Dims, index-to-world transform, components and unit. Stable while the grid is. */ readonly grid: VolumeGrid; /** Scalar samples, x-fastest, as a live f32 storage source. */ readonly source: StorageSource; /** Bumps whenever `source` holds new samples; 1 for a loaded volume. */ readonly generation: number; /** Default display interval (a slice's colour range). */ readonly range: readonly [number, number]; /** The CPU samples, when they exist without a readback: `<Volume>` only. */ readonly volume: VolumeData | null; /** Latest published CPU snapshot (the volume itself for `<Volume>`). */ readonly snapshot: VolumeData | null; /** Request snapshots at up to `maxHz`; returns the release. */ readonly subscribe: (maxHz: number, onPause: boolean) => () => void }
-WobbleCoordinates
-  export const WobbleCoordinates: LC<{ phase: number; amplitude?: number; children?: LiveElement }>;
 WorldSpacePointLayer
   export const WorldSpacePointLayer: LC<{ positions: ShaderSource; colors?: ShaderSource; radii: ShaderSource; count: number; scale?: number } & Omit<PointLayerProps, "positions" | "colors" | "sizes" | "count" | "depth">>;
 createStructureResource
   export function createStructureResource(data: StructureData): StructureResource;
-gpuDssp
-  export function gpuDssp(device: GPUDevice, positions: GPUBuffer, options: GpuDsspOptions): Promise<GpuDsspResult>;
 useAttributeSnapshot
   export function useAttributeSnapshot(name: string, options?: { maxHz?: number; onPause?: boolean; enabled?: boolean }): AttributeSnapshot | null;
 useCoordinateBounds
@@ -194,12 +172,12 @@ useCoordinates
 useField
   export function useField(field: Field, inputs?: Record<string, ShaderSource | number | { current: number }>, options?: { domain?: "atom" | "residue" }): ShaderSource;
 useStructure
-  export function useStructure(): StructureContextValue;
+  export function useStructure(): NearestStructure;
 useStructureResource
   export function useStructureResource(): StructureResource;
 useTimelineTime
   export function useTimelineTime(): number;
 useVolume
-  export function useVolume(): VolumeContextValue;
+  export function useVolume(): NearestVolume;
 useVolumeSnapshot
   export function useVolumeSnapshot(options?: { maxHz?: number; onPause?: boolean }): VolumeData | null;

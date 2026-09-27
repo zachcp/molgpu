@@ -37,16 +37,13 @@ import {
   type UnwrapStatus,
   useTrajectoryFrame,
 } from "@molgpu/viewer";
-import {
-  useCoordinates,
-  useCoordinateSnapshot,
-  WobbleCoordinates,
-} from "@molgpu/viewer/advanced";
+import { useCoordinates, useCoordinateSnapshot } from "@molgpu/viewer/advanced";
 import {
   enableInstrumentation,
   instrumentDevice,
   snapshotCounters,
 } from "../../src/internal/instrumentation.ts";
+import { WobbleCoordinates } from "../fixtures/wobble-coordinates.ts";
 
 enableInstrumentation();
 

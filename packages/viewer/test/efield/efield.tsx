@@ -43,11 +43,7 @@ import {
   Trajectory,
   VolumeSlice,
 } from "@molgpu/viewer";
-import {
-  createStructureResource,
-  useVolume,
-  WobbleCoordinates,
-} from "@molgpu/viewer/advanced";
+import { createStructureResource, useVolume } from "@molgpu/viewer/advanced";
 import {
   enableInstrumentation,
   snapshotCounters,
@@ -56,6 +52,7 @@ import { efieldTesting } from "../../src/efield.ts";
 import { fieldLinesTesting } from "../../src/field-lines.ts";
 import { positionsWgsl } from "../../src/field-arrows.ts";
 import { slicePlaneFrame } from "../../src/internal/slice-plane.ts";
+import { WobbleCoordinates } from "../fixtures/wobble-coordinates.ts";
 
 enableInstrumentation();
 

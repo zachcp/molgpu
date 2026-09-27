@@ -19,7 +19,7 @@ import {
 } from "@molgpu/table";
 import { structureFromBcif } from "@molgpu/io";
 import { GpuDssp, Ribbon, Structure, Transform } from "../src/index.ts";
-import { WobbleCoordinates } from "../src/wobble-coordinates.ts";
+import { WobbleCoordinates } from "./fixtures/wobble-coordinates.ts";
 import {
   enableInstrumentation,
   snapshotCounters,

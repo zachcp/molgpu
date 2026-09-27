@@ -6,6 +6,21 @@ All notable changes to `@molgpu/viewer` are recorded here. The format follows
 
 ## [Unreleased]
 
+- **Changed (advanced):** `./advanced` exposes hooks and one provider-authoring
+  component, not raw contexts.
+  - Added: `CoordinateKernel` and `CoordinateKernelProps`, the supported way to
+    write a GPU coordinate transform (previously internal).
+  - Removed: `CoordinatesContext`, `StructureContext`, `TimelineContext`,
+    `TrajectoryContext`, `VolumeContext`, `AttributesContext`, `Attributes`,
+    `ProducedAttribute`; read through `useCoordinates`, `useStructure`,
+    `useTimelineTime`, `useTrajectoryFrame`, `useVolume` and
+    `useAttributeSnapshot`.
+  - Renamed: `StructureContextValue` to `NearestStructure`, `VolumeContextValue`
+    to `NearestVolume`.
+  - Removed: `gpuDssp`, `GpuDsspOptions`, `GpuDsspResult` (use `<GpuDssp>`), and
+    the demo transforms `WobbleCoordinates` and `IdentityCoordinates` (a worked
+    example lives in `site/src/demos/coordinates.ts`).
+
 - **Changed (experimental):** the `.` entry holds components and the hooks an
   application composes with, listed explicitly (no `export type *`).
   - Moved to `./advanced`: `useCoordinateSnapshot`, `CoordinateSnapshot`,

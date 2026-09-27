@@ -180,23 +180,15 @@ may change before 0.1.0; _advanced_ — only from `@molgpu/viewer/advanced`.
 | `useTimelineTime`         | advanced     | Current timeline time.                                                                                                                                                                                                  |
 | `useAttributeSnapshot`    | advanced     | Demand-driven CPU copy of a GPU-produced attribute, with its source generation.                                                                                                                                         |
 | `AttributeSnapshot`       | advanced     | Published structure data and attribute producer generation.                                                                                                                                                             |
-| `StructureContext`        | advanced     | Live context carrying the nearest structure's resource and sources.                                                                                                                                                     |
-| `StructureContextValue`   | advanced     | `{ resource, sources }` from the structure context.                                                                                                                                                                     |
+| `CoordinateKernel`        | advanced     | Write a GPU coordinate transform: run a WGSL kernel over the upstream positions and publish the owned output with generations and snapshots.                                                                            |
+| `CoordinateKernelProps`   | advanced     | Upstream coordinates, WGSL module, args, extra storage sources, `parameterKey` and children.                                                                                                                            |
+| `NearestStructure`        | advanced     | `{ resource, sources }` returned by `useStructure`.                                                                                                                                                                     |
+| `NearestVolume`           | advanced     | Grid, GPU samples, generation, display range and CPU snapshot access returned by `useVolume`.                                                                                                                           |
 | `StructureSources`        | advanced     | Shared positions/radii shader sources.                                                                                                                                                                                  |
 | `useStructure`            | advanced     | Read the nearest `<Structure>`'s resource and sources.                                                                                                                                                                  |
-| `CoordinatesContext`      | advanced     | Live context carrying the nearest GPU coordinate stream.                                                                                                                                                                |
-| `AttributesContext`       | advanced     | Live context carrying GPU-produced attribute sources.                                                                                                                                                                   |
-| `Attributes`              | advanced     | Name-to-source map of produced attributes.                                                                                                                                                                              |
-| `ProducedAttribute`       | advanced     | GPU source, domain, kind, provenance and generation for one attribute.                                                                                                                                                  |
 | `AttributeProducer`       | advanced     | Compute a live scalar or code column for descendant fields.                                                                                                                                                             |
 | `Coordinates`             | advanced     | GPU positions source, atom count, opaque content generation, `ready` and owning resource.                                                                                                                               |
 | `useCoordinates`          | advanced     | Read the nearest coordinate stream; an empty structure returns null.                                                                                                                                                    |
-| `IdentityCoordinates`     | advanced     | Forward the nearest coordinates without allocating a GPU buffer.                                                                                                                                                        |
-| `WobbleCoordinates`       | advanced     | Example GPU coordinate transform driven by a phase and amplitude.                                                                                                                                                       |
-| `TimelineContext`         | advanced     | Live context carrying timeline time.                                                                                                                                                                                    |
-| `TrajectoryContext`       | advanced     | Live context carrying the nearest `<Trajectory>` state.                                                                                                                                                                 |
-| `VolumeContext`           | advanced     | Live context carrying the nearest `<Volume>`'s data and GPU samples.                                                                                                                                                    |
-| `VolumeContextValue`      | advanced     | `{ grid, source, generation, range, volume, snapshot, subscribe }` from the volume context.                                                                                                                             |
 | `useVolume`               | advanced     | Read the nearest `<Volume>` or `<EField>`; throws without one.                                                                                                                                                          |
 | `WorldSpacePointLayer`    | advanced     | PointLayer with GPU radii source and Ångström size conversion in a shader.                                                                                                                                              |
 | `useField`                | advanced     | Lower a field to a use.gpu shader source.                                                                                                                                                                               |
@@ -205,10 +197,7 @@ may change before 0.1.0; _advanced_ — only from `@molgpu/viewer/advanced`.
 | ---------------------- | ------------ | ---------------------------------------------------------------------------- |
 | `GpuDsspProps`         | experimental | Model, overflow policy, status callback and children.                        |
 | `GpuDsspStatus`        | experimental | Generation, directly flagged threshold centres, bridges and fallback reason. |
-| `gpuDssp`              | advanced     | Compute DSSP from a packed GPU coordinate buffer.                            |
 | `GpuDsspOverflowError` | experimental | Named static-path error for bounded GPU work.                                |
-| `GpuDsspOptions`       | advanced     | Layout, rows, generation and overflow policy.                                |
-| `GpuDsspResult`        | advanced     | Owned code buffer, CPU copy, memory counters and fallback.                   |
 
 ## Volumes
 
@@ -301,9 +290,22 @@ camera targets. `useCameraCurve()` remains a CPU resource operation; pass a
 snapshot resource when using it under a coordinate provider. The snapshot,
 selection and bounds hooks are on `@molgpu/viewer/advanced`.
 
-The [coordinate-stream gallery page](../../site/README.md) scrubs a
-`WobbleCoordinates > IdentityCoordinates` chain with live atoms and bonds,
-snapshot ribbon, and GPU focus.
+The [coordinate-stream gallery page](../../site/README.md) scrubs a wobble
+transform with live atoms and bonds, snapshot ribbon, and GPU focus.
+
+## Authoring a coordinate provider
+
+`<CoordinateKernel>` from `@molgpu/viewer/advanced` is the supported way to
+write a GPU coordinate transform. Give it the upstream coordinates
+(`useCoordinates()`), a WGSL compute module and its `args`, and a `parameterKey`
+that changes whenever the args change the output. It owns one packed output
+buffer (destroyed on unmount), advances the published generation per dispatch,
+reports `ready: false` until the first dispatch lands, and publishes CPU
+snapshots to descendants. The kernel links `getSize()`, one getter per arg, one
+per extra `sources` entry, then `getInput(i) -> vec3<f32>`, and writes
+`output[i * 3u + k]`.
+[`site/src/demos/coordinates.ts`](../../site/src/demos/coordinates.ts) is a
+complete example.
 
 ## Place in the dependency graph
 

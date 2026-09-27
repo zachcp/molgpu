@@ -15,10 +15,7 @@ import {
   TimelineProvider,
   useCoordinateFocus,
 } from "@molgpu/viewer";
-import {
-  IdentityCoordinates,
-  WobbleCoordinates,
-} from "@molgpu/viewer/advanced";
+import { WobbleCoordinates } from "./coordinates.ts";
 
 export type Scene = (data: StructureData) => unknown;
 
@@ -189,11 +186,9 @@ const ViewerRoot = (initial: ViewerState) => {
             data,
             children: use(WobbleCoordinates, {
               phase: options.time ?? 0,
-              children: use(IdentityCoordinates, {
-                children: use(StreamOrbitControls, {
-                  ...controls,
-                  children: pass(true),
-                }),
+              children: use(StreamOrbitControls, {
+                ...controls,
+                children: pass(true),
               }),
             }),
           })

@@ -29,7 +29,6 @@ import {
 } from "@molgpu/viewer";
 import type { StructureLoader, StructureProps } from "@molgpu/viewer";
 import {
-  IdentityCoordinates,
   useAttributeSnapshot,
   useCoordinateBounds,
   useCoordinates,
@@ -42,6 +41,7 @@ import { TestAttributeProducer } from "./test-attribute-producer.ts";
 import { BondVertexProbe } from "./bond-vertex-probe.ts";
 import { probe } from "./diagnostics.ts";
 import type { Mode, Phase, State } from "./diagnostics.ts";
+import { IdentityCoordinates } from "../fixtures/identity-coordinates.ts";
 
 /** One synthetic chain of carbons centred on x, owned by @molgpu/table. */
 const cluster = (

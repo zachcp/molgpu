@@ -12,7 +12,7 @@ import type { VolumeData, VolumeGrid } from "@molgpu/table";
  * The nearest volume: a `<Volume>` (samples on the CPU and GPU) or a computed
  * volume such as `<EField>` (samples on the GPU, CPU copies on demand).
  */
-export interface VolumeContextValue {
+export interface NearestVolume {
   /** Dims, index-to-world transform, components and unit. Stable while the grid is. */
   readonly grid: VolumeGrid;
   /** Scalar samples, x-fastest, as a live f32 storage source. */
@@ -30,11 +30,12 @@ export interface VolumeContextValue {
 }
 
 /** Null outside any volume, so optional readers (field lowering) can ask. */
-export const VolumeContext: LiveContext<VolumeContextValue | null> =
-  makeContext<VolumeContextValue | null>(null, "VolumeContext");
+export const VolumeContext: LiveContext<NearestVolume | null> = makeContext<
+  NearestVolume | null
+>(null, "VolumeContext");
 
 /** Read the nearest volume; throws without one. */
-export function useVolume(): VolumeContextValue {
+export function useVolume(): NearestVolume {
   const value = useContext(VolumeContext);
   if (!value) {
     throw new Error("useVolume() requires a <Volume> or <EField> ancestor");

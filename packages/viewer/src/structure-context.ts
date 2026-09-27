@@ -33,15 +33,15 @@ export interface StructureSources {
   readonly radii: ShaderSource;
 }
 
-export interface StructureContextValue {
+export interface NearestStructure {
   readonly resource: StructureResource;
   /** Null for an empty structure, which owns no GPU source. */
   readonly sources: StructureSources | null;
 }
 
 /** Nearest Structure wins; no global dataset registry is created. */
-export const StructureContext: LiveContext<StructureContextValue | undefined> =
-  makeContext<StructureContextValue | undefined>(undefined, "StructureContext");
+export const StructureContext: LiveContext<NearestStructure | undefined> =
+  makeContext<NearestStructure | undefined>(undefined, "StructureContext");
 
 const ROOT_POSITION_ERROR =
   "Root positions are stale under a coordinate provider; useCoordinates() or useCoordinateSnapshot() instead";
@@ -53,12 +53,12 @@ const guardRootPositions = buildEnv === undefined || !!(
 );
 const guardedContexts = new WeakMap<
   StructureResource,
-  { sources: StructureSources | null; value: StructureContextValue }
+  { sources: StructureSources | null; value: NearestStructure }
 >();
 
 function guardedStructure(
-  context: StructureContextValue,
-): StructureContextValue {
+  context: NearestStructure,
+): NearestStructure {
   const { resource, sources } = context;
   const cached = guardedContexts.get(resource);
   if (cached?.sources === sources) return cached.value;
@@ -185,7 +185,7 @@ export function useStructureResource(): StructureResource {
 
 /** Returns { resource, sources }; sources is null for an empty structure.
  * Missing context is a composition mistake, not a renderable empty state. */
-export function useStructure(): StructureContextValue {
+export function useStructure(): NearestStructure {
   const context = useContext(StructureContext);
   if (!context) {
     throw new Error("useStructure() requires a <Structure> ancestor");
