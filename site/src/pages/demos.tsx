@@ -100,6 +100,10 @@ export const DemosPage = () => {
           host.dataset.atomCount = String(data.topology.atoms.count);
           host.dataset.residueCount = String(data.topology.residues.count);
           host.dataset.worldLight = String(!!demo.options?.worldLight);
+          if (demo.id === "surface") {
+            host.dataset.surfaceColorMode = surfaceColorMode;
+            host.dataset.materialMode = materialMode;
+          }
           if (demo.id === "select") {
             host.dataset.selectedCount = String(
               selectionFor(data, selectionMode).indices.length,

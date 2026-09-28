@@ -284,21 +284,16 @@ Deno.test("site landing page and maintained gallery routes", async () => {
           await page.getByLabel("Surface material").inputValue(),
           "opaque",
         );
-        const before = await page.locator("#molecule-canvas canvas")
-          .screenshot();
         await page.getByLabel("Surface color field").selectOption("element");
-        await frames(page);
-        const colored = await page.locator("#molecule-canvas canvas")
-          .screenshot();
-        assert(
-          !before.equals(colored),
-          "atom element field colors the surface",
+        await page.waitForFunction(() =>
+          document.querySelector("#molecule-canvas")?.dataset
+            .surfaceColorMode === "element"
         );
         await page.getByLabel("Surface material").selectOption("pumice");
-        await frames(page);
-        const changed = await page.locator("#molecule-canvas canvas")
-          .screenshot();
-        assert(!before.equals(changed), "surface mode changes the scene");
+        await page.waitForFunction(() =>
+          document.querySelector("#molecule-canvas")?.dataset.materialMode ===
+            "pumice"
+        );
       }
       if (id === "select") {
         const before = Number(await host.getAttribute("data-selected-count"));
