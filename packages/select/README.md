@@ -242,8 +242,6 @@ Empty selections are valid and explicit (`isEmpty`, `count`).
 | `Selection`        | stable       | Type: a resolved, dataset-, domain- and revision-bound set of sorted indices.                                                                    |
 | `SelectionQuery`   | stable       | Type: a pure, dataset-independent query recipe. Opaque: build with the query constructors; only `type`, `domain`, `label` and `deps` are public. |
 | `Domain`           | stable       | Type: `'atom' \| 'residue' \| 'bond'`.                                                                                                           |
-| `RevisionStream`   | experimental | Type: `'topology' \| 'positions' \| 'attributes'`, the streams a selection may depend on.                                                        |
-| `SourceMap`        | experimental | Type: mapping from a converted selection's rows back to the source domain rows.                                                                  |
 | `SelectionExpr`    | experimental | Type: a MolQL expression as plain JSON: a literal, `{ name }`, or `{ head, args }`.                                                              |
 
 ## Place in the dependency graph

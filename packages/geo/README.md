@@ -60,7 +60,6 @@ interpolateSizes(state, w0, w1, w2, h0, h1, h2, 0.5); // widths and heights
 | `interpolateSizes`        | experimental | Width and height profile along a segment.                                       |
 | `CurveSegmentState`       | experimental | Scratch buffers, mutated in place by the interpolators.                         |
 | `CurveSegmentControls`    | experimental | Guide points p0–p4 and end directions d12/d23 for a segment.                    |
-| `Vec3Like`                | experimental | Any indexable of three numbers.                                                 |
 
 The curve-segment kernels are experimental because they mirror Mol*'s
 mutable-state calling convention. They may later be wrapped in a whole-trace

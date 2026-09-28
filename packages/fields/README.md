@@ -25,7 +25,9 @@ import { createStructure } from "@molgpu/table";
 import {
   attribute,
   byElement,
+  categorical,
   colormap,
+  columnRange,
   compile,
   constant,
   evaluate,
@@ -104,6 +106,12 @@ const heat = colormap(linear(attribute("bfactor"), { domain: [10, 40] }), [
 console.log(evaluate(heat, data)); // Float32Array(16): blue ... red
 console.log(evaluate(byElement(), data).length); // 16 (4 atoms x RGBA)
 console.log(evaluate(constant(1.5), data, { domain: "residue" })); // Float32Array [1.5, 1.5]
+console.log(columnRange(data, "bfactor")); // [10, 40]
+const elementField = categorical(attribute("element"), {
+  6: [0.2, 0.7, 0.4, 1],
+  7: [0.8, 0.3, 0.2, 1],
+}, [0.5, 0.5, 0.5, 1]);
+console.log(evaluate(elementField, data).length); // 16
 
 // Join per-residue scores by identity (chain + sequence), lifted onto atoms.
 const scores = joinAnnotation(data, [{
@@ -174,10 +182,16 @@ available from the package root when a preset needs a range derived from an
 attribute column.
 
 ```js
-import { byBfactor, bySecondaryStructure, bySeq } from "@molgpu/fields";
+import {
+  byBfactor,
+  byChain,
+  bySecondaryStructure,
+  bySeq,
+} from "@molgpu/fields";
 
 const temperature = byBfactor({ domain: [10, 40] });
 const sequencePosition = bySeq({ domain: [0, 99] });
+const chains = byChain();
 const cartoonColor = bySecondaryStructure();
 ```
 
@@ -216,10 +230,7 @@ before 0.1.0. _advanced_: for renderer integrations (the viewer), not app code.
 | `SCALAR`                   | experimental | Scalar `ValueType` descriptor accepted by `annotation`.                                                       |
 | `COLOR`                    | experimental | Colour `ValueType` descriptor accepted by `annotation`.                                                       |
 | `columnRange`              | experimental | Min/max range of a numeric table column for built-in field domains.                                           |
-| `Overflow`                 | experimental | `linear` overflow mode: `'clamp' \| 'wrap' \| 'fail'`.                                                        |
-| `Scalar`                   | experimental | Alias for `number` as a field value.                                                                          |
 | `ValueType`                | experimental | Field value type descriptor (kind, components, WGSL type name).                                               |
-| `EvalContext`              | experimental | `evaluate` options: timeline `t` and broadcast `domain`.                                                      |
 | `byBfactor`                | experimental | B-factor on a cool-to-warm ramp.                                                                              |
 | `bySeq`                    | experimental | Residue index on a rainbow ramp.                                                                              |
 | `byChain`                  | experimental | Chain index from a cyclic palette.                                                                            |
@@ -227,13 +238,9 @@ before 0.1.0. _advanced_: for renderer integrations (the viewer), not app code.
 | `byPotential`              | experimental | Electrostatic potential, red-white-blue over ±`range` (default 15), sampled from a volume or the nearest one. |
 | `bySecondaryStructure`     | experimental | Residue `ssCode` on Mol*'s secondary-structure colours (helix types, strand, turn, bend, white coil).         |
 | `joinAnnotation`           | experimental | Join external records onto the table by identity; returns an annotation field.                                |
-| `JoinOptions`              | experimental | Options for `joinAnnotation` (identity fields, value, policies, lift).                                        |
 | `IdentityField`            | experimental | Name of an identity field usable as a join key.                                                               |
 | `ResidueIdentity`          | experimental | Full residue identity (model, chain ids, seq ids, insertion code, comp).                                      |
 | `compile`                  | advanced     | Lower a numeric field to a WGSL string plus a plain-data binding schema.                                      |
-| `Compiled`                 | advanced     | Result of `compile`: value type, domain, entry, bindings, WGSL.                                               |
-| `Binding`                  | advanced     | One GPU input of a compiled field, with a pure `fill` function.                                               |
-| `Target`                   | advanced     | `compile` target: `'raw'` (plain WebGPU) or `'link'` (use.gpu linker).                                        |
 
 ## Place in the dependency graph
 

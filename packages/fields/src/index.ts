@@ -14,18 +14,11 @@
 // string fields are CPU-only. There is no arbitrary JS->WGSL and no user parser.
 
 export type {
-  Binding,
   Color,
-  Compiled,
   Domain,
-  EvalContext,
   Field,
   IdentityField,
-  JoinOptions,
-  Overflow,
   ResidueIdentity,
-  Scalar,
-  Target,
   ValueType,
 } from "./types.ts";
 export {
