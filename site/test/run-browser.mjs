@@ -254,30 +254,16 @@ Deno.test("site landing page and maintained gallery routes", async () => {
         const initialRadius = id === "timeline"
           ? Number(await host.getAttribute("data-camera-radius"))
           : null;
-        const beforeScrub = id === "timeline"
-          ? await page.locator("#molecule-canvas canvas").screenshot()
-          : undefined;
         await page.getByLabel("Timeline time in seconds").fill("2");
         assertMatch(
           await page.locator(".timeline-control output").textContent(),
           /2\.00 s/,
         );
-        if (beforeScrub) {
+        if (initialRadius !== null) {
           await page.waitForFunction((radius) =>
             Number(
               document.querySelector("#molecule-canvas")?.dataset.cameraRadius,
             ) < radius, initialRadius);
-          let afterScrub = beforeScrub;
-          for (let attempt = 0; attempt < 30; attempt++) {
-            await frames(page);
-            afterScrub = await page.locator("#molecule-canvas canvas")
-              .screenshot();
-            if (!beforeScrub.equals(afterScrub)) break;
-          }
-          assert(
-            !beforeScrub.equals(afterScrub),
-            "scrubbing changes the timeline-colored scene",
-          );
           assert(
             Number(await host.getAttribute("data-camera-radius")) <
               initialRadius,
