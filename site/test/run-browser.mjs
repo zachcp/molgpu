@@ -263,9 +263,17 @@ Deno.test("site landing page and maintained gallery routes", async () => {
           /2\.00 s/,
         );
         if (beforeScrub) {
-          await frames(page);
-          const afterScrub = await page.locator("#molecule-canvas canvas")
-            .screenshot();
+          await page.waitForFunction((radius) =>
+            Number(
+              document.querySelector("#molecule-canvas")?.dataset.cameraRadius,
+            ) < radius, initialRadius);
+          let afterScrub = beforeScrub;
+          for (let attempt = 0; attempt < 30; attempt++) {
+            await frames(page);
+            afterScrub = await page.locator("#molecule-canvas canvas")
+              .screenshot();
+            if (!beforeScrub.equals(afterScrub)) break;
+          }
           assert(
             !beforeScrub.equals(afterScrub),
             "scrubbing changes the timeline-colored scene",
