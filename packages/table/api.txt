@@ -18,14 +18,10 @@ AttributeValues
   export type AttributeValues = Float32Array | Int8Array | Uint8Array | Int32Array | Uint32Array;
 BOND_FLAGS
   export const BOND_FLAGS: Readonly<{ covalent: 1; metallic: 2; hydrogen: 4; disulfide: 8; aromatic: 16; computed: 32 }>;
-BondPolicy
-  export interface BondPolicy { readonly padding?: number; readonly interChain?: boolean }
 Bonds
   export interface Bonds { readonly count: number; readonly a: Uint32Array; readonly b: Uint32Array; /** 0 unknown, 1/2/3 multiplicity, 4 aromatic. */ readonly order: Uint8Array; readonly source: readonly ("explicit" | "inferred")[]; /** Bond type bits (see `BOND_FLAGS`); 0 is unknown. Inferred bonds are covalent | computed. */ readonly flags?: Uint8Array }
 Chains
   export interface Chains { readonly count: number; readonly model: Int32Array; readonly labelId: readonly string[]; readonly authId: readonly string[]; /** mmCIF label_entity_id. Absent when the source has none. */ readonly entityId?: readonly string[]; /** mmCIF _entity.type of the chain's entity, lower-cased ("polymer", "non-polymer", "water", "branched", ...); "" when unlisted. Absent with entityId. */ readonly entityType?: readonly string[]; /** Entity subtype as Mol* assigns it (entity_poly / pdbx_entity_branch type, else derived from the component: "polypeptide(L)", "oligosaccharide", "other", ...). Absent with entityId. */ readonly entitySubtype?: readonly string[] }
-DsspOptions
-  export interface DsspOptions { /** * Atom rows to read, ascending (default: every model with primary altlocs, * `activeAtoms(data, { model: "all" })`). A residue's backbone atom is the * first row with that name, so `altloc: "all"` rows read the first conformer * in file order, as Mol* does. */ readonly rows?: ArrayLike<number> }
 ELEMENT_SYMBOL
   export const ELEMENT_SYMBOL: readonly string[];
 FrameSource
@@ -42,8 +38,6 @@ SS_CODES
   export const SS_CODES: readonly ["-", "H", "B", "E", "G", "I", "T", "S", "P"];
 SecondaryStructureTrace
   export interface SecondaryStructureTrace { readonly count: number; readonly direction: Float32Array; readonly kind: readonly ("helix" | "sheet" | "coil")[]; /** 1 where a sample starts/ends a stable-frame block (run boundary or an SS-kind change), else 0. */ readonly first: Uint8Array; readonly last: Uint8Array }
-SpatialGrid
-  export interface SpatialGrid { readonly cellSize: number; /** * Visit, in a fixed cell order and then insertion order, every indexed row in the * cells around (x, y, z), restricted to `partition` when the grid has * partitions. This covers every row within `cellSize` of the point; callers * test the exact distance. Stops and returns true when `visit` returns true. */ near(x: number, y: number, z: number, visit: (row: number) => boolean | void, partition?: number): boolean }
 StructureData
   export interface StructureData extends StructureInput { readonly identity: { readonly [brand]: true }; readonly attributes?: Readonly<Record<string, AttributeColumn>>; readonly revision: { readonly topology: number; readonly positions: number; readonly attributes: number } }
 StructureInput
@@ -60,20 +54,16 @@ TrajectoryInput
   export interface TrajectoryInput { readonly atomCount: number; readonly frames?: readonly TrajectoryFrame[]; readonly source?: FrameSource; readonly frameCount?: number; /** Per-frame time, nondecreasing. Default: the frame index, unit "index". */ readonly time?: ArrayLike<number>; readonly timeUnit?: TrajectoryTimeUnit; /** Topology row of each trajectory atom, for trajectories over a subset. */ readonly atomMap?: ArrayLike<number> }
 TrajectoryTimeUnit
   export type TrajectoryTimeUnit = "ps" | "step" | "index";
-ViewPolicy
-  export interface ViewPolicy { readonly model?: "first" | "all" | number; readonly altloc?: "primary" | "all" }
 VolumeData
-  export interface VolumeData { readonly values: Float32Array; readonly dims: readonly [number, number, number]; /** Column-major 4×4 affine from grid index to Å. */ readonly transform: Float32Array; readonly stats: VolumeStats; readonly components: 1 | 3; readonly unit?: string }
+  export interface VolumeData { readonly values: Float32Array; readonly dims: readonly [number, number, number]; /** Column-major 4×4 affine from grid index to Å. */ readonly transform: Float32Array; readonly stats: { readonly min: number; readonly max: number; readonly mean: number; /** Population standard deviation about `mean`. */ readonly sigma: number }; readonly components: 1 | 3; readonly unit?: string }
 VolumeGrid
   export interface VolumeGrid { readonly dims: readonly [number, number, number]; /** Column-major 4×4 affine from grid index to Å. */ readonly transform: Float32Array; readonly components: 1 | 3; readonly unit?: string }
 VolumeInput
   export interface VolumeInput { /** * Samples laid out x-fastest: grid point `(i, j, k)` is at * `i + dims[0] * (j + dims[1] * k)`, times `components` when interleaved. */ readonly values: Float32Array; readonly dims: readonly [number, number, number]; /** Column-major 4×4 affine from grid index to Å; may rotate and shear. */ readonly transform: ArrayLike<number>; /** Interleaved components per sample. Default 1. */ readonly components?: 1 | 3; /** Unit label for the values, e.g. "e/Å³" or "kT/e". */ readonly unit?: string }
 VolumeLevel
   export type VolumeLevel = number | { readonly sigma: number };
-VolumeStats
-  export interface VolumeStats { readonly min: number; readonly max: number; readonly mean: number; /** Population standard deviation about `mean`. */ readonly sigma: number }
 activeAtoms
-  export function activeAtoms(data: StructureData, policy?: ViewPolicy): Uint32Array;
+  export function activeAtoms(data: StructureData, policy?: { readonly model?: "first" | "all" | number; readonly altloc?: "primary" | "all" }): Uint32Array;
 atomRadii
   export function atomRadii(data: StructureData): Float32Array;
 atomicNumberForSymbol
@@ -83,7 +73,7 @@ attributeColumn
 attributeNames
   export function attributeNames(data: StructureData): string[];
 bondTopology
-  export function bondTopology(data: StructureData, policy?: BondPolicy): Bonds;
+  export function bondTopology(data: StructureData, policy?: { readonly padding?: number; readonly interChain?: boolean }): Bonds;
 coordinateBounds
   export function coordinateBounds(data: StructureData, indices?: Uint32Array): null | { min: number[]; max: number[]; center: number[] };
 createStructure
@@ -95,7 +85,7 @@ createVolume
 createVolumeGrid
   export function createVolumeGrid(input: Omit<VolumeInput, "values">, options?: { maxSamples?: number }): VolumeGrid;
 dssp
-  export function dssp(data: StructureData, options?: DsspOptions): Uint8Array;
+  export function dssp(data: StructureData, options?: { /** Atom rows to read, ascending. Defaults to every model with primary * altlocs. With all altlocs, the first conformer in file order wins. */ readonly rows?: ArrayLike<number> }): Uint8Array;
 elementRadius
   export function elementRadius(atomicNumber: number): number;
 elementSymbolForAtomicNumber
@@ -109,7 +99,7 @@ sampleVolumeGradient
 secondaryStructureTrace
   export function secondaryStructureTrace(data: StructureData, atomIndices: Uint32Array, trace: Trace): SecondaryStructureTrace;
 spatialGrid
-  export function spatialGrid(positions: Float32Array, rows: ArrayLike<number> | null, cellSize: number, partition?: (row: number) => number): SpatialGrid;
+  export function spatialGrid(positions: Float32Array, rows: ArrayLike<number> | null, cellSize: number, partition?: (row: number) => number): { readonly cellSize: number; /** Visit nearby cells in fixed cell and insertion order, restricted to * `partition` when present. Callers check the exact distance. Returns true * as soon as `visit` returns true. */ near(x: number, y: number, z: number, visit: (row: number) => boolean | void, partition?: number): boolean };
 ssKind
   export function ssKind(code: number): "helix" | "sheet" | "coil";
 traceTable
@@ -133,4 +123,4 @@ withAttributes
 withPositions
   export function withPositions(data: StructureData, positions: Float32Array): StructureData;
 withSecondaryStructure
-  export function withSecondaryStructure(data: StructureData, options?: DsspOptions & { readonly mode?: "auto" | "dssp" | "model" }): StructureData;
+  export function withSecondaryStructure(data: StructureData, options?: { readonly rows?: ArrayLike<number>; readonly mode?: "auto" | "dssp" | "model" }): StructureData;

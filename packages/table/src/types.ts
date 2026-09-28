@@ -6,7 +6,6 @@ export type {
   AttributeDomain,
   AttributeProvenance,
   AttributeValues,
-  BondPolicy,
   Bonds,
   Chains,
   Instances,
@@ -15,7 +14,6 @@ export type {
   StructureData,
   StructureInput,
   Topology,
-  ViewPolicy,
 } from "./structure-types.ts";
 export type { SecondaryStructureTrace, Trace } from "./trace-types.ts";
 export type {
@@ -23,7 +21,6 @@ export type {
   VolumeGrid,
   VolumeInput,
   VolumeLevel,
-  VolumeStats,
 } from "./volume-types.ts";
 export type {
   FrameSource,

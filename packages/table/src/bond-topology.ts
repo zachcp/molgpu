@@ -90,10 +90,11 @@ const compatibleBondRows = (
     atoms.altloc[a] === atoms.altloc[b];
 };
 
-/** Shared topology for one structure revision. Explicit connectivity wins. */
+/** Shared topology for one structure revision. Explicit connectivity wins.
+ * `padding` (default 0.45 Å) and `interChain` (default true) tune inference. */
 export function bondTopology(
   data: StructureData,
-  policy: BondPolicy = {},
+  policy: { readonly padding?: number; readonly interChain?: boolean } = {},
 ): Bonds {
   const { padding = .45, interChain = true } = policy;
   if (!isStructureIdentity(data.identity)) {

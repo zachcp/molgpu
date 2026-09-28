@@ -133,10 +133,6 @@ export interface StructureData extends StructureInput {
     readonly attributes: number;
   };
 }
-export interface ViewPolicy {
-  readonly model?: "first" | "all" | number;
-  readonly altloc?: "primary" | "all";
-}
 export interface BondPolicy {
   readonly padding?: number;
   readonly interChain?: boolean;
