@@ -67,6 +67,9 @@ Deno.test("site landing page and maintained gallery routes", async () => {
     });
     const errors = [];
     page.on("pageerror", (error) => errors.push(String(error)));
+    page.on("console", (message) => {
+      if (message.type() === "error") errors.push(message.text());
+    });
 
     await page.goto("http://127.0.0.1:5190/");
     await page.waitForSelector("#hero-title");
@@ -207,6 +210,10 @@ Deno.test("site landing page and maintained gallery routes", async () => {
         );
       }
       if (id === "trajectory") {
+        assertStrictEquals(
+          await page.getByLabel("Trajectory representation").inputValue(),
+          "tube",
+        );
         // Scrubbing seeks: frames stream in and the displayed frame follows
         // the looping 15 fps curve (2 s → frame 30, 3.5 s → frame 52.5).
         for (const [seconds, frame] of [[2, 30], [3.5, 52.5], [0.5, 7.5]]) {
@@ -224,8 +231,29 @@ Deno.test("site landing page and maintained gallery routes", async () => {
             { timeout: 15000 },
           );
         }
+        await frames(page);
+        const tubeFrame = await page.locator("#molecule-canvas canvas")
+          .screenshot();
+        await page.getByLabel("Trajectory representation").selectOption(
+          "ball-and-stick",
+        );
+        await frames(page);
+        const ballAndStickFrame = await page.locator("#molecule-canvas canvas")
+          .screenshot();
+        assert(
+          !tubeFrame.equals(ballAndStickFrame),
+          "trajectory representation changes the rendered geometry",
+        );
+        assertStrictEquals(
+          await page.getByLabel("Timeline time in seconds").inputValue(),
+          "0.5",
+          "switching representation preserves trajectory time",
+        );
       }
       if (id === "timeline" || id === "coordinates" || id === "trajectory") {
+        const initialRadius = id === "timeline"
+          ? Number(await host.getAttribute("data-camera-radius"))
+          : null;
         const beforeScrub = id === "timeline"
           ? await page.locator("#molecule-canvas canvas").screenshot()
           : undefined;
@@ -242,6 +270,11 @@ Deno.test("site landing page and maintained gallery routes", async () => {
             !beforeScrub.equals(afterScrub),
             "scrubbing changes the timeline-colored scene",
           );
+          assert(
+            Number(await host.getAttribute("data-camera-radius")) <
+              initialRadius,
+            "timeline scrub also moves the camera",
+          );
         }
       }
       if (id === "coordinates") {
@@ -253,13 +286,47 @@ Deno.test("site landing page and maintained gallery routes", async () => {
         }, focusY);
       }
       if (id === "surface") {
+        assertStrictEquals(
+          await page.getByLabel("Surface material").inputValue(),
+          "opaque",
+        );
         const before = await page.locator("#molecule-canvas canvas")
           .screenshot();
+        await page.getByLabel("Surface color field").selectOption("element");
+        await frames(page);
+        const colored = await page.locator("#molecule-canvas canvas")
+          .screenshot();
+        assert(
+          !before.equals(colored),
+          "atom element field colors the surface",
+        );
         await page.getByLabel("Surface material").selectOption("pumice");
         await frames(page);
         const changed = await page.locator("#molecule-canvas canvas")
           .screenshot();
         assert(!before.equals(changed), "surface mode changes the scene");
+      }
+      if (id === "select") {
+        const before = Number(await host.getAttribute("data-selected-count"));
+        await page.getByLabel("Selection query").selectOption("sulfur");
+        await page.waitForFunction(
+          (count) =>
+            Number(
+              document.querySelector("#molecule-canvas")?.dataset.selectedCount,
+            ) !== count,
+          before,
+        );
+        assert(Number(await host.getAttribute("data-selected-count")) > 0);
+      }
+      if (id === "efield") {
+        await page.getByLabel("Potential grid spacing").selectOption("1.5");
+        await page.getByLabel("Field line seed spacing").selectOption("9");
+        await page.getByLabel("Field line distance").selectOption("18");
+        await page.waitForFunction(() => {
+          const data = document.querySelector("#molecule-canvas")?.dataset;
+          return data?.gridSpacing === "1.5" && data?.seedSpacing === "9" &&
+            data?.lineDistance === "18";
+        });
       }
       if (id === "materials") {
         const before = await page.locator("#molecule-canvas canvas")

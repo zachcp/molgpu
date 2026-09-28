@@ -1,13 +1,12 @@
-// Pure CPU shape for <Ribbon>: a flat, oriented cross-section extruded
+// Pure CPU shape for <Ribbon>: an oriented cross-section extruded
 // along each run's spline, built from the already-ported Mol* curve-segment
 // kernel (0sj.1) fed by the shared trace (0sj.4) and its per-residue
 // direction/secondary-structure data (0sj.2). No second polymer walk: this
 // only reads trace.guide/trace.residue/trace.runs and ss.direction/kind/
 // first/last, exactly as they come out of traceTable/secondaryStructureTrace.
 //
-// This remains a compact ribbon representation: sheet ends get a widened
-// shoulder and pointed terminus, while helix axes and coil profiles are not
-// fitted as in a full molecular-cartoon implementation.
+// Sheet ends get a widened shoulder and pointed terminus. Helices and coils
+// use rounded sections; sheets retain a broad, low profile.
 import {
   createCurveSegmentState,
   interpolateCurveSegment,
@@ -37,11 +36,16 @@ export interface RibbonGeometry {
 }
 
 const RIBBON_WIDTH: Record<SecondaryStructureTrace["kind"][number], number> = {
-  helix: 2.2,
+  helix: 1.45,
   sheet: 2.2,
-  coil: 0.7,
+  coil: 0.62,
 };
-const RIBBON_HEIGHT = 0.35;
+const RIBBON_HEIGHT: Record<SecondaryStructureTrace["kind"][number], number> = {
+  helix: 1.1,
+  sheet: 0.3,
+  coil: 0.62,
+};
+const RING_SIDES = 12;
 const SHEET_ARROW_SHOULDER = 1.5;
 
 const clampIndex = (i: number, n: number): number =>
@@ -89,7 +93,10 @@ function buildRun(
       secStrucFirst: !!ss.first[at(0)],
       secStrucLast: !!ss.last[at(0)],
     };
-    const w0 = RIBBON_WIDTH[ss.kind[at(-1)]],
+    const kind0 = ss.kind[at(-1)],
+      kind1 = ss.kind[at(0)],
+      kind2 = ss.kind[at(1)];
+    const w0 = RIBBON_WIDTH[kind0],
       w1 = RIBBON_WIDTH[ss.kind[at(0)]],
       w2 = RIBBON_WIDTH[ss.kind[at(1)]];
 
@@ -100,9 +107,9 @@ function buildRun(
       w0,
       w1,
       w2,
-      RIBBON_HEIGHT,
-      RIBBON_HEIGHT,
-      RIBBON_HEIGHT,
+      RIBBON_HEIGHT[kind0],
+      RIBBON_HEIGHT[kind1],
+      RIBBON_HEIGHT[kind2],
       0.5,
     );
 
@@ -130,30 +137,35 @@ function buildRun(
         halfH = state.heightValues[j] / 2 * heightScale;
       const ringBase = positions.length / 3;
       const sourceResidue = trace.residue[sampleIndex];
-      for (const [sw, sh] of [[1, 1], [-1, 1], [-1, -1], [1, -1]]) {
+      for (let side = 0; side < RING_SIDES; side++) {
+        const angle = 2 * Math.PI * side / RING_SIDES;
+        const sw = Math.cos(angle), sh = Math.sin(angle);
         positions.push(
           cx + bx * sw * halfW + nx * sh * halfH,
           cy + by * sw * halfW + ny * sh * halfH,
           cz + bz * sw * halfW + nz * sh * halfH,
         );
         const [ux, uy, uz] = unit3([
-          nx * sh + bx * sw,
-          ny * sh + by * sw,
-          nz * sh + bz * sw,
+          nx * sh / Math.max(halfH, 1e-3) + bx * sw / Math.max(halfW, 1e-3),
+          ny * sh / Math.max(halfH, 1e-3) + by * sw / Math.max(halfW, 1e-3),
+          nz * sh / Math.max(halfH, 1e-3) + bz * sw / Math.max(halfW, 1e-3),
         ]);
         normals.push(ux, uy, uz);
         residueOut.push(sourceResidue);
       }
       if (prevRing) {
-        for (let side = 0; side < 4; side++) {
+        for (let side = 0; side < RING_SIDES; side++) {
           const a = prevRing[side],
-            b = prevRing[(side + 1) % 4],
+            b = prevRing[(side + 1) % RING_SIDES],
             c = ringBase + side,
-            d = ringBase + (side + 1) % 4;
+            d = ringBase + (side + 1) % RING_SIDES;
           indices.push(a, b, d, a, d, c);
         }
       }
-      prevRing = [ringBase, ringBase + 1, ringBase + 2, ringBase + 3];
+      prevRing = Array.from(
+        { length: RING_SIDES },
+        (_, side) => ringBase + side,
+      );
     }
   }
   return { positions, normals, indices, residue: residueOut };

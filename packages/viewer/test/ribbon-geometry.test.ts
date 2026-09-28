@@ -60,12 +60,12 @@ Deno.test("drops the single-residue run and keeps the two multi-residue runs", (
   const { trace, ss } = fixture();
   const mesh = buildRibbonGeometry(trace, ss, 4);
   assert(mesh.vertexCount > 0);
-  // 4 verts/sample, samples = segs*linearSegments + 1 per run (dedup boundary): run0 has 3 segs, run2 has 2 segs.
+  // 12 verts/sample, samples = segs*linearSegments + 1 per run (dedup boundary).
   const samplesRun0 = 3 * 4 + 1, samplesRun2 = 2 * 4 + 1;
-  assertStrictEquals(mesh.vertexCount, (samplesRun0 + samplesRun2) * 4);
+  assertStrictEquals(mesh.vertexCount, (samplesRun0 + samplesRun2) * 12);
   assertStrictEquals(
     mesh.triangleCount,
-    (samplesRun0 - 1 + samplesRun2 - 1) * 4 * 2,
+    (samplesRun0 - 1 + samplesRun2 - 1) * 12 * 2,
   );
 });
 
@@ -160,10 +160,10 @@ Deno.test("beta sheet ends widen into an arrow shoulder and converge to a point"
 
   const maxRingDiameter = (residue: number) => {
     let max = 0;
-    for (let start = 0; start < mesh.vertexCount; start += 4) {
+    for (let start = 0; start < mesh.vertexCount; start += 12) {
       if (mesh.residue[start] !== residue) continue;
-      for (let a = 0; a < 4; a++) {
-        for (let b = a + 1; b < 4; b++) {
+      for (let a = 0; a < 12; a++) {
+        for (let b = a + 1; b < 12; b++) {
           const dx = mesh.positions[(start + a) * 3] -
             mesh.positions[(start + b) * 3];
           const dy = mesh.positions[(start + a) * 3 + 1] -

@@ -38,11 +38,8 @@ import {
 import { useAttributeSources } from "./internal/attribute-sources.ts";
 import { checkAtomSelection } from "./internal/representation.ts";
 import { ThrottledReadback } from "./internal/throttled-readback.ts";
-import {
-  count,
-  releaseOwnedBuffer,
-  trackOwnedBuffer,
-} from "./internal/instrumentation.ts";
+import { count, trackOwnedBuffer } from "./internal/instrumentation.ts";
+import { retireBuffers } from "./internal/retire-buffers.ts";
 import { live, viewer } from "./internal/elements.ts";
 import {
   type NearestVolume,
@@ -195,12 +192,7 @@ const EFieldCompute: LC<{
     return { made, rowBuffer, packed, phi, params, pack, shapes };
   }, [device, rows, grid, physics, chunk, chunks, samples]);
   useResource((dispose) => {
-    dispose(() => {
-      for (const buffer of buffers.made) {
-        releaseOwnedBuffer(buffer);
-        buffer.destroy();
-      }
-    });
+    dispose(() => retireBuffers(device, buffers.made));
   }, [buffers]);
 
   const packGroup = useMemo(() =>
