@@ -336,6 +336,7 @@ Deno.test("site landing page and maintained gallery routes", async () => {
     );
     await page.getByRole("link", { name: "Demos" }).click();
     await page.waitForSelector('#molecule-canvas[data-demo="scene"]');
+    await page.waitForSelector("#molecule-canvas canvas");
     assertStrictEquals(
       await page.locator("#molecule-canvas canvas").count(),
       1,
