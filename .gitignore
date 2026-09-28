@@ -1,5 +1,6 @@
 
 # Beads / Dolt files (added by bd init)
+.beads.gate.lock
 .dolt/
 *.db
 .beads-credential-key

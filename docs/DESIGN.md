@@ -4,7 +4,8 @@
 > [the JSX/domain review](findings/2026-09-17-architecture-review.md) alongside
 > this original plan. It updates domain identity, cache invalidation, package
 > boundaries, renderer fallbacks and acceptance gates. These contracts are
-> planned, not implemented.
+> implemented through Phase 16. This document retains the original design
+> rationale; the roadmap records delivered work and deferred follow-ons.
 
 A use.gpu-native molecular visualization library. GPU-first, declarative,
 timeline-native.
@@ -182,12 +183,12 @@ exactly one wall, and (b) everything correctness-critical is a pure function.
 | Package            | Depends on                         | Purpose                                                                                                                                         |
 | ------------------ | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
 | `@molgpu/table`    | —                                  | Columnar atom table, schema, typed attribute buffers. No GPU, no Mol*.                                                                          |
-| `@molgpu/io`       | `table`, `molstar` (loaded lazily) | Importers. Lowers a Mol* `Structure` into a table. __The only package that knows Mol_ exists._*                                                 |
+| `@molgpu/io`       | `table`, `molstar` (loaded lazily) | Importers for BinaryCIF, DCD/XTC/TRR, CCP4/MRC and PQR. Lowers structures into tables. Only this package imports `molstar`.                     |
 | `@molgpu/select`   | `table`                            | Selection language → sorted index buffers.                                                                                                      |
-| `@molgpu/fields`   | `table`, `@use-gpu/shader`         | Field abstraction, expression sublanguage → WGSL.                                                                                               |
+| `@molgpu/fields`   | `table`                            | Typed fields, CPU evaluation and renderer-free WGSL generation.                                                                                 |
 | `@molgpu/geo`      | —                                  | Geometry kernels: ported ribbon/spline math, molecular surface, sphere/cylinder instancing. Typed arrays in, typed arrays out. No GPU, no Live. |
 | `@molgpu/dynamics` | `table`                            | Pure coordinate math and CPU charge assignment; WGSL sources on `./wgsl`. **Never imports `@use-gpu/*`.**                                       |
-| `@molgpu/timeline` | `@use-gpu/workbench`               | Global scrubbable timeline, beats, curve sampling.                                                                                              |
+| `@molgpu/timeline` | `@use-gpu/core`                    | Global scrubbable timeline, beats, curve sampling.                                                                                              |
 | `@molgpu/viewer`   | all of the above                   | The Live components. **The only package that imports `@use-gpu/workbench` components.**                                                         |
 
 Two rules make the layout load-bearing rather than decorative:

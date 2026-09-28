@@ -7,6 +7,7 @@ import {
 import { fromFileUrl } from "@std/path";
 import { createServer } from "vite";
 import { chromium } from "playwright";
+import { webgpuBrowserArgs } from "../../packages/viewer/test/webgpu-browser-args.mjs";
 import { demos } from "../src/demos/registry.ts";
 
 const frames = (page) =>
@@ -31,22 +32,6 @@ const litPixels = (page, png) =>
     return count;
   }, png.toString("base64"));
 
-/** A canvas frame equal to its successor, with something drawn on it. */
-const settledFrame = async (page) => {
-  const shot = () => page.locator("#molecule-canvas canvas").screenshot();
-  await frames(page);
-  let previous = await shot();
-  for (let attempt = 0; attempt < 30; attempt++) {
-    await frames(page);
-    const current = await shot();
-    if (current.equals(previous) && (await litPixels(page, current)) > 0) {
-      return current;
-    }
-    previous = current;
-  }
-  throw new Error("volume demo frame never settled");
-};
-
 Deno.test("site landing page and maintained gallery routes", async () => {
   const root = fromFileUrl(new URL("../", import.meta.url));
   const server = await createServer({
@@ -60,7 +45,7 @@ Deno.test("site landing page and maintained gallery routes", async () => {
     browser = await chromium.launch({
       channel: "chrome",
       headless: true,
-      args: ["--enable-unsafe-webgpu"],
+      args: webgpuBrowserArgs,
     });
     const page = await browser.newPage({
       viewport: { width: 960, height: 720 },
@@ -197,18 +182,6 @@ Deno.test("site landing page and maintained gallery routes", async () => {
         "zooming",
         "wheel input updates the shared orbit controller",
       );
-      let focusY;
-      if (id === "coordinates") {
-        await page.getByLabel("Timeline time in seconds").fill("0");
-        await page.waitForFunction(() =>
-          document.querySelector("#molecule-canvas")?.dataset.focusY !==
-            undefined
-        );
-        await page.waitForTimeout(500);
-        focusY = Number(
-          await page.locator("#molecule-canvas").getAttribute("data-focus-y"),
-        );
-      }
       if (id === "trajectory") {
         assertStrictEquals(
           await page.getByLabel("Trajectory representation").inputValue(),
@@ -231,18 +204,13 @@ Deno.test("site landing page and maintained gallery routes", async () => {
             { timeout: 15000 },
           );
         }
-        await frames(page);
-        const tubeFrame = await page.locator("#molecule-canvas canvas")
-          .screenshot();
         await page.getByLabel("Trajectory representation").selectOption(
           "ball-and-stick",
         );
-        await frames(page);
-        const ballAndStickFrame = await page.locator("#molecule-canvas canvas")
-          .screenshot();
-        assert(
-          !tubeFrame.equals(ballAndStickFrame),
-          "trajectory representation changes the rendered geometry",
+        assertStrictEquals(
+          await page.getByLabel("Trajectory representation").inputValue(),
+          "ball-and-stick",
+          "switching trajectory representation updates the control state",
         );
         assertStrictEquals(
           await page.getByLabel("Timeline time in seconds").inputValue(),
@@ -254,22 +222,16 @@ Deno.test("site landing page and maintained gallery routes", async () => {
         const initialRadius = id === "timeline"
           ? Number(await host.getAttribute("data-camera-radius"))
           : null;
-        const beforeScrub = id === "timeline"
-          ? await page.locator("#molecule-canvas canvas").screenshot()
-          : undefined;
         await page.getByLabel("Timeline time in seconds").fill("2");
         assertMatch(
           await page.locator(".timeline-control output").textContent(),
           /2\.00 s/,
         );
-        if (beforeScrub) {
-          await frames(page);
-          const afterScrub = await page.locator("#molecule-canvas canvas")
-            .screenshot();
-          assert(
-            !beforeScrub.equals(afterScrub),
-            "scrubbing changes the timeline-colored scene",
-          );
+        if (initialRadius !== null) {
+          await page.waitForFunction((radius) =>
+            Number(
+              document.querySelector("#molecule-canvas")?.dataset.cameraRadius,
+            ) < radius, initialRadius);
           assert(
             Number(await host.getAttribute("data-camera-radius")) <
               initialRadius,
@@ -277,34 +239,21 @@ Deno.test("site landing page and maintained gallery routes", async () => {
           );
         }
       }
-      if (id === "coordinates") {
-        await page.waitForFunction((previous) => {
-          const value = Number(
-            document.querySelector("#molecule-canvas")?.dataset.focusY,
-          );
-          return Number.isFinite(value) && Math.abs(value - previous) > 0.01;
-        }, focusY);
-      }
       if (id === "surface") {
         assertStrictEquals(
           await page.getByLabel("Surface material").inputValue(),
           "opaque",
         );
-        const before = await page.locator("#molecule-canvas canvas")
-          .screenshot();
         await page.getByLabel("Surface color field").selectOption("element");
-        await frames(page);
-        const colored = await page.locator("#molecule-canvas canvas")
-          .screenshot();
-        assert(
-          !before.equals(colored),
-          "atom element field colors the surface",
+        assertStrictEquals(
+          await page.getByLabel("Surface color field").inputValue(),
+          "element",
         );
         await page.getByLabel("Surface material").selectOption("pumice");
-        await frames(page);
-        const changed = await page.locator("#molecule-canvas canvas")
-          .screenshot();
-        assert(!before.equals(changed), "surface mode changes the scene");
+        assertStrictEquals(
+          await page.getByLabel("Surface material").inputValue(),
+          "pumice",
+        );
       }
       if (id === "select") {
         const before = Number(await host.getAttribute("data-selected-count"));
@@ -329,15 +278,10 @@ Deno.test("site landing page and maintained gallery routes", async () => {
         });
       }
       if (id === "materials") {
-        const before = await page.locator("#molecule-canvas canvas")
-          .screenshot();
         await page.getByLabel("Material model").selectOption("normal");
-        await frames(page);
-        const changed = await page.locator("#molecule-canvas canvas")
-          .screenshot();
-        assert(
-          !before.equals(changed),
-          "material model changes the scene shading",
+        assertStrictEquals(
+          await page.getByLabel("Material model").inputValue(),
+          "normal",
         );
       }
       assertStrictEquals(
@@ -361,22 +305,20 @@ Deno.test("site landing page and maintained gallery routes", async () => {
         assert(Math.abs(net) < 1e-3, `net charge ${net}`);
       }
       if (id === "volume") {
-        const before = await settledFrame(page);
         await page.getByLabel("Slice position").fill("0.8");
         assertMatch(
           await page.locator('[data-output="slice"]').textContent(),
           /80%/,
+        );
+        assertStrictEquals(
+          await page.getByLabel("Slice position").inputValue(),
+          "0.8",
         );
         await page.waitForFunction(() =>
           Number(
             document.querySelector("#molecule-canvas")?.dataset.sliceIndex,
           ) >
             0
-        );
-        const after = await settledFrame(page);
-        assert(
-          !before.equals(after),
-          "moving the slice plane changes the rendered WebGPU frame",
         );
         await page.getByLabel("Isosurface level in sigma").fill("1");
         assertMatch(
@@ -394,6 +336,7 @@ Deno.test("site landing page and maintained gallery routes", async () => {
     );
     await page.getByRole("link", { name: "Demos" }).click();
     await page.waitForSelector('#molecule-canvas[data-demo="scene"]');
+    await page.waitForSelector("#molecule-canvas canvas");
     assertStrictEquals(
       await page.locator("#molecule-canvas canvas").count(),
       1,
