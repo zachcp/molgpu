@@ -49,7 +49,12 @@ nav a:hover {
   color: #f3f7ff;
 }
 @media (max-width: 480px) {
+  .site-header {
+    flex-wrap: wrap;
+    padding-block: 1rem;
+  }
   nav {
+    flex-wrap: wrap;
     gap: .55rem;
     font-size: .9rem;
   }
