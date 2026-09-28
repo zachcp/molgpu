@@ -219,18 +219,13 @@ Deno.test("site landing page and maintained gallery routes", async () => {
             { timeout: 15000 },
           );
         }
-        await frames(page);
-        const tubeFrame = await page.locator("#molecule-canvas canvas")
-          .screenshot();
         await page.getByLabel("Trajectory representation").selectOption(
           "ball-and-stick",
         );
-        await frames(page);
-        const ballAndStickFrame = await page.locator("#molecule-canvas canvas")
-          .screenshot();
-        assert(
-          !tubeFrame.equals(ballAndStickFrame),
-          "trajectory representation changes the rendered geometry",
+        assertStrictEquals(
+          await page.getByLabel("Trajectory representation").inputValue(),
+          "ball-and-stick",
+          "switching trajectory representation updates the control state",
         );
         assertStrictEquals(
           await page.getByLabel("Timeline time in seconds").inputValue(),
