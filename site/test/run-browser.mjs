@@ -102,6 +102,23 @@ Deno.test("site landing page and maintained gallery routes", async () => {
         .getAttribute("href"),
       /^https:\/\/github\.com\/zachcp\/molgpu\/blob\/main\/packages\/viewer\/README\.md$/,
     );
+    const githubLink = page.getByRole("link", { name: "GitHub", exact: true });
+    assertStrictEquals(
+      await githubLink.getAttribute("href"),
+      "https://github.com/zachcp/molgpu",
+    );
+    await page.setViewportSize({ width: 320, height: 720 });
+    assert(
+      await githubLink.isVisible(),
+      "the repository link remains visible on a narrow viewport",
+    );
+    assert(
+      await githubLink.evaluate((link) =>
+        link.getBoundingClientRect().right <= globalThis.innerWidth
+      ),
+      "the repository link stays inside the viewport",
+    );
+    await page.setViewportSize({ width: 960, height: 720 });
 
     for (const { id, title, fixture } of demos) {
       await page.goto(`http://127.0.0.1:5190/#demos/${id}`);

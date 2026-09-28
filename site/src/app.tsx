@@ -29,6 +29,7 @@ export const App = () => {
             Demos
           </a>
           <a href={packageReadme("viewer")}>API</a>
+          <a href="https://github.com/zachcp/molgpu">GitHub</a>
         </nav>
       </header>
       <main>{page === "demos" ? <DemosPage /> : <HomePage />}</main>

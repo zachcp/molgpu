@@ -48,6 +48,12 @@ nav a[aria-current=page],
 nav a:hover {
   color: #f3f7ff;
 }
+@media (max-width: 480px) {
+  nav {
+    gap: .55rem;
+    font-size: .9rem;
+  }
+}
 .hero {
   padding: clamp(5rem, 16vw, 11rem) 0 6rem;
   max-width: 800px;
