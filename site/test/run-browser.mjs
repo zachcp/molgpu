@@ -7,6 +7,7 @@ import {
 import { fromFileUrl } from "@std/path";
 import { createServer } from "vite";
 import { chromium } from "playwright";
+import { webgpuBrowserArgs } from "../../packages/viewer/test/webgpu-browser-args.mjs";
 import { demos } from "../src/demos/registry.ts";
 
 const frames = (page) =>
@@ -44,7 +45,7 @@ Deno.test("site landing page and maintained gallery routes", async () => {
     browser = await chromium.launch({
       channel: "chrome",
       headless: true,
-      args: ["--enable-unsafe-webgpu"],
+      args: webgpuBrowserArgs,
     });
     const page = await browser.newPage({
       viewport: { width: 960, height: 720 },
