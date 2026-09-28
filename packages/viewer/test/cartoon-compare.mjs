@@ -72,7 +72,7 @@ const App = () => {
   });
 };
 
-const model = render(use(WebGPU, {
+render(use(WebGPU, {
   fallback: (error) => {
     cartoon.errors.push(String(error));
     return null;
