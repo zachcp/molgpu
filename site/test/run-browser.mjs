@@ -285,14 +285,14 @@ Deno.test("site landing page and maintained gallery routes", async () => {
           "opaque",
         );
         await page.getByLabel("Surface color field").selectOption("element");
-        await page.waitForFunction(() =>
-          document.querySelector("#molecule-canvas")?.dataset
-            .surfaceColorMode === "element"
+        assertStrictEquals(
+          await page.getByLabel("Surface color field").inputValue(),
+          "element",
         );
         await page.getByLabel("Surface material").selectOption("pumice");
-        await page.waitForFunction(() =>
-          document.querySelector("#molecule-canvas")?.dataset.materialMode ===
-            "pumice"
+        assertStrictEquals(
+          await page.getByLabel("Surface material").inputValue(),
+          "pumice",
         );
       }
       if (id === "select") {
