@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>MolGPU and Mol* cartoon comparison</title>
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet"
+      href="/node_modules/molstar/build/viewer/molstar.css">
+    <style>
+    html,
+    body,
+    #comparison {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #101722;
+    }
+    #comparison {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+    }
+    .panel {
+      position: relative;
+      min-width: 0;
+      min-height: 0;
+    }
+    .label {
+      position: absolute;
+      z-index: 2;
+      top: 12px;
+      left: 12px;
+      padding: 5px 8px;
+      color: white;
+      background: #101722dd;
+      font: 13px system-ui, sans-serif;
+    }
+    #molgpu,
+    #molstar {
+      position: absolute;
+      inset: 0;
+    }
+    .msp-plugin {
+      width: 100%;
+      height: 100%;
+    }
+    .msp-layout-region-left,
+    .msp-layout-region-right,
+    .msp-layout-region-top,
+    .msp-layout-region-bottom {
+      display: none !important;
+    }
+    </style>
+  </head>
+  <body>
+    <main id="comparison">
+      <section class="panel">
+        <div class="label">@molgpu/viewer · Ribbon</div>
+        <div id="molgpu"></div>
+      </section>
+      <section class="panel">
+        <div class="label">Mol* default cartoon</div>
+        <div id="molstar"></div>
+      </section>
+    </main>
+    <script type="module" src="./cartoon-compare.mjs"></script>
+  </body>
+</html>

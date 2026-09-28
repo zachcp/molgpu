@@ -58,7 +58,7 @@ function useStableProjection(
 }
 
 /**
- * Draw the polymer backbone as a flat, oriented ribbon: a CPU-extruded
+ * Draw the polymer trace as an oriented ribbon: a CPU-extruded
  * cross-section (0sj.1's curve-segment kernel, oriented by 0sj.2's
  * per-residue direction/secondary-structure data) fed to FaceLayer as a
  * mesh. `select` (a @molgpu/select atom Selection) restricts which atoms
@@ -66,12 +66,13 @@ function useStableProjection(
  * a selection that drops a residue's guide atom all end a run rather than
  * bridging across it.
  *
- * Helix and sheet residues get a wide cross-section, coil a narrow one, and
- * beta-sheet ends form a widened shoulder that converges at the terminal
- * residue. This is a compact ribbon cartoon, not a complete Mol* replacement:
- * it does not fit whole-helix orientation axes or build custom coil profiles.
- * Only `select` and `smooth` (samples per guide segment) rebuild the
- * trace/spline geometry; `color`/`opacity` update bindings.
+ * Helix and sheet residues have a broad, thin profile, coil a circular one,
+ * and beta-sheet ends form a tapered arrow in the sheet plane. This draws the
+ * polymer trace part of Mol*'s Cartoon; nucleotide rings and polymer-gap
+ * cylinders are separate visuals that this component does not provide.
+ * Whole-helix axis fitting is also absent. Selection, coordinates, smooth
+ * (samples per guide segment), and cartoon secondary-structure codes rebuild
+ * geometry; color and opacity update bindings.
  */
 export const Ribbon: ViewerComponent<
   {

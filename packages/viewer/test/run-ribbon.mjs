@@ -241,18 +241,32 @@ Deno.test("viewer ribbon", async () => {
         16,
       );
     });
-    await page.waitForTimeout(700);
-    const duringPlayback = await page.evaluate(() => ({
-      runs: globalThis.__probe.dsspRuns,
-      inFlight: globalThis.__probe.counters().gauges["dssp:in-flight"],
-      codes: globalThis.__probe.dsspCodes,
-    }));
-    await page.evaluate(() => clearInterval(globalThis.__probe.playback));
+    let duringPlayback;
+    try {
+      // SwiftShader's readback time varies across CI hosts. Require two
+      // publications within a deadline instead of sampling at one arbitrary
+      // instant, when the second run may still be in flight.
+      await page.waitForFunction(
+        (minimum) => globalThis.__probe.dsspRuns >= minimum,
+        runsBeforePlayback + 2,
+        { timeout: 3000 },
+      );
+      duringPlayback = await page.evaluate(() => ({
+        runs: globalThis.__probe.dsspRuns,
+        inFlight: globalThis.__probe.counters().gauges["dssp:in-flight"],
+        codes: globalThis.__probe.dsspCodes,
+      }));
+    } finally {
+      await page.evaluate(() => clearInterval(globalThis.__probe.playback));
+    }
     assert(
       duringPlayback.runs >= runsBeforePlayback + 2,
       "continuous playback must publish GPU DSSP at a bounded rate",
     );
-    assertStrictEquals(duringPlayback.inFlight, 1);
+    assert(
+      duringPlayback.inFlight === 0 || duringPlayback.inFlight === 1,
+      "continuous playback must keep at most one GPU DSSP run in flight",
+    );
     assert(duringPlayback.codes?.length > 0);
     assertEquals((await snap()).errors, []);
 
