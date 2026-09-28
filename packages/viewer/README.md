@@ -114,7 +114,7 @@ may change before 0.1.0; _advanced_ — only from `@molgpu/viewer/advanced`.
 | `Bonds`                   | stable       | Bonds as world-space sticks; vertex positions follow the nearest coordinate provider.                                                                                                                                   |
 | `BallAndStick`            | stable       | Spacefill balls plus Bonds sticks over one selection.                                                                                                                                                                   |
 | `Tube`                    | stable       | Backbone as a GPU-extruded tube.                                                                                                                                                                                        |
-| `Ribbon`                  | stable       | Oriented backbone ribbon with widened, pointed beta-sheet ends.                                                                                                                                                         |
+| `Ribbon`                  | stable       | Oriented polymer trace with helix ribbons, coil tubes and beta-sheet arrows.                                                                                                                                            |
 | `GpuDssp`                 | experimental | Computes DSSP from the nearest GPU coordinate stream for one model and publishes generation-tagged `ssCode` to descendant fields and ribbons.                                                                           |
 | `Surface`                 | stable       | Molecular (solvent-excluded) surface.                                                                                                                                                                                   |
 | `Volume`                  | experimental | Own one scalar volume (`data` or CCP4/MRC `src`); one shared GPU copy per volume identity.                                                                                                                              |
@@ -234,12 +234,6 @@ Assign charges first with `templateCharges` (@molgpu/dynamics), `applyPqr` or
 primary-conformer atoms are summed. Pass a `select` that leaves out water if the
 charges include it.
 
-`<Surface>` also accepts atom-derived fields such as `byElement()` and
-`byCharge()`. Each surface vertex inherits the attributes of its nearest source
-atom; position and volume fields such as `byPotential()` continue to sample at
-the vertex (offset along its normal by `sampleOffset`). Changing a field,
-material, opacity or sampling offset leaves the computed surface mesh intact.
-
 - **Physics.** The default model is a distance-dependent dielectric (ε = 4r,
   ChimeraX's coulombic default). `model="debye"` screens with an ionic strength,
   and `model="vacuum"` is plain Coulomb. Values are in kT/e at 298.15 K, which
@@ -280,6 +274,13 @@ and reruns CPU DSSP; an overflow on a static `<Structure>` raises
 `GpuDsspOverflowError`. Set `overflow` explicitly to override this policy.
 `onStatus` reports the bridge count, direct near-threshold acceptor and bend
 centres (excluding dependent residues), and the fallback reason if any.
+
+`<Ribbon>` corresponds to the polymer-trace visual within Mol*'s Cartoon
+representation for protein structures. Mol*'s complete Cartoon can also draw
+polymer-gap cylinders and nucleotide rings. Those extra visuals are not part of
+`<Ribbon>`; nucleic polymers currently draw only their backbone trace. Ribbon
+geometry uses the latest coordinate snapshot while color and opacity stay as
+bound styling inputs.
 
 ## Coordinate consumers
 
