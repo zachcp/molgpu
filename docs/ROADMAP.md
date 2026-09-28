@@ -2,9 +2,10 @@
 
 > Architecture refinement (2026-09-17): read
 > [the JSX/domain review](findings/2026-09-17-architecture-review.md) alongside
-> this original plan. It updates domain identity, cache invalidation, package
-> boundaries, renderer fallbacks and acceptance gates. These contracts are
-> planned, not implemented.
+> this roadmap. It updates domain identity, cache invalidation, package
+> boundaries, renderer fallbacks and acceptance gates. Those contracts are
+> implemented. Phases 9–16 have shipped; this roadmap records the original gates
+> alongside their outcomes and deferred follow-ons.
 
 Phases are gated. Each gate is a question with a yes/no answer, written down
 before moving on. The ordering puts the two ideas that make this project
@@ -137,6 +138,13 @@ timeline.
 API review, docs, examples, versioning, published packages, changelog.
 Explicitly _not_ where tests first appear — the harness lands in Phase 1.
 
+## Phase 7 — TypeScript and JSR
+
+Completed: all eight packages use TypeScript, Deno workspace manifests are in
+place, and JSR dry-runs pass. See the
+[JSR spike](findings/2026-09-26-jsr-spike.md). First publication remains a
+release action.
+
 ---
 
 ## Phase 8 — Allowlisted MolQL selection
@@ -265,7 +273,7 @@ and writes about 444 B/atom, above the 96 B four-pass baseline, mostly in unwrap
 pointer jumping (9g3.11). See the
 [gate record](findings/2026-09-27-phase-13-gate.md).
 
-## Phase 14 — Per-atom charge
+## Phase 14 — Per-atom charge (shipped)
 
 `partialCharge` columns with provenance from PQR import, AMBER/PDB2PQR residue
 templates and Gasteiger for het groups, reconciled with imported `formalCharge`.
@@ -275,7 +283,7 @@ reports refused components. Net charge sums use the active model and conformer.
 Protonation states remain a caller choice. The GPU EEM/QEq solver (1to.8) is
 deferred until a coordinate-dependent charge use case needs it.
 
-## Phase 15 — Secondary structure codes and DSSP
+## Phase 15 — Secondary structure codes and DSSP (shipped)
 
 A residue column of DSSP 8-state codes, projected to helix/sheet/coil for the
 cartoon. Mol*'s DSSP ported to the CPU as the oracle, then a GPU path over the

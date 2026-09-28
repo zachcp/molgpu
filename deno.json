@@ -10,7 +10,8 @@
     "./packages/viewer"
   ],
   "nodeModulesDir": "auto",
-  "fmt": { "exclude": ["packages/dynamics/scripts/upstream"] },
+  "fmt": { "exclude": [".claude", "packages/dynamics/scripts/upstream"] },
+  "lint": { "exclude": [".claude", "packages/dynamics/scripts/upstream"] },
   "compilerOptions": {
     "lib": ["ES2023", "DOM", "DOM.Iterable", "deno.ns"]
   },

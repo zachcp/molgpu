@@ -16,6 +16,8 @@ jobs:
       - run: deno task lint
       - run: deno task test
       - run: deno task typecheck
+      - run: deno task typecheck:components
+      - run: deno task typecheck:site
       - run: deno task check:hardening
       - run: deno task jsr:check
 
@@ -31,6 +33,7 @@ jobs:
         with:
           deno-version: v2.x
       - run: deno run -A npm:playwright@1.62.1 install --with-deps chrome
+      - run: deno task test:site
       - name: WebGPU browser suites
         run: |
           failed=()
