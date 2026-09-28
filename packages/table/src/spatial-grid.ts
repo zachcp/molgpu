@@ -1,23 +1,5 @@
 // Uniform spatial hash over packed xyz positions. Pure CPU index math.
 
-/** Rows bucketed by cell, for neighbour queries within one cell size. */
-export interface SpatialGrid {
-  readonly cellSize: number;
-  /**
-   * Visit, in a fixed cell order and then insertion order, every indexed row in the
-   * cells around (x, y, z), restricted to `partition` when the grid has
-   * partitions. This covers every row within `cellSize` of the point; callers
-   * test the exact distance. Stops and returns true when `visit` returns true.
-   */
-  near(
-    x: number,
-    y: number,
-    z: number,
-    visit: (row: number) => boolean | void,
-    partition?: number,
-  ): boolean;
-}
-
 // A hair wider than requested, so a pair exactly `cellSize` apart can never
 // land two cells apart through division rounding.
 const WIDEN = 1 + 1e-9;
@@ -32,7 +14,19 @@ export function spatialGrid(
   rows: ArrayLike<number> | null,
   cellSize: number,
   partition?: (row: number) => number,
-): SpatialGrid {
+): {
+  readonly cellSize: number;
+  /** Visit nearby cells in fixed cell and insertion order, restricted to
+   * `partition` when present. Callers check the exact distance. Returns true
+   * as soon as `visit` returns true. */
+  near(
+    x: number,
+    y: number,
+    z: number,
+    visit: (row: number) => boolean | void,
+    partition?: number,
+  ): boolean;
+} {
   if (!Number.isFinite(cellSize) || cellSize <= 0) {
     throw new TypeError("spatialGrid: cellSize must be a positive number");
   }
@@ -90,9 +84,15 @@ export function spatialGrid(
     else buckets.set(cell, [i]);
   }
 
-  const grid: SpatialGrid = {
+  const grid = {
     cellSize,
-    near(x, y, z, visit, part = 0) {
+    near(
+      x: number,
+      y: number,
+      z: number,
+      visit: (row: number) => boolean | void,
+      part = 0,
+    ) {
       if (numeric && !Number.isSafeInteger(part * cells)) return false;
       const cx = Math.floor((x - minX) / size),
         cy = Math.floor((y - minY) / size),

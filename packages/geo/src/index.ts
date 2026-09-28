@@ -10,7 +10,6 @@ export type {
   CurveSegmentState,
   MarchingCubesInput,
   MarchingCubesMesh,
-  Vec3Like,
 } from "./types.ts";
 
 export {

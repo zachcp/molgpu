@@ -209,13 +209,11 @@ Element identity exports:
 | `StructureData`           | stable       | Validated, identity-branded structure value accepted by every other package.                                                          |
 | `bondTopology`            | experimental | Explicit bonds, or distance-inferred covalent bonds cached per position revision and policy.                                          |
 | `spatialGrid`             | experimental | Uniform spatial hash over packed positions for neighbour queries within one cell size, optionally partitioned.                        |
-| `SpatialGrid`             | experimental | Return type of `spatialGrid`.                                                                                                         |
 | `traceTable`              | experimental | Segmented polymer trace (guide points, tangent/normal/binormal frames, runs) for a selection.                                         |
 | `secondaryStructureTrace` | experimental | Per-sample direction vectors, helix/sheet/coil labels and block-boundary flags over a `Trace`.                                        |
 | `SS_CODES`                | experimental | DSSP letters in `ssCode` order: 0 coil, H, B, E, G, I, T, S, P (reserved).                                                            |
 | `ssKind`                  | experimental | Cartoon kind of an `ssCode` value: H/G/I helix, E/B sheet, otherwise coil.                                                            |
-| `dssp`                    | experimental | Mol*-ported DSSP: `ssCode` values per residue, per chain and model, over the given atom rows.                                         |
-| `DsspOptions`             | experimental | `rows`: atom rows to read (default every model, primary altlocs).                                                                     |
+| `dssp`                    | experimental | Mol*-ported DSSP: `ssCode` values per residue, per chain and model; accepts optional atom rows.                                       |
 | `withSecondaryStructure`  | experimental | Set `ssCode` by Mol*'s `auto`, `dssp` or `model` mode; computed codes carry `computed:dssp`.                                          |
 | `StructureInput`          | experimental | Unvalidated `{ topology, positions }` input to `createStructure`.                                                                     |
 | `Topology`                | experimental | The five column domains of a structure.                                                                                               |
@@ -226,8 +224,6 @@ Element identity exports:
 | `Links`                   | experimental | Type: source-declared bonds (chem_comp_bond templates, struct_conn) with type flags; add to inferred connectivity, not drawn.         |
 | `BOND_FLAGS`              | experimental | Bond type bits (covalent, metallic, hydrogen, disulfide, aromatic, computed) with Mol*'s values.                                      |
 | `Instances`               | experimental | Assembly rows: one chain times one column-major affine operator.                                                                      |
-| `ViewPolicy`              | experimental | `activeAtoms` options: model (`first`/`all`/id) and altloc (`primary`/`all`).                                                         |
-| `BondPolicy`              | experimental | Bond inference options: distance padding and whether inter-chain bonds are allowed.                                                   |
 | `Trace`                   | experimental | Return type of `traceTable`.                                                                                                          |
 | `SecondaryStructureTrace` | experimental | Return type of `secondaryStructureTrace`.                                                                                             |
 | `createVolume`            | experimental | Validate and wrap a grid plus index-to-world affine as a frozen `VolumeData`; adopts `values`, computes stats.                        |
@@ -244,7 +240,6 @@ Element identity exports:
 | `volumeLevel`             | experimental | Absolute isovalue for `number` or `{ sigma: k }` (`mean + k * sigma`).                                                                |
 | `VolumeData`              | experimental | Immutable grid: x-fastest `values`, `dims`, index-to-Å `transform`, `stats`, `components`, `unit`.                                    |
 | `VolumeInput`             | experimental | Input to `createVolume`.                                                                                                              |
-| `VolumeStats`             | experimental | Min, max, mean and population sigma of a volume.                                                                                      |
 | `VolumeLevel`             | experimental | Absolute isovalue or `{ sigma }`.                                                                                                     |
 | `createTrajectory`        | experimental | Validate and freeze a trajectory from in-memory `frames` or a streaming `source` plus `frameCount`; time defaults to the frame index. |
 | `validateTrajectory`      | experimental | Throw a `TypeError` unless a trajectory can move a structure (atom count, or in-range `atomMap` rows); frames are not decoded.        |

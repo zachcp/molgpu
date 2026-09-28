@@ -5,7 +5,6 @@ import type {
   VolumeGrid,
   VolumeInput,
   VolumeLevel,
-  VolumeStats,
 } from "./volume-types.ts";
 
 /** Default `createVolume` ceiling: 256³ samples (64 MiB of scalar f32). */
@@ -99,7 +98,7 @@ function check<T extends Omit<VolumeInput, "values"> & { values?: unknown }>(
 }
 
 /** Min, max, mean and population standard deviation of every stored value. */
-function statsOf(values: Float32Array): VolumeStats {
+function statsOf(values: Float32Array) {
   let min = Infinity, max = -Infinity, sum = 0;
   for (let i = 0; i < values.length; i++) {
     const v = values[i];

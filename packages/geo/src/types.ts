@@ -1,9 +1,6 @@
 // Pure geometry kernels: typed arrays and plain vec3 arrays in, owned typed
 // arrays out. No Mol*, use.gpu, or GPU types.
 
-/** A 3-vector as any indexable of at least three numbers (e.g. `[x, y, z]`). */
-export type Vec3Like = ArrayLike<number>;
-
 export interface MarchingCubesInput {
   /** Scalar grid, x-major: `values[x + nx * (y + ny * z)]`. */
   readonly values: Float32Array;
@@ -44,13 +41,13 @@ export interface CurveSegmentState {
 
 /** Five guide points around the segment p1→p2, plus the secondary-structure directions at its ends. */
 export interface CurveSegmentControls {
-  readonly p0: Vec3Like;
-  readonly p1: Vec3Like;
-  readonly p2: Vec3Like;
-  readonly p3: Vec3Like;
-  readonly p4: Vec3Like;
-  readonly d12: Vec3Like;
-  readonly d23: Vec3Like;
+  readonly p0: ArrayLike<number>;
+  readonly p1: ArrayLike<number>;
+  readonly p2: ArrayLike<number>;
+  readonly p3: ArrayLike<number>;
+  readonly p4: ArrayLike<number>;
+  readonly d12: ArrayLike<number>;
+  readonly d23: ArrayLike<number>;
   readonly secStrucFirst: boolean;
   readonly secStrucLast: boolean;
 }

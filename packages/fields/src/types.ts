@@ -18,15 +18,7 @@ export interface Field {
   readonly domain: Domain | "any";
 }
 
-export type Scalar = number;
 export type Color = readonly [number, number, number, number];
-
-export interface EvalContext {
-  t?: number;
-  domain?: Domain;
-  /** The volume an argument-free `volumeSample()` reads on the CPU. */
-  volume?: VolumeData;
-}
 
 export type Target = "raw" | "link";
 
@@ -42,22 +34,6 @@ export interface Binding {
   readonly fill: (source: StructureData | { t?: number }) => Float32Array;
   /** For a `volume:<n>` buffer: the volume whose samples fill it. */
   readonly volume?: VolumeData;
-}
-
-export interface Compiled {
-  readonly valueType: ValueType;
-  /** 'any' when a broadcast field (constant/curve) is compiled without `options.domain`. */
-  readonly domain: Domain | "any";
-  readonly target: Target;
-  /** Entry name: `evalField` (raw) or `getField` (link). */
-  readonly entry: string;
-  readonly bindings: readonly Binding[];
-  /**
-   * Self-contained WGSL. `raw` uses `@group(0)` bindings and a plain `evalField`;
-   * `link` uses `@link fn` accessors (bound in `bindings` order) and `@export fn
-   * getField`. No ShaderSource either way.
-   */
-  readonly wgsl: string;
 }
 
 // Identity-keyed annotation joins.
@@ -77,22 +53,3 @@ export interface ChainIdentity {
   chainAuth: string;
 }
 export type IdentityField = keyof ResidueIdentity;
-
-/** `R` is the caller's record shape (inferred from `records`). */
-export interface JoinOptions<R = unknown> {
-  /**
-   * Domain the records key to. Defaults to 'residue'. `'chain'` requires
-   * `lift: true` (annotations exist only on atom/residue domains).
-   */
-  domain?: "residue" | "chain";
-  /** Identity fields to match on; must include a chain field. */
-  fields: readonly IdentityField[];
-  /** Extract a record's value; defaults to reading `record.value`. */
-  value?: (record: R) => number | Color;
-  type?: ValueType;
-  policy?: "fallback" | "fail";
-  fallback?: number | Color;
-  duplicate?: "error" | "first" | "last";
-  /** Lift a residue/chain annotation onto atoms. Defaults to true. */
-  lift?: boolean;
-}

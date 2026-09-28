@@ -62,17 +62,6 @@ const bridge = (p1: number, p2: number, type: number): Bridge => ({
   type,
 });
 
-/** Options for `dssp`. */
-export interface DsspOptions {
-  /**
-   * Atom rows to read, ascending (default: every model with primary altlocs,
-   * `activeAtoms(data, { model: "all" })`). A residue's backbone atom is the
-   * first row with that name, so `altloc: "all"` rows read the first conformer
-   * in file order, as Mol* does.
-   */
-  readonly rows?: ArrayLike<number>;
-}
-
 /** One unit's residues (list order) and their backbone atom rows (-1 absent). */
 interface Unit {
   readonly residues: number[];
@@ -90,7 +79,11 @@ interface Unit {
  */
 export function dssp(
   data: StructureData,
-  options: DsspOptions = {},
+  options: {
+    /** Atom rows to read, ascending. Defaults to every model with primary
+     * altlocs. With all altlocs, the first conformer in file order wins. */
+    readonly rows?: ArrayLike<number>;
+  } = {},
 ): Uint8Array {
   const rows = options.rows ?? activeAtoms(data, { model: "all" });
   const { atoms, residues } = data.topology;
@@ -143,7 +136,10 @@ export function dssp(
  */
 export function withSecondaryStructure(
   data: StructureData,
-  options: DsspOptions & { readonly mode?: "auto" | "dssp" | "model" } = {},
+  options: {
+    readonly rows?: ArrayLike<number>;
+    readonly mode?: "auto" | "dssp" | "model";
+  } = {},
 ): StructureData {
   const { mode = "auto" } = options;
   if (!["auto", "dssp", "model"].includes(mode)) {

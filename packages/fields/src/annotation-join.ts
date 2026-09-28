@@ -10,8 +10,8 @@ import type {
   Color,
   Field,
   IdentityField,
-  JoinOptions,
   ResidueIdentity,
+  ValueType,
 } from "./types.ts";
 
 function fail(field: string, message: string): never {
@@ -69,7 +69,16 @@ export const identityKey = (
 export function joinAnnotation<R>(
   data: StructureData,
   records: readonly R[],
-  options: JoinOptions<R>,
+  options: {
+    domain?: "residue" | "chain";
+    fields: readonly IdentityField[];
+    value?: (record: R) => number | Color;
+    type?: ValueType;
+    policy?: "fallback" | "fail";
+    fallback?: number | Color;
+    duplicate?: "error" | "first" | "last";
+    lift?: boolean;
+  },
 ): Field {
   const {
     domain = "residue",
@@ -80,7 +89,7 @@ export function joinAnnotation<R>(
     fallback,
     duplicate = "error",
     lift = true,
-  } = options ?? ({} as JoinOptions<R>);
+  } = options;
   if (!Array.isArray(records)) {
     fail("joinAnnotation.records", "expected an array of records");
   }

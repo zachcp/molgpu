@@ -1,13 +1,4 @@
 // Scalar/vector volume samples and their affine grid geometry.
-/** Summary statistics over every stored sample of a volume. */
-export interface VolumeStats {
-  readonly min: number;
-  readonly max: number;
-  readonly mean: number;
-  /** Population standard deviation about `mean`. */
-  readonly sigma: number;
-}
-
 /** Input to `createVolume` / `validateVolume`. */
 export interface VolumeInput {
   /**
@@ -43,7 +34,13 @@ export interface VolumeData {
   readonly dims: readonly [number, number, number];
   /** Column-major 4×4 affine from grid index to Å. */
   readonly transform: Float32Array;
-  readonly stats: VolumeStats;
+  readonly stats: {
+    readonly min: number;
+    readonly max: number;
+    readonly mean: number;
+    /** Population standard deviation about `mean`. */
+    readonly sigma: number;
+  };
   readonly components: 1 | 3;
   readonly unit?: string;
 }

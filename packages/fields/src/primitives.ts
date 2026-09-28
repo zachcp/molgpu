@@ -26,9 +26,7 @@ import { sampleVolumeWgsl } from "./volume.ts";
 import type {
   Binding,
   Color,
-  Compiled,
   Domain,
-  EvalContext,
   Field,
   Overflow,
   Target,
@@ -297,7 +295,7 @@ export function linear(
   options: {
     domain: readonly [number, number];
     range?: readonly [number, number];
-    overflow?: Overflow;
+    overflow?: "clamp" | "wrap" | "fail";
   },
 ): Field {
   const { domain: dom, range = [0, 1], overflow = "clamp" } = options ?? {};
@@ -641,7 +639,12 @@ function sampleColor(
 export function evaluate(
   field: Field,
   data: StructureData,
-  ctx: EvalContext = {},
+  ctx: {
+    t?: number;
+    domain?: Domain;
+    /** The volume an argument-free `volumeSample()` reads on the CPU. */
+    volume?: VolumeData;
+  } = {},
 ): Float32Array | string[] {
   const f = field as FieldNode;
   const { domain } = ctx;
@@ -688,11 +691,28 @@ export function compile(
   field: Field,
   options: {
     domain?: Domain;
-    target?: Target;
+    target?: "raw" | "link";
     /** The grid argument-free `volumeSample()` samples (the viewer's nearest volume). */
     volume?: VolumeGrid;
   } = {},
-): Compiled {
+): {
+  readonly valueType: ValueType;
+  readonly domain: Domain | "any";
+  readonly target: "raw" | "link";
+  readonly entry: "evalField" | "getField";
+  readonly bindings: readonly {
+    readonly id: string;
+    readonly binding: number;
+    readonly kind: "buffer" | "uniform";
+    readonly wgslType: string;
+    readonly accessor: string;
+    readonly fill: (
+      source: StructureData | { t?: number },
+    ) => Float32Array;
+    readonly volume?: VolumeData;
+  }[];
+  readonly wgsl: string;
+} {
   const f = field as FieldNode;
   const { domain, target = "raw", volume: nearest } = options;
   assertField(f, "compile.field");

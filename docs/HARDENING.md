@@ -53,6 +53,28 @@ modules host both entries, its `.` is checked export by export: the types each
   source disagree, so an API change always shows up in the diff.
 - Public declarations name only types the package exports from some entry. A
   private alias would show up in the generated docs with nothing to link to.
+- Entry modules use explicit re-export lists; wildcard re-exports (`export *`
+  and `export * as`) are rejected. `deno task check:hardening --usage` reports
+  consumers by package, site, and tests for every entry export. An export with
+  no workspace consumer needs a meaningful caller-facing description in the
+  README API table, which is its explicit justification for the public surface.
+
+  **Export discipline (R1–R6).** Apply these rules to every entry, including
+  subpaths:
+
+  1. Export one `XProps` type per public component. For union props, export the
+     union; keep its variants internal.
+  2. Export callback status/result types and public hook return types that
+     callers need to name.
+  3. Remove generic utility aliases such as `TypedArray`, `VectorLike`, and
+     `Vec3Like`; inline a concrete type or `ArrayLike<number>`. Keep shared
+     domain aliases such as `ColorLike`, `Selection`, and `Field`.
+  4. Remove option bags with their removed owner function or component.
+  5. List every public export explicitly; never use `export *` or
+     `export type *` in an entry module.
+  6. Export an options or report type only if callers must name it outside a
+     call expression. Otherwise inline it in the public signature. A named type
+     that remains in a public signature must itself be exported.
 
 **H6 — Packs and imports cleanly.**
 

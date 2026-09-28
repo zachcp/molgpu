@@ -1,5 +1,5 @@
 // Active atom views, stable residue keys, and coordinate bounds.
-import type { StructureData, ViewPolicy } from "./structure-types.ts";
+import type { StructureData } from "./structure-types.ts";
 
 const fail = (path: string, message: string): never => {
   throw new TypeError(`${path}: ${message}`);
@@ -10,7 +10,10 @@ const fail = (path: string, message: string): never => {
  * occupancy (lexical tie-break), plus atoms with blank altloc. */
 export function activeAtoms(
   data: StructureData,
-  policy: ViewPolicy = {},
+  policy: {
+    readonly model?: "first" | "all" | number;
+    readonly altloc?: "primary" | "all";
+  } = {},
 ): Uint32Array {
   const { model = "first", altloc = "primary" } = policy;
   const { atoms: a, residues: r, chains: c } = data.topology;
