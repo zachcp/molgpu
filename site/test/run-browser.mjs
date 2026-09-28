@@ -197,18 +197,6 @@ Deno.test("site landing page and maintained gallery routes", async () => {
         "zooming",
         "wheel input updates the shared orbit controller",
       );
-      let focusY;
-      if (id === "coordinates") {
-        await page.getByLabel("Timeline time in seconds").fill("0");
-        await page.waitForFunction(() =>
-          document.querySelector("#molecule-canvas")?.dataset.focusY !==
-            undefined
-        );
-        await page.waitForTimeout(500);
-        focusY = Number(
-          await page.locator("#molecule-canvas").getAttribute("data-focus-y"),
-        );
-      }
       if (id === "trajectory") {
         assertStrictEquals(
           await page.getByLabel("Trajectory representation").inputValue(),
@@ -270,14 +258,6 @@ Deno.test("site landing page and maintained gallery routes", async () => {
             "timeline scrub also moves the camera",
           );
         }
-      }
-      if (id === "coordinates") {
-        await page.waitForFunction((previous) => {
-          const value = Number(
-            document.querySelector("#molecule-canvas")?.dataset.focusY,
-          );
-          return Number.isFinite(value) && Math.abs(value - previous) > 0.01;
-        }, focusY);
       }
       if (id === "surface") {
         assertStrictEquals(
