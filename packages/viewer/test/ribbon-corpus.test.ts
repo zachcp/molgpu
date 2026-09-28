@@ -52,7 +52,7 @@ for (const id of ["1tqn", "1ejg", "1bna", "1crn", "2k39"]) {
 
     // The mesh must stay within the atom cloud's bounds, expanded by the
     // Widest profile is the beta-sheet shoulder: 1.5 * 2.2 width and
-    // 0.35 height, so its axis-aligned half-extent is at most 1.825 Å.
+    // 1.1 Å helix height, so its axis-aligned half-extent remains below 1.85 Å.
     const bounds = coordinateBounds(data);
     assert(bounds);
     const margin = 1.85;

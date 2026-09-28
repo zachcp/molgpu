@@ -234,6 +234,12 @@ Assign charges first with `templateCharges` (@molgpu/dynamics), `applyPqr` or
 primary-conformer atoms are summed. Pass a `select` that leaves out water if the
 charges include it.
 
+`<Surface>` also accepts atom-derived fields such as `byElement()` and
+`byCharge()`. Each surface vertex inherits the attributes of its nearest source
+atom; position and volume fields such as `byPotential()` continue to sample at
+the vertex (offset along its normal by `sampleOffset`). Changing a field,
+material, opacity or sampling offset leaves the computed surface mesh intact.
+
 - **Physics.** The default model is a distance-dependent dielectric (ε = 4r,
   ChimeraX's coulombic default). `model="debye"` screens with an ionic strength,
   and `model="vacuum"` is plain Coulomb. Values are in kT/e at 298.15 K, which

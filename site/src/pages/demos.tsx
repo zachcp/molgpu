@@ -8,7 +8,7 @@ import {
 } from "@molgpu/table";
 import crambinUrl from "../../../packages/io/test/fixtures/1crn.bcif?url";
 import chargesUrl from "../../../packages/io/test/fixtures/1crn-amber.pqr?url";
-import { comp, element, resolve, within } from "@molgpu/select";
+import { element, resolve } from "@molgpu/select";
 import {
   densityMapFor,
   loadChargedCrambin,
@@ -18,7 +18,11 @@ import { demoById, demoCamera, type DemoId, demos } from "../demos/registry.ts";
 import {
   type MaterialMode,
   renderDemoScene,
+  selectionFor,
+  type SelectionMode,
+  type SurfaceColorMode,
   type SurfaceMode,
+  type TrajectoryMode,
 } from "../demos/scenes.tsx";
 import { disposeViewer, mountViewer } from "../demos/viewer.tsx";
 
@@ -34,8 +38,18 @@ export const DemosPage = () => {
   const [id, setId] = useState<DemoId>(demoFromHash);
   const [time, setTime] = useState(0);
   const [playing, setPlaying] = useState(false);
-  const [surfaceMode, setSurfaceMode] = useState<SurfaceMode>("glass");
+  const [surfaceMode, setSurfaceMode] = useState<SurfaceMode>("opaque");
+  const [surfaceColorMode, setSurfaceColorMode] = useState<SurfaceColorMode>(
+    "neutral",
+  );
   const [materialMode, setMaterialMode] = useState<MaterialMode>("matte");
+  const [selectionMode, setSelectionMode] = useState<SelectionMode>(
+    "near-cysteine",
+  );
+  const [trajectoryMode, setTrajectoryMode] = useState<TrajectoryMode>("tube");
+  const [efieldSpacing, setEfieldSpacing] = useState(1);
+  const [seedSpacing, setSeedSpacing] = useState(7);
+  const [lineDistance, setLineDistance] = useState(30);
   // Slice position as a fraction of the map's k extent, and isolevel in sigma.
   const [sliceFraction, setSliceFraction] = useState(0.5);
   const [isoSigma, setIsoSigma] = useState(2);
@@ -49,6 +63,7 @@ export const DemosPage = () => {
   useEffect(() => {
     setTime(0);
     setPlaying(false);
+    setSurfaceMode("opaque");
   }, [id]);
   useEffect(() => {
     if (!playing || !scrubbed(id)) return;
@@ -87,7 +102,7 @@ export const DemosPage = () => {
           host.dataset.worldLight = String(!!demo.options?.worldLight);
           if (demo.id === "select") {
             host.dataset.selectedCount = String(
-              resolve(within(5, comp(["CYS"])), data).indices.length,
+              selectionFor(data, selectionMode).indices.length,
             );
           }
           if (demo.id === "bonds") {
@@ -120,16 +135,31 @@ export const DemosPage = () => {
         const scene = (current: StructureData) =>
           renderDemoScene(demo.id, current, {
             surfaceMode,
+            surfaceColorMode,
             materialMode,
+            selectionMode,
+            trajectoryMode,
+            efieldSpacing,
+            seedSpacing,
+            lineDistance,
             sliceIndex,
             isoSigma,
           });
+        const camera = demoCamera(data, demo.id, time);
+        if (host) {
+          host.dataset.cameraRadius = camera.radius.toFixed(3);
+          if (demo.id === "efield") {
+            host.dataset.gridSpacing = String(efieldSpacing);
+            host.dataset.seedSpacing = String(seedSpacing);
+            host.dataset.lineDistance = String(lineDistance);
+          }
+        }
         mountViewer(
           demo.id,
           "#molecule-canvas",
           data,
           scene,
-          demoCamera(data, demo.id),
+          camera,
           scrubbed(demo.id) ? { ...demo.options, time } : demo.options,
         );
         if (status) status.textContent = "";
@@ -144,7 +174,20 @@ export const DemosPage = () => {
     return () => {
       cancelled = true;
     };
-  }, [demo, time, surfaceMode, materialMode, sliceFraction, isoSigma]);
+  }, [
+    demo,
+    time,
+    surfaceMode,
+    surfaceColorMode,
+    materialMode,
+    selectionMode,
+    trajectoryMode,
+    efieldSpacing,
+    seedSpacing,
+    lineDistance,
+    sliceFraction,
+    isoSigma,
+  ]);
   return (
     <section className="demo-page" aria-labelledby="demo-title">
       <div className="demo-copy">
@@ -181,19 +224,107 @@ export const DemosPage = () => {
           </div>
         )}
         {demo.id === "surface" && (
+          <>
+            <label className="timeline-control">
+              Surface{" "}
+              <select
+                aria-label="Surface material"
+                value={surfaceMode}
+                onChange={(event) =>
+                  setSurfaceMode(event.currentTarget.value as SurfaceMode)}
+              >
+                <option value="opaque">Opaque</option>
+                <option value="glass">Glass</option>
+                <option value="pumice">Pumice</option>
+              </select>
+            </label>
+            <label className="timeline-control">
+              Color{" "}
+              <select
+                aria-label="Surface color field"
+                value={surfaceColorMode}
+                onChange={(event) =>
+                  setSurfaceColorMode(
+                    event.currentTarget.value as SurfaceColorMode,
+                  )}
+              >
+                <option value="neutral">Neutral</option>
+                <option value="element">Nearest atom element</option>
+              </select>
+            </label>
+          </>
+        )}
+        {demo.id === "select" && (
           <label className="timeline-control">
-            Surface{" "}
+            Selection{" "}
             <select
-              aria-label="Surface material"
-              value={surfaceMode}
+              aria-label="Selection query"
+              value={selectionMode}
               onChange={(event) =>
-                setSurfaceMode(event.currentTarget.value as SurfaceMode)}
+                setSelectionMode(event.currentTarget.value as SelectionMode)}
             >
-              <option value="opaque">Opaque</option>
-              <option value="glass">Glass</option>
-              <option value="pumice">Pumice</option>
+              <option value="near-cysteine">Within 5 Å of cysteine</option>
+              <option value="cysteine">Cysteine residues</option>
+              <option value="sulfur">Sulfur atoms</option>
             </select>
           </label>
+        )}
+        {demo.id === "trajectory" && (
+          <label className="timeline-control">
+            Representation{" "}
+            <select
+              aria-label="Trajectory representation"
+              value={trajectoryMode}
+              onChange={(event) =>
+                setTrajectoryMode(event.currentTarget.value as TrajectoryMode)}
+            >
+              <option value="tube">Backbone tube</option>
+              <option value="ball-and-stick">Ball and stick</option>
+            </select>
+          </label>
+        )}
+        {demo.id === "efield" && (
+          <>
+            <label className="timeline-control">
+              Grid spacing{" "}
+              <select
+                aria-label="Potential grid spacing"
+                value={efieldSpacing}
+                onChange={(event) =>
+                  setEfieldSpacing(Number(event.currentTarget.value))}
+              >
+                <option value={1.5}>Coarse · 1.5 Å</option>
+                <option value={1}>Standard · 1 Å</option>
+                <option value={0.75}>Fine · 0.75 Å</option>
+              </select>
+            </label>
+            <label className="timeline-control">
+              Field line density{" "}
+              <select
+                aria-label="Field line seed spacing"
+                value={seedSpacing}
+                onChange={(event) =>
+                  setSeedSpacing(Number(event.currentTarget.value))}
+              >
+                <option value={9}>Sparse · 9 Å</option>
+                <option value={7}>Standard · 7 Å</option>
+                <option value={3.5}>Dense · 3.5 Å</option>
+              </select>
+            </label>
+            <label className="timeline-control">
+              Field line distance{" "}
+              <select
+                aria-label="Field line distance"
+                value={lineDistance}
+                onChange={(event) =>
+                  setLineDistance(Number(event.currentTarget.value))}
+              >
+                <option value={18}>Short · 18 Å</option>
+                <option value={30}>Standard · 30 Å</option>
+                <option value={60}>Long · 60 Å</option>
+              </select>
+            </label>
+          </>
         )}
         {demo.id === "volume" && (
           <>

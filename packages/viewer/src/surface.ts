@@ -1,6 +1,6 @@
 import type { Selection } from "@molgpu/select";
 import { compile, type Field } from "@molgpu/fields";
-import { createVolumeGrid } from "@molgpu/table";
+import { createVolumeGrid, type StructureData } from "@molgpu/table";
 import type {
   MaterialSpec,
   Translucency,
@@ -35,6 +35,8 @@ import { useGeometryJob } from "./use-geometry-job.ts";
 import { buildSurfaceGeometry } from "./internal/surface-geometry.ts";
 import { useRepaint } from "./internal/use-repaint.ts";
 import { useBindingProbe } from "./internal/use-binding-probe.ts";
+import { useAttributeSources } from "./internal/attribute-sources.ts";
+import { indexed } from "./internal/indexed.ts";
 
 // A vertex pushed `offset` Å along its normal: where a surface colour field
 // samples, so moving the sampling shell is a uniform write.
@@ -48,44 +50,76 @@ const OFFSET_POSITIONS = wgsl`
 `;
 
 /**
- * Surface vertices are not atoms: a colour field may only read position
- * (e.g. `volumeSample`/`byPotential`), plus constants and the timeline.
+ * Surface vertices sample positions directly and atom attributes through the
+ * nearest source atom recorded when the mesh is built.
  */
 const PROBE_GRID = createVolumeGrid({
   dims: [2, 2, 2],
   transform: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
 });
-function checkVertexField(field: Field): void {
+function vertexFieldAttributes(field: Field): string[] {
   // Compiled only to list its inputs; any grid will do for that.
-  const reads = compile(field, {
+  const bindings = compile(field, {
     target: "link",
     domain: "atom",
     volume: PROBE_GRID,
-  }).bindings
+  }).bindings;
+  const reads = bindings
     .map((b) => b.id)
     .filter((id) =>
-      id !== "positions" && id !== "curve:t" && !id.startsWith("volume:")
+      id !== "positions" && id !== "curve:t" && !id.startsWith("volume:") &&
+      !id.startsWith("attr:")
     );
   if (reads.length) {
     throw new TypeError(
-      `Surface colour fields may read only position (volumeSample, byPotential), not ${
-        reads.join(", ")
-      }; per-atom surface colouring is not supported`,
+      `Surface colour fields cannot read ${reads.join(", ")}`,
     );
   }
+  return bindings.filter((binding) => binding.id.startsWith("attr:"))
+    .map((binding) => binding.id.slice(5));
 }
 
 const FieldFaces: LC<{
   field: Field;
   positions: StorageSource;
   normals: StorageSource;
+  sourceAtom: StorageSource | null;
+  data: StructureData;
+  attrNames: readonly string[];
   sampleOffset: number;
   opacity: number;
   render: (colors: ShaderSource) => ReturnType<typeof live>;
-}> = ({ field, positions, normals, sampleOffset, opacity, render }) => {
+}> = (
+  {
+    field,
+    positions,
+    normals,
+    sourceAtom,
+    data,
+    attrNames,
+    sampleOffset,
+    opacity,
+    render,
+  },
+) => {
   const offset = useShaderRef(sampleOffset);
   const shell = useShader(OFFSET_POSITIONS, [positions, normals, offset]);
-  const inputs = useMemo(() => ({ positions: shell }), [shell]);
+  const attributes = useAttributeSources(data, attrNames);
+  const columns = attrNames.map((name) => attributes.sources[`attr:${name}`]);
+  for (const name of attrNames) {
+    if (attributes.domains[`attr:${name}`] !== "atom") {
+      throw new TypeError(
+        `Surface colour field '${name}' must be an atom attribute`,
+      );
+    }
+  }
+  const inputs = useMemo(() => ({
+    positions: shell,
+    ...Object.fromEntries(attrNames.map((name, i) => [
+      `attr:${name}`,
+      indexed(columns[i], sourceAtom, "f32"),
+    ])),
+  }), [shell, sourceAtom, attrNames.join(), ...columns]);
   const colors = useOpacityColors(
     useField(field, inputs, { domain: "atom" }),
     opacity,
@@ -105,12 +139,11 @@ const FieldFaces: LC<{
  * are separate FaceLayer bindings and never do. An oversize grid throws an
  * actionable error (see internal/geometry-job.ts's assertGridBudget)
  * before the field is computed, not after. Each vertex carries the atom row
- * it is nearest to (`sourceAtom` on the raw geometry, not yet surfaced as a
- * prop here — picking/field colouring is future work built on top of it).
+ * it is nearest to (`sourceAtom`), used for atom-attribute colour fields.
  * `material` (a @molgpu/viewer material spec) wraps the shaded face layer;
  * without one the surface uses the ambient scene material.
  *
- * `color` may be a Field that reads only position, such as `byPotential()`
+ * `color` may read atom attributes such as `byElement()`, or position such as `byPotential()`
  * under `<EField>`: each vertex samples it `sampleOffset` Å out along its
  * normal (default 1.4, one water radius, as ChimeraX's coulombic colouring),
  * live as the volume changes. Moving the offset is a uniform write. The mesh
@@ -127,7 +160,7 @@ export const Surface: ViewerComponent<
     resolution?: number;
     /** Grid byte budget override; defaults to 256 MiB. */
     maxBytes?: number;
-    /** A flat colour, or a position-only Field such as `byPotential()`. */
+    /** A flat colour or an atom/position Field such as `byElement()` or `byPotential()`. */
     color?: VectorLike | Field;
     /** Å along the vertex normal where a colour field samples; default 1.4. */
     sampleOffset?: number;
@@ -156,7 +189,7 @@ export const Surface: ViewerComponent<
   useBindingProbe("surface", color, opacity);
   checkOpacity(opacity, "Surface");
   const field = isField(color) ? color : null;
-  if (field) checkVertexField(field);
+  const attrNames = field ? vertexFieldAttributes(field) : [];
   if (!Number.isFinite(sampleOffset)) {
     throw new TypeError("Surface sampleOffset must be finite");
   }
@@ -189,6 +222,9 @@ export const Surface: ViewerComponent<
     { key: "normals", data: mesh.normals, format: "vec3<f32>" },
     { key: "indices", data: mesh.indices, format: "u32" },
   ];
+  if (attrNames.length) {
+    specs.push({ key: "sourceAtom", data: mesh.sourceAtom, format: "u32" });
+  }
   const faces = (
     map: Record<string, StorageSource | null>,
     colors?: ShaderSource,
@@ -213,6 +249,9 @@ export const Surface: ViewerComponent<
         field,
         positions: map.positions!,
         normals: map.normals!,
+        sourceAtom: map.sourceAtom,
+        data: resource.data,
+        attrNames,
         sampleOffset,
         opacity,
         render: (colors: ShaderSource) => live(faces(map, colors)),

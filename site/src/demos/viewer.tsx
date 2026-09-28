@@ -26,6 +26,7 @@ type ViewerOptions = {
   time?: number;
   postprocess?: boolean;
   coordinates?: boolean;
+  lightFigure?: boolean;
 };
 
 type ViewerState = {
@@ -60,7 +61,7 @@ const OrbitControls = (
 ) => {
   const [bearing, setBearing] = useState(initialBearing);
   const [pitch, setPitch] = useState(initialPitch);
-  const [radius, setRadius] = useState(initialRadius);
+  const [zoom, setZoom] = useState(1);
   const mouse = useMouseState();
   const wheel = useWheelState();
   useResource(() => {
@@ -74,9 +75,7 @@ const OrbitControls = (
   }, [mouse]);
   useResource(() => {
     if (!wheel.moveY) return;
-    setRadius((value) =>
-      clamp(value * Math.exp(wheel.moveY * 0.002), 0.5, 5000)
-    );
+    setZoom((value) => clamp(value * Math.exp(wheel.moveY * 0.002), 0.1, 20));
     document.querySelector<HTMLElement>(host)?.setAttribute(
       "data-orbit",
       "zooming",
@@ -85,7 +84,7 @@ const OrbitControls = (
   return use(OrbitCamera, {
     bearing,
     pitch,
-    radius,
+    radius: clamp(initialRadius * zoom, 0.5, 5000),
     target,
     children,
   });
@@ -139,7 +138,9 @@ const ViewerRoot = (initial: ViewerState) => {
     children: use(AutoCanvas, {
       selector: host,
       samples: 4,
-      backgroundColor: [0.035, 0.055, 0.09, 1],
+      backgroundColor: options.lightFigure
+        ? [0.22, 0.28, 0.36, 1]
+        : [0.035, 0.055, 0.09, 1],
       children: (() => {
         const pass = (insideStructure: boolean) =>
           use(Pass, {
@@ -147,7 +148,7 @@ const ViewerRoot = (initial: ViewerState) => {
             oit: options.oit,
             ...(options.postprocess
               ? {
-                ssao: 0.35,
+                ssao: options.lightFigure ? 0.12 : 0.35,
                 outline: {
                   outer: 1.5,
                   inner: 0,
@@ -158,12 +159,20 @@ const ViewerRoot = (initial: ViewerState) => {
             children: [
               use(AmbientLight, {
                 color: [0.7, 0.8, 1],
-                intensity: options.worldLight ? 0.1 : 0.35,
+                intensity: options.worldLight
+                  ? 0.1
+                  : options.lightFigure
+                  ? 0.7
+                  : 0.35,
               }),
               use(DirectionalLight, {
                 direction: [-1, -2, -1.5],
                 color: [1, 0.95, 0.88],
-                intensity: options.worldLight ? 1.8 : 1.25,
+                intensity: options.worldLight
+                  ? 1.8
+                  : options.lightFigure
+                  ? 1.55
+                  : 1.25,
               }),
               use(TimelineProvider, {
                 time: options.time ?? 0,

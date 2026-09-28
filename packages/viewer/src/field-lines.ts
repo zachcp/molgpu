@@ -21,11 +21,8 @@ import type { Translucency, VectorLike, ViewerComponent } from "./types.ts";
 import { useVolume } from "./volume-context.ts";
 import { withColumns } from "./internal/representation.ts";
 import { checkOpacity, modeProps } from "./internal/opacity.ts";
-import {
-  count,
-  releaseOwnedBuffer,
-  trackOwnedBuffer,
-} from "./internal/instrumentation.ts";
+import { count, trackOwnedBuffer } from "./internal/instrumentation.ts";
+import { retireBuffers } from "./internal/retire-buffers.ts";
 import { useRepaint } from "./internal/use-repaint.ts";
 import { useBindingProbe } from "./internal/use-binding-probe.ts";
 import { viewer } from "./internal/elements.ts";
@@ -225,12 +222,7 @@ export const FieldLines: ViewerComponent<
     return { seedBuffer, out, params };
   }, [device, points, steps, step, minField, potentialCap]);
   useResource((dispose) => {
-    dispose(() => {
-      for (const buffer of Object.values(buffers)) {
-        releaseOwnedBuffer(buffer);
-        buffer.destroy();
-      }
-    });
+    dispose(() => retireBuffers(device, Object.values(buffers)));
   }, [buffers]);
   const group = useMemo(() =>
     device.createBindGroup({

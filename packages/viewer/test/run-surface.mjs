@@ -158,6 +158,31 @@ Deno.test("viewer surface", async () => {
       "a color edit must change the rendered image",
     );
 
+    // Atom fields gather through sourceAtom, while the surface mesh is reused.
+    await page.evaluate(() => globalThis.__probe.setElementColor());
+    await settle();
+    await settle();
+    const attributed = await snap();
+    const attributedShot = await shot();
+    assertEquals(attributed.errors, [], "atom field produced WebGPU errors");
+    for (
+      const label of ["molgpu:positions", "molgpu:normals", "molgpu:indices"]
+    ) {
+      assertStrictEquals(
+        attributed.storageLabels.filter((name) => name === label).length,
+        styled.storageLabels.filter((name) => name === label).length,
+        `${label} must not be rebuilt for atom coloring`,
+      );
+    }
+    assert(
+      attributed.storageLabels.includes("molgpu:sourceAtom"),
+      "atom coloring uploads the vertex-to-atom index",
+    );
+    assert(
+      !attributedShot.equals(styledShot),
+      "atom field changes surface colors",
+    );
+
     // Empty input (a selection that matches no atoms): renders nothing, no crash.
     await page.evaluate(() => globalThis.__probe.setMode("empty"));
     await settle();
@@ -170,7 +195,7 @@ Deno.test("viewer surface", async () => {
       "empty-input scene produced WebGPU errors",
     );
     assert(
-      !emptyShot.equals(styledShot),
+      !emptyShot.equals(attributedShot),
       "empty input must stop drawing the surface",
     );
     const newSurfaceBuffers = empty.storageLabels.slice(styled.storage)

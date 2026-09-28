@@ -45,15 +45,31 @@ const FrameReadout = () => {
 };
 
 export type SurfaceMode = "opaque" | "glass" | "pumice";
+export type SurfaceColorMode = "neutral" | "element";
 export type MaterialMode = "matte" | "metal" | "basic" | "normal";
+export type SelectionMode = "near-cysteine" | "cysteine" | "sulfur";
+export type TrajectoryMode = "tube" | "ball-and-stick";
 export interface SceneOptions {
   readonly surfaceMode: SurfaceMode;
+  readonly surfaceColorMode: SurfaceColorMode;
   readonly materialMode: MaterialMode;
+  readonly selectionMode: SelectionMode;
+  readonly trajectoryMode: TrajectoryMode;
+  readonly efieldSpacing: number;
+  readonly seedSpacing: number;
+  readonly lineDistance: number;
   /** Fractional k (third-axis) grid index of the volume slice. */
   readonly sliceIndex: number;
   /** Isosurface level in sigma above the map mean. */
   readonly isoSigma: number;
 }
+
+export const selectionFor = (data: StructureData, mode: SelectionMode) =>
+  mode === "near-cysteine"
+    ? resolve(within(5, comp(["CYS"])), data)
+    : mode === "cysteine"
+    ? toAtoms(resolve(comp(["CYS"]), data), data)
+    : resolve(element(16), data);
 
 type Rgba = readonly [number, number, number, number];
 const DENSITY_STOPS: ReadonlyArray<readonly [number, Rgba]> = [
@@ -89,7 +105,7 @@ export const renderDemoScene = (
           color={[0.3, 0.33, 0.4, 1]}
         />,
         <BallAndStick
-          select={resolve(within(5, comp(["CYS"])), data)}
+          select={selectionFor(data, options.selectionMode)}
           ball={0.35}
           stick={0.28}
           color={byElement()}
@@ -110,7 +126,10 @@ export const renderDemoScene = (
         />,
       ];
     case "bonds":
-      return <Bonds width={0.32} />;
+      return [
+        <Spacefill scale={0.13} color={[0.55, 0.72, 0.9, 1]} />,
+        <Bonds width={0.55} color={[0.98, 0.82, 0.45, 1]} />,
+      ];
     case "coordinates":
       return [
         <Spacefill
@@ -129,25 +148,37 @@ export const renderDemoScene = (
     case "trajectory":
       return (
         <Trajectory src={motionUrl} frame={motion}>
-          <Spacefill scale={0.3} color={[0.42, 0.72, 0.95, 1]} />
-          <Ribbon color={[0.95, 0.5, 0.28, 1]} />
+          {options.trajectoryMode === "tube"
+            ? <Tube radius={0.48} color={[0.55, 0.85, 0.6, 1]} />
+            : <BallAndStick ball={0.28} stick={0.22} color={byElement()} />}
           <FrameReadout />
         </Trajectory>
       );
     case "tube":
       return <Tube radius={0.5} color={[0.55, 0.85, 0.6, 1]} />;
     case "ribbon":
-      return <Ribbon color={[0.86, 0.55, 0.35, 1]} />;
+      return (
+        <Ribbon color={[0.97, 0.66, 0.38, 1]} material={{ type: "basic" }} />
+      );
     case "surface":
       if (options.surfaceMode === "opaque") {
-        return <Surface resolution={0.55} color={[0.75, 0.78, 0.86, 1]} />;
+        return (
+          <Surface
+            resolution={0.55}
+            color={options.surfaceColorMode === "element"
+              ? byElement()
+              : [0.75, 0.78, 0.86, 1]}
+          />
+        );
       }
       if (options.surfaceMode === "pumice") {
         return (
           <Surface
             probeRadius={0.5}
             resolution={0.4}
-            color={[0.52, 0.5, 0.47, 1]}
+            color={options.surfaceColorMode === "element"
+              ? byElement()
+              : [0.52, 0.5, 0.47, 1]}
             material={{ type: "pbr", roughness: 1, metalness: 0 }}
           />
         );
@@ -160,7 +191,9 @@ export const renderDemoScene = (
         />,
         <Surface
           resolution={0.55}
-          color={[0.55, 0.72, 0.98, 1]}
+          color={options.surfaceColorMode === "element"
+            ? byElement()
+            : [0.55, 0.72, 0.98, 1]}
           opacity={0.3}
         />,
       ];
@@ -173,9 +206,9 @@ export const renderDemoScene = (
         ? { type: "normal" as const }
         : { type: "pbr" as const, roughness: 0.85, metalness: 0 };
       return (
-        <Spacefill
-          scale={0.5}
-          color={[0.38, 0.68, 0.92, 1]}
+        <Surface
+          resolution={0.55}
+          color={[0.67, 0.75, 0.84, 1]}
           material={material}
         />
       );
@@ -213,14 +246,16 @@ export const renderDemoScene = (
         />
       );
     case "efield":
-      // Coulomb potential (ε = 4r, kT/e) of the PQR charges on a 1 Å grid,
+      // Coulomb potential (ε = 4r, kT/e) of the PQR charges on a chosen grid,
       // read 1.4 Å off the surface; field lines trace E between the charges.
       return (
-        <EField>
+        <EField spacing={options.efieldSpacing} padding={14}>
           <Surface color={byPotential({ range: 5 })} opacity={0.85} />
           <FieldLines
-            seeds={{ spacing: 6 }}
-            steps={80}
+            seeds={{ spacing: options.seedSpacing }}
+            step={0.35}
+            steps={Math.ceil(options.lineDistance / 0.35)}
+            minField={0.025}
             color={[1, 1, 1, 0.8]}
             width={1.5}
           />
@@ -228,11 +263,11 @@ export const renderDemoScene = (
       );
     case "figure":
       return [
-        <Ribbon color={[0.86, 0.55, 0.35, 1]} />,
+        <Ribbon color={[0.98, 0.73, 0.39, 1]} material={{ type: "basic" }} />,
         <Surface
           resolution={0.65}
-          color={[0.55, 0.72, 0.98, 1]}
-          opacity={0.15}
+          color={[0.68, 0.81, 0.99, 1]}
+          opacity={0.12}
         />,
         <Spacefill
           select={resolve(element(16), data)}

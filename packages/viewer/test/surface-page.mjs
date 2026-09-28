@@ -11,6 +11,7 @@ import {
   useDeviceContext,
 } from "@use-gpu/workbench";
 import { resolve, where } from "@molgpu/select";
+import { byElement } from "@molgpu/fields";
 import { coordinateBounds } from "@molgpu/table";
 import { structureFromBcif } from "@molgpu/io";
 import { Structure, Surface } from "../src/index.ts";
@@ -85,6 +86,7 @@ const SurfaceProbe = () => {
   probe.setProbeRadius = setProbeRadius;
   probe.setResolution = setResolution;
   probe.setColor = setColor;
+  probe.setElementColor = () => setColor(byElement());
   probe.mounted = true;
   const props = mode === "empty"
     ? { select: nothing, probeRadius, resolution, color }
