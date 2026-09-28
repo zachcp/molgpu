@@ -1,7 +1,7 @@
 #!/usr/bin/env -S deno run -A
 // Phase 6 hardening checks: automates H1–H6 of docs/HARDENING.md.
 //
-//   deno run -A scripts/check-hardening.mjs [pkg|dir ...] [--update] [--json]
+//   deno run -A scripts/check-hardening.mjs [pkg|dir ...] [--update] [--json] [--usage]
 //
 // With no arguments every packages/* workspace is checked. A bare name ("geo")
 // resolves to packages/geo; anything with a slash is taken as a directory, which
@@ -315,8 +315,15 @@ function readmeApi(readme) {
   if (!section) return undefined;
   const rows = new Map();
   for (const line of section.split("\n")) {
-    const m = line.match(/^\|\s*`?([\w$]+)`?\s*\|\s*(\w+)\s*\|/);
-    if (m) rows.set(m[1], m[2].toLowerCase());
+    const m = line.match(
+      /^\|\s*`?([\w$]+)`?\s*\|\s*(\w+)\s*(?:\|\s*(.*?)\s*\|?)?\s*$/,
+    );
+    if (m) {
+      rows.set(m[1], {
+        stability: m[2].toLowerCase(),
+        description: m[3]?.trim() ?? "",
+      });
+    }
   }
   return rows;
 }
@@ -337,7 +344,232 @@ function apiSnapshot(name, apis) {
   return lines.join("\n");
 }
 
-function checkPackage(dir, { update = false } = {}) {
+function workspaceSources() {
+  const paths = [
+    join(ROOT, "site", "src"),
+    join(ROOT, "site", "test"),
+    join(ROOT, "test"),
+  ];
+  for (const entry of Deno.readDirSync(join(ROOT, "packages"))) {
+    const base = join(ROOT, "packages", entry.name);
+    paths.push(join(base, "src"), join(base, "test"));
+  }
+  return [...new Set(paths.flatMap((path) => walk(path, SOURCE)))];
+}
+
+function consumerFor(file) {
+  const packageSource = file.match(/\/packages\/([^/]+)\/src\//);
+  if (packageSource) {
+    const manifest = join(ROOT, "packages", packageSource[1], "deno.json");
+    return {
+      type: "package",
+      name: exists(manifest) ? readJson(manifest).name : packageSource[1],
+    };
+  }
+  return /\/site\/src\//.test(file) ? { type: "site" } : { type: "tests" };
+}
+
+function addUsage(target, exportName, consumer) {
+  if (consumer.type === "package" && consumer.name === target.package) return;
+  target.uses.get(exportName)?.add(
+    consumer.type === "package" ? `package:${consumer.name}` : consumer.type,
+  );
+}
+
+function identifierUsedOutside(source, name, excluded) {
+  let found = false;
+  const visit = (node) => {
+    if (found || node === excluded) return;
+    if (ts.isIdentifier(node) && node.text === name) {
+      found = true;
+      return;
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
+  return found;
+}
+
+/** Summarize which shipped workspace areas consume every public entry export. */
+function exportUsage() {
+  const targets = [];
+  const bySpecifier = new Map();
+  const byEntryFile = new Map();
+  for (const entry of Deno.readDirSync(join(ROOT, "packages"))) {
+    const dir = join(ROOT, "packages", entry.name);
+    const manifestPath = join(dir, "deno.json");
+    if (!exists(manifestPath)) continue;
+    const manifest = readJson(manifestPath);
+    for (const entryPoint of entries(manifest)) {
+      const file = join(dir, entryPoint.types ?? entryPoint.import ?? "");
+      if (!exists(file)) continue;
+      const api = moduleExports(file);
+      const specifier = entryPoint.subpath === "."
+        ? manifest.name
+        : `${manifest.name}/${entryPoint.subpath.slice(2)}`;
+      const target = {
+        package: manifest.name,
+        subpath: entryPoint.subpath,
+        specifier,
+        names: [...api.keys()],
+        uses: new Map([...api.keys()].map((name) => [name, new Set()])),
+      };
+      targets.push(target);
+      bySpecifier.set(specifier, target);
+      for (const path of new Set([entryPoint.types, entryPoint.import])) {
+        if (path) byEntryFile.set(resolve(dir, path), target);
+      }
+    }
+  }
+
+  const targetFor = (specifier, file) =>
+    bySpecifier.get(specifier) ??
+      (specifier.startsWith(".")
+        ? byEntryFile.get(resolve(dirname(file), specifier))
+        : undefined);
+
+  for (const file of workspaceSources()) {
+    const source = ts.createSourceFile(
+      file,
+      readFile(file),
+      ts.ScriptTarget.Latest,
+      true,
+    );
+    const consumer = consumerFor(file);
+    for (const statement of source.statements) {
+      if (
+        ts.isImportDeclaration(statement) &&
+        ts.isStringLiteral(statement.moduleSpecifier)
+      ) {
+        const target = targetFor(statement.moduleSpecifier.text, file);
+        if (!target || !statement.importClause) continue;
+        const clause = statement.importClause;
+        if (
+          clause.name &&
+          identifierUsedOutside(source, clause.name.text, statement)
+        ) {
+          addUsage(target, "default", consumer);
+        }
+        if (clause.namedBindings && ts.isNamedImports(clause.namedBindings)) {
+          for (const specifier of clause.namedBindings.elements) {
+            const name = specifier.propertyName?.text ?? specifier.name.text;
+            if (
+              target.uses.has(name) &&
+              identifierUsedOutside(source, specifier.name.text, statement)
+            ) addUsage(target, name, consumer);
+          }
+        } else if (
+          clause.namedBindings && ts.isNamespaceImport(clause.namedBindings) &&
+          identifierUsedOutside(
+            source,
+            clause.namedBindings.name.text,
+            statement,
+          )
+        ) {
+          // Namespace consumers are reported conservatively: every entry symbol
+          // is reachable through the namespace, even if a particular property
+          // access is assembled dynamically.
+          for (const name of target.names) addUsage(target, name, consumer);
+        }
+      } else if (
+        ts.isExportDeclaration(statement) && statement.moduleSpecifier &&
+        ts.isStringLiteral(statement.moduleSpecifier)
+      ) {
+        const target = targetFor(statement.moduleSpecifier.text, file);
+        if (!target) continue;
+        if (
+          statement.exportClause && ts.isNamedExports(statement.exportClause)
+        ) {
+          for (const specifier of statement.exportClause.elements) {
+            addUsage(
+              target,
+              specifier.propertyName?.text ?? specifier.name.text,
+              consumer,
+            );
+          }
+        } else {
+          for (const name of target.names) addUsage(target, name, consumer);
+        }
+      }
+      const visitDynamic = (node) => {
+        if (
+          ts.isCallExpression(node) &&
+          (node.expression.kind === ts.SyntaxKind.ImportKeyword ||
+            (ts.isIdentifier(node.expression) &&
+              node.expression.text === "require")) &&
+          node.arguments[0] && ts.isStringLiteralLike(node.arguments[0])
+        ) {
+          const target = targetFor(node.arguments[0].text, file);
+          if (target) {
+            const value = ts.isAwaitExpression(node.parent)
+              ? node.parent
+              : node;
+            const declaration = value.parent;
+            if (
+              ts.isVariableDeclaration(declaration) &&
+              declaration.initializer === value &&
+              ts.isObjectBindingPattern(declaration.name) &&
+              declaration.name.elements.every((element) =>
+                !element.dotDotDotToken &&
+                (!element.propertyName ||
+                  ts.isIdentifier(element.propertyName) ||
+                  ts.isStringLiteral(element.propertyName))
+              )
+            ) {
+              for (const element of declaration.name.elements) {
+                const name = element.propertyName?.text ?? element.name.text;
+                addUsage(target, name, consumer);
+              }
+            } else {
+              // A namespace or computed access may reach any entry symbol.
+              for (const name of target.names) addUsage(target, name, consumer);
+            }
+          }
+        }
+        ts.forEachChild(node, visitDynamic);
+      };
+      visitDynamic(statement);
+    }
+  }
+
+  return targets.map((target) => ({
+    package: target.package,
+    subpath: target.subpath,
+    exports: target.names.sort().map((name) => {
+      const usedBy = [...target.uses.get(name)].sort();
+      return {
+        name,
+        consumers: {
+          packages: usedBy.filter((use) => use.startsWith("package:")).map((
+            use,
+          ) => use.slice(8)),
+          site: usedBy.includes("site"),
+          tests: usedBy.includes("tests"),
+        },
+        category: usedBy.length === 0
+          ? "none"
+          : usedBy.some((use) => use.startsWith("package:") || use === "site")
+          ? "workspace"
+          : "tests only",
+      };
+    }),
+  }));
+}
+
+function wildcardExports(file) {
+  const source = ts.createSourceFile(
+    file,
+    readFile(file),
+    ts.ScriptTarget.Latest,
+    true,
+  );
+  return source.statements.filter((node) =>
+    ts.isExportDeclaration(node) && node.moduleSpecifier &&
+    (node.exportClause === undefined || ts.isNamespaceExport(node.exportClause))
+  );
+}
+
+function checkPackage(dir, { update = false, usage = [] } = {}) {
   const fails = Object.fromEntries(CRITERIA.map((c) => [c, []]));
   const fail = (c, msg) => fails[c].push(msg);
   const manifestPath = join(dir, "deno.json");
@@ -545,6 +777,17 @@ function checkPackage(dir, { update = false } = {}) {
   }
 
   // H5 — reviewed API: committed snapshot, and every export classified in the README.
+  for (const e of ents) {
+    for (const entryFile of new Set([e.types, e.import].filter(Boolean))) {
+      if (!exists(join(dir, entryFile))) continue;
+      for (const node of wildcardExports(join(dir, entryFile))) {
+        fail(
+          "H5",
+          `${e.subpath}: wildcard re-export in ${entryFile}; list public names explicitly`,
+        );
+      }
+    }
+  }
   if (apis.size) {
     // A public signature may only name types some entry exports: a private
     // alias would appear in the generated docs with nothing to link to.
@@ -578,18 +821,37 @@ function checkPackage(dir, { update = false } = {}) {
       ? readmeApi(readFile(readmePath))
       : undefined;
     if (!rows) fail("H5", 'README.md has no "## API" section');
-    else {for (const [subpath, api] of apis) {
+    else {
+      const usageBySubpath = new Map(
+        usage.map((entry) => [
+          entry.subpath,
+          new Map(entry.exports.map((item) => [item.name, item.category])),
+        ]),
+      );
+      for (const [subpath, api] of apis) {
         for (const k of api.keys()) {
-          const level = rows.get(k);
-          if (!level) {
+          const row = rows.get(k);
+          if (!row) {
             fail("H5", `${subpath}: "${k}" is not classified in README ## API`);
-          } else if (!STABILITY.has(level)) {
-            fail("H5", `"${k}" has unknown stability "${level}"`);
-          } else if (level === "advanced" && subpath === "." && isViewer) {
+          } else if (!STABILITY.has(row.stability)) {
+            fail("H5", `"${k}" has unknown stability "${row.stability}"`);
+          } else if (
+            row.stability === "advanced" && subpath === "." && isViewer
+          ) {
             fail("H5", `"${k}" is advanced but exported from "."`);
           }
+          if (
+            (usageBySubpath.get(subpath)?.get(k) ?? "none") === "none" &&
+            !hasPublicRationale(row?.description)
+          ) {
+            fail(
+              "H5",
+              `${subpath}: "${k}" has no in-workspace consumer; document its public purpose in README ## API`,
+            );
+          }
         }
-      }}
+      }
+    }
   }
 
   // H6 — JSR's dry-run is the package-content and import validation.
@@ -618,6 +880,11 @@ function checkPackage(dir, { update = false } = {}) {
     jsrCheck(dir, ents, !BROWSER_ONLY.has(m.name), (msg) => fail("H6", msg));
   }
   return { name, dir: relative(ROOT, dir), fails };
+}
+
+function hasPublicRationale(description = "") {
+  const plain = description.replace(/[\x60*_]/g, "").trim();
+  return plain.length >= 12 && !/^(?:-|none|todo|tbd|api)$/i.test(plain);
 }
 
 const firstError = (err) =>
@@ -673,9 +940,45 @@ function main(argv) {
     : [...Deno.readDirSync(join(ROOT, "packages"))]
       .map((entry) => join(ROOT, "packages", entry.name))
       .filter((d) => exists(join(d, "deno.json")));
-  const results = dirs.map((d) =>
-    checkPackage(d, { update: flags.has("--update") })
-  );
+  const usage = exportUsage();
+  if (flags.has("--usage")) {
+    const names = new Set(
+      dirs.filter((d) => exists(join(d, "deno.json"))).map((d) =>
+        readJson(join(d, "deno.json")).name
+      ),
+    );
+    const selected = usage.filter((entry) => names.has(entry.package));
+    if (flags.has("--json")) console.log(JSON.stringify(selected, null, 2));
+    else {
+      for (const entry of selected) {
+        console.log(`\n${entry.package} ${entry.subpath}`);
+        for (const item of entry.exports) {
+          const consumers = [
+            ...item.consumers.packages,
+            ...(item.consumers.site ? ["site"] : []),
+            ...(item.consumers.tests ? ["tests"] : []),
+          ];
+          console.log(`  ${item.name}: ${consumers.join(", ") || "none"}`);
+        }
+      }
+    }
+    return 0;
+  }
+  const usageByPackage = new Map();
+  for (const entry of usage) {
+    const packageUsage = usageByPackage.get(entry.package) ?? [];
+    packageUsage.push(entry);
+    usageByPackage.set(entry.package, packageUsage);
+  }
+  const results = dirs.map((d) => {
+    const manifest = exists(join(d, "deno.json"))
+      ? readJson(join(d, "deno.json"))
+      : {};
+    return checkPackage(d, {
+      update: flags.has("--update"),
+      usage: usageByPackage.get(manifest.name) ?? [],
+    });
+  });
   if (flags.has("--json")) console.log(JSON.stringify(results, null, 2));
   else {for (const r of results) {
       const bad = CRITERIA.filter((c) => r.fails[c]?.length);
