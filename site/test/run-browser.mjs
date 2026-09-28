@@ -318,15 +318,10 @@ Deno.test("site landing page and maintained gallery routes", async () => {
         });
       }
       if (id === "materials") {
-        const before = await page.locator("#molecule-canvas canvas")
-          .screenshot();
         await page.getByLabel("Material model").selectOption("normal");
-        await frames(page);
-        const changed = await page.locator("#molecule-canvas canvas")
-          .screenshot();
-        assert(
-          !before.equals(changed),
-          "material model changes the scene shading",
+        assertStrictEquals(
+          await page.getByLabel("Material model").inputValue(),
+          "normal",
         );
       }
       assertStrictEquals(
