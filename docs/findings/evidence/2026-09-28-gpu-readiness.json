@@ -1,0 +1,155 @@
+{
+  "browser": "153.0.8010.53",
+  "scenarios": [
+    {
+      "mode": "attribute",
+      "before": {
+        "held": 1,
+        "ready": true,
+        "generation": 3,
+        "positions": [
+          7,
+          0,
+          0,
+          8,
+          0,
+          0,
+          9,
+          0,
+          0,
+          10,
+          0,
+          0
+        ],
+        "snapshot": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gpu": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gpuErrors": []
+      },
+      "after": {
+        "held": 1,
+        "ready": true,
+        "generation": 3,
+        "positions": [
+          7,
+          0,
+          0,
+          8,
+          0,
+          0,
+          9,
+          0,
+          0,
+          10,
+          0,
+          0
+        ],
+        "snapshot": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gpu": [
+          120,
+          121,
+          122,
+          123
+        ],
+        "gpuErrors": []
+      },
+      "checks": {
+        "pendingAttributeHidden": false,
+        "pendingCoordinatesHidden": true,
+        "finalSnapshotCorrect": false,
+        "finalGpuCorrect": true,
+        "noErrors": true
+      },
+      "errors": []
+    },
+    {
+      "mode": "coordinates",
+      "before": {
+        "held": 1,
+        "ready": false,
+        "generation": 2,
+        "positions": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "snapshot": [
+          113,
+          113,
+          113,
+          113
+        ],
+        "gpu": [
+          113,
+          113,
+          113,
+          113
+        ],
+        "gpuErrors": []
+      },
+      "after": {
+        "held": 1,
+        "ready": true,
+        "generation": 3,
+        "positions": [
+          7,
+          0,
+          0,
+          8,
+          0,
+          0,
+          9,
+          0,
+          0,
+          10,
+          0,
+          0
+        ],
+        "snapshot": [
+          120,
+          121,
+          122,
+          123
+        ],
+        "gpu": [
+          120,
+          121,
+          122,
+          123
+        ],
+        "gpuErrors": []
+      },
+      "checks": {
+        "pendingAttributeHidden": false,
+        "pendingCoordinatesHidden": false,
+        "finalSnapshotCorrect": true,
+        "finalGpuCorrect": true,
+        "noErrors": true
+      },
+      "errors": []
+    }
+  ]
+}
