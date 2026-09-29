@@ -2,6 +2,7 @@ import { resolve, type SelectionQuery, toAtoms } from "@molgpu/select";
 import { createCurve, sample } from "@molgpu/timeline";
 import { atomRadii, type StructureData } from "@molgpu/table";
 import { gauge } from "./internal/instrumentation.ts";
+import { viewRows } from "./internal/view-rows.ts";
 import type {
   CameraCurve,
   CameraFrame,
@@ -106,7 +107,8 @@ const displayBounds = (
 };
 
 /** Resolve a reusable query against the current resource at evaluation time.
- * Empty queries focus the whole structure by default; an empty structure yields
+ * Empty queries focus the structure's default view (first model, primary
+ * conformers) by default; an empty structure yields
  * the explicit neutral camera. Pass empty:'null' for a no-op result instead. */
 export function focusSelection(
   resource: StructureResource,
@@ -164,10 +166,7 @@ export function focusSelection(
   if (!indices.length) {
     if (empty === "error") throw new RangeError("focus selection is empty");
     if (empty === "null") return remember(byOptions, cacheKey, null);
-    indices = Uint32Array.from(
-      { length: data.topology.atoms.count },
-      (_, i) => i,
-    );
+    indices = viewRows(data, null);
   }
   const bounds = displayBounds(data, indices, atomRadiusScale);
   if (!bounds) {

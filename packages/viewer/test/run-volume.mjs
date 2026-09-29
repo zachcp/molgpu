@@ -181,11 +181,13 @@ Deno.test("volume components", async () => {
           if (!redMask[i]) continue;
           const queue = [i];
           redMask[i] = 0;
-          let size = 0, sx = 0;
+          let size = 0, sx = 0, sy = 0, top = Infinity;
           for (let q = 0; q < queue.length; q++) {
             const k = queue[q];
             size++;
             sx += k % w;
+            sy += Math.floor(k / w);
+            top = Math.min(top, Math.floor(k / w));
             for (const j of [k - w, k + w, k - 1, k + 1]) {
               if (j >= 0 && j < n && redMask[j]) {
                 redMask[j] = 0;
@@ -193,7 +195,14 @@ Deno.test("volume components", async () => {
               }
             }
           }
-          if (size > 30) blobs.push({ size, x: Math.round(sx / size) });
+          if (size > 30) {
+            blobs.push({
+              size,
+              x: Math.round(sx / size),
+              y: Math.round(sy / size),
+              top,
+            });
+          }
         }
         return { red, blue, purple, green, lit, redBlobs: blobs };
       }, png.toString("base64"));
@@ -519,6 +528,42 @@ Deno.test("volume components", async () => {
         }
         await update({ mode: "none" });
       }
+    }
+
+    // 9. One default view: with no selection, Spacefill and Bonds draw model 1
+    //    with its primary conformer (left, not above) like every other
+    //    representation. A selection replaces the view exactly: model 2
+    //    (right), every row (both models and the upper altloc B), or nothing.
+    report.states.view = {};
+    const left = (blob) => blob.x < 400, right = (blob) => blob.x > 400;
+    // Model 1 atoms and bonds reach y ≈ 280; altloc B reaches y ≈ 190.
+    const upper = (blob) => blob.top < 240;
+    for (const target of ["spacefill", "bonds"]) {
+      for (const view of ["default", "model2", "all", "empty"]) {
+        const name = `view-${target}-${view}`;
+        const failures = errors.length;
+        await update({ mode: "view", target, view });
+        const pixels = await classify(await settled(name, view !== "empty"));
+        assertEquals(errors.slice(failures), [], `${name}: page errors`);
+        report.states.view[name] = pixels;
+        const blobs = pixels.redBlobs;
+        const seen = JSON.stringify(blobs);
+        if (view === "empty") {
+          assertStrictEquals(pixels.red, 0, `${name}: draws nothing`);
+        } else if (view === "default") {
+          assert(blobs.length && blobs.every(left), `${name}: model 1 ${seen}`);
+          assert(!blobs.some(upper), `${name}: altloc B hidden ${seen}`);
+        } else if (view === "model2") {
+          assert(
+            blobs.length && blobs.every(right),
+            `${name}: model 2 ${seen}`,
+          );
+        } else {
+          assert(blobs.some(left) && blobs.some(right), `${name}: ${seen}`);
+          assert(blobs.some(upper), `${name}: altloc B drawn ${seen}`);
+        }
+      }
+      await update({ mode: "none" });
     }
 
     assertEquals(

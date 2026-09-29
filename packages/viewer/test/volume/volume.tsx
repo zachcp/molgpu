@@ -232,6 +232,75 @@ const STYLES: Record<FieldStyle, Field> = {
   lifted: LIFTED,
 };
 type FieldStyle = "nearest" | "annotation" | "lifted";
+
+// Two models of one residue. Model 1 (left) has an alternate conformer: C2
+// altloc A (occupancy 0.6, beside C1) and altloc B (0.4, above C1). Model 2
+// sits on the right. The default view is model 1 with altloc A only.
+function models(): StructureData {
+  const base = atoms([-8, -6.6, -7.3, 6.6, 8]);
+  const { topology } = base;
+  const positions = Float32Array.from(base.positions);
+  positions[2 * 3 + 1] = 7;
+  return createStructure({
+    positions,
+    topology: {
+      ...topology,
+      atoms: {
+        ...topology.atoms,
+        name: ["C1", "C2", "C2", "C1", "C2"],
+        altloc: ["", "A", "B", "", ""],
+        occupancy: Float32Array.from([1, 0.6, 0.4, 1, 1]),
+        residue: Uint32Array.from([0, 0, 0, 1, 1]),
+      },
+      residues: {
+        count: 2,
+        chain: Uint32Array.from([0, 1]),
+        labelSeq: new Int32Array([1, 1]),
+        authSeq: ["1", "1"],
+        insertionCode: ["", ""],
+        comp: ["GLY", "GLY"],
+        polymer: ["other", "other"],
+      },
+      chains: {
+        count: 2,
+        model: Int32Array.from([1, 2]),
+        labelId: ["A", "A"],
+        authId: ["A", "A"],
+      },
+      bonds: {
+        count: 3,
+        a: Uint32Array.from([0, 0, 3]),
+        b: Uint32Array.from([1, 2, 4]),
+        order: Uint8Array.from([1, 1, 1]),
+        source: ["explicit", "explicit", "explicit"],
+      },
+      instances: {
+        count: 2,
+        chain: Uint32Array.from([0, 1]),
+        operatorId: ["identity", "identity"],
+        transform: Float64Array.from([
+          ...topology.instances.transform,
+          ...topology.instances.transform,
+        ]),
+      },
+    },
+  });
+}
+const MODELS = models();
+const modelOf = (data: StructureData, row: number): number =>
+  data.topology.chains.model[
+    data.topology.residues.chain[data.topology.atoms.residue[row]]
+  ];
+type View = "default" | "model2" | "all" | "empty";
+const VIEWS: Record<View, Selection | null> = {
+  default: null,
+  model2: resolve(
+    where("atom", "model 2", (d, i) => modelOf(d, i) === 2),
+    MODELS,
+  ),
+  all: resolve(where("atom", "all", () => true), MODELS),
+  empty: resolve(where("atom", "none", () => false), MODELS),
+};
 type FieldTarget = "spacefill" | "bonds" | "surface";
 
 type Mode =
@@ -243,7 +312,8 @@ type Mode =
   | "depth"
   | "src"
   | "big"
-  | "field";
+  | "field"
+  | "view";
 interface State {
   mode: Mode;
   level: number | { sigma: number };
@@ -255,6 +325,7 @@ interface State {
   target: FieldTarget;
   style: FieldStyle;
   subset: boolean;
+  view: View;
 }
 
 interface Probe {
@@ -395,6 +466,17 @@ const Scene = ({ state }: { state: State }): LiveElement => {
         </Volume>
       );
     }
+    case "view": {
+      // One structure's default view, or an explicit selection override.
+      const select = VIEWS[state.view];
+      return (
+        <Structure data={MODELS}>
+          {state.target === "bonds"
+            ? <Bonds color={RED} select={select} width={0.8} />
+            : <Spacefill color={RED} select={select} />}
+        </Structure>
+      );
+    }
     case "big":
       return (
         <Volume data={BIG()}>
@@ -427,6 +509,7 @@ const App = (): LiveElement => {
     target: "spacefill",
     style: "nearest",
     subset: false,
+    view: "default",
   });
   probe.update = (patch) => setState((previous) => ({ ...previous, ...patch }));
   probe.mounted = true;

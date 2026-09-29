@@ -2,7 +2,7 @@ import { type LiveElement, use, useMemo } from "@use-gpu/live";
 import type { StorageSource } from "@use-gpu/core";
 import type { Field } from "@molgpu/fields";
 import type { Selection } from "@molgpu/select";
-import { activeAtoms } from "@molgpu/table";
+import { viewRows } from "./view-rows.ts";
 import type { ColumnFormat } from "./columns.ts";
 import type { StructureResource, ViewerElement } from "../types.ts";
 import { ColumnSource } from "./column-source.ts";
@@ -22,9 +22,10 @@ export function checkAtomSelection(
   }
 }
 
-/** The atom rows a trace or surface draws: the selection's, else the active
- * model/primary-altloc view. activeAtoms reads topology only, so coordinate
- * edits keep the rows (and everything memoised on their identity). */
+/** The atom rows a representation draws: the selection's, else the default
+ * first-model/primary-conformer view (see viewRows). The view reads topology
+ * only, so coordinate edits keep the rows (and everything memoised on their
+ * identity). */
 export function useActiveRows(
   resource: StructureResource,
   select: Selection | null | undefined,
@@ -33,10 +34,10 @@ export function useActiveRows(
   checkAtomSelection(select, resource, who);
   return useMemo(
     () =>
-      select
-        ? select.indices
-        : (count("topologyBuilds", `${who.toLowerCase()}:activeAtoms`),
-          activeAtoms(resource.data)),
+      select ? select.indices : (
+        count("topologyBuilds", `${who.toLowerCase()}:activeAtoms`),
+          viewRows(resource.data, null)
+      ),
     [resource.identity, resource.topologyRevision, select?.id ?? "active"],
   );
 }

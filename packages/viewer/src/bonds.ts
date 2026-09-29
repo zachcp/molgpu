@@ -15,12 +15,13 @@ import { byElement } from "@molgpu/fields";
 import { useStructure, useStructureResource } from "./structure-context.ts";
 import { useField } from "./use-field.ts";
 import {
-  checkAtomSelection,
   type ColumnMap,
   type ColumnSpec,
   isField,
+  useActiveRows,
   withColumns,
 } from "./internal/representation.ts";
+import { allOrRows } from "./internal/view-rows.ts";
 import {
   fieldColumns,
   type FieldPlan,
@@ -212,8 +213,10 @@ const BondLines: LC<{
 };
 
 /**
- * Draw bonds as world-space sticks. `select` (a @molgpu/select atom Selection)
- * keeps bonds whose endpoints satisfy `endpoints` ('both', the default, or
+ * Draw bonds as world-space sticks between the first model's primary-conformer
+ * atoms, or `select`'s atoms (a @molgpu/select atom Selection, which may reach
+ * other models or conformers). Bonds are kept when their endpoints satisfy
+ * `endpoints` ('both', the default, or
  * 'either'); the endpoint policy is explicit and documented. By default, each
  * bond is split at its midpoint: the first half takes element A's colour and
  * the second takes element B's. An explicit `color` retains the unsplit stroke
@@ -259,7 +262,8 @@ export const Bonds: ViewerComponent<
   const coordinates = useCoordinates();
   const { data } = resource;
 
-  checkAtomSelection(select, resource, "Bonds");
+  const viewed = useActiveRows(resource, select, "Bonds");
+  const indices = useMemo(() => allOrRows(data, viewed), [viewed]);
   if (!["both", "either"].includes(endpoints)) {
     throw new TypeError("Bonds endpoints must be 'both' or 'either'");
   }
@@ -279,8 +283,6 @@ export const Bonds: ViewerComponent<
     mode,
     flatAlpha(effectiveColor, !!field) * opacity,
   );
-  const indices = select ? select.indices : null;
-  const selectKey = select?.id ?? "all";
   // Explicit topology is independent of root positions. Inferred connectivity
   // may change when the root StructureData itself receives new positions.
   const inferenceRevision = data.topology.bonds.count
@@ -293,7 +295,7 @@ export const Bonds: ViewerComponent<
       resource.identity,
       resource.topologyRevision,
       inferenceRevision,
-      selectKey,
+      indices,
       endpoints,
       defaultColor,
     ],

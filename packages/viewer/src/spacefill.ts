@@ -18,12 +18,13 @@ import { useField } from "./use-field.ts";
 import { indexed } from "./internal/indexed.ts";
 import { useAttributeSources } from "./internal/attribute-sources.ts";
 import {
-  checkAtomSelection,
   type ColumnMap,
   type ColumnSpec,
   isField,
+  useActiveRows,
   withColumns,
 } from "./internal/representation.ts";
+import { allOrRows } from "./internal/view-rows.ts";
 import {
   fieldColumns,
   type FieldPlan,
@@ -191,9 +192,10 @@ const SelectedSpacefill: LC<
 };
 
 /**
- * Render active atom sites as world-space shaded spheres. `select` (a
- * @molgpu/select atom Selection) restricts to a subset, drawn by reading the
- * shared structure columns through the selection's uploaded atom rows. `color` is either a flat colour or a @molgpu/fields Field,
+ * Render atom sites as world-space shaded spheres: the first model's
+ * primary-conformer atoms, or exactly `select` (a @molgpu/select atom
+ * Selection, which may reach other models or conformers), drawn by reading
+ * the shared structure columns through the uploaded atom rows. `color` is either a flat colour or a @molgpu/fields Field,
  * which is composed shader-side over the atoms' columns (no per-atom colour
  * upload; an annotation uploads its own rows once) via the viewer's useField,
  * including a `volumeSample()` of the nearest volume. `material` (a @molgpu/viewer material
@@ -238,7 +240,9 @@ export const Spacefill: ViewerComponent<
   const coordinates = useCoordinates();
   const { data } = resource;
 
-  checkAtomSelection(select, resource, "Spacefill");
+  const rows = useActiveRows(resource, select, "Spacefill");
+  // Every row in order draws straight from the shared sources, unindexed.
+  const indices = useMemo(() => allOrRows(data, rows), [rows]);
   const field = isField(color) ? color : null;
   // A colour field names the columns it reads; gather exactly those.
   const plan = useFieldPlan(field, resource, "Spacefill");
@@ -249,7 +253,6 @@ export const Spacefill: ViewerComponent<
   );
   const drawMode = modeProps(mode, flatAlpha(color, !!field) * opacity);
 
-  const indices = select ? select.indices : null;
   const n = indices ? indices.length : data.topology.atoms.count;
   if (!sources || !coordinates || coordinates.ready === false || n === 0) {
     return null;
