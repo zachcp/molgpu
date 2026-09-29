@@ -7,6 +7,8 @@ export interface ProducedAttribute {
   readonly domain: AttributeDomain;
   readonly kind: "scalar" | "code";
   readonly generation: number;
+  /** True after the requested revision has been submitted to the device queue. */
+  readonly ready?: boolean;
   readonly provenance: AttributeProvenance;
 }
 export type Attributes = Readonly<Record<string, ProducedAttribute>>;

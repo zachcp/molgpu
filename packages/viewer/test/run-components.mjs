@@ -419,7 +419,17 @@ Deno.test("viewer components", async () => {
       globalThis.__viewer.counters().detail["geometryBuilds:bonds:columns"] ?? 0
     );
     await update({ offsetX: 6 }, true);
-    const movedBondVertices = await readBondVertices();
+    let movedBondVertices = [];
+    for (let attempt = 0; attempt < 12; attempt++) {
+      movedBondVertices = await readBondVertices();
+      if (
+        movedBondVertices.length === bondVertices.length &&
+        movedBondVertices.every((value, i) =>
+          Math.abs(value - bondVertices[i] - (i % 3 === 0 ? 1 : 0)) <= 1e-5
+        )
+      ) break;
+      await settle();
+    }
     for (let i = 0; i < bondVertices.length; i += 3) {
       assert(Math.abs(movedBondVertices[i] - bondVertices[i] - 1) <= 1e-5);
       assert(

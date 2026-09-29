@@ -144,7 +144,7 @@ export const CoordinateSnapshotBoundary: LC<{
   const maxHz = Math.max(...demand.map((request) => request.maxHz));
   const onPause = demand.some((request) => request.onPause);
   return provide(CoordinateSnapshotContext, context, [
-    demand.length
+    demand.length && coordinates.ready !== false
       ? use(ThrottledReadback, {
         buffer: coordinates.source.buffer,
         bytes: coordinates.count * 12,

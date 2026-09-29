@@ -33,6 +33,12 @@ export const ThrottledReadback: LC<{
   const latest = useRef({ buffer, generation, publish, maxHz, onPause });
   latest.current = { buffer, generation, publish, maxHz, onPause };
   const inFlight = useRef(false);
+  const mapping = useRef<GPUBuffer | null>(null);
+  const retired = useRef(new Set<GPUBuffer>());
+  const destroy = (buffer: GPUBuffer) => {
+    releaseOwnedBuffer(buffer);
+    buffer.destroy();
+  };
   const published = useRef(-1);
   const lastDispatch = useRef(-Infinity);
   const nextBuffer = useRef(0);
@@ -48,8 +54,8 @@ export const ThrottledReadback: LC<{
     for (const b of staging) trackOwnedBuffer(b, label);
     dispose(() => {
       for (const b of staging) {
-        releaseOwnedBuffer(b);
-        b.destroy();
+        if (mapping.current === b) retired.current.add(b);
+        else destroy(b);
       }
     });
   }, [staging]);
@@ -84,6 +90,7 @@ export const ThrottledReadback: LC<{
         const { buffer: source, generation: target } = latest.current;
         const into = staging[nextBuffer.current++ % staging.length];
         inFlight.current = true;
+        mapping.current = into;
         lastDispatch.current = performance.now();
         count("gathers", `${label}:dispatch`);
         try {
@@ -102,6 +109,8 @@ export const ThrottledReadback: LC<{
         } catch {
           if (mounted.current) count("gathers", `${label}:error`);
         } finally {
+          mapping.current = null;
+          if (retired.current.delete(into)) destroy(into);
           inFlight.current = false;
           if (mounted.current) kick.current();
         }

@@ -1,5 +1,5 @@
 // Research fixture, deliberately inspecting internal publication contracts.
-import { React, render, useContext } from "@use-gpu/live";
+import { React, render, useContext, useState } from "@use-gpu/live";
 import { AutoCanvas, WebGPU } from "@use-gpu/webgpu";
 import { OrbitCamera, Pass, useDeviceContext } from "@use-gpu/workbench";
 import { wgsl } from "@use-gpu/shader/wgsl";
@@ -7,6 +7,7 @@ import { Structure } from "@molgpu/viewer";
 import {
   AttributeProducer,
   useAttributeSnapshot,
+  useCoordinateBounds,
   useCoordinates,
   useCoordinateSnapshot,
 } from "@molgpu/viewer/advanced";
@@ -23,6 +24,11 @@ const probe = {
   snapshot: null as null | number[],
   positions: null as null | number[],
   read: () => Promise.resolve([] as number[]),
+  bounds: null as null | number[],
+  attributeReady: false,
+  attributeBuffer: null as GPUBuffer | null,
+  setOffset: (_value: number) => {},
+  setMounted: (_value: boolean) => {},
 };
 Object.assign(globalThis, { __readiness: probe });
 
@@ -43,6 +49,10 @@ const Probe = () => {
   const entry = useContext(AttributesContext)?.["spike:x"];
   const snapshot = useAttributeSnapshot("spike:x", { maxHz: 10 });
   const coordinates = useCoordinateSnapshot({ maxHz: 10 });
+  const bounds = useCoordinateBounds();
+  probe.bounds = bounds ? [...bounds.min, ...bounds.max] : null;
+  probe.attributeReady = entry?.ready ?? false;
+  probe.attributeBuffer = entry?.source.buffer ?? null;
   probe.snapshot = snapshot
     ? Array.from(snapshot.data.attributes!["spike:x"].values)
     : null;
@@ -71,22 +81,34 @@ const Probe = () => {
   return null;
 };
 
+const Controlled = () => {
+  const [offset, setOffset] = useState(7);
+  const [mounted, setMounted] = useState(true);
+  probe.setOffset = setOffset;
+  probe.setMounted = setMounted;
+  return mounted
+    ? (
+      <OffsetCoordinates offset={[offset, 0, 0]}>
+        <AttributeProducer
+          name="spike:x"
+          domain="atom"
+          kind="scalar"
+          kernel={KERNEL}
+        >
+          <Probe />
+        </AttributeProducer>
+      </OffsetCoordinates>
+    )
+    : null;
+};
+
 render(
   <WebGPU fallback={null}>
     <AutoCanvas selector="#root">
       <OrbitCamera radius={30}>
         <Pass>
           <Structure data={structure()}>
-            <OffsetCoordinates offset={[7, 0, 0]}>
-              <AttributeProducer
-                name="spike:x"
-                domain="atom"
-                kind="scalar"
-                kernel={KERNEL}
-              >
-                <Probe />
-              </AttributeProducer>
-            </OffsetCoordinates>
+            <Controlled />
           </Structure>
         </Pass>
       </OrbitCamera>
