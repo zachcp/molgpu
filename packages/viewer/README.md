@@ -271,9 +271,11 @@ residue column from a WGSL kernel and makes it available to descendant fields as
 so its generation advances. `useAttributeSnapshot(name)` subscribes to a
 throttled CPU copy for a tooltip or analysis; it returns `null` until the first
 submitted dispatch and mapped readback. The snapshot contains a revised table
-with the produced column and the producer generation. A new parameter revision
-remains pending until its dispatch submits; dependent fields and EField wait for
-that revision instead of reading an uninitialized buffer.
+with the produced column and the producer generation. It can retain the latest
+completed generation while a new one is pending. A new owner, buffer or column
+layout starts without a snapshot. A new parameter revision remains pending until
+its dispatch submits; dependent fields and EField wait for that revision instead
+of reading an uninitialized buffer.
 
 `<GpuDssp><Ribbon secondaryStructure="model" /></GpuDssp>` computes secondary
 structure from the nearest GPU coordinate stream. Put it below the coordinate
@@ -302,6 +304,8 @@ bound styling inputs.
 latest `useCoordinateSnapshot()` result. Snapshots are shared below each
 provider, default to 4 Hz during motion, and publish once more after a pause.
 They are asynchronous; CPU geometry is absent until the first snapshot arrives.
+The latest completed positions can remain visible during an update to the same
+source; replacing the source buffer or structure starts pending again.
 `useCoordinateSelection()` resolves `within` and other position-dependent
 queries against that snapshot. Topology-only queries resolve directly against
 the root data. Picking keeps atom-row IDs, so its result follows live geometry.
