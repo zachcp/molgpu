@@ -289,12 +289,15 @@ const App = () => {
                   </Transform>
                 </Structure>
               )
-              : new URLSearchParams(location.search).has("mask")
+              : new URLSearchParams(location.search).has("mask") ||
+                  new URLSearchParams(location.search).has("compute")
               ? (
                 <Structure data={efieldData}>
                   <Transform
                     matrix={shift}
-                    select={epoch ? otherSelected : selected}
+                    select={new URLSearchParams(location.search).has("compute")
+                      ? (epoch ? undefined : selected)
+                      : (epoch ? otherSelected : selected)}
                   >
                     <Spacefill
                       color={colors[palette]}

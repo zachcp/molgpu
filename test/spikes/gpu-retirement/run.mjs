@@ -47,7 +47,9 @@ try {
   });
   const results = { browser: browser.version(), scenarios: [] };
   for (
-    const policy of Deno.args.includes("--mask")
+    const policy of Deno.args.includes("--compute")
+      ? ["compute"]
+      : Deno.args.includes("--mask")
       ? ["mask"]
       : Deno.args.includes("--coords")
       ? ["coords"]
@@ -139,6 +141,7 @@ try {
             "dssp",
             "coords",
             "mask",
+            "compute",
             "dynamic",
             "volume",
             "efield",
@@ -270,6 +273,17 @@ try {
           held.push(() => result.then(resolve, reject));
         });
       };
+      if (policy === "compute") {
+        const compileCompute = GPUDevice.prototype.createComputePipelineAsync;
+        GPUDevice.prototype.createComputePipelineAsync = function (desc) {
+          const result = compileCompute.call(this, desc);
+          if (!armed) return result;
+          log("compute-compile-held");
+          return new Promise((resolve, reject) => {
+            held.push(() => result.then(resolve, reject));
+          });
+        };
+      }
       globalThis.__retirement = {
         mark: (name) => log("mark", { name }),
         guardFor: policy === "point-guarded"
@@ -330,6 +344,8 @@ try {
           ? "?coords"
           : policy === "mask"
           ? "?mask"
+          : policy === "compute"
+          ? "?compute"
           : ""
       }`,
     );
@@ -353,6 +369,8 @@ try {
               : new URLSearchParams(location.search).has("coords")
               ? "molgpu:coords:provider"
               : new URLSearchParams(location.search).has("mask")
+              ? "molgpu:coords:transform:mask"
+              : new URLSearchParams(location.search).has("compute")
               ? "molgpu:coords:transform:mask"
               : new URLSearchParams(location.search).has("volume")
               ? "molgpu:volume:values"
@@ -388,6 +406,7 @@ try {
         "dssp",
         "coords",
         "mask",
+        "compute",
       ]
         .includes(
           policy,
@@ -485,6 +504,8 @@ try {
         ? "molgpu:coords:provider"
         : s.policy === "mask"
         ? "molgpu:coords:transform:mask"
+        : s.policy === "compute"
+        ? "molgpu:coords:transform:mask"
         : s.policy === "volume"
         ? "molgpu:volume:values"
         : s.policy === "dynamic"
@@ -518,6 +539,9 @@ try {
         e.ids.some((id) => original.has(id))
       ),
       noPageErrors: s.errors.length === 0,
+      computeCompileHeld: s.held.events.some((e) =>
+        e.type === "compute-compile-held"
+      ),
       oldGuardRejected: s.held.events.some((e) => e.name === "guard:3:false"),
       oldPointGuardRejected: s.held.events.some((e) =>
         e.type === "point-guard" && !e.valid
@@ -542,6 +566,8 @@ try {
     new URL(
       Deno.args.includes("--dynamic")
         ? "../../../docs/findings/evidence/2026-09-29-dynamic-retirement.json"
+        : Deno.args.includes("--compute")
+        ? "../../../docs/findings/evidence/2026-09-29-compute-retirement.json"
         : Deno.args.includes("--mask")
         ? "../../../docs/findings/evidence/2026-09-29-transform-mask-retirement.json"
         : Deno.args.includes("--coords")
@@ -591,6 +617,12 @@ try {
         "EField replacement must retain an old phi consumer past the fence",
       );
     }
+    if (s.policy === "compute") {
+      assert(
+        s.checks.computeCompileHeld,
+        "replacement compute pipeline was not held",
+      );
+    }
     if (s.policy === "point-guarded") {
       assert(s.checks.oldPointGuardRejected);
       assert(s.summary.gpuErrors === 0 && s.summary.postDestroy.length === 0);
@@ -618,6 +650,8 @@ try {
     const current = results.scenarios.find((s) =>
       s.policy === (Deno.args.includes("--efield")
         ? "efield"
+        : Deno.args.includes("--compute")
+        ? "compute"
         : Deno.args.includes("--mask")
         ? "mask"
         : Deno.args.includes("--coords")

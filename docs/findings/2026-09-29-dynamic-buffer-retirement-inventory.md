@@ -114,3 +114,10 @@ the other two while render compilation was held. Its old mask buffer was
 destroyed, but no subsequent compute submission used it, and Chrome reported no
 WebGPU errors. This is a negative result for one selected-mask replacement;
 Trajectory and NormalMode inputs remain untested under retained compute work.
+
+The `--compute` variant began with a selected Transform, switched to the
+all-atom kernel, and held its replacement `createComputePipelineAsync` result.
+The probe confirmed that the compute compilation was held beyond two frames; the
+old mask was destroyed, but no later dispatch submitted it and there were no
+WebGPU errors. This establishes safe withdrawal for this one shader swap, not
+for every dynamic input owner.
