@@ -9,9 +9,9 @@ import {
 import { AutoCanvas, WebGPU } from "@use-gpu/webgpu";
 import { OrbitCamera, Pass, useDeviceContext } from "@use-gpu/workbench";
 import { Structure } from "@molgpu/viewer";
-import { structure } from "../../../packages/fields/test/fixture.ts";
-import { ThrottledReadback } from "../../../packages/viewer/src/internal/throttled-readback.ts";
-import type { ReadbackToken } from "../../../packages/viewer/src/internal/readback-token.ts";
+import { structure } from "../../../fields/test/fixture.ts";
+import { ThrottledReadback } from "../../src/internal/throttled-readback.ts";
+import type { ReadbackToken } from "../../src/internal/readback-token.ts";
 
 void React;
 const COPY_SRC = 0x0004;

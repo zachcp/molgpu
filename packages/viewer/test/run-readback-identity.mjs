@@ -2,7 +2,7 @@ import { assertEquals } from "@std/assert";
 import { createServer } from "vite";
 import { chromium } from "playwright";
 import { workspaceAliases } from "../../../scripts/workspace-aliases.mjs";
-import { webgpuBrowserArgs } from "../../../packages/viewer/test/webgpu-browser-args.mjs";
+import { webgpuBrowserArgs } from "./webgpu-browser-args.mjs";
 
 Deno.test("readback provenance survives replacement, resize and unmount", async () => {
   const server = await createServer({
@@ -10,7 +10,9 @@ Deno.test("readback provenance survives replacement, resize and unmount", async 
     configFile: false,
     resolve: { alias: workspaceAliases() },
     server: { host: "127.0.0.1", port: 0 },
-    optimizeDeps: { entries: ["test/spikes/readback-identity/index.html"] },
+    optimizeDeps: {
+      entries: ["packages/viewer/test/readback-identity/index.html"],
+    },
   });
   let browser;
   try {
@@ -64,7 +66,7 @@ Deno.test("readback provenance survives replacement, resize and unmount", async 
       await page.goto(
         `${
           server.resolvedUrls.local[0]
-        }test/spikes/readback-identity/index.html`,
+        }packages/viewer/test/readback-identity/index.html`,
       );
       await page.waitForFunction(() => globalThis.__mapGate.held.length === 1);
       if (mode === "unmount") {
