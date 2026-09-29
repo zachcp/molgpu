@@ -552,6 +552,31 @@ Deno.test("viewer components", async () => {
     };
     await update({ mode: "preloaded" });
 
+    for (
+      const [name, phase, expected, type] of [
+        ["ssCode", 3, "3", "Uint8Array"],
+        ["formalCharge", -1, "-1,0,1", "Int8Array"],
+        ["partialCharge", 0.25, "0.25,1.25,2.25", "Float32Array"],
+        ["gpu:test", 2, "2,3,4", "Float32Array"],
+      ]
+    ) {
+      await update({
+        mode: "attribute-roundtrip",
+        attributeName: name,
+        offsetX: phase,
+      });
+      await page.waitForFunction(
+        ({ expected, type }) => {
+          const snapshot = globalThis.__viewer.attributeSnapshot;
+          return snapshot?.values.join(",") === expected &&
+            snapshot?.type === type;
+        },
+        { expected, type },
+        { timeout: 10000 },
+      );
+      await update({ mode: "preloaded" });
+    }
+
     await update({ mode: "snapshot", offsetX: 5 });
     await page.waitForFunction(
       () => globalThis.__viewer.coordinateSnapshot?.positions[0] === -13,
@@ -803,6 +828,38 @@ Deno.test("viewer components", async () => {
       "only the deliberate absent structure may 404",
     );
     assertEquals((await snapshot()).errors, [], "WebGPU errors");
+
+    // A semantically invalid code must not count as a published generation.
+    const beforeInvalid = await page.evaluate(() =>
+      globalThis.__viewer.counters().detail
+    );
+    await update({
+      mode: "attribute-roundtrip",
+      attributeName: "ssCode",
+      offsetX: 9,
+    });
+    await page.waitForFunction(() =>
+      (globalThis.__viewer.counters().detail[
+        "gathers:attr:snapshot:ssCode:error"
+      ] ?? 0) > 0
+    );
+    const afterInvalid = await page.evaluate(() =>
+      globalThis.__viewer.counters().detail
+    );
+    assertStrictEquals(
+      afterInvalid["gathers:attr:snapshot:ssCode:publish"],
+      beforeInvalid["gathers:attr:snapshot:ssCode:publish"],
+      "invalid ssCode generation was not published",
+    );
+    await page.waitForFunction(() =>
+      globalThis.__viewer.attributeSnapshot === null
+    );
+    assert(
+      errors.some((message) =>
+        message.includes("Attribute snapshot ssCode failed")
+      ),
+      `invalid ssCode failure is surfaced: ${JSON.stringify(errors)}`,
+    );
     report.status = "passed";
     report.browser = browser.version();
     console.log(JSON.stringify(report, null, 2));

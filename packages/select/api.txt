@@ -28,6 +28,8 @@ isEmpty
   export function isEmpty(sel: Selection): boolean;
 isStale
   export function isStale(sel: Selection, data: StructureData): boolean;
+preserveBondGraph
+  export function preserveBondGraph(source: StructureData, snapshot: StructureData): StructureData;
 resolve
   export function resolve(query: SelectionQuery, data: StructureData): Selection;
 supportedSymbols

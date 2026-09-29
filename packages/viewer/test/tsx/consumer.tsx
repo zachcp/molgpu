@@ -40,7 +40,7 @@ import { OffsetCoordinates } from "./offset-coordinates.ts";
 import { TestAttributeProducer } from "./test-attribute-producer.ts";
 import { BondVertexProbe } from "./bond-vertex-probe.ts";
 import { probe } from "./diagnostics.ts";
-import type { Mode, Phase, State } from "./diagnostics.ts";
+import type { Phase, State } from "./diagnostics.ts";
 import { IdentityCoordinates } from "../fixtures/identity-coordinates.ts";
 
 declare global {
@@ -272,12 +272,16 @@ const RootPositionProbe = (): LiveElement => {
   return null;
 };
 
-const AttributeSnapshotProbe = (): LiveElement => {
-  const snapshot = useAttributeSnapshot("gpu:test", { maxHz: 10 });
+const AttributeSnapshotProbe = ({ name = "gpu:test" }: {
+  name?: State["attributeName"];
+}): LiveElement => {
+  const snapshot = useAttributeSnapshot(name, { maxHz: 10 });
+  const values = snapshot?.data.attributes?.[name]?.values;
   probe.attributeSnapshot = snapshot
     ? {
       generation: snapshot.generation,
-      values: Array.from(snapshot.data.attributes?.["gpu:test"]?.values ?? []),
+      values: Array.from(values ?? []),
+      type: values?.constructor.name ?? "missing",
     }
     : null;
   return null;
@@ -309,7 +313,10 @@ const FIRST_TWO = resolve(
 const NO_ATOMS = resolve(where("atom", "none", () => false), bonded);
 
 const Scene = (
-  { mode, src, offsetX }: { mode: Mode; src: string; offsetX: number },
+  { mode, src, offsetX, attributeName }: Pick<
+    State,
+    "mode" | "src" | "offsetX" | "attributeName"
+  >,
 ): LiveElement => {
   if (mode === "preloaded") {
     return (
@@ -393,6 +400,24 @@ const Scene = (
       </Structure>
     );
   }
+  if (mode === "attribute-roundtrip") {
+    const domain = attributeName === "ssCode" ? "residue" : "atom";
+    const kind = attributeName === "ssCode" || attributeName === "formalCharge"
+      ? "code"
+      : "scalar";
+    return (
+      <Structure data={bonded}>
+        <TestAttributeProducer
+          name={attributeName}
+          domain={domain}
+          kind={kind}
+          phase={offsetX}
+        >
+          <AttributeSnapshotProbe name={attributeName} />
+        </TestAttributeProducer>
+      </Structure>
+    );
+  }
   if (mode === "snapshot") {
     return (
       <Structure data={bonded}>
@@ -446,6 +471,7 @@ const App = (): LiveElement => {
     src: "",
     mounted: true,
     offsetX: 5,
+    attributeName: "gpu:test",
   });
   try {
     useCoordinates();
@@ -481,6 +507,7 @@ const App = (): LiveElement => {
               mode={state.mode}
               src={state.src}
               offsetX={state.offsetX}
+              attributeName={state.attributeName}
             />
           )
           : null}

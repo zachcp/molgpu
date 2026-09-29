@@ -18,12 +18,17 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
 
 export const TestAttributeProducer: LC<{
   phase: number;
+  name?: string;
+  domain?: "atom" | "residue";
+  kind?: "scalar" | "code";
   children?: LiveElement;
-}> = ({ phase, children }) =>
+}> = (
+  { phase, name = "gpu:test", domain = "atom", kind = "scalar", children },
+) =>
   use(AttributeProducer, {
-    name: "gpu:test",
-    domain: "atom",
-    kind: "scalar",
+    name,
+    domain,
+    kind,
     kernel: TEST,
     args: [phase],
     parameterKey: String(phase),

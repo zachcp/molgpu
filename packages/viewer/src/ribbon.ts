@@ -142,12 +142,14 @@ export const Ribbon: ViewerComponent<
           rows: dsspRows,
         });
       }
-      // GpuDssp holds its last completed code column briefly while a newer
-      // coordinate generation runs, so generations may differ. The dataset
-      // must still match: a snapshot from a replaced structure is ignored.
-      if (attributeSnapshot?.data.identity === snapshot.identity) {
-        const column = attributeColumn(attributeSnapshot.data, "ssCode");
-        if (column?.provenance === "gpu:dssp") {
+      // A produced code column may briefly trail a newer coordinate
+      // generation. Its dataset must still match the coordinate snapshot.
+      if (
+        attributeSnapshot?.data !== resource.data &&
+        attributeSnapshot?.data.identity === snapshot.identity
+      ) {
+        const column = attributeSnapshot.data.attributes?.ssCode;
+        if (column) {
           return withAttributes(snapshot, { ssCode: column });
         }
       }

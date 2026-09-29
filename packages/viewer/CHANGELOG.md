@@ -6,6 +6,13 @@ All notable changes to `@molgpu/viewer` are recorded here. The format follows
 
 ## [Unreleased]
 
+- Nested Structure boundaries shadow trajectory metadata while Volume and
+  Timeline continue to scope independently.
+- GPU attribute readbacks validate and convert code columns before publication;
+  failed conversions surface an error without marking a generation successful.
+- Coordinate snapshots preserve the source chemical graph for connected
+  selections and no longer insert inferred display bonds into topology.
+
 - `<Structure src>` and `<Volume src>` default loaders pass the URL to
   `@molgpu/io`, so a failed fetch surfaces as an `IoError` (`FETCH_FAILED`).
 

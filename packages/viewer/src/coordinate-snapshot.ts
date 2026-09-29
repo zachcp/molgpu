@@ -11,7 +11,8 @@ import {
   useResource,
   useState,
 } from "@use-gpu/live";
-import { bondTopology, type StructureData, withPositions } from "@molgpu/table";
+import { type StructureData, withPositions } from "@molgpu/table";
+import { preserveBondGraph } from "@molgpu/select";
 import type { Coordinates } from "./coordinates-context.ts";
 import type { StructureResource } from "./types.ts";
 import { createStructureResource } from "./internal/structure-resource.ts";
@@ -127,21 +128,13 @@ export const CoordinateSnapshotBoundary: LC<{
     subscribe,
   }), [data, snapshotResource, published, subscribe]);
   const root = coordinates.resource.data;
-  const rootBonds = useMemo(() => demand.length ? bondTopology(root) : null, [
-    coordinates.resource.identity,
-    coordinates.resource.topologyRevision,
-    Boolean(demand.length),
-  ]);
   const publish = (positions: Float32Array, generation: number) => {
     if (latest.current.generation !== generation) return;
     const revised = withPositions(
       published?.owner === coordinates.resource ? published.data : root,
       positions,
     );
-    const data = root.topology.bonds.count ? revised : Object.freeze({
-      ...revised,
-      topology: Object.freeze({ ...revised.topology, bonds: rootBonds! }),
-    });
+    const data = preserveBondGraph(root, revised);
     setPublished(Object.freeze({
       data,
       generation,

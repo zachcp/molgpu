@@ -241,6 +241,34 @@ const computed = new WeakMap<
   StructureData["topology"],
   { key: string; graph: BondGraph }
 >();
+const inherited = new WeakMap<
+  Float32Array,
+  {
+    identity: StructureData["identity"];
+    topology: StructureData["topology"];
+    graph: BondGraph;
+  }
+>();
+
+/** Keep a coordinate snapshot's chemical graph tied to its source structure. */
+export function preserveBondGraph(
+  source: StructureData,
+  snapshot: StructureData,
+): StructureData {
+  if (
+    source.identity !== snapshot.identity ||
+    source.topology !== snapshot.topology ||
+    source.revision.topology !== snapshot.revision.topology
+  ) {
+    throw new TypeError("preserveBondGraph requires the same dataset topology");
+  }
+  inherited.set(snapshot.positions, {
+    identity: snapshot.identity,
+    topology: snapshot.topology,
+    graph: bondGraph(source),
+  });
+  return snapshot;
+}
 
 /**
  * The bond graph for a structure: explicit bonds plus links when the structure
@@ -248,6 +276,10 @@ const computed = new WeakMap<
  * objects, or per topology (one topology and positions revision) when computed.
  */
 export function bondGraph(data: StructureData): BondGraph {
+  const pinned = inherited.get(data.positions);
+  if (pinned?.identity === data.identity && pinned.topology === data.topology) {
+    return pinned.graph;
+  }
   const { topology } = data;
   if (topology.bonds.count) {
     const bonds = bondTopology(data);

@@ -6,6 +6,9 @@ All notable changes to `@molgpu/select` are recorded here. The format follows
 
 ## [Unreleased]
 
+- Coordinate snapshots can retain the source chemical graph through
+  `preserveBondGraph`, without changing declared or display bonds.
+
 - Fine secondary-structure flags (Phase 15, efv.6; closes 922.16). Each `ssCode`
   maps to Mol*'s flags for its DSSP letter: alpha, 3-10 and pi helices, sheet
   and bridge strands, turns and bends. VMD `structure` letters and PyMOL `ss`
