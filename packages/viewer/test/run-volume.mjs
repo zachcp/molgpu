@@ -459,6 +459,68 @@ Deno.test("volume components", async () => {
     );
     await update({ mode: "none" });
 
+    // 8. Contextual fields: argument-free volumeSample() binds the nearest
+    //    <Volume>, an annotation join binds its baked rows, and a lifted
+    //    residue column reads through each atom's residue, for Spacefill,
+    //    Bonds and Surface, over all atoms and over residue 2's subset rows.
+    //    Residue 1 is blue (nearest, lifted) or green (annotation); residue 2
+    //    is red under every style.
+    const residueOne = { nearest: "blue", annotation: "green", lifted: "blue" };
+    const minimum = { spacefill: 200, bonds: 20, surface: 200 };
+    report.states.field = {};
+    for (const target of ["spacefill", "bonds", "surface"]) {
+      for (const subset of [false, true]) {
+        let styled = false;
+        for (const style of ["nearest", "annotation", "lifted"]) {
+          const name = `field-${target}-${style}${subset ? "-subset" : ""}`;
+          const start = await counters();
+          const failures = errors.length;
+          await update({ mode: "field", target, style, subset });
+          const pixels = await classify(
+            await settled(name).catch((failure) => {
+              throw new Error(`${name}: ${JSON.stringify(errors)}`, {
+                cause: failure,
+              });
+            }),
+          );
+          // A render that throws leaves the previous frame on screen.
+          assertEquals(errors.slice(failures), [], `${name}: page errors`);
+          report.states.field[name] = pixels;
+          const first = residueOne[style];
+          assert(
+            pixels.red > minimum[target],
+            `${name}: residue 2 is red ${JSON.stringify(pixels)}`,
+          );
+          if (subset) {
+            assert(
+              pixels[first] <= 5,
+              `${name}: residue 1 is not drawn ${JSON.stringify(pixels)}`,
+            );
+          } else {
+            assert(
+              pixels[first] > minimum[target],
+              `${name}: residue 1 is ${first} ${JSON.stringify(pixels)}`,
+            );
+          }
+          // Restyling one mounted representation moves no molecular geometry:
+          // no coordinate upload, geometry build or topology build. The first
+          // use of a field's own rows (an annotation) may upload them once.
+          const now = await counters();
+          if (styled) {
+            const moved = Object.keys(now.detail).filter((key) =>
+              (key.startsWith("uploadBytes:structure:") ||
+                key.startsWith("geometryBuilds:") ||
+                key.startsWith("topologyBuilds:")) &&
+              delta(now, start, key) !== 0
+            );
+            assertEquals(moved, [], `${name}: restyle moved geometry`);
+          }
+          styled = true;
+        }
+        await update({ mode: "none" });
+      }
+    }
+
     assertEquals(
       await page.evaluate(() => globalThis.__volume.errors),
       [],

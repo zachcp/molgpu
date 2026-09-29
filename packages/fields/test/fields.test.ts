@@ -186,6 +186,19 @@ Deno.test("annotation joins external per-row values with an explicit missing pol
   assertThrows(() => evaluate(failField, data), Error, "missing value");
 });
 
+Deno.test("an annotation for another structure's rows fails on evaluate and bake", () => {
+  const data = structure();
+  const short = annotation("atom", SCALAR, Float32Array.from([1, 2, 3]));
+  assertThrows(
+    () => evaluate(short, data),
+    TypeError,
+    "has 3 rows; the structure has 4 atom rows",
+  );
+  const mapped = colormap(short, [[0, [0, 0, 0, 1]], [1, [1, 1, 1, 1]]]);
+  const { bindings } = compile(mapped, { target: "link", domain: "atom" });
+  assertThrows(() => bindings[0].fill(data), TypeError, "has 3 rows");
+});
+
 Deno.test("curve samples a scalar along the global t uniform", () => {
   const data = structure();
   const c = curve([[0, 0], [1, 10]]);

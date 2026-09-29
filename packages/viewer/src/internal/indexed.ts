@@ -16,6 +16,11 @@ const INDEXED = {
 @link fn getData(i: u32) -> vec3<f32>;
 @export fn getIndexedData(i: u32) -> vec3<f32> { return getData(getIndex(i)); }
 `,
+  "vec4<f32>": wgsl`
+@link fn getIndex(i: u32) -> u32;
+@link fn getData(i: u32) -> vec4<f32>;
+@export fn getIndexedData(i: u32) -> vec4<f32> { return getData(getIndex(i)); }
+`,
 };
 
 /** `source` read at `index` rows; `source` itself when there is no index. */

@@ -6,6 +6,8 @@ All notable changes to `@molgpu/fields` are recorded here. The format follows
 
 ## [Unreleased]
 
+- `evaluate` and a compiled annotation binding's `fill` reject an annotation
+  whose row count differs from the structure's, instead of reading past it.
 - Trim evaluator constants, identity accessors and `columnRange` from the
   package entry; keep field constructors and types needed by public signatures.
 - `volumeSample()` without an argument samples the nearest viewer volume

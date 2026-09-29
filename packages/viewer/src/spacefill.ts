@@ -10,8 +10,7 @@ import type {
 import { type LC, use, useMemo } from "@use-gpu/live";
 import type { ShaderSource } from "@use-gpu/shader";
 import type { StorageSource } from "@use-gpu/core";
-import type { StructureData } from "@molgpu/table";
-import type { AttributeDomain } from "@molgpu/table";
+import type { AttributeDomain, StructureData } from "@molgpu/table";
 import { WorldSpacePointLayer } from "./world-space-points.ts";
 import { type StructureSources, useStructure } from "./structure-context.ts";
 import { useCoordinates } from "./coordinates-context.ts";
@@ -22,10 +21,14 @@ import {
   checkAtomSelection,
   type ColumnMap,
   type ColumnSpec,
-  fieldAttrNames,
   isField,
   withColumns,
 } from "./internal/representation.ts";
+import {
+  fieldColumns,
+  type FieldPlan,
+  useFieldPlan,
+} from "./internal/use-field-plan.ts";
 
 /** Point-layer props Spacefill forwards to its layer (flags, draw mode, picking id). */
 type LayerProps = PointLayerOptions & {
@@ -73,13 +76,13 @@ const FieldPoints: LC<
   });
 };
 
-// Reads the shared structure sources and full attribute columns through the
-// selection's rows. Instance k draws atom indices[k], which is also the
-// mapping Pickable registers.
+// Reads the shared structure sources, full attribute columns and the field's
+// annotation rows through the selection's rows. Instance k draws atom
+// indices[k], which is also the mapping Pickable registers.
 const IndexedPoints: LC<
   {
     map: ColumnMap;
-    attrNames: readonly string[];
+    plan: FieldPlan;
     attrSources: Record<string, StorageSource>;
     attrDomains: Record<string, AttributeDomain>;
     shared: StructureSources;
@@ -93,7 +96,7 @@ const IndexedPoints: LC<
 > = (
   {
     map,
-    attrNames,
+    plan,
     attrSources,
     attrDomains,
     shared,
@@ -107,20 +110,20 @@ const IndexedPoints: LC<
   },
 ) => {
   const index = map.index ?? null;
-  const columns = attrNames.map((name) => attrSources[`attr:${name}`]);
-  const domains = attrNames.map((name) => attrDomains[`attr:${name}`]);
+  const keys = plan.attrNames.map((name) => `attr:${name}`);
   const sources = useMemo(() => ({
     positions: indexed(positions, index, "vec3<f32>"),
     radii: indexed(shared.radii, index, "f32"),
-    attrs: Object.fromEntries(
-      attrNames.map((name, k) => [
-        `attr:${name}`,
-        attrDomains[`attr:${name}`] === "atom"
-          ? indexed(columns[k]!, index, "f32")
-          : columns[k]!,
-      ]),
-    ),
-  }), [shared, positions, index, attrNames.join(), ...domains, ...columns]);
+    attrs: fieldColumns(plan, attrSources, attrDomains, map.annotation, index),
+  }), [
+    shared,
+    positions,
+    index,
+    plan,
+    map.annotation,
+    ...keys.map((key) => attrSources[key]),
+    ...keys.map((key) => attrDomains[key]),
+  ]);
   return field
     ? use(FieldPoints, {
       positions: sources.positions,
@@ -145,13 +148,13 @@ const IndexedPoints: LC<
 };
 
 // Uploads a selection's rows and, for a colour field, the full attribute
-// columns it reads. Attribute columns follow topology only, so neither a
-// selection change nor a coordinate edit regathers them.
+// columns and annotation rows it reads. Those follow topology and the field
+// only, so neither a selection change nor a coordinate edit regathers them.
 const SelectedSpacefill: LC<
   {
     data: StructureData;
     indices: Uint32Array | null;
-    attrNames: readonly string[];
+    plan: FieldPlan;
     field: Field | null;
     opacity: number;
     shared: StructureSources;
@@ -163,21 +166,22 @@ const SelectedSpacefill: LC<
   {
     data,
     indices,
-    attrNames,
+    plan,
     ...props
   },
 ) => {
-  const attributes = useAttributeSources(data, attrNames);
+  const attributes = useAttributeSources(data, plan.attrNames);
   if (!attributes.ready) return null;
   const specs: ColumnSpec[] = [];
   if (indices) specs.push({ key: "index", data: indices, format: "u32" });
+  if (plan.annotation) specs.push(plan.annotation);
   const count = indices ? indices.length : data.topology.atoms.count;
   return withColumns(
     specs,
     (map) =>
       use(IndexedPoints, {
         map,
-        attrNames,
+        plan,
         attrSources: attributes.sources,
         attrDomains: attributes.domains,
         count,
@@ -191,7 +195,8 @@ const SelectedSpacefill: LC<
  * @molgpu/select atom Selection) restricts to a subset, drawn by reading the
  * shared structure columns through the selection's uploaded atom rows. `color` is either a flat colour or a @molgpu/fields Field,
  * which is composed shader-side over the atoms' columns (no per-atom colour
- * upload) via the viewer's useField. `material` (a @molgpu/viewer material
+ * upload; an annotation uploads its own rows once) via the viewer's useField,
+ * including a `volumeSample()` of the nearest volume. `material` (a @molgpu/viewer material
  * spec) wraps the shaded point layer; without one the atoms use the ambient
  * scene material. `opacity` (0–1) multiplies the colour's alpha — a uniform,
  * so fading never touches geometry — and below 1 the atoms draw in transparent
@@ -235,8 +240,8 @@ export const Spacefill: ViewerComponent<
 
   checkAtomSelection(select, resource, "Spacefill");
   const field = isField(color) ? color : null;
-  // A colour field names the atom columns it reads; gather exactly those.
-  const attrNames = useMemo(() => fieldAttrNames(field), [field]);
+  // A colour field names the columns it reads; gather exactly those.
+  const plan = useFieldPlan(field, resource, "Spacefill");
   checkOpacity(opacity, "Spacefill");
   const flatColor = useMemo(
     () => field ? color : applyOpacity(color as VectorLike, opacity),
@@ -272,7 +277,7 @@ export const Spacefill: ViewerComponent<
         : use(SelectedSpacefill, {
           data,
           indices,
-          attrNames,
+          plan,
           field,
           opacity,
           shared: sources,

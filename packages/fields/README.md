@@ -146,6 +146,7 @@ representation rather than evaluating it yourself.
 - `annotation(domain, type, values, { missing?, policy?, fallback? })` —
   externally supplied per-row values with an explicit missing policy (`fallback`
   or `fail`). Use the package-root `SCALAR` or `COLOR` descriptor as `type`.
+  Evaluating or baking it for a structure whose row count differs fails.
 - `curve(stops, { overflow? })` — a scalar along the global parameter `t`
   (uniform, same for every row).
 

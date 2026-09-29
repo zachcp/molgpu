@@ -224,6 +224,15 @@ moving its plane, range or opacity updates uniforms only. Colour atoms from a
 map with `color={colormap(volumeSample(map), stops)}`: the field reads the
 atoms' positions and the shared samples, with no per-atom colour upload.
 
+`<Spacefill>`, `<Bonds>` and `<Surface>` resolve a colour field's inputs the
+same way, over all atoms or a `select` subset. An argument-free `volumeSample()`
+samples the nearest `<Volume>` or `<EField>` ancestor (and fails without one);
+atom and lifted residue attributes read the shared attribute columns; an
+annotation, such as a `joinAnnotation` result, uploads its own atom rows once
+when the field is first applied. Surface vertices read atom inputs through their
+nearest source atom. A residue-domain annotation (`lift: false`) or one joined
+against another structure's rows is rejected.
+
 ## Electric fields
 
 `<EField>` is a computed volume. It sums the Coulomb potential of the nearest

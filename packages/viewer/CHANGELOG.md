@@ -6,6 +6,10 @@ All notable changes to `@molgpu/viewer` are recorded here. The format follows
 
 ## [Unreleased]
 
+- `<Spacefill>`, `<Bonds>` and `<Surface>` share one colour-field binding plan:
+  argument-free `volumeSample()` binds the nearest `<Volume>`/`<EField>`,
+  annotation fields upload their atom rows, and lifted residue attributes work
+  on surfaces, for full structures and selections.
 - Nested Structure boundaries shadow trajectory metadata while Volume and
   Timeline continue to scope independently.
 - GPU attribute readbacks validate and convert code columns before publication;

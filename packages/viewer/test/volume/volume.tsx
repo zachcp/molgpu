@@ -19,11 +19,22 @@ import {
   type StructureData,
   type VolumeData,
 } from "@molgpu/table";
-import { colormap, volumeSample } from "@molgpu/fields";
 import {
+  attribute,
+  categorical,
+  COLOR,
+  colormap,
+  type Field,
+  joinAnnotation,
+  volumeSample,
+} from "@molgpu/fields";
+import { resolve, type Selection, where } from "@molgpu/select";
+import {
+  Bonds,
   Isosurface,
   Spacefill,
   Structure,
+  Surface,
   Volume,
   VolumeSlice,
 } from "@molgpu/viewer";
@@ -162,7 +173,66 @@ const COLOURED = atoms([-8, 8, 16]);
 const FRONT = atoms([0], 8);
 const BEHIND = atoms([4], -8);
 const RED = [1, 0, 0, 1] as const, BLUE = [0, 0, 1, 1] as const;
+const GREEN = [0, 1, 0, 1] as const;
 const BY_X = colormap(volumeSample(GRADIENT), [[-10, BLUE], [10, RED]]);
+
+// Two bonded residues: residue 1 at x ≈ -8 (blue under BY_X), residue 2 at
+// x ≈ 8 (red). Explicit bonds 0–1 and 2–3.
+function pairs(): StructureData {
+  const xs = [-8.7, -7.3, 7.3, 8.7];
+  const base = atoms(xs);
+  const { topology } = base;
+  return createStructure({
+    positions: base.positions,
+    topology: {
+      ...topology,
+      atoms: { ...topology.atoms, residue: Uint32Array.from([0, 0, 1, 1]) },
+      residues: {
+        count: 2,
+        chain: new Uint32Array(2),
+        labelSeq: new Int32Array([1, 2]),
+        authSeq: ["1", "2"],
+        insertionCode: ["", ""],
+        comp: ["GLY", "GLY"],
+        polymer: ["other", "other"],
+      },
+      bonds: {
+        count: 2,
+        a: Uint32Array.from([0, 2]),
+        b: Uint32Array.from([1, 3]),
+        order: Uint8Array.from([1, 1]),
+        source: ["explicit", "explicit"],
+      },
+    },
+  });
+}
+const PAIRS = pairs();
+// Residue 2 only: subset rows exercise per-representation row indexing.
+const SECOND: Selection = resolve(
+  where("atom", "residue 2", (data, i) => data.topology.atoms.residue[i] === 1),
+  PAIRS,
+);
+// The nearest <Volume>'s gradient, through an argument-free volumeSample().
+const NEAREST = colormap(volumeSample(), [[-10, BLUE], [10, RED]]);
+// Residue records joined by identity and lifted onto atoms.
+const ANNOTATED = joinAnnotation(PAIRS, [
+  { chainLabel: "A", labelSeq: 1, value: GREEN },
+  { chainLabel: "A", labelSeq: 2, value: RED },
+], { fields: ["chainLabel", "labelSeq"], type: COLOR });
+// A built-in residue column read through each atom's residue. Residue 1
+// alternates blue/green/blue across styles, so a stale frame cannot pass.
+const LIFTED = categorical(
+  attribute("labelSeq", { domain: "atom" }),
+  { 1: BLUE, 2: RED },
+  GREEN,
+);
+const STYLES: Record<FieldStyle, Field> = {
+  nearest: NEAREST,
+  annotation: ANNOTATED,
+  lifted: LIFTED,
+};
+type FieldStyle = "nearest" | "annotation" | "lifted";
+type FieldTarget = "spacefill" | "bonds" | "surface";
 
 type Mode =
   | "none"
@@ -172,7 +242,8 @@ type Mode =
   | "slice"
   | "depth"
   | "src"
-  | "big";
+  | "big"
+  | "field";
 interface State {
   mode: Mode;
   level: number | { sigma: number };
@@ -181,6 +252,9 @@ interface State {
   index: number;
   src: string;
   bearing: number;
+  target: FieldTarget;
+  style: FieldStyle;
+  subset: boolean;
 }
 
 interface Probe {
@@ -304,6 +378,23 @@ const Scene = ({ state }: { state: State }): LiveElement => {
           <Spacefill color={[1, 0, 0, 1]} />
         </Structure>,
       ];
+    case "field": {
+      // A contextual field under the nearest <Volume>, applied by one
+      // representation to all atoms or to residue 2.
+      const color = STYLES[state.style];
+      const select = state.subset ? SECOND : null;
+      return (
+        <Volume data={GRADIENT}>
+          <Structure data={PAIRS}>
+            {state.target === "spacefill"
+              ? <Spacefill color={color} select={select} />
+              : state.target === "bonds"
+              ? <Bonds color={color} select={select} width={0.8} />
+              : <Surface color={color} select={select} sampleOffset={0} />}
+          </Structure>
+        </Volume>
+      );
+    }
     case "big":
       return (
         <Volume data={BIG()}>
@@ -333,6 +424,9 @@ const App = (): LiveElement => {
     index: 10,
     src: "",
     bearing: 0,
+    target: "spacefill",
+    style: "nearest",
+    subset: false,
   });
   probe.update = (patch) => setState((previous) => ({ ...previous, ...patch }));
   probe.mounted = true;
