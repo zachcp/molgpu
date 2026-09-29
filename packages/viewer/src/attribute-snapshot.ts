@@ -77,6 +77,8 @@ const Readback: LC<{
   const latest = useRef({ entry, publish, fail, maxHz, onPause });
   latest.current = { entry, publish, fail, maxHz, onPause };
   const inFlight = useRef(false);
+  const mapping = useRef<GPUBuffer | null>(null);
+  const retired = useRef(new Set<GPUBuffer>());
   const published = useRef<{ generation: number; buffer: GPUBuffer } | null>(
     null,
   );
@@ -97,8 +99,11 @@ const Readback: LC<{
     );
     dispose(() =>
       staging.forEach((buffer) => {
-        releaseOwnedBuffer(buffer);
-        buffer.destroy();
+        if (mapping.current === buffer) retired.current.add(buffer);
+        else {
+          releaseOwnedBuffer(buffer);
+          buffer.destroy();
+        }
       })
     );
   }, [staging]);
@@ -125,17 +130,13 @@ const Readback: LC<{
       const delay = pause
         ? Math.min(Math.max(0, remaining), 34)
         : Math.max(0, remaining);
-      // Compute pipelines are created asynchronously. Give the initial
-      // dispatch a chance to land before copying a newly allocated output.
-      const readyDelay = published.current?.buffer !== current.source.buffer
-        ? 200
-        : 0;
       timer = setTimeout(async () => {
         if (!alive || inFlight.current) return;
         const { entry: target } = latest.current;
         const generation = target.generation;
         const buffer = staging[nextBuffer.current++ % staging.length];
         inFlight.current = true;
+        mapping.current = buffer;
         lastDispatch.current = performance.now();
         count("gathers", `attr:snapshot:${name}:dispatch`);
         try {
@@ -161,10 +162,15 @@ const Readback: LC<{
             latest.current.fail(error, generation, target.source.buffer);
           }
         } finally {
+          mapping.current = null;
+          if (retired.current.delete(buffer)) {
+            releaseOwnedBuffer(buffer);
+            buffer.destroy();
+          }
           inFlight.current = false;
           if (mounted.current) kick.current();
         }
-      }, Math.max(readyDelay, delay));
+      }, delay);
     };
     kick.current = schedule;
     schedule();
@@ -250,7 +256,7 @@ export const AttributeSnapshotBoundary: LC<{
       [name]: context,
     }),
     [
-      demand.length
+      demand.length && entry.ready !== false
         ? use(Readback, { name, entry, maxHz, onPause, publish, fail })
         : null,
       children,

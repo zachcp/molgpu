@@ -1,4 +1,5 @@
 import {
+  gather,
   type LC,
   type LiveElement,
   provide,
@@ -7,6 +8,8 @@ import {
   useMemo,
   useRef,
   useResource,
+  useState,
+  yeet,
 } from "@use-gpu/live";
 import type { StorageSource, StorageTarget } from "@use-gpu/core";
 import type { ShaderModule } from "@use-gpu/shader";
@@ -35,8 +38,9 @@ const Published: LC<{
   source: StorageTarget;
   count: number;
   generation: number;
+  ready: boolean;
   children: LiveElement;
-}> = ({ name, domain, kind, source, count, generation, children }) => {
+}> = ({ name, domain, kind, source, count, generation, ready, children }) => {
   const upstream = useContext(AttributesContext) ?? {};
   const repaint = useContext(LoopContext);
   const published = useMemo<StorageSource>(() => ({
@@ -48,21 +52,21 @@ const Published: LC<{
   }), [source.buffer, count, generation]);
   useResource((dispose) => {
     trackOwnedBuffer(source.buffer, `attr:producer:${name}`);
-    const wakeups = [16, 50, 100, 200, 400, 800].map((ms) =>
-      setTimeout(repaint, ms)
-    );
     dispose(() => {
-      wakeups.forEach(clearTimeout);
       releaseOwnedBuffer(source.buffer);
       source.buffer.destroy();
     });
   }, [source.buffer]);
+  useResource(() => {
+    if (ready) repaint();
+  }, [ready]);
   const provenance = `gpu:${name.replace(/^[^:]*:/, "")}` as const;
   const entry = Object.freeze({
     source: published,
     domain,
     kind,
     generation,
+    ready,
     provenance,
   });
   const attributes: Attributes = Object.freeze({ ...upstream, [name]: entry });
@@ -128,18 +132,54 @@ export const AttributeProducer: LC<{
     parameterKey,
     ...sources,
   ]);
+  const [submittedGeneration, setSubmittedGeneration] = useState(-1);
+  const notified = useRef(-1);
+  const mounted = useRef(true);
+  useResource((dispose) => {
+    mounted.current = true;
+    dispose(() => {
+      mounted.current = false;
+    });
+  }, []);
+  const ready = submittedGeneration === generation;
   const output = () =>
     use(Compute, {
       immediate: true,
-      children: use(Kernel, {
-        shader: kernel,
-        source: coordinates.source,
-        sources: linked,
-        args,
-        initial: true,
-        version: generation,
-        size: [count, 1],
-      }),
+      children: coordinates.ready === false ? null : gather(
+        use(Kernel, {
+          shader: kernel,
+          source: coordinates.source,
+          sources: linked,
+          args,
+          initial: true,
+          version: generation,
+          size: [count, 1],
+        }),
+        (calls: { compute?: (...args: unknown[]) => unknown }[]) => {
+          const call = calls.find((item) => item?.compute);
+          return call?.compute
+            ? yeet({
+              compute: (
+                pass: unknown,
+                countDispatch: (...args: number[]) => void,
+              ) => {
+                let dispatched = false;
+                const result = call.compute!(pass, (...counts: number[]) => {
+                  dispatched = true;
+                  countDispatch(...counts);
+                });
+                if (dispatched && notified.current !== generation) {
+                  notified.current = generation;
+                  queueMicrotask(() => {
+                    if (mounted.current) setSubmittedGeneration(generation);
+                  });
+                }
+                return result;
+              },
+            })
+            : null;
+        },
+      ),
     });
   return use(ComputeBuffer, {
     width: count,
@@ -155,6 +195,7 @@ export const AttributeProducer: LC<{
         source,
         count,
         generation,
+        ready,
         children: children ?? null,
       }),
   });

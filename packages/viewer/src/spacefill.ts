@@ -168,6 +168,7 @@ const SelectedSpacefill: LC<
   },
 ) => {
   const attributes = useAttributeSources(data, attrNames);
+  if (!attributes.ready) return null;
   const specs: ColumnSpec[] = [];
   if (indices) specs.push({ key: "index", data: indices, format: "u32" });
   const count = indices ? indices.length : data.topology.atoms.count;
@@ -245,7 +246,9 @@ export const Spacefill: ViewerComponent<
 
   const indices = select ? select.indices : null;
   const n = indices ? indices.length : data.topology.atoms.count;
-  if (!sources || !coordinates || n === 0) return null;
+  if (!sources || !coordinates || coordinates.ready === false || n === 0) {
+    return null;
+  }
 
   // Build the shaded layer, given the picking id to draw under (undefined when
   // not pickable → PointLayer emits no picking id). The whole-structure flat

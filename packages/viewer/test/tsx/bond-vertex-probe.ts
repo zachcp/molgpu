@@ -60,7 +60,7 @@ const Materialize: LC<{ endpoints: StorageSource; count: number }> = (
     children: () =>
       use(Compute, {
         immediate: true,
-        children: use(Kernel, {
+        children: coordinates.ready === false ? null : use(Kernel, {
           shader: COPY_VERTICES,
           source: positions,
           initial: true,

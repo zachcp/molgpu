@@ -69,6 +69,7 @@ export function useAttributeSources(
 ): {
   sources: Record<string, StorageSource>;
   domains: Record<string, AttributeDomain>;
+  ready: boolean;
 } {
   const device = useDeviceContext();
   const produced = useContext(AttributesContext);
@@ -91,6 +92,7 @@ export function useAttributeSources(
     );
   }, [entries]);
   return {
+    ready: names.every((name) => produced?.[name]?.ready !== false),
     sources: Object.fromEntries(names.map((name, i) => [
       `attr:${name}`,
       produced?.[name]?.source ?? entries[i]!.source,

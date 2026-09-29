@@ -159,11 +159,11 @@ export function useCoordinateBounds(
   const next = useRef(0);
   const inFlight = useRef(false);
   useResource((dispose) => {
-    if (!coordinates) return;
+    if (!coordinates || coordinates.ready === false) return;
     let alive = true;
     const generation = coordinates.generation;
     const selected = rows !== null;
-    let work: ReturnType<typeof setTimeout>;
+    let work: ReturnType<typeof setTimeout> | undefined;
     const run = async () => {
       if (!alive) return;
       if (inFlight.current) {
@@ -224,14 +224,15 @@ export function useCoordinateBounds(
         inFlight.current = false;
       }
     };
-    work = setTimeout(run, 16);
+    queueMicrotask(run);
     dispose(() => {
       alive = false;
-      clearTimeout(work);
+      if (work) clearTimeout(work);
     });
   }, [
     coordinates?.source.buffer,
     coordinates?.generation,
+    coordinates?.ready,
     rows,
     buffers,
     pipeline,

@@ -54,17 +54,14 @@ export const Published: LC<{
   useResource((dispose) => {
     trackOwnedBuffer(source.buffer, "coords:provider");
     gauge("coords:provider:bytes", source.buffer.size);
-    // Pipeline creation is asynchronous. A bounded set of wakeups prevents a
-    // first draw from staying on the zero-filled buffer after the dispatch lands.
-    const wakeups = [16, 50, 100, 200, 400, 800].map((delay) =>
-      setTimeout(requestRepaint, delay)
-    );
     dispose(() => {
-      for (const wakeup of wakeups) clearTimeout(wakeup);
       releaseOwnedBuffer(source.buffer);
       source.buffer.destroy();
     });
   }, [source.buffer]);
+  useResource(() => {
+    if (ready) requestRepaint();
+  }, [ready]);
   const coordinates = Object.freeze({
     source: packed,
     count: upstream.count,
@@ -125,6 +122,13 @@ export const CoordinateKernel: LC<CoordinateKernelProps> = (
   ]);
   const [dispatchedGeneration, setDispatchedGeneration] = useState(-1);
   const notified = useRef(-1);
+  const mounted = useRef(true);
+  useResource((dispose) => {
+    mounted.current = true;
+    dispose(() => {
+      mounted.current = false;
+    });
+  }, []);
   const ready = dispatchedGeneration === generation;
   const output = () => {
     return use(Compute, {
@@ -146,11 +150,23 @@ export const CoordinateKernel: LC<CoordinateKernelProps> = (
           const call = calls.find((item) => item?.compute);
           return call?.compute
             ? yeet({
-              compute: (...args: unknown[]) => {
-                const result = call.compute!(...args);
-                if (notified.current !== generation) {
+              compute: (
+                pass: unknown,
+                countDispatch: (...args: number[]) => void,
+              ) => {
+                let dispatched = false;
+                const result = call.compute!(pass, (...counts: number[]) => {
+                  dispatched = true;
+                  countDispatch(...counts);
+                });
+                // ComputePass submits synchronously after this call returns.
+                // Kernel's initial guard can suppress a call, so only the
+                // count callback establishes that encoding reached dispatch.
+                if (dispatched && notified.current !== generation) {
                   notified.current = generation;
-                  queueMicrotask(() => setDispatchedGeneration(generation));
+                  queueMicrotask(() => {
+                    if (mounted.current) setDispatchedGeneration(generation);
+                  });
                 }
                 return result;
               },
@@ -170,7 +186,7 @@ export const CoordinateKernel: LC<CoordinateKernelProps> = (
       use(Published, {
         upstream,
         source,
-        generation: generation * 2 + Number(ready),
+        generation,
         ready,
         children,
       }),

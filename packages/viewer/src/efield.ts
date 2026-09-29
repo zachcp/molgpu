@@ -365,6 +365,7 @@ const EFieldCompute: LC<{
       snapshot,
       subscribe,
     }), [grid, source, generation, range, snapshot, subscribe]);
+  if (!generation) return null;
   return provide(VolumeContext, value, [
     demand.length
       ? use(ThrottledReadback, {
@@ -521,6 +522,7 @@ const EFieldInner: LC<EFieldProps & { coordinates: Coordinates }> = (
   const display = range ??
     (physics.model === "debye" ? 2 : 15) *
       (physics.unit === "kT/e" ? 1 : physics.kT);
+  if (produced?.ready === false) return null;
   return use(EFieldCompute, {
     coordinates,
     grid: stable,

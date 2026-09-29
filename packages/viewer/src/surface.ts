@@ -124,7 +124,7 @@ const FieldFaces: LC<{
     useField(field, inputs, { domain: "atom" }),
     opacity,
   );
-  return render(colors);
+  return attributes.ready ? render(colors) : null;
 };
 
 /**

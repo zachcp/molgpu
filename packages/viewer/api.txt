@@ -146,7 +146,7 @@ CoordinateKernelProps
 CoordinateSnapshot
   export interface CoordinateSnapshot { readonly data: StructureData; readonly generation: number; readonly resource: StructureResource }
 Coordinates
-  export interface Coordinates { readonly source: StorageSource; readonly count: number; readonly generation: number; /** False until an asynchronous coordinate kernel has dispatched its first output. */ readonly ready?: boolean; readonly resource: StructureResource }
+  export interface Coordinates { readonly source: StorageSource; readonly count: number; readonly generation: number; /** False until the requested content revision has been submitted. */ readonly ready?: boolean; readonly resource: StructureResource }
 NearestStructure
   export interface NearestStructure { readonly resource: StructureResource; /** Null for an empty structure, which owns no GPU source. */ readonly sources: StructureSources | null }
 NearestVolume

@@ -270,8 +270,10 @@ residue column from a WGSL kernel and makes it available to descendant fields as
 `attribute(name, { domain })`. Pass `parameterKey` when kernel parameters change
 so its generation advances. `useAttributeSnapshot(name)` subscribes to a
 throttled CPU copy for a tooltip or analysis; it returns `null` until the first
-readback. The snapshot contains a revised table with the produced column and the
-producer generation.
+submitted dispatch and mapped readback. The snapshot contains a revised table
+with the produced column and the producer generation. A new parameter revision
+remains pending until its dispatch submits; dependent fields and EField wait for
+that revision instead of reading an uninitialized buffer.
 
 `<GpuDssp><Ribbon secondaryStructure="model" /></GpuDssp>` computes secondary
 structure from the nearest GPU coordinate stream. Put it below the coordinate
@@ -318,11 +320,11 @@ transform with live atoms and bonds, snapshot ribbon, and GPU focus.
 write a GPU coordinate transform. Give it the upstream coordinates
 (`useCoordinates()`), a WGSL compute module and its `args`, and a `parameterKey`
 that changes whenever the args change the output. It owns one packed output
-buffer (destroyed on unmount), advances the published generation per dispatch,
-reports `ready: false` until the first dispatch lands, and publishes CPU
-snapshots to descendants. The kernel links `getSize()`, one getter per arg, one
-per extra `sources` entry, then `getInput(i) -> vec3<f32>`, and writes
-`output[i * 3u + k]`.
+buffer (destroyed on unmount). Its generation identifies requested content;
+`ready` becomes true only after that revision's dispatch submits. Dependent work
+then follows queue order, while CPU snapshots appear after a mapped copy. The
+kernel links `getSize()`, one getter per arg, one per extra `sources` entry,
+then `getInput(i) -> vec3<f32>`, and writes `output[i * 3u + k]`.
 [`site/src/demos/coordinates.ts`](../../site/src/demos/coordinates.ts) is a
 complete example.
 

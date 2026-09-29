@@ -301,7 +301,9 @@ export const Bonds: ViewerComponent<
   // Full attribute columns follow topology only; selections, coordinate edits
   // and re-inferred bonds change only the row column.
   const attributes = useAttributeSources(data, attrNames);
-  if (!coordinates || !built.n) return null;
+  if (
+    !coordinates || coordinates.ready === false || !attributes.ready || !built.n
+  ) return null;
 
   const specs: ColumnSpec[] = [
     { key: "endpoints", data: endpointRows, format: "vec2<u32>" },
