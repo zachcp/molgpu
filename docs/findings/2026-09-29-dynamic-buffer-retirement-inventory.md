@@ -8,11 +8,11 @@ the issue remains open until the other published paths and memory cases pass.
 | ------------------------------------------------------ | ----------------------------------------------------------- | --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Immutable Structure attribute                          | Owner releases references                                   | Retained styled draw                          | Fixed by `19s`; Gate 2 and CI pass.                                                                                                                |
 | Shared `VolumeData` values                             | Last viewer borrower released references                    | Retained slice/field draw                     | Fixed here; held field style change reproduced 9 submissions after destruction and 9 WebGPU errors before the repair, then 0/0.                    |
-| Root positions/radii (`ColumnSource`)                  | Immediate `destroy()`                                       | Retained representation draw                  | Open; needs held replacement coverage.                                                                                                             |
+| Root positions/radii (`ColumnSource`)                  | Immediate `destroy()`                                       | Retained representation draw                  | Open; held style plus Structure data replacement kept old positions alive until hide (0/0), so this variant did not exercise early destruction.    |
 | Coordinate and GPU attribute `ComputeBuffer` output    | Immediate `destroy()`                                       | Retained draw and downstream compute/readback | Open; a held Transform all-to-selected replacement withdrew the old draw before destruction (0/0), which does not establish all provider variants. |
 | Trajectory window/map, Transform and NormalMode inputs | Immediate `destroy()`                                       | Retained compute and downstream draw          | Open.                                                                                                                                              |
 | Superpose/Unwrap working and status buffers            | Immediate `destroy()`                                       | Dispatch and status copy                      | Open.                                                                                                                                              |
-| EField working/output buffers                          | Viewer releases references; native reachability reclaims   | Retained VolumeSlice draw or dispatch         | Fixed in the follow-up: resize with a held replacement produced 7 destroyed-phi submissions/errors before repair and 0/0 after.                   |
+| EField working/output buffers                          | Viewer releases references; native reachability reclaims    | Retained VolumeSlice draw or dispatch         | Fixed in the follow-up: resize with a held replacement produced 7 destroyed-phi submissions/errors before repair and 0/0 after.                    |
 | FieldLines working/output buffers                      | Two-frame-plus-fence `retireBuffers()`                      | Retained draw or dispatch                     | Open; queue completion does not withdraw future retained work.                                                                                     |
 | Coordinate bounds and status/snapshot readback staging | Immediate or map-completion `destroy()`                     | In-flight or later retained copy/map          | Open; preserve owner, buffer and layout tokens when changing cleanup.                                                                              |
 | DSSP published `ssCode`                                | Immediate `destroy()`                                       | Retained field draw/readback                  | Open.                                                                                                                                              |
@@ -55,3 +55,10 @@ after the fence and stopped after the subtree was hidden. This trace covers
 resize with a live slice, not all EField consumers. Its forced-GC observation
 found no reachable molecular buffer wrappers, but native GPU memory still needs
 repeat-churn coverage.
+
+The `--column` policy then replaced `Structure` data while render compilation
+was held and tracked the original root positions buffer. The old positions draw
+persisted beyond the queue fence, but `ColumnSource` kept that buffer until the
+subtree was hidden. There were no post-destroy submissions or GPU errors. This
+is a negative result for that exact ordering, not proof that all root-column
+replacements are safe.

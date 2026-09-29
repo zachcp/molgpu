@@ -43,7 +43,9 @@ try {
   });
   const results = { browser: browser.version(), scenarios: [] };
   for (
-    const policy of Deno.args.includes("--efield")
+    const policy of Deno.args.includes("--column")
+      ? ["column"]
+      : Deno.args.includes("--efield")
       ? ["efield"]
       : Deno.args.includes("--dynamic")
       ? ["dynamic"]
@@ -117,6 +119,7 @@ try {
         if (
           [
             "current",
+            "column",
             "dynamic",
             "volume",
             "efield",
@@ -294,6 +297,8 @@ try {
           ? "?volume"
           : policy === "efield"
           ? "?efield"
+          : policy === "column"
+          ? "?column"
           : ""
       }`,
     );
@@ -306,6 +311,8 @@ try {
               ? "molgpu:guarded-face:3"
               : new URLSearchParams(location.search).has("efield")
               ? "molgpu:efield:phi"
+              : new URLSearchParams(location.search).has("column")
+              ? "molgpu:positions"
               : new URLSearchParams(location.search).has("volume")
               ? "molgpu:volume:values"
               : new URLSearchParams(location.search).has("dynamic")
@@ -326,7 +333,7 @@ try {
       globalThis.__scene.palette(1);
     });
     await page.waitForFunction(() => globalThis.__retirement.held() > 0);
-    if (policy === "dynamic" || policy === "efield") {
+    if (policy === "dynamic" || policy === "efield" || policy === "column") {
       await page.evaluate(() => globalThis.__scene.epoch(1));
     }
     if (["guarded", "unguarded"].includes(policy)) {
@@ -407,6 +414,8 @@ try {
         ? "molgpu:guarded-face:3"
         : s.policy === "efield"
         ? "molgpu:efield:phi"
+        : s.policy === "column"
+        ? "molgpu:positions"
         : s.policy === "volume"
         ? "molgpu:volume:values"
         : s.policy === "dynamic"
@@ -464,6 +473,8 @@ try {
     new URL(
       Deno.args.includes("--dynamic")
         ? "../../../docs/findings/evidence/2026-09-29-dynamic-retirement.json"
+        : Deno.args.includes("--column")
+        ? "../../../docs/findings/evidence/2026-09-29-column-retirement.json"
         : Deno.args.includes("--efield")
         ? "../../../docs/findings/evidence/2026-09-29-efield-retirement.json"
         : Deno.args.includes("--volume")
@@ -528,6 +539,8 @@ try {
     const current = results.scenarios.find((s) =>
       s.policy === (Deno.args.includes("--efield")
         ? "efield"
+        : Deno.args.includes("--column")
+        ? "column"
         : Deno.args.includes("--dynamic")
         ? "dynamic"
         : Deno.args.includes("--volume")
