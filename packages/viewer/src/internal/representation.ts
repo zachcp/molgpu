@@ -1,6 +1,6 @@
 import { type LiveElement, use, useMemo } from "@use-gpu/live";
 import type { StorageSource } from "@use-gpu/core";
-import { compile, type Field } from "@molgpu/fields";
+import type { Field } from "@molgpu/fields";
 import type { Selection } from "@molgpu/select";
 import { activeAtoms } from "@molgpu/table";
 import type { ColumnFormat } from "./columns.ts";
@@ -46,13 +46,6 @@ export const isField = (v: unknown): v is Field =>
   !!v && typeof v === "object" && !Array.isArray(v) &&
   typeof (v as Partial<Field>).kind === "string" &&
   !!(v as Partial<Field>).type;
-
-/** The atom attribute columns a colour field reads, to gather alongside geometry. */
-export const fieldAttrNames = (field: Field | null): string[] =>
-  !field ? [] : compile(field, { target: "link", domain: "atom" }).bindings
-    .filter((b) => b.kind === "buffer" && b.id.startsWith("attr:")).map((b) =>
-      b.id.slice(5)
-    );
 
 /** One CPU column to upload: its key in the resulting source map, data and format. */
 export interface ColumnSpec {

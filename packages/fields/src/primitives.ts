@@ -655,6 +655,7 @@ export function evaluate(
     fail("evaluate.domain", "a broadcast field needs an explicit { domain }");
   }
   const n = rowCount(dom, data);
+  checkAnnotationRows(f, data);
   if (f.type === STRING) {
     return Array.from(
       { length: n },
@@ -910,7 +911,7 @@ function emit(
         ctx,
         `annotation`,
         node.type.wgsl!,
-        (data) => bakeAnnotation(node, rowCount(node.domain, data)),
+        (data) => bakeAnnotation(node, data),
       );
       return { expr: call, type: node.type };
     }
@@ -992,11 +993,31 @@ export function readsNearestVolume(field: Field): boolean {
   return "input" in node && readsNearestVolume(node.input);
 }
 
+/** Reject an annotation whose rows do not match the structure it colours. */
+function checkAnnotationRows(node: FieldNode, data: StructureData): void {
+  if (node.kind === "annotation") {
+    const n = rowCount(node.domain, data), c = node.type.components;
+    if (
+      node.values.length !== n * c ||
+      (node.missing && node.missing.length !== n)
+    ) {
+      fail(
+        "annotation",
+        `has ${
+          Math.floor(node.values.length / c)
+        } rows; the structure has ${n} ${node.domain} rows`,
+      );
+    }
+  } else if ("input" in node) checkAnnotationRows(node.input, data);
+}
+
 /** Bake an annotation's values + missing policy into a dense f32 array for GPU. */
 function bakeAnnotation(
   node: Extract<FieldNode, { kind: "annotation" }>,
-  n: number,
+  data: StructureData,
 ): Float32Array {
+  checkAnnotationRows(node, data);
+  const n = rowCount(node.domain, data);
   const c = node.type.components;
   const out = new Float32Array(n * c);
   for (let row = 0; row < n; row++) {
