@@ -47,7 +47,9 @@ try {
   });
   const results = { browser: browser.version(), scenarios: [] };
   for (
-    const policy of Deno.args.includes("--dssp")
+    const policy of Deno.args.includes("--coords")
+      ? ["coords"]
+      : Deno.args.includes("--dssp")
       ? ["dssp"]
       : Deno.args.includes("--attribute")
       ? ["attribute"]
@@ -133,6 +135,7 @@ try {
             "lines",
             "attribute",
             "dssp",
+            "coords",
             "dynamic",
             "volume",
             "efield",
@@ -320,6 +323,8 @@ try {
           ? "?attribute"
           : policy === "dssp"
           ? "?dssp"
+          : policy === "coords"
+          ? "?coords"
           : ""
       }`,
     );
@@ -340,6 +345,8 @@ try {
               ? "molgpu:attr:producer:gpu:test"
               : new URLSearchParams(location.search).has("dssp")
               ? "molgpu:dssp:ssCode"
+              : new URLSearchParams(location.search).has("coords")
+              ? "molgpu:coords:provider"
               : new URLSearchParams(location.search).has("volume")
               ? "molgpu:volume:values"
               : new URLSearchParams(location.search).has("dynamic")
@@ -350,7 +357,8 @@ try {
           (new URLSearchParams(location.search).has("efield") ||
               new URLSearchParams(location.search).has("lines") ||
               new URLSearchParams(location.search).has("attribute") ||
-              new URLSearchParams(location.search).has("dssp")
+              new URLSearchParams(location.search).has("dssp") ||
+              new URLSearchParams(location.search).has("coords")
             ? e.type === "draw"
             : e.type === "submit") && e.ids.some((id) => ids.includes(id))
         );
@@ -364,9 +372,10 @@ try {
     });
     await page.waitForFunction(() => globalThis.__retirement.held() > 0);
     if (
-      ["dynamic", "efield", "column", "lines", "attribute", "dssp"].includes(
-        policy,
-      )
+      ["dynamic", "efield", "column", "lines", "attribute", "dssp", "coords"]
+        .includes(
+          policy,
+        )
     ) {
       await page.evaluate(() => globalThis.__scene.epoch(1));
     }
@@ -456,6 +465,8 @@ try {
         ? "molgpu:attr:producer:gpu:test"
         : s.policy === "dssp"
         ? "molgpu:dssp:ssCode"
+        : s.policy === "coords"
+        ? "molgpu:coords:provider"
         : s.policy === "volume"
         ? "molgpu:volume:values"
         : s.policy === "dynamic"
@@ -513,6 +524,8 @@ try {
     new URL(
       Deno.args.includes("--dynamic")
         ? "../../../docs/findings/evidence/2026-09-29-dynamic-retirement.json"
+        : Deno.args.includes("--coords")
+        ? "../../../docs/findings/evidence/2026-09-29-coordinate-retirement.json"
         : Deno.args.includes("--dssp")
         ? "../../../docs/findings/evidence/2026-09-29-dssp-retirement.json"
         : Deno.args.includes("--attribute")
@@ -585,6 +598,8 @@ try {
     const current = results.scenarios.find((s) =>
       s.policy === (Deno.args.includes("--efield")
         ? "efield"
+        : Deno.args.includes("--coords")
+        ? "coords"
         : Deno.args.includes("--dssp")
         ? "dssp"
         : Deno.args.includes("--attribute")

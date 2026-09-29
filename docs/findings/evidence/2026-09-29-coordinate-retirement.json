@@ -1,0 +1,507 @@
+{
+  "browser": "153.0.8010.53",
+  "scenarios": [
+    {
+      "policy": "coords",
+      "checks": {
+        "heldBeyondTwoFrames": true,
+        "oldDrawAfterCompletedFence": false,
+        "noOldDrawAfterHide": true,
+        "noPageErrors": true,
+        "oldGuardRejected": false,
+        "oldPointGuardRejected": false
+      },
+      "summary": {
+        "policy": "coords",
+        "postDestroy": [],
+        "gpuErrors": 0,
+        "molecularAllocations": 9,
+        "totalRequestedMolecularBytes": 352,
+        "wrappersAliveAfterForcedGC": 0
+      },
+      "events": [
+        {
+          "seq": 0,
+          "frame": 22,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 1,
+          "frame": 22,
+          "type": "mark",
+          "name": "checkpoint:0"
+        },
+        {
+          "seq": 2,
+          "frame": 23,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 3,
+          "frame": 23,
+          "type": "mark",
+          "name": "checkpoint:0"
+        },
+        {
+          "seq": 4,
+          "frame": 23,
+          "type": "submit",
+          "ids": [
+            2,
+            4,
+            5
+          ]
+        },
+        {
+          "seq": 5,
+          "frame": 23,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 6,
+          "frame": 24,
+          "type": "draw",
+          "ids": [
+            1,
+            4,
+            3,
+            6,
+            7
+          ]
+        },
+        {
+          "seq": 7,
+          "frame": 24,
+          "type": "submit",
+          "ids": [
+            1,
+            4,
+            3,
+            6,
+            7
+          ]
+        },
+        {
+          "seq": 8,
+          "frame": 24,
+          "type": "mark",
+          "name": "checkpoint:0"
+        },
+        {
+          "seq": 9,
+          "frame": 24,
+          "type": "armed"
+        },
+        {
+          "seq": 10,
+          "frame": 24,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 11,
+          "frame": 24,
+          "type": "compile-held"
+        },
+        {
+          "seq": 12,
+          "frame": 24,
+          "type": "compile-held"
+        },
+        {
+          "seq": 13,
+          "frame": 24,
+          "type": "release",
+          "id": 2,
+          "label": "molgpu:positions"
+        },
+        {
+          "seq": 14,
+          "frame": 24,
+          "type": "destroy",
+          "id": 2
+        },
+        {
+          "seq": 15,
+          "frame": 24,
+          "type": "release",
+          "id": 3,
+          "label": "molgpu:radii"
+        },
+        {
+          "seq": 16,
+          "frame": 24,
+          "type": "destroy",
+          "id": 3
+        },
+        {
+          "seq": 17,
+          "frame": 24,
+          "type": "submit",
+          "ids": [
+            9,
+            11,
+            12
+          ]
+        },
+        {
+          "seq": 18,
+          "frame": 24,
+          "type": "release",
+          "id": 4,
+          "label": "molgpu:coords:provider"
+        },
+        {
+          "seq": 19,
+          "frame": 24,
+          "type": "destroy",
+          "id": 4
+        },
+        {
+          "seq": 20,
+          "frame": 24,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 21,
+          "frame": 24,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 22,
+          "frame": 25,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 23,
+          "frame": 25,
+          "type": "mark",
+          "name": "checkpoint:1"
+        },
+        {
+          "seq": 24,
+          "frame": 25,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 25,
+          "frame": 26,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 26,
+          "frame": 26,
+          "type": "mark",
+          "name": "checkpoint:2"
+        },
+        {
+          "seq": 27,
+          "frame": 26,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 28,
+          "frame": 27,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 29,
+          "frame": 27,
+          "type": "mark",
+          "name": "checkpoint:3"
+        },
+        {
+          "seq": 30,
+          "frame": 27,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 31,
+          "frame": 28,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 32,
+          "frame": 28,
+          "type": "mark",
+          "name": "checkpoint:4"
+        },
+        {
+          "seq": 33,
+          "frame": 28,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 34,
+          "frame": 29,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 35,
+          "frame": 29,
+          "type": "mark",
+          "name": "checkpoint:5"
+        },
+        {
+          "seq": 36,
+          "frame": 29,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 37,
+          "frame": 30,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 38,
+          "frame": 30,
+          "type": "mark",
+          "name": "checkpoint:6"
+        },
+        {
+          "seq": 39,
+          "frame": 30,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 40,
+          "frame": 31,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 41,
+          "frame": 31,
+          "type": "mark",
+          "name": "checkpoint:7"
+        },
+        {
+          "seq": 42,
+          "frame": 31,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 43,
+          "frame": 32,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 44,
+          "frame": 32,
+          "type": "mark",
+          "name": "checkpoint:8"
+        },
+        {
+          "seq": 45,
+          "frame": 32,
+          "type": "mark",
+          "name": "completed-fence-while-held"
+        },
+        {
+          "seq": 46,
+          "frame": 32,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 47,
+          "frame": 33,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 48,
+          "frame": 33,
+          "type": "mark",
+          "name": "checkpoint:9"
+        },
+        {
+          "seq": 49,
+          "frame": 33,
+          "type": "mark",
+          "name": "hide"
+        },
+        {
+          "seq": 50,
+          "frame": 33,
+          "type": "release",
+          "id": 11,
+          "label": "molgpu:coords:provider"
+        },
+        {
+          "seq": 51,
+          "frame": 33,
+          "type": "destroy",
+          "id": 11
+        },
+        {
+          "seq": 52,
+          "frame": 33,
+          "type": "release",
+          "id": 10,
+          "label": "molgpu:radii"
+        },
+        {
+          "seq": 53,
+          "frame": 33,
+          "type": "destroy",
+          "id": 10
+        },
+        {
+          "seq": 54,
+          "frame": 33,
+          "type": "release",
+          "id": 9,
+          "label": "molgpu:positions"
+        },
+        {
+          "seq": 55,
+          "frame": 33,
+          "type": "destroy",
+          "id": 9
+        },
+        {
+          "seq": 56,
+          "frame": 34,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 57,
+          "frame": 34,
+          "type": "mark",
+          "name": "checkpoint:9"
+        },
+        {
+          "seq": 58,
+          "frame": 34,
+          "type": "compile-release"
+        },
+        {
+          "seq": 59,
+          "frame": 41,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 60,
+          "frame": 41,
+          "type": "mark",
+          "name": "checkpoint:10"
+        },
+        {
+          "seq": 61,
+          "frame": 41,
+          "type": "mark",
+          "name": "root-unmount"
+        }
+      ],
+      "buffers": [
+        {
+          "id": 0,
+          "label": "",
+          "size": 614400,
+          "wrapperAlive": false
+        },
+        {
+          "id": 1,
+          "label": "",
+          "size": 544,
+          "wrapperAlive": false
+        },
+        {
+          "id": 2,
+          "label": "molgpu:positions",
+          "size": 48,
+          "wrapperAlive": false
+        },
+        {
+          "id": 3,
+          "label": "molgpu:radii",
+          "size": 16,
+          "wrapperAlive": false
+        },
+        {
+          "id": 4,
+          "label": "molgpu:coords:provider",
+          "size": 48,
+          "wrapperAlive": false
+        },
+        {
+          "id": 5,
+          "label": "",
+          "size": 80,
+          "wrapperAlive": false
+        },
+        {
+          "id": 6,
+          "label": "molgpu:attribute:element",
+          "size": 16,
+          "wrapperAlive": false
+        },
+        {
+          "id": 7,
+          "label": "",
+          "size": 32,
+          "wrapperAlive": false
+        },
+        {
+          "id": 8,
+          "label": "molgpu:attribute:bfactor",
+          "size": 16,
+          "wrapperAlive": false
+        },
+        {
+          "id": 9,
+          "label": "molgpu:positions",
+          "size": 96,
+          "wrapperAlive": false
+        },
+        {
+          "id": 10,
+          "label": "molgpu:radii",
+          "size": 32,
+          "wrapperAlive": false
+        },
+        {
+          "id": 11,
+          "label": "molgpu:coords:provider",
+          "size": 60,
+          "wrapperAlive": false
+        },
+        {
+          "id": 12,
+          "label": "",
+          "size": 80,
+          "wrapperAlive": false
+        },
+        {
+          "id": 13,
+          "label": "molgpu:attribute:bfactor",
+          "size": 20,
+          "wrapperAlive": false
+        }
+      ],
+      "errors": []
+    }
+  ]
+}
