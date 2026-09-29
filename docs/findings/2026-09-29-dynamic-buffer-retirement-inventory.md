@@ -15,7 +15,7 @@ the issue remains open until the other published paths and memory cases pass.
 | Superpose/Unwrap working and status buffers            | Immediate `destroy()`                                       | Dispatch and status copy                      | Open.                                                                                                                                               |
 | EField working/output buffers                          | Viewer releases references; native reachability reclaims    | Retained VolumeSlice draw or dispatch         | Fixed in the follow-up: resize with a held replacement produced 7 destroyed-phi submissions/errors before repair and 0/0 after.                     |
 | FieldLines working/output buffers                      | Viewer releases references; native reachability reclaims    | Retained LineLayer draw or dispatch           | Fixed in the follow-up: held grid replacement produced 6 destroyed-vertex submissions/errors before repair; acceptance trace follows.               |
-| Coordinate bounds and status/snapshot readback staging | Immediate or map-completion `destroy()`                     | In-flight or later retained copy/map          | Open; preserve owner, buffer and layout tokens when changing cleanup.                                                                               |
+| Coordinate bounds and status/snapshot readback staging | Immediate or map-completion `destroy()`                     | In-flight or later retained copy/map          | Open; status callback held after native map completion was safely discarded at unmount (0 errors), but pending GPU copies and other owners remain.  |
 | DSSP published `ssCode`                                | Immediate `destroy()`                                       | Retained field draw/readback                  | Open; a WobbleCoordinates generation change withdrew the old `ssCode` draw before destruction (0/0), so other publication/owner variants remain.    |
 | DSSP transient scratch                                 | Destroyed in `gpuDssp()` after its awaited mapped readbacks | That invocation's submitted dispatch/copies   | Source-reviewed as local scratch; leave in place pending the held-compute run.                                                                      |
 
@@ -121,3 +121,10 @@ The probe confirmed that the compute compilation was held beyond two frames; the
 old mask was destroyed, but no later dispatch submitted it and there were no
 WebGPU errors. This establishes safe withdrawal for this one shader swap, not
 for every dynamic input owner.
+
+The separate `run-status.mjs` probe submitted a status copy, held its mapped
+completion after native `mapAsync` resolved, unmounted the owner, and then
+released the callback. Both staging buffers were destroyed, no status was
+published and Chrome reported no WebGPU errors. This confirms the epoch guard
+for a late callback after native map completion. It does not prove cleanup while
+the GPU copy itself is still in flight.

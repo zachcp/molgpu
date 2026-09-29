@@ -1,0 +1,10 @@
+{
+  "browser": "153.0.8010.53",
+  "reports": [],
+  "destroyed": [
+    "molgpu:status-probe",
+    "molgpu:status-probe",
+    "molgpu:status-probe:source"
+  ],
+  "gpuErrors": []
+}
