@@ -19,8 +19,10 @@ import {
   useDeviceContext,
 } from "@use-gpu/workbench";
 import type { StorageSource } from "@use-gpu/core";
-import { Spacefill, Structure } from "@molgpu/viewer";
-import { attribute, categorical } from "@molgpu/fields";
+import { Spacefill, Structure, Transform } from "@molgpu/viewer";
+import { attribute, categorical, colormap, volumeSample } from "@molgpu/fields";
+import { createVolume } from "@molgpu/table";
+import { where } from "@molgpu/select";
 import { structure } from "../../../packages/fields/test/fixture.ts";
 
 void React;
@@ -36,6 +38,34 @@ const colors = [
   }, [0, 1, 0, 1]),
   categorical(attribute("bfactor"), { 10: [1, 0, 0, 1] }, [0, 1, 0, 1]),
 ];
+const shift = [
+  1,
+  0,
+  0,
+  0,
+  0,
+  1,
+  0,
+  0,
+  0,
+  0,
+  1,
+  0,
+  1,
+  0,
+  0,
+  1,
+];
+const selected = where("atom", "retirement-subset", (_data, i) => i < 2);
+const volume = createVolume({
+  values: Float32Array.from({ length: 64 }, (_, i) => i % 4),
+  dims: [4, 4, 4],
+  transform: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
+});
+const volumeColor = colormap(volumeSample(volume), [
+  [0, [0, 0, 1, 1]],
+  [3, [1, 0, 0, 1]],
+]);
 const controls = {
   palette: (_n: number) => {},
   epoch: (_n: number) => {},
@@ -148,6 +178,29 @@ const App = () => {
                     side="both"
                   />
                 </>
+              )
+              : new URLSearchParams(location.search).has("volume")
+              ? (
+                <Structure data={data}>
+                  <Spacefill
+                    color={palette ? colors[0] : volumeColor}
+                    material={{ type: "basic" }}
+                  />
+                </Structure>
+              )
+              : new URLSearchParams(location.search).has("dynamic")
+              ? (
+                <Structure data={data}>
+                  <Transform
+                    matrix={shift}
+                    select={epoch % 2 ? selected : undefined}
+                  >
+                    <Spacefill
+                      color={colors[palette]}
+                      material={{ type: "basic" }}
+                    />
+                  </Transform>
+                </Structure>
               )
               : (
                 <Structure data={data}>

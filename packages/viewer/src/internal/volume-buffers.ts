@@ -1,6 +1,7 @@
 // One GPU storage copy per VolumeData identity, shared by <Volume>,
 // <Isosurface>, <VolumeSlice> and volumeSample field lowering. Refcounted per
-// device; the last release destroys the buffer (plan finding 8).
+// device. Pinned use.gpu may retain a draw after the last viewer consumer
+// releases it, so release drops references without explicit destruction.
 import { useMemo, useResource } from "@use-gpu/live";
 import { useDeviceContext } from "@use-gpu/workbench";
 import type { StorageSource } from "@use-gpu/core";
@@ -63,7 +64,6 @@ function release(device: GPUDevice, volume: VolumeData): void {
   if (!entry || --entry.refs > 0) return;
   entries!.delete(volume);
   releaseOwnedBuffer(entry.source.buffer);
-  entry.source.buffer.destroy();
 }
 
 /** The shared GPU samples of `volume`, held for this component's lifetime. */

@@ -43,14 +43,18 @@ try {
   });
   const results = { browser: browser.version(), scenarios: [] };
   for (
-    const policy of [
-      "current",
-      "two-frames",
-      "reachability",
-      "unguarded",
-      "guarded",
-      "point-guarded",
-    ]
+    const policy of Deno.args.includes("--dynamic")
+      ? ["dynamic"]
+      : Deno.args.includes("--volume")
+      ? ["volume"]
+      : [
+        "current",
+        "two-frames",
+        "reachability",
+        "unguarded",
+        "guarded",
+        "point-guarded",
+      ]
   ) {
     const page = await browser.newPage();
     const errors = [];
@@ -109,7 +113,15 @@ try {
           destroy.call(this);
         };
         if (
-          ["current", "unguarded", "guarded", "point-guarded"].includes(policy)
+          [
+            "current",
+            "dynamic",
+            "volume",
+            "unguarded",
+            "guarded",
+            "point-guarded",
+          ]
+            .includes(policy)
         ) finish();
         if (policy === "two-frames") {
           const device = devices.get(this);
@@ -239,7 +251,13 @@ try {
     }, policy);
     await page.goto(
       `${server.resolvedUrls.local[0]}test/spikes/gpu-retirement/index.html${
-        ["guarded", "unguarded"].includes(policy) ? `?guarded&${policy}` : ""
+        ["guarded", "unguarded"].includes(policy)
+          ? `?guarded&${policy}`
+          : policy === "dynamic"
+          ? "?dynamic"
+          : policy === "volume"
+          ? "?volume"
+          : ""
       }`,
     );
     await page.waitForFunction(
@@ -249,6 +267,10 @@ try {
           b.label ===
             (new URLSearchParams(location.search).has("guarded")
               ? "molgpu:guarded-face:3"
+              : new URLSearchParams(location.search).has("volume")
+              ? "molgpu:volume:values"
+              : new URLSearchParams(location.search).has("dynamic")
+              ? "molgpu:coords:provider"
               : "molgpu:attribute:element")
         ).map((b) => b.id);
         return s.events.some((e) =>
@@ -263,6 +285,9 @@ try {
       globalThis.__scene.palette(1);
     });
     await page.waitForFunction(() => globalThis.__retirement.held() > 0);
+    if (policy === "dynamic") {
+      await page.evaluate(() => globalThis.__scene.epoch(1));
+    }
     if (["guarded", "unguarded"].includes(policy)) {
       await page.evaluate(() => globalThis.__scene.invalidate());
       await page.waitForFunction(() =>
@@ -339,6 +364,10 @@ try {
     const element = s.held.buffers.find((b) =>
       b.label === (["guarded", "unguarded"].includes(s.policy)
         ? "molgpu:guarded-face:3"
+        : s.policy === "volume"
+        ? "molgpu:volume:values"
+        : s.policy === "dynamic"
+        ? "molgpu:coords:provider"
         : "molgpu:attribute:element")
     ).id;
     const fence = s.held.events.find((e) =>
@@ -390,7 +419,11 @@ try {
   }
   await Deno.writeTextFile(
     new URL(
-      "../../../docs/findings/evidence/2026-09-28-gpu-retirement.json",
+      Deno.args.includes("--dynamic")
+        ? "../../../docs/findings/evidence/2026-09-29-dynamic-retirement.json"
+        : Deno.args.includes("--volume")
+        ? "../../../docs/findings/evidence/2026-09-29-volume-retirement.json"
+        : "../../../docs/findings/evidence/2026-09-28-gpu-retirement.json",
       import.meta.url,
     ),
     JSON.stringify(
@@ -433,15 +466,21 @@ try {
         "churn must allocate fresh molecular buffers",
       );
       // GC reachability is reported, not a deterministic cleanup assertion.
-    } else if (!Deno.args.includes("--acceptance")) {
+    } else {
       assert(
-        s.summary.gpuErrors > 0 && s.summary.postDestroy.length > 0,
-        "expected lifetime counterexample missing",
+        s.summary.gpuErrors === 0 && s.summary.postDestroy.length === 0,
+        `production retirement still submits a destroyed buffer: ${s.policy}`,
       );
     }
   }
   if (Deno.args.includes("--acceptance")) {
-    const current = results.scenarios.find((s) => s.policy === "current");
+    const current = results.scenarios.find((s) =>
+      s.policy === (Deno.args.includes("--dynamic")
+        ? "dynamic"
+        : Deno.args.includes("--volume")
+        ? "volume"
+        : "current")
+    );
     assert(
       current.summary.gpuErrors === 0 &&
         current.summary.postDestroy.length === 0,
