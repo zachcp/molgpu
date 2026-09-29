@@ -16,7 +16,7 @@ the issue remains open until the other published paths and memory cases pass.
 | EField working/output buffers                          | Viewer releases references; native reachability reclaims    | Retained VolumeSlice draw or dispatch         | Fixed in the follow-up: resize with a held replacement produced 7 destroyed-phi submissions/errors before repair and 0/0 after.                    |
 | FieldLines working/output buffers                      | Viewer releases references; native reachability reclaims    | Retained LineLayer draw or dispatch           | Fixed in the follow-up: held grid replacement produced 6 destroyed-vertex submissions/errors before repair; acceptance trace follows.              |
 | Coordinate bounds and status/snapshot readback staging | Immediate or map-completion `destroy()`                     | In-flight or later retained copy/map          | Open; preserve owner, buffer and layout tokens when changing cleanup.                                                                              |
-| DSSP published `ssCode`                                | Immediate `destroy()`                                       | Retained field draw/readback                  | Open.                                                                                                                                              |
+| DSSP published `ssCode`                                | Immediate `destroy()`                                       | Retained field draw/readback                  | Open; a WobbleCoordinates generation change withdrew the old `ssCode` draw before destruction (0/0), so other publication/owner variants remain.   |
 | DSSP transient scratch                                 | Destroyed in `gpuDssp()` after its awaited mapped readbacks | That invocation's submitted dispatch/copies   | Source-reviewed as local scratch; leave in place pending the held-compute run.                                                                     |
 
 The [retirement probe](../../test/spikes/gpu-retirement/run.mjs) now has a
@@ -94,3 +94,10 @@ replacement. After releasing viewer ownership without explicit destruction,
 `--attribute --acceptance` observed zero post-destroy submissions and errors,
 while the old draw stayed active past the fence and stopped after hide. Other
 producer and readback combinations remain open.
+
+The `--dssp` probe coloured crambin with its published GPU `ssCode` buffer, then
+changed a WobbleCoordinates generation during held render compilation. The old
+`ssCode` buffer was destroyed only after its draw stopped submitting; there were
+no post-destroy submissions or WebGPU errors. The old draw did not remain active
+after the completed fence, so this is a negative result for that specific
+generation transition, not a general retirement guarantee.

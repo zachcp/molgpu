@@ -11,7 +11,11 @@ const server = await createServer({
   resolve: { alias: workspaceAliases() },
   server: { host: "127.0.0.1", port: 0 },
   optimizeDeps: {
-    entries: ["test/spikes/gpu-retirement/index.html"],
+    entries: [
+      Deno.args.includes("--dssp")
+        ? "test/spikes/gpu-retirement/dssp.html"
+        : "test/spikes/gpu-retirement/index.html",
+    ],
     esbuildOptions: {
       plugins: [{
         name: "research-raw-quads-guard",
@@ -43,7 +47,9 @@ try {
   });
   const results = { browser: browser.version(), scenarios: [] };
   for (
-    const policy of Deno.args.includes("--attribute")
+    const policy of Deno.args.includes("--dssp")
+      ? ["dssp"]
+      : Deno.args.includes("--attribute")
       ? ["attribute"]
       : Deno.args.includes("--lines")
       ? ["lines"]
@@ -126,6 +132,7 @@ try {
             "column",
             "lines",
             "attribute",
+            "dssp",
             "dynamic",
             "volume",
             "efield",
@@ -294,7 +301,9 @@ try {
       };
     }, policy);
     await page.goto(
-      `${server.resolvedUrls.local[0]}test/spikes/gpu-retirement/index.html${
+      `${server.resolvedUrls.local[0]}test/spikes/gpu-retirement/${
+        policy === "dssp" ? "dssp.html" : "index.html"
+      }${
         ["guarded", "unguarded"].includes(policy)
           ? `?guarded&${policy}`
           : policy === "dynamic"
@@ -309,6 +318,8 @@ try {
           ? "?lines"
           : policy === "attribute"
           ? "?attribute"
+          : policy === "dssp"
+          ? "?dssp"
           : ""
       }`,
     );
@@ -327,6 +338,8 @@ try {
               ? "molgpu:lines:vertices"
               : new URLSearchParams(location.search).has("attribute")
               ? "molgpu:attr:producer:gpu:test"
+              : new URLSearchParams(location.search).has("dssp")
+              ? "molgpu:dssp:ssCode"
               : new URLSearchParams(location.search).has("volume")
               ? "molgpu:volume:values"
               : new URLSearchParams(location.search).has("dynamic")
@@ -336,7 +349,8 @@ try {
         return s.events.some((e) =>
           (new URLSearchParams(location.search).has("efield") ||
               new URLSearchParams(location.search).has("lines") ||
-              new URLSearchParams(location.search).has("attribute")
+              new URLSearchParams(location.search).has("attribute") ||
+              new URLSearchParams(location.search).has("dssp")
             ? e.type === "draw"
             : e.type === "submit") && e.ids.some((id) => ids.includes(id))
         );
@@ -350,7 +364,9 @@ try {
     });
     await page.waitForFunction(() => globalThis.__retirement.held() > 0);
     if (
-      ["dynamic", "efield", "column", "lines", "attribute"].includes(policy)
+      ["dynamic", "efield", "column", "lines", "attribute", "dssp"].includes(
+        policy,
+      )
     ) {
       await page.evaluate(() => globalThis.__scene.epoch(1));
     }
@@ -438,6 +454,8 @@ try {
         ? "molgpu:lines:vertices"
         : s.policy === "attribute"
         ? "molgpu:attr:producer:gpu:test"
+        : s.policy === "dssp"
+        ? "molgpu:dssp:ssCode"
         : s.policy === "volume"
         ? "molgpu:volume:values"
         : s.policy === "dynamic"
@@ -495,6 +513,8 @@ try {
     new URL(
       Deno.args.includes("--dynamic")
         ? "../../../docs/findings/evidence/2026-09-29-dynamic-retirement.json"
+        : Deno.args.includes("--dssp")
+        ? "../../../docs/findings/evidence/2026-09-29-dssp-retirement.json"
         : Deno.args.includes("--attribute")
         ? "../../../docs/findings/evidence/2026-09-29-attribute-retirement.json"
         : Deno.args.includes("--lines")
@@ -565,6 +585,8 @@ try {
     const current = results.scenarios.find((s) =>
       s.policy === (Deno.args.includes("--efield")
         ? "efield"
+        : Deno.args.includes("--dssp")
+        ? "dssp"
         : Deno.args.includes("--attribute")
         ? "attribute"
         : Deno.args.includes("--lines")
