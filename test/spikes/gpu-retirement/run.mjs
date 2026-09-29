@@ -43,7 +43,9 @@ try {
   });
   const results = { browser: browser.version(), scenarios: [] };
   for (
-    const policy of Deno.args.includes("--lines")
+    const policy of Deno.args.includes("--attribute")
+      ? ["attribute"]
+      : Deno.args.includes("--lines")
       ? ["lines"]
       : Deno.args.includes("--column")
       ? ["column"]
@@ -123,6 +125,7 @@ try {
             "current",
             "column",
             "lines",
+            "attribute",
             "dynamic",
             "volume",
             "efield",
@@ -304,6 +307,8 @@ try {
           ? "?column"
           : policy === "lines"
           ? "?lines"
+          : policy === "attribute"
+          ? "?attribute"
           : ""
       }`,
     );
@@ -320,6 +325,8 @@ try {
               ? "molgpu:positions"
               : new URLSearchParams(location.search).has("lines")
               ? "molgpu:lines:vertices"
+              : new URLSearchParams(location.search).has("attribute")
+              ? "molgpu:attr:producer:gpu:test"
               : new URLSearchParams(location.search).has("volume")
               ? "molgpu:volume:values"
               : new URLSearchParams(location.search).has("dynamic")
@@ -328,7 +335,8 @@ try {
         ).map((b) => b.id);
         return s.events.some((e) =>
           (new URLSearchParams(location.search).has("efield") ||
-              new URLSearchParams(location.search).has("lines")
+              new URLSearchParams(location.search).has("lines") ||
+              new URLSearchParams(location.search).has("attribute")
             ? e.type === "draw"
             : e.type === "submit") && e.ids.some((id) => ids.includes(id))
         );
@@ -341,7 +349,9 @@ try {
       globalThis.__scene.palette(1);
     });
     await page.waitForFunction(() => globalThis.__retirement.held() > 0);
-    if (["dynamic", "efield", "column", "lines"].includes(policy)) {
+    if (
+      ["dynamic", "efield", "column", "lines", "attribute"].includes(policy)
+    ) {
       await page.evaluate(() => globalThis.__scene.epoch(1));
     }
     if (["guarded", "unguarded"].includes(policy)) {
@@ -426,6 +436,8 @@ try {
         ? "molgpu:positions"
         : s.policy === "lines"
         ? "molgpu:lines:vertices"
+        : s.policy === "attribute"
+        ? "molgpu:attr:producer:gpu:test"
         : s.policy === "volume"
         ? "molgpu:volume:values"
         : s.policy === "dynamic"
@@ -483,6 +495,8 @@ try {
     new URL(
       Deno.args.includes("--dynamic")
         ? "../../../docs/findings/evidence/2026-09-29-dynamic-retirement.json"
+        : Deno.args.includes("--attribute")
+        ? "../../../docs/findings/evidence/2026-09-29-attribute-retirement.json"
         : Deno.args.includes("--lines")
         ? "../../../docs/findings/evidence/2026-09-29-lines-retirement.json"
         : Deno.args.includes("--column")
@@ -518,7 +532,7 @@ try {
         s.checks.noPageErrors,
       "research preconditions/withdrawal observation failed",
     );
-    if (s.policy === "efield" || s.policy === "lines") {
+    if (["efield", "lines", "attribute"].includes(s.policy)) {
       assert(
         s.checks.oldDrawAfterCompletedFence,
         "EField replacement must retain an old phi consumer past the fence",
@@ -551,6 +565,8 @@ try {
     const current = results.scenarios.find((s) =>
       s.policy === (Deno.args.includes("--efield")
         ? "efield"
+        : Deno.args.includes("--attribute")
+        ? "attribute"
         : Deno.args.includes("--lines")
         ? "lines"
         : Deno.args.includes("--column")

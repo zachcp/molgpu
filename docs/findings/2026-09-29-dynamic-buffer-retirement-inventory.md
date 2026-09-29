@@ -9,7 +9,8 @@ the issue remains open until the other published paths and memory cases pass.
 | Immutable Structure attribute                          | Owner releases references                                   | Retained styled draw                          | Fixed by `19s`; Gate 2 and CI pass.                                                                                                                |
 | Shared `VolumeData` values                             | Last viewer borrower released references                    | Retained slice/field draw                     | Fixed here; held field style change reproduced 9 submissions after destruction and 9 WebGPU errors before the repair, then 0/0.                    |
 | Root positions/radii (`ColumnSource`)                  | Immediate `destroy()`                                       | Retained representation draw                  | Open; held style plus Structure data replacement kept old positions alive until hide (0/0), so this variant did not exercise early destruction.    |
-| Coordinate and GPU attribute `ComputeBuffer` output    | Immediate `destroy()`                                       | Retained draw and downstream compute/readback | Open; a held Transform all-to-selected replacement withdrew the old draw before destruction (0/0), which does not establish all provider variants. |
+| Coordinate `ComputeBuffer` output                      | Immediate `destroy()`                                       | Retained draw and downstream compute/readback | Open; a held Transform all-to-selected replacement withdrew the old draw before destruction (0/0), which does not establish all provider variants. |
+| GPU attribute `ComputeBuffer` output                   | Viewer releases reference; native reachability reclaims     | Retained styled draw and downstream readback  | Fixed in the follow-up: changing producer output width with a held styled draw produced 9 destroyed-buffer submissions/errors before repair.       |
 | Trajectory window/map, Transform and NormalMode inputs | Immediate `destroy()`                                       | Retained compute and downstream draw          | Open.                                                                                                                                              |
 | Superpose/Unwrap working and status buffers            | Immediate `destroy()`                                       | Dispatch and status copy                      | Open.                                                                                                                                              |
 | EField working/output buffers                          | Viewer releases references; native reachability reclaims    | Retained VolumeSlice draw or dispatch         | Fixed in the follow-up: resize with a held replacement produced 7 destroyed-phi submissions/errors before repair and 0/0 after.                    |
@@ -83,3 +84,13 @@ RSS after each hide was 946,544, 895,296, 885,104 and 883,216 KiB. The
 executable bound rejects growth greater than 128 MiB from the first to fourth
 hide. RSS includes browser and renderer overhead and is a proxy for native GPU
 memory, not an isolated GPU allocation measurement.
+
+The `--attribute` policy changed a published `AttributeProducer` output from
+four atom rows to the smaller residue domain while the old atom-colour shader
+was held. The old draw remained active past a completed fence. Before repair,
+the producer destroyed its old output and the retained draw submitted it nine
+times, with nine uncaptured WebGPU errors. This probe tests one output-width
+replacement. After releasing viewer ownership without explicit destruction,
+`--attribute --acceptance` observed zero post-destroy submissions and errors,
+while the old draw stayed active past the fence and stopped after hide. Other
+producer and readback combinations remain open.

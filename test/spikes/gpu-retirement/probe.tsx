@@ -27,10 +27,17 @@ import {
   Transform,
   VolumeSlice,
 } from "@molgpu/viewer";
-import { attribute, categorical, colormap, volumeSample } from "@molgpu/fields";
+import {
+  attribute,
+  categorical,
+  colormap,
+  linear,
+  volumeSample,
+} from "@molgpu/fields";
 import { createVolume, withAttributes } from "@molgpu/table";
 import { where } from "@molgpu/select";
 import { structure } from "../../../packages/fields/test/fixture.ts";
+import { TestAttributeProducer } from "../../../packages/viewer/test/tsx/test-attribute-producer.ts";
 
 void React;
 const trace = (event: string) => {
@@ -73,6 +80,10 @@ const volumeColor = colormap(volumeSample(volume), [
   [0, [0, 0, 1, 1]],
   [3, [1, 0, 0, 1]],
 ]);
+const producedColor = colormap(
+  linear(attribute("gpu:test", { domain: "atom" }), { domain: [0, 4] }),
+  [[0, [0, 0, 1, 1]], [1, [1, 0, 0, 1]]],
+);
 const controls = {
   palette: (_n: number) => {},
   epoch: (_n: number) => {},
@@ -195,6 +206,20 @@ const App = () => {
                     side="both"
                   />
                 </>
+              )
+              : new URLSearchParams(location.search).has("attribute")
+              ? (
+                <Structure data={efieldData}>
+                  <TestAttributeProducer
+                    phase={epoch}
+                    domain={epoch ? "residue" : "atom"}
+                  >
+                    <Spacefill
+                      color={palette ? colors[0] : producedColor}
+                      material={{ type: "basic" }}
+                    />
+                  </TestAttributeProducer>
+                </Structure>
               )
               : new URLSearchParams(location.search).has("efield") ||
                   new URLSearchParams(location.search).has("lines") ||
