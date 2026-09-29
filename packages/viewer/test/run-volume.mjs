@@ -62,8 +62,46 @@ Deno.test("volume components", async () => {
     browser = await chromium.launch({
       channel: "chrome",
       headless: true,
-      args: webgpuBrowserArgs,
+      args: [...webgpuBrowserArgs, "--enable-automation"],
     });
+    const browserCdp = await browser.newBrowserCDPSession();
+    const commandLine = await browserCdp.send("Browser.getBrowserCommandLine");
+    const profile = commandLine.arguments.find((arg) =>
+      arg.startsWith("--user-data-dir=")
+    )?.slice("--user-data-dir=".length);
+    assert(profile, "Chrome profile is required for process RSS attribution");
+    const browserRssKb = async () => {
+      const output = await new Deno.Command("ps", {
+        args: ["-eo", "pid=,ppid=,rss=,command="],
+      }).output();
+      assertEquals(output.code, 0, "ps failed while measuring Chrome RSS");
+      const rows = new TextDecoder().decode(output.stdout).split("\n")
+        .map((line) => {
+          const match = line.match(/^\s*(\d+)\s+(\d+)\s+(\d+)\s+(.*)$/);
+          return match && {
+            pid: Number(match[1]),
+            parent: Number(match[2]),
+            rssKb: Number(match[3]),
+            command: match[4],
+          };
+        }).filter(Boolean);
+      const root = rows.find((row) =>
+        row.command.includes(profile) && !row.command.includes("--type=")
+      );
+      assert(root, "cannot identify the dedicated Chrome browser process");
+      const pids = new Set([root.pid]);
+      for (let changed = true; changed;) {
+        changed = false;
+        for (const row of rows) {
+          if (pids.has(row.parent) && !pids.has(row.pid)) {
+            pids.add(row.pid);
+            changed = true;
+          }
+        }
+      }
+      return rows.filter((row) => pids.has(row.pid))
+        .reduce((sum, row) => sum + row.rssKb, 0);
+    };
     const page = await browser.newPage({
       viewport: { width: 800, height: 600 },
       deviceScaleFactor: 1,
@@ -339,7 +377,9 @@ Deno.test("volume components", async () => {
     await update({ mode: "none" });
 
     // 7. A 256³ map (the plan's default ceiling) holds exactly one 64 MiB
-    //    GPU copy and releases it.
+    //    GPU copy and releases it. Four mount/unmount cycles must not grow
+    //    dedicated Chrome process RSS by another full map each time.
+    const rssAfterUnmountKb = [];
     await update({ mode: "big" });
     await page.waitForFunction(
       () => globalThis.__volume.volume?.dims[0] === 256,
@@ -348,11 +388,49 @@ Deno.test("volume components", async () => {
     );
     now = await counters();
     assertStrictEquals(now.ownedBuffers.bytes["volume:values"], 256 ** 3 * 4);
+    await page.evaluate(() => {
+      globalThis.__bigVolumeBuffer = new WeakRef(
+        globalThis.__volume.source.buffer,
+      );
+    });
     await update({ mode: "none" });
     assertStrictEquals(
       (await counters()).ownedBuffers.bytes["volume:values"],
       0,
     );
+    await page.evaluate(() => globalThis.__volume.source = null);
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send("HeapProfiler.collectGarbage");
+    await page.waitForTimeout(50);
+    await cdp.send("HeapProfiler.collectGarbage");
+    const bigWrapperAlive = await page.evaluate(() =>
+      !!globalThis.__bigVolumeBuffer.deref()
+    );
+    assert(
+      !bigWrapperAlive,
+      "64 MiB volume GPUBuffer wrapper remained reachable",
+    );
+    report.states.bigVolume = {
+      requestedBytes: 256 ** 3 * 4,
+      wrapperAliveAfterGC: bigWrapperAlive,
+    };
+    rssAfterUnmountKb.push(await browserRssKb());
+    for (let cycle = 1; cycle < 4; cycle++) {
+      await update({ mode: "big" });
+      assertStrictEquals(
+        (await counters()).ownedBuffers.bytes["volume:values"],
+        256 ** 3 * 4,
+      );
+      await update({ mode: "none" });
+      await page.evaluate(() => globalThis.__volume.source = null);
+      await cdp.send("HeapProfiler.collectGarbage");
+      rssAfterUnmountKb.push(await browserRssKb());
+    }
+    assert(
+      rssAfterUnmountKb.at(-1) - rssAfterUnmountKb[0] <= 128 * 1024,
+      `64 MiB volume churn grew Chrome RSS beyond 128 MiB: ${rssAfterUnmountKb}`,
+    );
+    report.states.bigVolume.browserRssAfterUnmountKb = rssAfterUnmountKb;
 
     // 8. <Volume src> loads CCP4/MRC with loading → ready, and reports errors.
     await update({ mode: "src", src: "/map.mrc" });

@@ -35,6 +35,10 @@ Deno.test("viewer postprocess", async () => {
         "@use-gpu/shader",
         "@use-gpu/shader/wgsl",
         "@use-gpu/wgsl",
+        // Surface's optional Mol* adapter loads this parser after mount.
+        // Prebundle it before navigation so Vite does not invalidate live
+        // modules with an Outdated Optimize Dep response during the test.
+        "molstar/lib/mol-io/reader/xtc/parser.js",
       ],
     },
   });
