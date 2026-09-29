@@ -465,6 +465,33 @@ Deno.test("trajectory components", async () => {
     const baseline = await counters();
     const report = {};
 
+    // A Structure boundary shadows trajectory metadata even when the nested
+    // structure has the same row count. Volume and Timeline remain inherited.
+    await update({ mode: "scope", frame: 0, time: 2.25 });
+    await page.waitForFunction(() =>
+      globalThis.__trajectory.scope.outer?.box?.[0] === 10 &&
+      globalThis.__trajectory.scope.nestedUnwrap !== undefined
+    );
+    const scope = await page.evaluate(() => globalThis.__trajectory.scope);
+    for (const name of ["outer", "afterNested"]) {
+      assertStrictEquals(scope[name].trajectory, true, `${name} trajectory`);
+      assertStrictEquals(scope[name].box[0], 10, `${name} box`);
+    }
+    for (const name of ["nested", "nestedUnwrap", "sibling"]) {
+      assertStrictEquals(scope[name].trajectory, false, `${name} trajectory`);
+      assertStrictEquals(scope[name].box, null, `${name} box`);
+      assertStrictEquals(scope[name].volume, true, `${name} volume`);
+      assertStrictEquals(scope[name].time, 2.25, `${name} timeline`);
+    }
+    assertStrictEquals(
+      (await page.evaluate(() =>
+        globalThis.__trajectory.unwrap.statuses.slice(-1)[0]
+      )).status,
+      "missing-box",
+      "nested Unwrap cannot use the outer box",
+    );
+    await update({ mode: "none" });
+
     // 1. Integer frames and a fractional frame.
     await update({ mode: "whole", frame: 0 });
     await displayed({ a: 0, b: 0, t: 0 });
@@ -1353,6 +1380,15 @@ Deno.test("trajectory components", async () => {
       [...errors, ...pageErrors],
       [],
       "no page or WebGPU errors",
+    );
+    const rejectedFirst = page.waitForEvent("pageerror", { timeout: 5000 });
+    await update({ mode: "scope-superpose", frame: 0 });
+    const rejection = String(await rejectedFirst);
+    assert(
+      rejection.includes(
+        '<Superpose to="first"> needs a <Trajectory> ancestor',
+      ),
+      `nested Superpose rejects the absent trajectory: ${rejection}`,
     );
     report.readPolls = polls;
     await Deno.writeTextFile(

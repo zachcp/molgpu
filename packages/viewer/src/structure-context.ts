@@ -25,6 +25,7 @@ import {
   CoordinateSnapshotContext,
   rootSnapshot,
 } from "./coordinate-snapshot.ts";
+import { TrajectoryContext } from "./trajectory-context.ts";
 
 /** GPU columns allocated once per structure and shared by representations. */
 export interface StructureSources {
@@ -104,25 +105,29 @@ const provideSources = (
     StructureContext,
     Object.freeze({ resource, sources }),
     provide(
-      CoordinatesContext,
-      sources
-        ? Object.freeze({
-          source: sources.positions as StorageSource,
-          count: resource.data.topology.atoms.count,
-          generation: resource.positionsRevision,
-          resource,
-        })
-        : null,
+      TrajectoryContext,
+      null,
       provide(
-        CoordinateSnapshotContext,
-        rootSnapshot(resource),
+        CoordinatesContext,
+        sources
+          ? Object.freeze({
+            source: sources.positions as StorageSource,
+            count: resource.data.topology.atoms.count,
+            generation: resource.positionsRevision,
+            resource,
+          })
+          : null,
         provide(
-          AttributesContext,
-          EMPTY_ATTRIBUTES,
+          CoordinateSnapshotContext,
+          rootSnapshot(resource),
           provide(
-            AttributeSnapshotContext,
-            EMPTY_ATTRIBUTE_SNAPSHOTS,
-            children,
+            AttributesContext,
+            EMPTY_ATTRIBUTES,
+            provide(
+              AttributeSnapshotContext,
+              EMPTY_ATTRIBUTE_SNAPSHOTS,
+              children,
+            ),
           ),
         ),
       ),

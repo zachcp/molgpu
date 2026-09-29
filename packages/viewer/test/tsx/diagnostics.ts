@@ -24,6 +24,7 @@ export type Mode =
   | "attributes"
   | "attribute-revision"
   | "attribute-producer"
+  | "attribute-roundtrip"
   | "snapshot";
 export type Phase = "idle" | "loading" | "error" | "ready";
 export interface State {
@@ -31,6 +32,7 @@ export interface State {
   src: string;
   mounted: boolean;
   offsetX: number;
+  attributeName: "ssCode" | "formalCharge" | "partialCharge" | "gpu:test";
 }
 /** One in-flight load handed to the test rather than resolved by the fixture. */
 export interface Pending {
@@ -56,7 +58,11 @@ export interface Probe {
     revision: number;
     positions: number[];
   } | null;
-  attributeSnapshot: { generation: number; values: number[] } | null;
+  attributeSnapshot: {
+    generation: number;
+    values: number[];
+    type: string;
+  } | null;
   coordinateBounds: {
     min: readonly number[];
     max: readonly number[];

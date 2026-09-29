@@ -16,6 +16,7 @@ import {
 import {
   createStructure,
   createTrajectory,
+  createVolume,
   type StructureData,
   type TrajectoryData,
   type TrajectoryFrame,
@@ -36,8 +37,14 @@ import {
   Unwrap,
   type UnwrapStatus,
   useTrajectoryFrame,
+  Volume,
 } from "@molgpu/viewer";
-import { useCoordinates, useCoordinateSnapshot } from "@molgpu/viewer/advanced";
+import {
+  useCoordinates,
+  useCoordinateSnapshot,
+  useTimelineTime,
+  useVolume,
+} from "@molgpu/viewer/advanced";
 import {
   enableInstrumentation,
   instrumentDevice,
@@ -111,6 +118,25 @@ function atoms(
   });
 }
 const STRUCTURE = atoms(ATOMS);
+const NESTED_STRUCTURE = atoms(
+  ATOMS,
+  Float32Array.of(
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+  ),
+);
+const SCOPE_VOLUME = createVolume({
+  values: Float32Array.of(1),
+  dims: [1, 1, 1],
+  transform: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
+});
 
 /** Frame k: atom i at (4i - 4 + k, k + 1, -k); exact in f32, and no frame
  * equals the structure's own positions (y = 0). */
@@ -439,7 +465,9 @@ type Mode =
   | "unwrap-deep"
   | "static-superpose"
   | "static-unwrap"
-  | "gate";
+  | "gate"
+  | "scope"
+  | "scope-superpose";
 interface State {
   mode: Mode;
   frame: number;
@@ -471,6 +499,15 @@ interface Probe {
   frames: number[][];
   root: number[];
   gate: { generation: number; count: number } | null;
+  scope: Record<
+    string,
+    {
+      trajectory: boolean;
+      box: number[] | null;
+      time?: number;
+      volume?: boolean;
+    }
+  >;
   superpose: {
     frames: number[][];
     root: number[];
@@ -500,6 +537,7 @@ const probe: Probe = {
   frames: FRAMES.map((f) => Array.from(f.positions)),
   root: Array.from(STRUCTURE.positions),
   gate: null,
+  scope: {},
   superpose: {
     frames: SUP_FRAMES.map((f) => Array.from(f)),
     root: Array.from(SUP_STRUCTURE.positions),
@@ -566,6 +604,21 @@ const Probe = (): null => {
   return null;
 };
 
+const ScopeProbe = ({ name }: {
+  name: string;
+}): null => {
+  const frame = useTrajectoryFrame();
+  const scopedVolume = useVolume();
+  const time = useTimelineTime();
+  probe.scope[name] = {
+    trajectory: frame !== null,
+    box: frame?.box ? Array.from(frame.box) : null,
+    volume: scopedVolume.volume === SCOPE_VOLUME,
+    time,
+  };
+  return null;
+};
+
 const played = (
   state: State,
   trajectory: TrajectoryData,
@@ -621,6 +674,39 @@ const Scene = ({ state }: { state: State }): LiveElement => {
             <Probe />
           </Trajectory>
         </Structure>
+      );
+    case "scope":
+    case "scope-superpose":
+      return (
+        <TimelineProvider time={state.time}>
+          <Volume data={SCOPE_VOLUME}>
+            <Structure data={STRUCTURE}>
+              <Trajectory data={BOXED} frame={state.frame}>
+                <ScopeProbe name="outer" />
+                <Structure data={NESTED_STRUCTURE}>
+                  <ScopeProbe name="nested" />
+                  <UnitCell />
+                  <Unwrap
+                    onStatus={(status) => probe.unwrap.statuses.push(status)}
+                  >
+                    <ScopeProbe name="nestedUnwrap" />
+                  </Unwrap>
+                  {state.mode === "scope-superpose"
+                    ? (
+                      <Superpose to="first">
+                        <ScopeProbe name="nestedSuperpose" />
+                      </Superpose>
+                    )
+                    : null}
+                </Structure>
+                <ScopeProbe name="afterNested" />
+              </Trajectory>
+            </Structure>
+            <Structure data={NESTED_STRUCTURE}>
+              <ScopeProbe name="sibling" />
+            </Structure>
+          </Volume>
+        </TimelineProvider>
       );
     case "src":
       return (

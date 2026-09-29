@@ -26,6 +26,8 @@ import {
 } from "./expr.ts";
 import type { RevisionStream } from "./internal/revision.ts";
 
+export { preserveBondGraph } from "./bond-graph.ts";
+
 export type { SelectionExpr };
 
 // Smallest grid cell for within(); a zero cutoff still needs a positive cell.

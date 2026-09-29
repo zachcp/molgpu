@@ -24,6 +24,7 @@ import {
   EMPTY_ATTRIBUTE_SNAPSHOTS,
   type SnapshotProvider,
 } from "./attribute-snapshot-context.ts";
+import { snapshotAttributeValues } from "./internal/attribute-values.ts";
 
 export type { AttributeSnapshot } from "./attribute-snapshot-context.ts";
 export {
@@ -69,11 +70,12 @@ const Readback: LC<{
   entry: ProducedAttribute;
   maxHz: number;
   onPause: boolean;
-  publish: (values: Float32Array, generation: number) => void;
-}> = ({ name, entry, maxHz, onPause, publish }) => {
+  publish: (values: Float32Array, generation: number) => boolean;
+  fail: (error: unknown, generation: number, buffer: GPUBuffer) => void;
+}> = ({ name, entry, maxHz, onPause, publish, fail }) => {
   const device = useDeviceContext();
-  const latest = useRef({ entry, publish, maxHz, onPause });
-  latest.current = { entry, publish, maxHz, onPause };
+  const latest = useRef({ entry, publish, fail, maxHz, onPause });
+  latest.current = { entry, publish, fail, maxHz, onPause };
   const inFlight = useRef(false);
   const published = useRef<{ generation: number; buffer: GPUBuffer } | null>(
     null,
@@ -148,12 +150,16 @@ const Readback: LC<{
             generation === latest.current.entry.generation &&
             target.source.buffer === latest.current.entry.source.buffer
           ) {
-            published.current = { generation, buffer: target.source.buffer };
-            latest.current.publish(values, generation);
-            count("gathers", `attr:snapshot:${name}:publish`);
+            if (latest.current.publish(values, generation)) {
+              published.current = { generation, buffer: target.source.buffer };
+              count("gathers", `attr:snapshot:${name}:publish`);
+            }
           } else count("gathers", `attr:snapshot:${name}:discard`);
-        } catch {
-          if (mounted.current) count("gathers", `attr:snapshot:${name}:error`);
+        } catch (error) {
+          if (mounted.current) {
+            count("gathers", `attr:snapshot:${name}:error`);
+            latest.current.fail(error, generation, target.source.buffer);
+          }
         } finally {
           inFlight.current = false;
           if (mounted.current) kick.current();
@@ -185,6 +191,9 @@ export const AttributeSnapshotBoundary: LC<{
   const [published, setPublished] = useState<
     (AttributeSnapshot & { buffer: GPUBuffer }) | null
   >(null);
+  const [failure, setFailure] = useState<
+    { error: unknown; generation: number; buffer: GPUBuffer } | null
+  >(null);
   const latest = useRef(entry);
   latest.current = entry;
   const subscribe = useMemo(() => (maxHz: number, onPause: boolean) => {
@@ -204,20 +213,35 @@ export const AttributeSnapshotBoundary: LC<{
   const context: SnapshotProvider = { snapshot, subscribe };
   const maxHz = Math.max(...demand.map((request) => request.maxHz));
   const onPause = demand.some((request) => request.onPause);
-  const publish = (values: Float32Array, generation: number) => {
+  if (
+    failure?.generation === entry.generation &&
+    failure.buffer === entry.source.buffer
+  ) {
+    throw new Error(`Attribute snapshot ${name} failed`, {
+      cause: failure.error,
+    });
+  }
+  const publish = (values: Float32Array, generation: number): boolean => {
     if (
       latest.current.generation !== generation ||
       latest.current.source.buffer !== entry.source.buffer
-    ) return;
+    ) return false;
     const data = withAttributes(root.data, {
       [name]: {
         domain: entry.domain,
         kind: entry.kind,
         provenance: entry.provenance,
-        values,
+        values: snapshotAttributeValues(name, entry.kind, values),
       },
     });
     setPublished({ data, generation, buffer: entry.source.buffer });
+    return true;
+  };
+  const fail = (error: unknown, generation: number, buffer: GPUBuffer) => {
+    if (
+      latest.current.generation === generation &&
+      latest.current.source.buffer === buffer
+    ) setFailure({ error, generation, buffer });
   };
   return provide(
     AttributeSnapshotContext,
@@ -227,7 +251,7 @@ export const AttributeSnapshotBoundary: LC<{
     }),
     [
       demand.length
-        ? use(Readback, { name, entry, maxHz, onPause, publish })
+        ? use(Readback, { name, entry, maxHz, onPause, publish, fail })
         : null,
       children,
     ],

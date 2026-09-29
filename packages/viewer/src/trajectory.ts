@@ -6,9 +6,7 @@
 // docs/findings/2026-09-26-trajectory-plan.md.
 import {
   type LC,
-  type LiveContext,
   type LiveElement,
-  makeContext,
   provide,
   use,
   useAwait,
@@ -47,6 +45,8 @@ import {
   trackOwnedBuffer,
 } from "./internal/instrumentation.ts";
 import { live, viewer } from "./internal/elements.ts";
+import { StructureContext } from "./structure-context.ts";
+import { TrajectoryContext } from "./trajectory-context.ts";
 
 const STORAGE = 0x0080;
 const COPY_DST = 0x0008;
@@ -250,12 +250,11 @@ class Player {
   }
 }
 
-export const TrajectoryContext: LiveContext<TrajectoryFrameState | null> =
-  makeContext<TrajectoryFrameState | null>(null, "TrajectoryContext");
-
 /** What the nearest `<Trajectory>` shows; null outside one. */
 export function useTrajectoryFrame(): TrajectoryFrameState | null {
-  return useContext(TrajectoryContext);
+  const frame = useContext(TrajectoryContext);
+  const structure = useContext(StructureContext);
+  return frame && structure?.resource === frame.owner ? frame.state : null;
 }
 
 const ZERO3 = [0, 0, 0];
@@ -377,7 +376,7 @@ const TrajectoryPlayer: LC<PlayerProps> = (
     }), [trajectory, clamped, key]);
   return provide(
     TrajectoryContext,
-    state,
+    Object.freeze({ owner: upstream.resource, state }),
     use(CoordinateKernel, {
       upstream,
       shader: player.rows ? SUBSET : WHOLE,

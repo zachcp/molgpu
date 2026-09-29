@@ -137,6 +137,13 @@ Two concepts, kept apart on purpose:
 example after `withPositions`). Structural selections survive a coordinate-only
 update; position-dependent ones do not.
 
+`preserveBondGraph(source, snapshot)` binds a coordinate snapshot to the
+source's chemical graph when both share one dataset topology. The viewer uses
+this for GPU coordinate readbacks: connected selections keep the same chemical
+edges, including after attribute-only updates, while position predicates still
+read the snapshot's current coordinates. It does not change declared bond rows
+or the table's display bond inference.
+
 ### Selection expressions
 
 `compile(expr)` accepts the MolQL expression tree that Mol*'s mol-script uses,
@@ -220,29 +227,30 @@ Empty selections are valid and explicit (`isEmpty`, `count`).
 
 ## API
 
-| Export             | Stability    | Description                                                                                                                                      |
-| ------------------ | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `all`              | stable       | Query for every row of a domain (default `atom`).                                                                                                |
-| `where`            | stable       | Query from a labelled row predicate `(data, row) => boolean`, run once at resolve time.                                                          |
-| `element`          | stable       | Query for atoms with a given atomic number.                                                                                                      |
-| `comp`             | stable       | Query for residues whose chemical component name is in a list.                                                                                   |
-| `within`           | stable       | Query for atoms within a distance (Angstrom) of an inner query; depends on positions.                                                            |
-| `resolve`          | stable       | Resolve a query against one `StructureData` into a `Selection`.                                                                                  |
-| `union`            | stable       | Union of two selections from the same dataset and domain.                                                                                        |
-| `intersect`        | stable       | Intersection of two selections from the same dataset and domain.                                                                                 |
-| `difference`       | stable       | Rows in the first selection but not the second.                                                                                                  |
-| `toAtoms`          | stable       | Expand a residue or bond selection to atoms, keeping a residue source map.                                                                       |
-| `toResidues`       | experimental | Collapse a selection to the residues it touches.                                                                                                 |
-| `toBonds`          | experimental | Bonds incident on a selection (`endpoints: 'both' \| 'either'`), with endpoint source map.                                                       |
-| `isStale`          | experimental | True once any revision stream the selection read has advanced on `data`.                                                                         |
-| `isEmpty`          | experimental | True when a selection has no rows.                                                                                                               |
-| `count`            | stable       | Number of rows in a selection.                                                                                                                   |
-| `compile`          | experimental | Compile a `SelectionExpr` (MolQL expression tree) into an atom query; label and deps are derived from the expression. Unsupported symbols throw. |
-| `supportedSymbols` | experimental | The MolQL symbol names `compile` accepts (the Phase 1 allowlist).                                                                                |
-| `Selection`        | stable       | Type: a resolved, dataset-, domain- and revision-bound set of sorted indices.                                                                    |
-| `SelectionQuery`   | stable       | Type: a pure, dataset-independent query recipe. Opaque: build with the query constructors; only `type`, `domain`, `label` and `deps` are public. |
-| `Domain`           | stable       | Type: `'atom' \| 'residue' \| 'bond'`.                                                                                                           |
-| `SelectionExpr`    | experimental | Type: a MolQL expression as plain JSON: a literal, `{ name }`, or `{ head, args }`.                                                              |
+| Export              | Stability    | Description                                                                                                                                      |
+| ------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `all`               | stable       | Query for every row of a domain (default `atom`).                                                                                                |
+| `where`             | stable       | Query from a labelled row predicate `(data, row) => boolean`, run once at resolve time.                                                          |
+| `element`           | stable       | Query for atoms with a given atomic number.                                                                                                      |
+| `comp`              | stable       | Query for residues whose chemical component name is in a list.                                                                                   |
+| `within`            | stable       | Query for atoms within a distance (Angstrom) of an inner query; depends on positions.                                                            |
+| `resolve`           | stable       | Resolve a query against one `StructureData` into a `Selection`.                                                                                  |
+| `union`             | stable       | Union of two selections from the same dataset and domain.                                                                                        |
+| `intersect`         | stable       | Intersection of two selections from the same dataset and domain.                                                                                 |
+| `difference`        | stable       | Rows in the first selection but not the second.                                                                                                  |
+| `toAtoms`           | stable       | Expand a residue or bond selection to atoms, keeping a residue source map.                                                                       |
+| `toResidues`        | experimental | Collapse a selection to the residues it touches.                                                                                                 |
+| `toBonds`           | experimental | Bonds incident on a selection (`endpoints: 'both' \| 'either'`), with endpoint source map.                                                       |
+| `isStale`           | experimental | True once any revision stream the selection read has advanced on `data`.                                                                         |
+| `preserveBondGraph` | advanced     | Bind a coordinate snapshot to the source dataset's chemical graph after checking topology identity.                                              |
+| `isEmpty`           | experimental | True when a selection has no rows.                                                                                                               |
+| `count`             | stable       | Number of rows in a selection.                                                                                                                   |
+| `compile`           | experimental | Compile a `SelectionExpr` (MolQL expression tree) into an atom query; label and deps are derived from the expression. Unsupported symbols throw. |
+| `supportedSymbols`  | experimental | The MolQL symbol names `compile` accepts (the Phase 1 allowlist).                                                                                |
+| `Selection`         | stable       | Type: a resolved, dataset-, domain- and revision-bound set of sorted indices.                                                                    |
+| `SelectionQuery`    | stable       | Type: a pure, dataset-independent query recipe. Opaque: build with the query constructors; only `type`, `domain`, `label` and `deps` are public. |
+| `Domain`            | stable       | Type: `'atom' \| 'residue' \| 'bond'`.                                                                                                           |
+| `SelectionExpr`     | experimental | Type: a MolQL expression as plain JSON: a literal, `{ name }`, or `{ head, args }`.                                                              |
 
 ## Place in the dependency graph
 

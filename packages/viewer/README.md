@@ -86,6 +86,17 @@ use(Pass, {
 `opacity` is a uniform, so animating it never rebuilds or re-uploads geometry.
 Pass `mode: 'opaque'` or `mode: 'transparent'` to override the automatic choice.
 
+### Scoped trajectory metadata
+
+`<Trajectory>` publishes its displayed frame and periodic box only within its
+own `<Structure>`. A nested `<Structure>` starts without trajectory metadata,
+even if it has the same atom count; a sibling structure also sees none.
+`<UnitCell>` and `<Unwrap>` therefore need a trajectory within the nearest
+structure (or an explicit `box` for `<Unwrap>`), and `<Superpose to="first">`
+requires one. A surrounding `<Volume>` and `<TimelineProvider>` remain available
+through nested structures because their data and time are independent of a
+structure's topology.
+
 ## Entries
 
 - **`@molgpu/viewer`** (`.`) carries **no use.gpu types**. Components are typed
