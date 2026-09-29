@@ -52,10 +52,9 @@ const Published: LC<{
   }), [source.buffer, count, generation]);
   useResource((dispose) => {
     trackOwnedBuffer(source.buffer, `attr:producer:${name}`);
-    dispose(() => {
-      releaseOwnedBuffer(source.buffer);
-      source.buffer.destroy();
-    });
+    // A styled draw can retain this published source while its replacement
+    // shader compiles. Native reachability retires it after that draw.
+    dispose(() => releaseOwnedBuffer(source.buffer));
   }, [source.buffer]);
   useResource(() => {
     if (ready) repaint();

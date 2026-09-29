@@ -27,10 +27,17 @@ import {
   Transform,
   VolumeSlice,
 } from "@molgpu/viewer";
-import { attribute, categorical, colormap, volumeSample } from "@molgpu/fields";
+import {
+  attribute,
+  categorical,
+  colormap,
+  linear,
+  volumeSample,
+} from "@molgpu/fields";
 import { createVolume, withAttributes } from "@molgpu/table";
 import { where } from "@molgpu/select";
 import { structure } from "../../../packages/fields/test/fixture.ts";
+import { TestAttributeProducer } from "../../../packages/viewer/test/tsx/test-attribute-producer.ts";
 
 void React;
 const trace = (event: string) => {
@@ -73,6 +80,10 @@ const volumeColor = colormap(volumeSample(volume), [
   [0, [0, 0, 1, 1]],
   [3, [1, 0, 0, 1]],
 ]);
+const producedColor = colormap(
+  linear(attribute("gpu:test", { domain: "atom" }), { domain: [0, 4] }),
+  [[0, [0, 0, 1, 1]], [1, [1, 0, 0, 1]]],
+);
 const controls = {
   palette: (_n: number) => {},
   epoch: (_n: number) => {},
@@ -196,20 +207,39 @@ const App = () => {
                   />
                 </>
               )
+              : new URLSearchParams(location.search).has("attribute")
+              ? (
+                <Structure data={efieldData}>
+                  <TestAttributeProducer
+                    phase={epoch}
+                    domain={epoch ? "residue" : "atom"}
+                  >
+                    <Spacefill
+                      color={palette ? colors[0] : producedColor}
+                      material={{ type: "basic" }}
+                    />
+                  </TestAttributeProducer>
+                </Structure>
+              )
               : new URLSearchParams(location.search).has("efield") ||
-                  new URLSearchParams(location.search).has("lines")
+                  new URLSearchParams(location.search).has("lines") ||
+                  new URLSearchParams(location.search).has("memory")
               ? (
                 <Structure data={charged}>
                   <EField
                     box={{ min: [-4, -4, -4], max: [8 + epoch, 4, 4] }}
-                    spacing={1}
+                    spacing={new URLSearchParams(location.search).has("memory")
+                      ? 0.05
+                      : 1}
+                    maxSamples={8_000_000}
                   >
                     <Spacefill
                       color={colors[palette]}
                       material={{ type: "basic" }}
                     />
                     <VolumeSlice plane={{ axis: 2, index: 4 }} />
-                    {new URLSearchParams(location.search).has("lines")
+                    {new URLSearchParams(location.search).has("lines") ||
+                        new URLSearchParams(location.search).has("memory")
                       ? <FieldLines seeds={{ spacing: 4 }} steps={8} />
                       : null}
                   </EField>
