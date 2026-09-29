@@ -1,0 +1,3370 @@
+{
+  "browser": "153.0.8010.53",
+  "scenarios": [
+    {
+      "policy": "current",
+      "checks": {
+        "heldBeyondTwoFrames": true,
+        "oldDrawAfterCompletedFence": true,
+        "noOldDrawAfterHide": true,
+        "noPageErrors": true,
+        "oldGuardRejected": false,
+        "oldPointGuardRejected": false
+      },
+      "summary": {
+        "policy": "current",
+        "postDestroy": [
+          11,
+          14,
+          17,
+          20,
+          23,
+          26,
+          29,
+          32,
+          36
+        ],
+        "gpuErrors": 9,
+        "molecularAllocations": 4,
+        "totalRequestedMolecularBytes": 96,
+        "wrappersAliveAfterForcedGC": 0
+      },
+      "events": [
+        {
+          "seq": 0,
+          "frame": 22,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 1,
+          "frame": 22,
+          "type": "mark",
+          "name": "checkpoint:0"
+        },
+        {
+          "seq": 2,
+          "frame": 23,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 3,
+          "frame": 23,
+          "type": "mark",
+          "name": "checkpoint:0"
+        },
+        {
+          "seq": 4,
+          "frame": 25,
+          "type": "submit",
+          "ids": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "seq": 5,
+          "frame": 25,
+          "type": "mark",
+          "name": "checkpoint:0"
+        },
+        {
+          "seq": 6,
+          "frame": 26,
+          "type": "armed"
+        },
+        {
+          "seq": 7,
+          "frame": 26,
+          "type": "release",
+          "id": 4,
+          "label": "molgpu:attribute:element"
+        },
+        {
+          "seq": 8,
+          "frame": 26,
+          "type": "destroy",
+          "id": 4
+        },
+        {
+          "seq": 9,
+          "frame": 26,
+          "type": "compile-held"
+        },
+        {
+          "seq": 10,
+          "frame": 26,
+          "type": "compile-held"
+        },
+        {
+          "seq": 11,
+          "frame": 27,
+          "type": "submit",
+          "ids": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "seq": 12,
+          "frame": 27,
+          "type": "mark",
+          "name": "checkpoint:1"
+        },
+        {
+          "seq": 13,
+          "frame": 27,
+          "type": "gpu-error",
+          "message": "[Buffer \"molgpu:attribute:element\"] used in submit while destroyed.\n - While calling [Queue].Submit([[CommandBuffer from CommandEncoder \"ColorPass\"]])\n"
+        },
+        {
+          "seq": 14,
+          "frame": 28,
+          "type": "submit",
+          "ids": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "seq": 15,
+          "frame": 28,
+          "type": "mark",
+          "name": "checkpoint:2"
+        },
+        {
+          "seq": 16,
+          "frame": 28,
+          "type": "gpu-error",
+          "message": "[Buffer \"molgpu:attribute:element\"] used in submit while destroyed.\n - While calling [Queue].Submit([[CommandBuffer from CommandEncoder \"ColorPass\"]])\n"
+        },
+        {
+          "seq": 17,
+          "frame": 29,
+          "type": "submit",
+          "ids": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "seq": 18,
+          "frame": 29,
+          "type": "mark",
+          "name": "checkpoint:3"
+        },
+        {
+          "seq": 19,
+          "frame": 29,
+          "type": "gpu-error",
+          "message": "[Buffer \"molgpu:attribute:element\"] used in submit while destroyed.\n - While calling [Queue].Submit([[CommandBuffer from CommandEncoder \"ColorPass\"]])\n"
+        },
+        {
+          "seq": 20,
+          "frame": 30,
+          "type": "submit",
+          "ids": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "seq": 21,
+          "frame": 30,
+          "type": "mark",
+          "name": "checkpoint:4"
+        },
+        {
+          "seq": 22,
+          "frame": 30,
+          "type": "gpu-error",
+          "message": "[Buffer \"molgpu:attribute:element\"] used in submit while destroyed.\n - While calling [Queue].Submit([[CommandBuffer from CommandEncoder \"ColorPass\"]])\n"
+        },
+        {
+          "seq": 23,
+          "frame": 31,
+          "type": "submit",
+          "ids": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "seq": 24,
+          "frame": 31,
+          "type": "mark",
+          "name": "checkpoint:5"
+        },
+        {
+          "seq": 25,
+          "frame": 31,
+          "type": "gpu-error",
+          "message": "[Buffer \"molgpu:attribute:element\"] used in submit while destroyed.\n - While calling [Queue].Submit([[CommandBuffer from CommandEncoder \"ColorPass\"]])\n"
+        },
+        {
+          "seq": 26,
+          "frame": 32,
+          "type": "submit",
+          "ids": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "seq": 27,
+          "frame": 32,
+          "type": "mark",
+          "name": "checkpoint:6"
+        },
+        {
+          "seq": 28,
+          "frame": 32,
+          "type": "gpu-error",
+          "message": "[Buffer \"molgpu:attribute:element\"] used in submit while destroyed.\n - While calling [Queue].Submit([[CommandBuffer from CommandEncoder \"ColorPass\"]])\n"
+        },
+        {
+          "seq": 29,
+          "frame": 33,
+          "type": "submit",
+          "ids": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "seq": 30,
+          "frame": 33,
+          "type": "mark",
+          "name": "checkpoint:7"
+        },
+        {
+          "seq": 31,
+          "frame": 33,
+          "type": "gpu-error",
+          "message": "[Buffer \"molgpu:attribute:element\"] used in submit while destroyed.\n - While calling [Queue].Submit([[CommandBuffer from CommandEncoder \"ColorPass\"]])\n"
+        },
+        {
+          "seq": 32,
+          "frame": 34,
+          "type": "submit",
+          "ids": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "seq": 33,
+          "frame": 34,
+          "type": "mark",
+          "name": "checkpoint:8"
+        },
+        {
+          "seq": 34,
+          "frame": 34,
+          "type": "gpu-error",
+          "message": "[Buffer \"molgpu:attribute:element\"] used in submit while destroyed.\n - While calling [Queue].Submit([[CommandBuffer from CommandEncoder \"ColorPass\"]])\n"
+        },
+        {
+          "seq": 35,
+          "frame": 34,
+          "type": "mark",
+          "name": "completed-fence-while-held"
+        },
+        {
+          "seq": 36,
+          "frame": 35,
+          "type": "submit",
+          "ids": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "seq": 37,
+          "frame": 35,
+          "type": "mark",
+          "name": "checkpoint:9"
+        },
+        {
+          "seq": 38,
+          "frame": 35,
+          "type": "gpu-error",
+          "message": "[Buffer \"molgpu:attribute:element\"] used in submit while destroyed.\n - While calling [Queue].Submit([[CommandBuffer from CommandEncoder \"ColorPass\"]])\n"
+        },
+        {
+          "seq": 39,
+          "frame": 35,
+          "type": "mark",
+          "name": "hide"
+        },
+        {
+          "seq": 40,
+          "frame": 35,
+          "type": "release",
+          "id": 6,
+          "label": "molgpu:attribute:bfactor"
+        },
+        {
+          "seq": 41,
+          "frame": 35,
+          "type": "destroy",
+          "id": 6
+        },
+        {
+          "seq": 42,
+          "frame": 35,
+          "type": "release",
+          "id": 3,
+          "label": "molgpu:radii"
+        },
+        {
+          "seq": 43,
+          "frame": 35,
+          "type": "destroy",
+          "id": 3
+        },
+        {
+          "seq": 44,
+          "frame": 35,
+          "type": "release",
+          "id": 2,
+          "label": "molgpu:positions"
+        },
+        {
+          "seq": 45,
+          "frame": 35,
+          "type": "destroy",
+          "id": 2
+        },
+        {
+          "seq": 46,
+          "frame": 36,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 47,
+          "frame": 36,
+          "type": "mark",
+          "name": "checkpoint:9"
+        },
+        {
+          "seq": 48,
+          "frame": 36,
+          "type": "compile-release"
+        },
+        {
+          "seq": 49,
+          "frame": 43,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 50,
+          "frame": 43,
+          "type": "mark",
+          "name": "checkpoint:10"
+        },
+        {
+          "seq": 51,
+          "frame": 43,
+          "type": "mark",
+          "name": "root-unmount"
+        }
+      ],
+      "buffers": [
+        {
+          "id": 0,
+          "label": "",
+          "size": 614400,
+          "wrapperAlive": false
+        },
+        {
+          "id": 1,
+          "label": "",
+          "size": 544,
+          "wrapperAlive": false
+        },
+        {
+          "id": 2,
+          "label": "molgpu:positions",
+          "size": 48,
+          "wrapperAlive": false
+        },
+        {
+          "id": 3,
+          "label": "molgpu:radii",
+          "size": 16,
+          "wrapperAlive": false
+        },
+        {
+          "id": 4,
+          "label": "molgpu:attribute:element",
+          "size": 16,
+          "wrapperAlive": false
+        },
+        {
+          "id": 5,
+          "label": "",
+          "size": 32,
+          "wrapperAlive": false
+        },
+        {
+          "id": 6,
+          "label": "molgpu:attribute:bfactor",
+          "size": 16,
+          "wrapperAlive": false
+        }
+      ],
+      "errors": []
+    },
+    {
+      "policy": "two-frames",
+      "checks": {
+        "heldBeyondTwoFrames": true,
+        "oldDrawAfterCompletedFence": true,
+        "noOldDrawAfterHide": true,
+        "noPageErrors": true,
+        "oldGuardRejected": false,
+        "oldPointGuardRejected": false
+      },
+      "summary": {
+        "policy": "two-frames",
+        "postDestroy": [
+          16,
+          19,
+          22,
+          25,
+          28,
+          31,
+          35
+        ],
+        "gpuErrors": 7,
+        "molecularAllocations": 4,
+        "totalRequestedMolecularBytes": 96,
+        "wrappersAliveAfterForcedGC": 0
+      },
+      "events": [
+        {
+          "seq": 0,
+          "frame": 11,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 1,
+          "frame": 11,
+          "type": "mark",
+          "name": "checkpoint:0"
+        },
+        {
+          "seq": 2,
+          "frame": 12,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 3,
+          "frame": 12,
+          "type": "mark",
+          "name": "checkpoint:0"
+        },
+        {
+          "seq": 4,
+          "frame": 14,
+          "type": "submit",
+          "ids": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "seq": 5,
+          "frame": 14,
+          "type": "mark",
+          "name": "checkpoint:0"
+        },
+        {
+          "seq": 6,
+          "frame": 14,
+          "type": "armed"
+        },
+        {
+          "seq": 7,
+          "frame": 14,
+          "type": "release",
+          "id": 4,
+          "label": "molgpu:attribute:element"
+        },
+        {
+          "seq": 8,
+          "frame": 14,
+          "type": "compile-held"
+        },
+        {
+          "seq": 9,
+          "frame": 14,
+          "type": "compile-held"
+        },
+        {
+          "seq": 10,
+          "frame": 15,
+          "type": "submit",
+          "ids": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "seq": 11,
+          "frame": 15,
+          "type": "mark",
+          "name": "checkpoint:1"
+        },
+        {
+          "seq": 12,
+          "frame": 16,
+          "type": "submit",
+          "ids": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "seq": 13,
+          "frame": 16,
+          "type": "mark",
+          "name": "checkpoint:2"
+        },
+        {
+          "seq": 14,
+          "frame": 16,
+          "type": "fence-request",
+          "id": 4
+        },
+        {
+          "seq": 15,
+          "frame": 16,
+          "type": "destroy",
+          "id": 4
+        },
+        {
+          "seq": 16,
+          "frame": 17,
+          "type": "submit",
+          "ids": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "seq": 17,
+          "frame": 17,
+          "type": "mark",
+          "name": "checkpoint:3"
+        },
+        {
+          "seq": 18,
+          "frame": 17,
+          "type": "gpu-error",
+          "message": "[Buffer \"molgpu:attribute:element\"] used in submit while destroyed.\n - While calling [Queue].Submit([[CommandBuffer from CommandEncoder \"ColorPass\"]])\n"
+        },
+        {
+          "seq": 19,
+          "frame": 18,
+          "type": "submit",
+          "ids": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "seq": 20,
+          "frame": 18,
+          "type": "mark",
+          "name": "checkpoint:4"
+        },
+        {
+          "seq": 21,
+          "frame": 18,
+          "type": "gpu-error",
+          "message": "[Buffer \"molgpu:attribute:element\"] used in submit while destroyed.\n - While calling [Queue].Submit([[CommandBuffer from CommandEncoder \"ColorPass\"]])\n"
+        },
+        {
+          "seq": 22,
+          "frame": 19,
+          "type": "submit",
+          "ids": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "seq": 23,
+          "frame": 19,
+          "type": "mark",
+          "name": "checkpoint:5"
+        },
+        {
+          "seq": 24,
+          "frame": 19,
+          "type": "gpu-error",
+          "message": "[Buffer \"molgpu:attribute:element\"] used in submit while destroyed.\n - While calling [Queue].Submit([[CommandBuffer from CommandEncoder \"ColorPass\"]])\n"
+        },
+        {
+          "seq": 25,
+          "frame": 20,
+          "type": "submit",
+          "ids": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "seq": 26,
+          "frame": 20,
+          "type": "mark",
+          "name": "checkpoint:6"
+        },
+        {
+          "seq": 27,
+          "frame": 20,
+          "type": "gpu-error",
+          "message": "[Buffer \"molgpu:attribute:element\"] used in submit while destroyed.\n - While calling [Queue].Submit([[CommandBuffer from CommandEncoder \"ColorPass\"]])\n"
+        },
+        {
+          "seq": 28,
+          "frame": 21,
+          "type": "submit",
+          "ids": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "seq": 29,
+          "frame": 21,
+          "type": "mark",
+          "name": "checkpoint:7"
+        },
+        {
+          "seq": 30,
+          "frame": 21,
+          "type": "gpu-error",
+          "message": "[Buffer \"molgpu:attribute:element\"] used in submit while destroyed.\n - While calling [Queue].Submit([[CommandBuffer from CommandEncoder \"ColorPass\"]])\n"
+        },
+        {
+          "seq": 31,
+          "frame": 22,
+          "type": "submit",
+          "ids": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "seq": 32,
+          "frame": 22,
+          "type": "mark",
+          "name": "checkpoint:8"
+        },
+        {
+          "seq": 33,
+          "frame": 22,
+          "type": "gpu-error",
+          "message": "[Buffer \"molgpu:attribute:element\"] used in submit while destroyed.\n - While calling [Queue].Submit([[CommandBuffer from CommandEncoder \"ColorPass\"]])\n"
+        },
+        {
+          "seq": 34,
+          "frame": 22,
+          "type": "mark",
+          "name": "completed-fence-while-held"
+        },
+        {
+          "seq": 35,
+          "frame": 23,
+          "type": "submit",
+          "ids": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "seq": 36,
+          "frame": 23,
+          "type": "mark",
+          "name": "checkpoint:9"
+        },
+        {
+          "seq": 37,
+          "frame": 23,
+          "type": "gpu-error",
+          "message": "[Buffer \"molgpu:attribute:element\"] used in submit while destroyed.\n - While calling [Queue].Submit([[CommandBuffer from CommandEncoder \"ColorPass\"]])\n"
+        },
+        {
+          "seq": 38,
+          "frame": 23,
+          "type": "mark",
+          "name": "hide"
+        },
+        {
+          "seq": 39,
+          "frame": 23,
+          "type": "release",
+          "id": 6,
+          "label": "molgpu:attribute:bfactor"
+        },
+        {
+          "seq": 40,
+          "frame": 23,
+          "type": "release",
+          "id": 3,
+          "label": "molgpu:radii"
+        },
+        {
+          "seq": 41,
+          "frame": 23,
+          "type": "release",
+          "id": 2,
+          "label": "molgpu:positions"
+        },
+        {
+          "seq": 42,
+          "frame": 24,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 43,
+          "frame": 24,
+          "type": "mark",
+          "name": "checkpoint:9"
+        },
+        {
+          "seq": 44,
+          "frame": 24,
+          "type": "compile-release"
+        },
+        {
+          "seq": 45,
+          "frame": 25,
+          "type": "fence-request",
+          "id": 6
+        },
+        {
+          "seq": 46,
+          "frame": 25,
+          "type": "fence-request",
+          "id": 3
+        },
+        {
+          "seq": 47,
+          "frame": 25,
+          "type": "fence-request",
+          "id": 2
+        },
+        {
+          "seq": 48,
+          "frame": 25,
+          "type": "destroy",
+          "id": 6
+        },
+        {
+          "seq": 49,
+          "frame": 25,
+          "type": "destroy",
+          "id": 3
+        },
+        {
+          "seq": 50,
+          "frame": 25,
+          "type": "destroy",
+          "id": 2
+        },
+        {
+          "seq": 51,
+          "frame": 31,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 52,
+          "frame": 31,
+          "type": "mark",
+          "name": "checkpoint:10"
+        },
+        {
+          "seq": 53,
+          "frame": 31,
+          "type": "mark",
+          "name": "root-unmount"
+        }
+      ],
+      "buffers": [
+        {
+          "id": 0,
+          "label": "",
+          "size": 614400,
+          "wrapperAlive": false
+        },
+        {
+          "id": 1,
+          "label": "",
+          "size": 544,
+          "wrapperAlive": false
+        },
+        {
+          "id": 2,
+          "label": "molgpu:positions",
+          "size": 48,
+          "wrapperAlive": false
+        },
+        {
+          "id": 3,
+          "label": "molgpu:radii",
+          "size": 16,
+          "wrapperAlive": false
+        },
+        {
+          "id": 4,
+          "label": "molgpu:attribute:element",
+          "size": 16,
+          "wrapperAlive": false
+        },
+        {
+          "id": 5,
+          "label": "",
+          "size": 32,
+          "wrapperAlive": false
+        },
+        {
+          "id": 6,
+          "label": "molgpu:attribute:bfactor",
+          "size": 16,
+          "wrapperAlive": false
+        }
+      ],
+      "errors": []
+    },
+    {
+      "policy": "reachability",
+      "checks": {
+        "heldBeyondTwoFrames": true,
+        "oldDrawAfterCompletedFence": true,
+        "noOldDrawAfterHide": true,
+        "noPageErrors": true,
+        "oldGuardRejected": false,
+        "oldPointGuardRejected": false
+      },
+      "summary": {
+        "policy": "reachability",
+        "postDestroy": [],
+        "gpuErrors": 0,
+        "molecularAllocations": 40,
+        "totalRequestedMolecularBytes": 1056,
+        "wrappersAliveAfterForcedGC": 0
+      },
+      "events": [
+        {
+          "seq": 0,
+          "frame": 11,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 1,
+          "frame": 11,
+          "type": "mark",
+          "name": "checkpoint:0"
+        },
+        {
+          "seq": 2,
+          "frame": 12,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 3,
+          "frame": 12,
+          "type": "mark",
+          "name": "checkpoint:0"
+        },
+        {
+          "seq": 4,
+          "frame": 13,
+          "type": "submit",
+          "ids": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "seq": 5,
+          "frame": 13,
+          "type": "mark",
+          "name": "checkpoint:0"
+        },
+        {
+          "seq": 6,
+          "frame": 13,
+          "type": "armed"
+        },
+        {
+          "seq": 7,
+          "frame": 13,
+          "type": "release",
+          "id": 4,
+          "label": "molgpu:attribute:element"
+        },
+        {
+          "seq": 8,
+          "frame": 13,
+          "type": "compile-held"
+        },
+        {
+          "seq": 9,
+          "frame": 13,
+          "type": "compile-held"
+        },
+        {
+          "seq": 10,
+          "frame": 14,
+          "type": "submit",
+          "ids": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "seq": 11,
+          "frame": 14,
+          "type": "mark",
+          "name": "checkpoint:1"
+        },
+        {
+          "seq": 12,
+          "frame": 15,
+          "type": "submit",
+          "ids": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "seq": 13,
+          "frame": 15,
+          "type": "mark",
+          "name": "checkpoint:2"
+        },
+        {
+          "seq": 14,
+          "frame": 16,
+          "type": "submit",
+          "ids": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "seq": 15,
+          "frame": 16,
+          "type": "mark",
+          "name": "checkpoint:3"
+        },
+        {
+          "seq": 16,
+          "frame": 17,
+          "type": "submit",
+          "ids": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "seq": 17,
+          "frame": 17,
+          "type": "mark",
+          "name": "checkpoint:4"
+        },
+        {
+          "seq": 18,
+          "frame": 18,
+          "type": "submit",
+          "ids": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "seq": 19,
+          "frame": 18,
+          "type": "mark",
+          "name": "checkpoint:5"
+        },
+        {
+          "seq": 20,
+          "frame": 19,
+          "type": "submit",
+          "ids": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "seq": 21,
+          "frame": 19,
+          "type": "mark",
+          "name": "checkpoint:6"
+        },
+        {
+          "seq": 22,
+          "frame": 20,
+          "type": "submit",
+          "ids": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "seq": 23,
+          "frame": 20,
+          "type": "mark",
+          "name": "checkpoint:7"
+        },
+        {
+          "seq": 24,
+          "frame": 21,
+          "type": "submit",
+          "ids": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "seq": 25,
+          "frame": 21,
+          "type": "mark",
+          "name": "checkpoint:8"
+        },
+        {
+          "seq": 26,
+          "frame": 21,
+          "type": "mark",
+          "name": "completed-fence-while-held"
+        },
+        {
+          "seq": 27,
+          "frame": 22,
+          "type": "submit",
+          "ids": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "seq": 28,
+          "frame": 22,
+          "type": "mark",
+          "name": "checkpoint:9"
+        },
+        {
+          "seq": 29,
+          "frame": 22,
+          "type": "mark",
+          "name": "hide"
+        },
+        {
+          "seq": 30,
+          "frame": 22,
+          "type": "release",
+          "id": 6,
+          "label": "molgpu:attribute:bfactor"
+        },
+        {
+          "seq": 31,
+          "frame": 22,
+          "type": "release",
+          "id": 3,
+          "label": "molgpu:radii"
+        },
+        {
+          "seq": 32,
+          "frame": 22,
+          "type": "release",
+          "id": 2,
+          "label": "molgpu:positions"
+        },
+        {
+          "seq": 33,
+          "frame": 23,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 34,
+          "frame": 23,
+          "type": "mark",
+          "name": "checkpoint:9"
+        },
+        {
+          "seq": 35,
+          "frame": 23,
+          "type": "compile-release"
+        },
+        {
+          "seq": 36,
+          "frame": 30,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 37,
+          "frame": 30,
+          "type": "mark",
+          "name": "checkpoint:10"
+        },
+        {
+          "seq": 38,
+          "frame": 32,
+          "type": "submit",
+          "ids": [
+            1,
+            7,
+            8,
+            9,
+            10
+          ]
+        },
+        {
+          "seq": 39,
+          "frame": 32,
+          "type": "mark",
+          "name": "checkpoint:11"
+        },
+        {
+          "seq": 40,
+          "frame": 32,
+          "type": "release",
+          "id": 9,
+          "label": "molgpu:attribute:bfactor"
+        },
+        {
+          "seq": 41,
+          "frame": 32,
+          "type": "release",
+          "id": 8,
+          "label": "molgpu:radii"
+        },
+        {
+          "seq": 42,
+          "frame": 32,
+          "type": "release",
+          "id": 7,
+          "label": "molgpu:positions"
+        },
+        {
+          "seq": 43,
+          "frame": 33,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 44,
+          "frame": 33,
+          "type": "mark",
+          "name": "checkpoint:11"
+        },
+        {
+          "seq": 45,
+          "frame": 34,
+          "type": "submit",
+          "ids": [
+            1,
+            11,
+            12,
+            13,
+            14
+          ]
+        },
+        {
+          "seq": 46,
+          "frame": 34,
+          "type": "mark",
+          "name": "checkpoint:12"
+        },
+        {
+          "seq": 47,
+          "frame": 34,
+          "type": "release",
+          "id": 13,
+          "label": "molgpu:attribute:element"
+        },
+        {
+          "seq": 48,
+          "frame": 34,
+          "type": "release",
+          "id": 12,
+          "label": "molgpu:radii"
+        },
+        {
+          "seq": 49,
+          "frame": 34,
+          "type": "release",
+          "id": 11,
+          "label": "molgpu:positions"
+        },
+        {
+          "seq": 50,
+          "frame": 35,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 51,
+          "frame": 35,
+          "type": "mark",
+          "name": "checkpoint:12"
+        },
+        {
+          "seq": 52,
+          "frame": 36,
+          "type": "submit",
+          "ids": [
+            1,
+            15,
+            16,
+            17,
+            18
+          ]
+        },
+        {
+          "seq": 53,
+          "frame": 36,
+          "type": "mark",
+          "name": "checkpoint:13"
+        },
+        {
+          "seq": 54,
+          "frame": 36,
+          "type": "release",
+          "id": 17,
+          "label": "molgpu:attribute:bfactor"
+        },
+        {
+          "seq": 55,
+          "frame": 36,
+          "type": "release",
+          "id": 16,
+          "label": "molgpu:radii"
+        },
+        {
+          "seq": 56,
+          "frame": 36,
+          "type": "release",
+          "id": 15,
+          "label": "molgpu:positions"
+        },
+        {
+          "seq": 57,
+          "frame": 37,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 58,
+          "frame": 37,
+          "type": "mark",
+          "name": "checkpoint:13"
+        },
+        {
+          "seq": 59,
+          "frame": 38,
+          "type": "submit",
+          "ids": [
+            1,
+            19,
+            20,
+            21,
+            22
+          ]
+        },
+        {
+          "seq": 60,
+          "frame": 38,
+          "type": "mark",
+          "name": "checkpoint:14"
+        },
+        {
+          "seq": 61,
+          "frame": 38,
+          "type": "release",
+          "id": 21,
+          "label": "molgpu:attribute:element"
+        },
+        {
+          "seq": 62,
+          "frame": 38,
+          "type": "release",
+          "id": 20,
+          "label": "molgpu:radii"
+        },
+        {
+          "seq": 63,
+          "frame": 38,
+          "type": "release",
+          "id": 19,
+          "label": "molgpu:positions"
+        },
+        {
+          "seq": 64,
+          "frame": 39,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 65,
+          "frame": 39,
+          "type": "mark",
+          "name": "checkpoint:14"
+        },
+        {
+          "seq": 66,
+          "frame": 40,
+          "type": "submit",
+          "ids": [
+            1,
+            23,
+            24,
+            25,
+            26
+          ]
+        },
+        {
+          "seq": 67,
+          "frame": 40,
+          "type": "mark",
+          "name": "checkpoint:15"
+        },
+        {
+          "seq": 68,
+          "frame": 40,
+          "type": "release",
+          "id": 25,
+          "label": "molgpu:attribute:bfactor"
+        },
+        {
+          "seq": 69,
+          "frame": 40,
+          "type": "release",
+          "id": 24,
+          "label": "molgpu:radii"
+        },
+        {
+          "seq": 70,
+          "frame": 40,
+          "type": "release",
+          "id": 23,
+          "label": "molgpu:positions"
+        },
+        {
+          "seq": 71,
+          "frame": 41,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 72,
+          "frame": 41,
+          "type": "mark",
+          "name": "checkpoint:15"
+        },
+        {
+          "seq": 73,
+          "frame": 42,
+          "type": "submit",
+          "ids": [
+            1,
+            27,
+            28,
+            29,
+            30
+          ]
+        },
+        {
+          "seq": 74,
+          "frame": 42,
+          "type": "mark",
+          "name": "checkpoint:16"
+        },
+        {
+          "seq": 75,
+          "frame": 42,
+          "type": "release",
+          "id": 29,
+          "label": "molgpu:attribute:element"
+        },
+        {
+          "seq": 76,
+          "frame": 42,
+          "type": "release",
+          "id": 28,
+          "label": "molgpu:radii"
+        },
+        {
+          "seq": 77,
+          "frame": 42,
+          "type": "release",
+          "id": 27,
+          "label": "molgpu:positions"
+        },
+        {
+          "seq": 78,
+          "frame": 43,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 79,
+          "frame": 43,
+          "type": "mark",
+          "name": "checkpoint:16"
+        },
+        {
+          "seq": 80,
+          "frame": 44,
+          "type": "submit",
+          "ids": [
+            1,
+            31,
+            32,
+            33,
+            34
+          ]
+        },
+        {
+          "seq": 81,
+          "frame": 44,
+          "type": "mark",
+          "name": "checkpoint:17"
+        },
+        {
+          "seq": 82,
+          "frame": 44,
+          "type": "release",
+          "id": 33,
+          "label": "molgpu:attribute:bfactor"
+        },
+        {
+          "seq": 83,
+          "frame": 44,
+          "type": "release",
+          "id": 32,
+          "label": "molgpu:radii"
+        },
+        {
+          "seq": 84,
+          "frame": 44,
+          "type": "release",
+          "id": 31,
+          "label": "molgpu:positions"
+        },
+        {
+          "seq": 85,
+          "frame": 45,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 86,
+          "frame": 45,
+          "type": "mark",
+          "name": "checkpoint:17"
+        },
+        {
+          "seq": 87,
+          "frame": 46,
+          "type": "submit",
+          "ids": [
+            1,
+            35,
+            36,
+            37,
+            38
+          ]
+        },
+        {
+          "seq": 88,
+          "frame": 46,
+          "type": "mark",
+          "name": "checkpoint:18"
+        },
+        {
+          "seq": 89,
+          "frame": 46,
+          "type": "release",
+          "id": 37,
+          "label": "molgpu:attribute:element"
+        },
+        {
+          "seq": 90,
+          "frame": 46,
+          "type": "release",
+          "id": 36,
+          "label": "molgpu:radii"
+        },
+        {
+          "seq": 91,
+          "frame": 46,
+          "type": "release",
+          "id": 35,
+          "label": "molgpu:positions"
+        },
+        {
+          "seq": 92,
+          "frame": 47,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 93,
+          "frame": 47,
+          "type": "mark",
+          "name": "checkpoint:18"
+        },
+        {
+          "seq": 94,
+          "frame": 48,
+          "type": "submit",
+          "ids": [
+            1,
+            39,
+            40,
+            41,
+            42
+          ]
+        },
+        {
+          "seq": 95,
+          "frame": 48,
+          "type": "mark",
+          "name": "checkpoint:19"
+        },
+        {
+          "seq": 96,
+          "frame": 48,
+          "type": "release",
+          "id": 41,
+          "label": "molgpu:attribute:bfactor"
+        },
+        {
+          "seq": 97,
+          "frame": 48,
+          "type": "release",
+          "id": 40,
+          "label": "molgpu:radii"
+        },
+        {
+          "seq": 98,
+          "frame": 48,
+          "type": "release",
+          "id": 39,
+          "label": "molgpu:positions"
+        },
+        {
+          "seq": 99,
+          "frame": 49,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 100,
+          "frame": 49,
+          "type": "mark",
+          "name": "checkpoint:19"
+        },
+        {
+          "seq": 101,
+          "frame": 50,
+          "type": "submit",
+          "ids": [
+            1,
+            43,
+            44,
+            45,
+            46
+          ]
+        },
+        {
+          "seq": 102,
+          "frame": 50,
+          "type": "mark",
+          "name": "checkpoint:20"
+        },
+        {
+          "seq": 103,
+          "frame": 50,
+          "type": "release",
+          "id": 45,
+          "label": "molgpu:attribute:element"
+        },
+        {
+          "seq": 104,
+          "frame": 50,
+          "type": "release",
+          "id": 44,
+          "label": "molgpu:radii"
+        },
+        {
+          "seq": 105,
+          "frame": 50,
+          "type": "release",
+          "id": 43,
+          "label": "molgpu:positions"
+        },
+        {
+          "seq": 106,
+          "frame": 51,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 107,
+          "frame": 51,
+          "type": "mark",
+          "name": "checkpoint:20"
+        },
+        {
+          "seq": 108,
+          "frame": 52,
+          "type": "submit",
+          "ids": [
+            1,
+            47,
+            48,
+            49,
+            50
+          ]
+        },
+        {
+          "seq": 109,
+          "frame": 52,
+          "type": "mark",
+          "name": "checkpoint:21"
+        },
+        {
+          "seq": 110,
+          "frame": 52,
+          "type": "release",
+          "id": 49,
+          "label": "molgpu:attribute:bfactor"
+        },
+        {
+          "seq": 111,
+          "frame": 52,
+          "type": "release",
+          "id": 48,
+          "label": "molgpu:radii"
+        },
+        {
+          "seq": 112,
+          "frame": 52,
+          "type": "release",
+          "id": 47,
+          "label": "molgpu:positions"
+        },
+        {
+          "seq": 113,
+          "frame": 53,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 114,
+          "frame": 53,
+          "type": "mark",
+          "name": "checkpoint:21"
+        },
+        {
+          "seq": 115,
+          "frame": 54,
+          "type": "submit",
+          "ids": [
+            1,
+            51,
+            52,
+            53,
+            54
+          ]
+        },
+        {
+          "seq": 116,
+          "frame": 54,
+          "type": "mark",
+          "name": "checkpoint:22"
+        },
+        {
+          "seq": 117,
+          "frame": 54,
+          "type": "mark",
+          "name": "root-unmount"
+        },
+        {
+          "seq": 118,
+          "frame": 54,
+          "type": "release",
+          "id": 53,
+          "label": "molgpu:attribute:element"
+        },
+        {
+          "seq": 119,
+          "frame": 54,
+          "type": "release",
+          "id": 52,
+          "label": "molgpu:radii"
+        },
+        {
+          "seq": 120,
+          "frame": 54,
+          "type": "release",
+          "id": 51,
+          "label": "molgpu:positions"
+        }
+      ],
+      "buffers": [
+        {
+          "id": 0,
+          "label": "",
+          "size": 614400,
+          "wrapperAlive": false
+        },
+        {
+          "id": 1,
+          "label": "",
+          "size": 544,
+          "wrapperAlive": false
+        },
+        {
+          "id": 2,
+          "label": "molgpu:positions",
+          "size": 48,
+          "wrapperAlive": false
+        },
+        {
+          "id": 3,
+          "label": "molgpu:radii",
+          "size": 16,
+          "wrapperAlive": false
+        },
+        {
+          "id": 4,
+          "label": "molgpu:attribute:element",
+          "size": 16,
+          "wrapperAlive": false
+        },
+        {
+          "id": 5,
+          "label": "",
+          "size": 32,
+          "wrapperAlive": false
+        },
+        {
+          "id": 6,
+          "label": "molgpu:attribute:bfactor",
+          "size": 16,
+          "wrapperAlive": false
+        },
+        {
+          "id": 7,
+          "label": "molgpu:positions",
+          "size": 48,
+          "wrapperAlive": false
+        },
+        {
+          "id": 8,
+          "label": "molgpu:radii",
+          "size": 16,
+          "wrapperAlive": false
+        },
+        {
+          "id": 9,
+          "label": "molgpu:attribute:bfactor",
+          "size": 16,
+          "wrapperAlive": false
+        },
+        {
+          "id": 10,
+          "label": "",
+          "size": 32,
+          "wrapperAlive": false
+        },
+        {
+          "id": 11,
+          "label": "molgpu:positions",
+          "size": 48,
+          "wrapperAlive": false
+        },
+        {
+          "id": 12,
+          "label": "molgpu:radii",
+          "size": 16,
+          "wrapperAlive": false
+        },
+        {
+          "id": 13,
+          "label": "molgpu:attribute:element",
+          "size": 16,
+          "wrapperAlive": false
+        },
+        {
+          "id": 14,
+          "label": "",
+          "size": 32,
+          "wrapperAlive": false
+        },
+        {
+          "id": 15,
+          "label": "molgpu:positions",
+          "size": 48,
+          "wrapperAlive": false
+        },
+        {
+          "id": 16,
+          "label": "molgpu:radii",
+          "size": 16,
+          "wrapperAlive": false
+        },
+        {
+          "id": 17,
+          "label": "molgpu:attribute:bfactor",
+          "size": 16,
+          "wrapperAlive": false
+        },
+        {
+          "id": 18,
+          "label": "",
+          "size": 32,
+          "wrapperAlive": false
+        },
+        {
+          "id": 19,
+          "label": "molgpu:positions",
+          "size": 48,
+          "wrapperAlive": false
+        },
+        {
+          "id": 20,
+          "label": "molgpu:radii",
+          "size": 16,
+          "wrapperAlive": false
+        },
+        {
+          "id": 21,
+          "label": "molgpu:attribute:element",
+          "size": 16,
+          "wrapperAlive": false
+        },
+        {
+          "id": 22,
+          "label": "",
+          "size": 32,
+          "wrapperAlive": false
+        },
+        {
+          "id": 23,
+          "label": "molgpu:positions",
+          "size": 48,
+          "wrapperAlive": false
+        },
+        {
+          "id": 24,
+          "label": "molgpu:radii",
+          "size": 16,
+          "wrapperAlive": false
+        },
+        {
+          "id": 25,
+          "label": "molgpu:attribute:bfactor",
+          "size": 16,
+          "wrapperAlive": false
+        },
+        {
+          "id": 26,
+          "label": "",
+          "size": 32,
+          "wrapperAlive": false
+        },
+        {
+          "id": 27,
+          "label": "molgpu:positions",
+          "size": 48,
+          "wrapperAlive": false
+        },
+        {
+          "id": 28,
+          "label": "molgpu:radii",
+          "size": 16,
+          "wrapperAlive": false
+        },
+        {
+          "id": 29,
+          "label": "molgpu:attribute:element",
+          "size": 16,
+          "wrapperAlive": false
+        },
+        {
+          "id": 30,
+          "label": "",
+          "size": 32,
+          "wrapperAlive": false
+        },
+        {
+          "id": 31,
+          "label": "molgpu:positions",
+          "size": 48,
+          "wrapperAlive": false
+        },
+        {
+          "id": 32,
+          "label": "molgpu:radii",
+          "size": 16,
+          "wrapperAlive": false
+        },
+        {
+          "id": 33,
+          "label": "molgpu:attribute:bfactor",
+          "size": 16,
+          "wrapperAlive": false
+        },
+        {
+          "id": 34,
+          "label": "",
+          "size": 32,
+          "wrapperAlive": false
+        },
+        {
+          "id": 35,
+          "label": "molgpu:positions",
+          "size": 48,
+          "wrapperAlive": false
+        },
+        {
+          "id": 36,
+          "label": "molgpu:radii",
+          "size": 16,
+          "wrapperAlive": false
+        },
+        {
+          "id": 37,
+          "label": "molgpu:attribute:element",
+          "size": 16,
+          "wrapperAlive": false
+        },
+        {
+          "id": 38,
+          "label": "",
+          "size": 32,
+          "wrapperAlive": false
+        },
+        {
+          "id": 39,
+          "label": "molgpu:positions",
+          "size": 48,
+          "wrapperAlive": false
+        },
+        {
+          "id": 40,
+          "label": "molgpu:radii",
+          "size": 16,
+          "wrapperAlive": false
+        },
+        {
+          "id": 41,
+          "label": "molgpu:attribute:bfactor",
+          "size": 16,
+          "wrapperAlive": false
+        },
+        {
+          "id": 42,
+          "label": "",
+          "size": 32,
+          "wrapperAlive": false
+        },
+        {
+          "id": 43,
+          "label": "molgpu:positions",
+          "size": 48,
+          "wrapperAlive": false
+        },
+        {
+          "id": 44,
+          "label": "molgpu:radii",
+          "size": 16,
+          "wrapperAlive": false
+        },
+        {
+          "id": 45,
+          "label": "molgpu:attribute:element",
+          "size": 16,
+          "wrapperAlive": false
+        },
+        {
+          "id": 46,
+          "label": "",
+          "size": 32,
+          "wrapperAlive": false
+        },
+        {
+          "id": 47,
+          "label": "molgpu:positions",
+          "size": 48,
+          "wrapperAlive": false
+        },
+        {
+          "id": 48,
+          "label": "molgpu:radii",
+          "size": 16,
+          "wrapperAlive": false
+        },
+        {
+          "id": 49,
+          "label": "molgpu:attribute:bfactor",
+          "size": 16,
+          "wrapperAlive": false
+        },
+        {
+          "id": 50,
+          "label": "",
+          "size": 32,
+          "wrapperAlive": false
+        },
+        {
+          "id": 51,
+          "label": "molgpu:positions",
+          "size": 48,
+          "wrapperAlive": false
+        },
+        {
+          "id": 52,
+          "label": "molgpu:radii",
+          "size": 16,
+          "wrapperAlive": false
+        },
+        {
+          "id": 53,
+          "label": "molgpu:attribute:element",
+          "size": 16,
+          "wrapperAlive": false
+        },
+        {
+          "id": 54,
+          "label": "",
+          "size": 32,
+          "wrapperAlive": false
+        }
+      ],
+      "errors": []
+    },
+    {
+      "policy": "unguarded",
+      "checks": {
+        "heldBeyondTwoFrames": true,
+        "oldDrawAfterCompletedFence": true,
+        "noOldDrawAfterHide": true,
+        "noPageErrors": true,
+        "oldGuardRejected": true,
+        "oldPointGuardRejected": false
+      },
+      "summary": {
+        "policy": "unguarded",
+        "postDestroy": [
+          12,
+          16,
+          20,
+          24,
+          28,
+          32,
+          36,
+          40,
+          44,
+          49
+        ],
+        "gpuErrors": 10,
+        "molecularAllocations": 1,
+        "totalRequestedMolecularBytes": 64,
+        "wrappersAliveAfterForcedGC": 0
+      },
+      "events": [
+        {
+          "seq": 0,
+          "frame": 10,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 1,
+          "frame": 10,
+          "type": "mark",
+          "name": "checkpoint:0"
+        },
+        {
+          "seq": 2,
+          "frame": 13,
+          "type": "mark",
+          "name": "guard:3:true"
+        },
+        {
+          "seq": 3,
+          "frame": 13,
+          "type": "submit",
+          "ids": [
+            1,
+            2,
+            4,
+            3
+          ]
+        },
+        {
+          "seq": 4,
+          "frame": 13,
+          "type": "mark",
+          "name": "checkpoint:0"
+        },
+        {
+          "seq": 5,
+          "frame": 14,
+          "type": "armed"
+        },
+        {
+          "seq": 6,
+          "frame": 14,
+          "type": "compile-held"
+        },
+        {
+          "seq": 7,
+          "frame": 14,
+          "type": "compile-held"
+        },
+        {
+          "seq": 8,
+          "frame": 14,
+          "type": "mark",
+          "name": "invalidate:3"
+        },
+        {
+          "seq": 9,
+          "frame": 14,
+          "type": "release",
+          "id": 2,
+          "label": "molgpu:guarded-face:3"
+        },
+        {
+          "seq": 10,
+          "frame": 14,
+          "type": "destroy",
+          "id": 2
+        },
+        {
+          "seq": 11,
+          "frame": 15,
+          "type": "mark",
+          "name": "guard:3:false"
+        },
+        {
+          "seq": 12,
+          "frame": 15,
+          "type": "submit",
+          "ids": [
+            1,
+            2,
+            4
+          ]
+        },
+        {
+          "seq": 13,
+          "frame": 15,
+          "type": "mark",
+          "name": "checkpoint:0"
+        },
+        {
+          "seq": 14,
+          "frame": 15,
+          "type": "gpu-error",
+          "message": "[Buffer \"molgpu:guarded-face:3\"] used in submit while destroyed.\n - While calling [Queue].Submit([[CommandBuffer from CommandEncoder \"ColorPass\"]])\n"
+        },
+        {
+          "seq": 15,
+          "frame": 16,
+          "type": "mark",
+          "name": "guard:3:false"
+        },
+        {
+          "seq": 16,
+          "frame": 16,
+          "type": "submit",
+          "ids": [
+            1,
+            2,
+            4
+          ]
+        },
+        {
+          "seq": 17,
+          "frame": 16,
+          "type": "mark",
+          "name": "checkpoint:1"
+        },
+        {
+          "seq": 18,
+          "frame": 16,
+          "type": "gpu-error",
+          "message": "[Buffer \"molgpu:guarded-face:3\"] used in submit while destroyed.\n - While calling [Queue].Submit([[CommandBuffer from CommandEncoder \"ColorPass\"]])\n"
+        },
+        {
+          "seq": 19,
+          "frame": 17,
+          "type": "mark",
+          "name": "guard:3:false"
+        },
+        {
+          "seq": 20,
+          "frame": 17,
+          "type": "submit",
+          "ids": [
+            1,
+            2,
+            4
+          ]
+        },
+        {
+          "seq": 21,
+          "frame": 17,
+          "type": "mark",
+          "name": "checkpoint:2"
+        },
+        {
+          "seq": 22,
+          "frame": 17,
+          "type": "gpu-error",
+          "message": "[Buffer \"molgpu:guarded-face:3\"] used in submit while destroyed.\n - While calling [Queue].Submit([[CommandBuffer from CommandEncoder \"ColorPass\"]])\n"
+        },
+        {
+          "seq": 23,
+          "frame": 18,
+          "type": "mark",
+          "name": "guard:3:false"
+        },
+        {
+          "seq": 24,
+          "frame": 18,
+          "type": "submit",
+          "ids": [
+            1,
+            2,
+            4
+          ]
+        },
+        {
+          "seq": 25,
+          "frame": 18,
+          "type": "mark",
+          "name": "checkpoint:3"
+        },
+        {
+          "seq": 26,
+          "frame": 18,
+          "type": "gpu-error",
+          "message": "[Buffer \"molgpu:guarded-face:3\"] used in submit while destroyed.\n - While calling [Queue].Submit([[CommandBuffer from CommandEncoder \"ColorPass\"]])\n"
+        },
+        {
+          "seq": 27,
+          "frame": 19,
+          "type": "mark",
+          "name": "guard:3:false"
+        },
+        {
+          "seq": 28,
+          "frame": 19,
+          "type": "submit",
+          "ids": [
+            1,
+            2,
+            4
+          ]
+        },
+        {
+          "seq": 29,
+          "frame": 19,
+          "type": "mark",
+          "name": "checkpoint:4"
+        },
+        {
+          "seq": 30,
+          "frame": 19,
+          "type": "gpu-error",
+          "message": "[Buffer \"molgpu:guarded-face:3\"] used in submit while destroyed.\n - While calling [Queue].Submit([[CommandBuffer from CommandEncoder \"ColorPass\"]])\n"
+        },
+        {
+          "seq": 31,
+          "frame": 20,
+          "type": "mark",
+          "name": "guard:3:false"
+        },
+        {
+          "seq": 32,
+          "frame": 20,
+          "type": "submit",
+          "ids": [
+            1,
+            2,
+            4
+          ]
+        },
+        {
+          "seq": 33,
+          "frame": 20,
+          "type": "mark",
+          "name": "checkpoint:5"
+        },
+        {
+          "seq": 34,
+          "frame": 20,
+          "type": "gpu-error",
+          "message": "[Buffer \"molgpu:guarded-face:3\"] used in submit while destroyed.\n - While calling [Queue].Submit([[CommandBuffer from CommandEncoder \"ColorPass\"]])\n"
+        },
+        {
+          "seq": 35,
+          "frame": 21,
+          "type": "mark",
+          "name": "guard:3:false"
+        },
+        {
+          "seq": 36,
+          "frame": 21,
+          "type": "submit",
+          "ids": [
+            1,
+            2,
+            4
+          ]
+        },
+        {
+          "seq": 37,
+          "frame": 21,
+          "type": "mark",
+          "name": "checkpoint:6"
+        },
+        {
+          "seq": 38,
+          "frame": 21,
+          "type": "gpu-error",
+          "message": "[Buffer \"molgpu:guarded-face:3\"] used in submit while destroyed.\n - While calling [Queue].Submit([[CommandBuffer from CommandEncoder \"ColorPass\"]])\n"
+        },
+        {
+          "seq": 39,
+          "frame": 22,
+          "type": "mark",
+          "name": "guard:3:false"
+        },
+        {
+          "seq": 40,
+          "frame": 22,
+          "type": "submit",
+          "ids": [
+            1,
+            2,
+            4
+          ]
+        },
+        {
+          "seq": 41,
+          "frame": 22,
+          "type": "mark",
+          "name": "checkpoint:7"
+        },
+        {
+          "seq": 42,
+          "frame": 22,
+          "type": "gpu-error",
+          "message": "[Buffer \"molgpu:guarded-face:3\"] used in submit while destroyed.\n - While calling [Queue].Submit([[CommandBuffer from CommandEncoder \"ColorPass\"]])\n"
+        },
+        {
+          "seq": 43,
+          "frame": 23,
+          "type": "mark",
+          "name": "guard:3:false"
+        },
+        {
+          "seq": 44,
+          "frame": 23,
+          "type": "submit",
+          "ids": [
+            1,
+            2,
+            4
+          ]
+        },
+        {
+          "seq": 45,
+          "frame": 23,
+          "type": "mark",
+          "name": "checkpoint:8"
+        },
+        {
+          "seq": 46,
+          "frame": 23,
+          "type": "gpu-error",
+          "message": "[Buffer \"molgpu:guarded-face:3\"] used in submit while destroyed.\n - While calling [Queue].Submit([[CommandBuffer from CommandEncoder \"ColorPass\"]])\n"
+        },
+        {
+          "seq": 47,
+          "frame": 23,
+          "type": "mark",
+          "name": "completed-fence-while-held"
+        },
+        {
+          "seq": 48,
+          "frame": 24,
+          "type": "mark",
+          "name": "guard:3:false"
+        },
+        {
+          "seq": 49,
+          "frame": 24,
+          "type": "submit",
+          "ids": [
+            1,
+            2,
+            4
+          ]
+        },
+        {
+          "seq": 50,
+          "frame": 24,
+          "type": "mark",
+          "name": "checkpoint:9"
+        },
+        {
+          "seq": 51,
+          "frame": 24,
+          "type": "gpu-error",
+          "message": "[Buffer \"molgpu:guarded-face:3\"] used in submit while destroyed.\n - While calling [Queue].Submit([[CommandBuffer from CommandEncoder \"ColorPass\"]])\n"
+        },
+        {
+          "seq": 52,
+          "frame": 24,
+          "type": "mark",
+          "name": "hide"
+        },
+        {
+          "seq": 53,
+          "frame": 25,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 54,
+          "frame": 25,
+          "type": "mark",
+          "name": "checkpoint:9"
+        },
+        {
+          "seq": 55,
+          "frame": 25,
+          "type": "compile-release"
+        },
+        {
+          "seq": 56,
+          "frame": 32,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 57,
+          "frame": 32,
+          "type": "mark",
+          "name": "checkpoint:10"
+        },
+        {
+          "seq": 58,
+          "frame": 32,
+          "type": "mark",
+          "name": "root-unmount"
+        }
+      ],
+      "buffers": [
+        {
+          "id": 0,
+          "label": "",
+          "size": 614400,
+          "wrapperAlive": false
+        },
+        {
+          "id": 1,
+          "label": "",
+          "size": 544,
+          "wrapperAlive": false
+        },
+        {
+          "id": 2,
+          "label": "molgpu:guarded-face:3",
+          "size": 64,
+          "wrapperAlive": false
+        },
+        {
+          "id": 3,
+          "label": "",
+          "size": 16,
+          "wrapperAlive": false
+        },
+        {
+          "id": 4,
+          "label": "",
+          "size": 16,
+          "wrapperAlive": false
+        }
+      ],
+      "errors": []
+    },
+    {
+      "policy": "guarded",
+      "checks": {
+        "heldBeyondTwoFrames": true,
+        "oldDrawAfterCompletedFence": false,
+        "noOldDrawAfterHide": true,
+        "noPageErrors": true,
+        "oldGuardRejected": true,
+        "oldPointGuardRejected": false
+      },
+      "summary": {
+        "policy": "guarded",
+        "postDestroy": [],
+        "gpuErrors": 0,
+        "molecularAllocations": 1,
+        "totalRequestedMolecularBytes": 64,
+        "wrappersAliveAfterForcedGC": 0
+      },
+      "events": [
+        {
+          "seq": 0,
+          "frame": 10,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 1,
+          "frame": 10,
+          "type": "mark",
+          "name": "checkpoint:0"
+        },
+        {
+          "seq": 2,
+          "frame": 12,
+          "type": "mark",
+          "name": "guard:3:true"
+        },
+        {
+          "seq": 3,
+          "frame": 12,
+          "type": "submit",
+          "ids": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "seq": 4,
+          "frame": 12,
+          "type": "mark",
+          "name": "checkpoint:0"
+        },
+        {
+          "seq": 5,
+          "frame": 12,
+          "type": "armed"
+        },
+        {
+          "seq": 6,
+          "frame": 12,
+          "type": "compile-held"
+        },
+        {
+          "seq": 7,
+          "frame": 12,
+          "type": "compile-held"
+        },
+        {
+          "seq": 8,
+          "frame": 12,
+          "type": "mark",
+          "name": "invalidate:3"
+        },
+        {
+          "seq": 9,
+          "frame": 12,
+          "type": "release",
+          "id": 2,
+          "label": "molgpu:guarded-face:3"
+        },
+        {
+          "seq": 10,
+          "frame": 12,
+          "type": "destroy",
+          "id": 2
+        },
+        {
+          "seq": 11,
+          "frame": 13,
+          "type": "mark",
+          "name": "guard:3:false"
+        },
+        {
+          "seq": 12,
+          "frame": 13,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 13,
+          "frame": 13,
+          "type": "mark",
+          "name": "checkpoint:0"
+        },
+        {
+          "seq": 14,
+          "frame": 14,
+          "type": "mark",
+          "name": "guard:3:false"
+        },
+        {
+          "seq": 15,
+          "frame": 14,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 16,
+          "frame": 14,
+          "type": "mark",
+          "name": "checkpoint:1"
+        },
+        {
+          "seq": 17,
+          "frame": 15,
+          "type": "mark",
+          "name": "guard:3:false"
+        },
+        {
+          "seq": 18,
+          "frame": 15,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 19,
+          "frame": 15,
+          "type": "mark",
+          "name": "checkpoint:2"
+        },
+        {
+          "seq": 20,
+          "frame": 16,
+          "type": "mark",
+          "name": "guard:3:false"
+        },
+        {
+          "seq": 21,
+          "frame": 16,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 22,
+          "frame": 16,
+          "type": "mark",
+          "name": "checkpoint:3"
+        },
+        {
+          "seq": 23,
+          "frame": 17,
+          "type": "mark",
+          "name": "guard:3:false"
+        },
+        {
+          "seq": 24,
+          "frame": 17,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 25,
+          "frame": 17,
+          "type": "mark",
+          "name": "checkpoint:4"
+        },
+        {
+          "seq": 26,
+          "frame": 18,
+          "type": "mark",
+          "name": "guard:3:false"
+        },
+        {
+          "seq": 27,
+          "frame": 18,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 28,
+          "frame": 18,
+          "type": "mark",
+          "name": "checkpoint:5"
+        },
+        {
+          "seq": 29,
+          "frame": 19,
+          "type": "mark",
+          "name": "guard:3:false"
+        },
+        {
+          "seq": 30,
+          "frame": 19,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 31,
+          "frame": 19,
+          "type": "mark",
+          "name": "checkpoint:6"
+        },
+        {
+          "seq": 32,
+          "frame": 20,
+          "type": "mark",
+          "name": "guard:3:false"
+        },
+        {
+          "seq": 33,
+          "frame": 20,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 34,
+          "frame": 20,
+          "type": "mark",
+          "name": "checkpoint:7"
+        },
+        {
+          "seq": 35,
+          "frame": 21,
+          "type": "mark",
+          "name": "guard:3:false"
+        },
+        {
+          "seq": 36,
+          "frame": 21,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 37,
+          "frame": 21,
+          "type": "mark",
+          "name": "checkpoint:8"
+        },
+        {
+          "seq": 38,
+          "frame": 21,
+          "type": "mark",
+          "name": "completed-fence-while-held"
+        },
+        {
+          "seq": 39,
+          "frame": 22,
+          "type": "mark",
+          "name": "guard:3:false"
+        },
+        {
+          "seq": 40,
+          "frame": 22,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 41,
+          "frame": 22,
+          "type": "mark",
+          "name": "checkpoint:9"
+        },
+        {
+          "seq": 42,
+          "frame": 22,
+          "type": "mark",
+          "name": "hide"
+        },
+        {
+          "seq": 43,
+          "frame": 23,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 44,
+          "frame": 23,
+          "type": "mark",
+          "name": "checkpoint:9"
+        },
+        {
+          "seq": 45,
+          "frame": 23,
+          "type": "compile-release"
+        },
+        {
+          "seq": 46,
+          "frame": 30,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 47,
+          "frame": 30,
+          "type": "mark",
+          "name": "checkpoint:10"
+        },
+        {
+          "seq": 48,
+          "frame": 30,
+          "type": "mark",
+          "name": "root-unmount"
+        }
+      ],
+      "buffers": [
+        {
+          "id": 0,
+          "label": "",
+          "size": 614400,
+          "wrapperAlive": false
+        },
+        {
+          "id": 1,
+          "label": "",
+          "size": 544,
+          "wrapperAlive": false
+        },
+        {
+          "id": 2,
+          "label": "molgpu:guarded-face:3",
+          "size": 64,
+          "wrapperAlive": false
+        },
+        {
+          "id": 3,
+          "label": "",
+          "size": 16,
+          "wrapperAlive": false
+        },
+        {
+          "id": 4,
+          "label": "",
+          "size": 16,
+          "wrapperAlive": false
+        }
+      ],
+      "errors": []
+    },
+    {
+      "policy": "point-guarded",
+      "checks": {
+        "heldBeyondTwoFrames": true,
+        "oldDrawAfterCompletedFence": false,
+        "noOldDrawAfterHide": true,
+        "noPageErrors": true,
+        "oldGuardRejected": false,
+        "oldPointGuardRejected": true
+      },
+      "summary": {
+        "policy": "point-guarded",
+        "postDestroy": [],
+        "gpuErrors": 0,
+        "molecularAllocations": 4,
+        "totalRequestedMolecularBytes": 96,
+        "wrappersAliveAfterForcedGC": 0
+      },
+      "events": [
+        {
+          "seq": 0,
+          "frame": 10,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 1,
+          "frame": 10,
+          "type": "mark",
+          "name": "checkpoint:0"
+        },
+        {
+          "seq": 2,
+          "frame": 11,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 3,
+          "frame": 11,
+          "type": "mark",
+          "name": "checkpoint:0"
+        },
+        {
+          "seq": 4,
+          "frame": 12,
+          "type": "point-guard",
+          "ownEpoch": 0,
+          "valid": true
+        },
+        {
+          "seq": 5,
+          "frame": 12,
+          "type": "submit",
+          "ids": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "seq": 6,
+          "frame": 12,
+          "type": "mark",
+          "name": "checkpoint:0"
+        },
+        {
+          "seq": 7,
+          "frame": 12,
+          "type": "armed"
+        },
+        {
+          "seq": 8,
+          "frame": 12,
+          "type": "release",
+          "id": 4,
+          "label": "molgpu:attribute:element"
+        },
+        {
+          "seq": 9,
+          "frame": 12,
+          "type": "destroy",
+          "id": 4
+        },
+        {
+          "seq": 10,
+          "frame": 12,
+          "type": "compile-held"
+        },
+        {
+          "seq": 11,
+          "frame": 12,
+          "type": "compile-held"
+        },
+        {
+          "seq": 12,
+          "frame": 13,
+          "type": "point-guard",
+          "ownEpoch": 0,
+          "valid": false
+        },
+        {
+          "seq": 13,
+          "frame": 13,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 14,
+          "frame": 13,
+          "type": "mark",
+          "name": "checkpoint:1"
+        },
+        {
+          "seq": 15,
+          "frame": 14,
+          "type": "point-guard",
+          "ownEpoch": 0,
+          "valid": false
+        },
+        {
+          "seq": 16,
+          "frame": 14,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 17,
+          "frame": 14,
+          "type": "mark",
+          "name": "checkpoint:2"
+        },
+        {
+          "seq": 18,
+          "frame": 15,
+          "type": "point-guard",
+          "ownEpoch": 0,
+          "valid": false
+        },
+        {
+          "seq": 19,
+          "frame": 15,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 20,
+          "frame": 15,
+          "type": "mark",
+          "name": "checkpoint:3"
+        },
+        {
+          "seq": 21,
+          "frame": 16,
+          "type": "point-guard",
+          "ownEpoch": 0,
+          "valid": false
+        },
+        {
+          "seq": 22,
+          "frame": 16,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 23,
+          "frame": 16,
+          "type": "mark",
+          "name": "checkpoint:4"
+        },
+        {
+          "seq": 24,
+          "frame": 17,
+          "type": "point-guard",
+          "ownEpoch": 0,
+          "valid": false
+        },
+        {
+          "seq": 25,
+          "frame": 17,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 26,
+          "frame": 17,
+          "type": "mark",
+          "name": "checkpoint:5"
+        },
+        {
+          "seq": 27,
+          "frame": 18,
+          "type": "point-guard",
+          "ownEpoch": 0,
+          "valid": false
+        },
+        {
+          "seq": 28,
+          "frame": 18,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 29,
+          "frame": 18,
+          "type": "mark",
+          "name": "checkpoint:6"
+        },
+        {
+          "seq": 30,
+          "frame": 19,
+          "type": "point-guard",
+          "ownEpoch": 0,
+          "valid": false
+        },
+        {
+          "seq": 31,
+          "frame": 19,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 32,
+          "frame": 19,
+          "type": "mark",
+          "name": "checkpoint:7"
+        },
+        {
+          "seq": 33,
+          "frame": 20,
+          "type": "point-guard",
+          "ownEpoch": 0,
+          "valid": false
+        },
+        {
+          "seq": 34,
+          "frame": 20,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 35,
+          "frame": 20,
+          "type": "mark",
+          "name": "checkpoint:8"
+        },
+        {
+          "seq": 36,
+          "frame": 20,
+          "type": "mark",
+          "name": "completed-fence-while-held"
+        },
+        {
+          "seq": 37,
+          "frame": 21,
+          "type": "point-guard",
+          "ownEpoch": 0,
+          "valid": false
+        },
+        {
+          "seq": 38,
+          "frame": 21,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 39,
+          "frame": 21,
+          "type": "mark",
+          "name": "checkpoint:9"
+        },
+        {
+          "seq": 40,
+          "frame": 21,
+          "type": "mark",
+          "name": "hide"
+        },
+        {
+          "seq": 41,
+          "frame": 21,
+          "type": "release",
+          "id": 6,
+          "label": "molgpu:attribute:bfactor"
+        },
+        {
+          "seq": 42,
+          "frame": 21,
+          "type": "destroy",
+          "id": 6
+        },
+        {
+          "seq": 43,
+          "frame": 21,
+          "type": "release",
+          "id": 3,
+          "label": "molgpu:radii"
+        },
+        {
+          "seq": 44,
+          "frame": 21,
+          "type": "destroy",
+          "id": 3
+        },
+        {
+          "seq": 45,
+          "frame": 21,
+          "type": "release",
+          "id": 2,
+          "label": "molgpu:positions"
+        },
+        {
+          "seq": 46,
+          "frame": 21,
+          "type": "destroy",
+          "id": 2
+        },
+        {
+          "seq": 47,
+          "frame": 22,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 48,
+          "frame": 22,
+          "type": "mark",
+          "name": "checkpoint:9"
+        },
+        {
+          "seq": 49,
+          "frame": 22,
+          "type": "compile-release"
+        },
+        {
+          "seq": 50,
+          "frame": 29,
+          "type": "submit",
+          "ids": []
+        },
+        {
+          "seq": 51,
+          "frame": 29,
+          "type": "mark",
+          "name": "checkpoint:10"
+        },
+        {
+          "seq": 52,
+          "frame": 29,
+          "type": "mark",
+          "name": "root-unmount"
+        }
+      ],
+      "buffers": [
+        {
+          "id": 0,
+          "label": "",
+          "size": 614400,
+          "wrapperAlive": false
+        },
+        {
+          "id": 1,
+          "label": "",
+          "size": 544,
+          "wrapperAlive": false
+        },
+        {
+          "id": 2,
+          "label": "molgpu:positions",
+          "size": 48,
+          "wrapperAlive": false
+        },
+        {
+          "id": 3,
+          "label": "molgpu:radii",
+          "size": 16,
+          "wrapperAlive": false
+        },
+        {
+          "id": 4,
+          "label": "molgpu:attribute:element",
+          "size": 16,
+          "wrapperAlive": false
+        },
+        {
+          "id": 5,
+          "label": "",
+          "size": 32,
+          "wrapperAlive": false
+        },
+        {
+          "id": 6,
+          "label": "molgpu:attribute:bfactor",
+          "size": 16,
+          "wrapperAlive": false
+        }
+      ],
+      "errors": []
+    }
+  ]
+}
