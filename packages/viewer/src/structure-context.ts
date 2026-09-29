@@ -14,6 +14,7 @@ import type { ShaderSource } from "@use-gpu/shader";
 import { atomRadii, type StructureData } from "@molgpu/table";
 import type { StructureResource } from "./types.ts";
 import { createStructureResource } from "./internal/structure-resource.ts";
+import { releaseImmutableAttributes } from "./internal/immutable-attribute-cache.ts";
 import { ColumnSource } from "./internal/column-source.ts";
 import { CoordinatesContext } from "./coordinates-context.ts";
 import { AttributesContext, EMPTY_ATTRIBUTES } from "./attributes-context.ts";
@@ -173,6 +174,15 @@ export const StructureProvider: LC<
   { data: StructureData; children?: LiveElement }
 > = ({ data, children }) => {
   const resource = useMemo(() => createStructureResource(data), [data]);
+  const attributeOwner = useMemo(() => ({}), [
+    data.identity,
+    data.revision.topology,
+    data.revision.attributes,
+  ]);
+  attributeOwners.set(resource, attributeOwner);
+  useResource((dispose) => {
+    dispose(() => releaseImmutableAttributes(attributeOwner));
+  }, [attributeOwner]);
   useResource((dispose) => {
     dispose(() => resource.dispose());
   }, [resource]);
@@ -186,6 +196,15 @@ export function useStructureResource(): StructureResource {
     throw new Error("useStructureResource() requires a <Structure> ancestor");
   }
   return context.resource;
+}
+
+const attributeOwners = new WeakMap<StructureResource, object>();
+
+/** Internal owner of immutable uploads for the nearest Structure layout. */
+export function useImmutableAttributeOwner(): object {
+  const owner = attributeOwners.get(useStructureResource());
+  if (!owner) throw new Error("Structure has no immutable attribute owner");
+  return owner;
 }
 
 /** Returns { resource, sources }; sources is null for an empty structure.

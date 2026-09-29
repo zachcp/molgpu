@@ -39,8 +39,6 @@ jobs:
           failed=()
           for suite in packages/viewer/test/run-*.mjs \
             packages/fields/test/run-browser.mjs; do
-            # Pre-existing failure since Phase 10 (molgpu-sept-19s).
-            [[ $suite == */run-gate2.mjs ]] && continue
             echo "::group::$suite"
             timeout 15m deno test -A "$suite" || failed+=("$suite")
             echo "::endgroup::"

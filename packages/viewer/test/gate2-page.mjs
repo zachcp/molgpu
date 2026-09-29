@@ -1,7 +1,7 @@
 // Gate 2 proof mount: one selection + one colour field drive Spacefill, Bonds,
 // and BallAndStick through <Structure>. Recolouring (swapping the colour field)
 // must upload no new geometry/position columns — only the field's shader module
-// changes. We count STORAGE allocations so a recolour shows zero.
+// changes. The first demand for a new immutable attribute may upload once.
 import { render, use, useState } from "@use-gpu/live";
 import { AutoCanvas, WebGPU } from "@use-gpu/webgpu";
 import {
@@ -68,6 +68,7 @@ GPUQueue.prototype.writeBuffer = function (
 const request = GPUAdapter.prototype.requestDevice;
 GPUAdapter.prototype.requestDevice = async function (...args) {
   const device = await request.apply(this, args);
+  probe.device = device;
   device.addEventListener(
     "uncapturederror",
     (e) => probe.errors.push(e.error.message),
@@ -167,7 +168,7 @@ const PALETTES = [
   ]),
 ];
 
-const CameraScene = ({ palette, mode }) => {
+const CameraScene = ({ palette, mode, mounted }) => {
   const camera = useCameraCurve(cameraCurve, focusResource);
   probe.camera = camera;
   return use(OrbitCamera, {
@@ -182,7 +183,7 @@ const CameraScene = ({ palette, mode }) => {
           intensity: 1,
         }),
         // three consumers of one colour field: Spacefill, Bonds, and BallAndStick.
-        use(Structure, {
+        mounted && use(Structure, {
           data,
           children: mode === "bonds"
             ? use(Bonds, { select: selected, width: 0.8 })
@@ -203,13 +204,15 @@ const App = () => {
   const [palette, setPalette] = useState(0);
   const [mode, setMode] = useState("gate2");
   const [time, setTime] = useState(0);
+  const [mounted, setMounted] = useState(true);
   probe.setPalette = setPalette;
   probe.setMode = setMode;
   probe.setTime = setTime;
+  probe.setMounted = setMounted;
   probe.mounted = true;
   return use(TimelineProvider, {
     time,
-    children: use(CameraScene, { palette, mode }),
+    children: use(CameraScene, { palette, mode, mounted }),
   });
 };
 

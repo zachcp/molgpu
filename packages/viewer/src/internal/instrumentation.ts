@@ -61,8 +61,9 @@ let enabled = false;
 let totals: Record<CounterName, number>,
   detail: Record<string, number>,
   gauges: Record<string, number>;
-// Live buffer accounting is never reset: live = created - destroyed since the
-// counters were enabled, so a test can compare against its own baseline.
+// Viewer-owned accounting measures logical ownership. `destroyed` here means
+// released by an owner; it does not imply GPUBuffer.destroy() was called.
+// Device-level counters below separately observe explicit native destruction.
 const owned = { created: 0, destroyed: 0 };
 const device = {
   created: 0,
@@ -130,7 +131,7 @@ export function gauge(name: string, value: number): void {
 
 /**
  * Note a GPU buffer owned by viewer code. The first sighting counts one
- * allocation; `release` (returned) counts its destruction once.
+ * allocation; `releaseOwnedBuffer` counts logical owner release once.
  */
 export function trackOwnedBuffer(buffer: GPUBuffer, label: string): void {
   if (!enabled || seenOwned.has(buffer)) return;
