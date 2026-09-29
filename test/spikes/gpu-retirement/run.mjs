@@ -11,7 +11,11 @@ const server = await createServer({
   resolve: { alias: workspaceAliases() },
   server: { host: "127.0.0.1", port: 0 },
   optimizeDeps: {
-    entries: ["test/spikes/gpu-retirement/index.html"],
+    entries: [
+      Deno.args.includes("--dssp")
+        ? "test/spikes/gpu-retirement/dssp.html"
+        : "test/spikes/gpu-retirement/index.html",
+    ],
     esbuildOptions: {
       plugins: [{
         name: "research-raw-quads-guard",
@@ -43,7 +47,15 @@ try {
   });
   const results = { browser: browser.version(), scenarios: [] };
   for (
-    const policy of Deno.args.includes("--attribute")
+    const policy of Deno.args.includes("--compute")
+      ? ["compute"]
+      : Deno.args.includes("--mask")
+      ? ["mask"]
+      : Deno.args.includes("--coords")
+      ? ["coords"]
+      : Deno.args.includes("--dssp")
+      ? ["dssp"]
+      : Deno.args.includes("--attribute")
       ? ["attribute"]
       : Deno.args.includes("--lines")
       ? ["lines"]
@@ -126,6 +138,10 @@ try {
             "column",
             "lines",
             "attribute",
+            "dssp",
+            "coords",
+            "mask",
+            "compute",
             "dynamic",
             "volume",
             "efield",
@@ -257,6 +273,17 @@ try {
           held.push(() => result.then(resolve, reject));
         });
       };
+      if (policy === "compute") {
+        const compileCompute = GPUDevice.prototype.createComputePipelineAsync;
+        GPUDevice.prototype.createComputePipelineAsync = function (desc) {
+          const result = compileCompute.call(this, desc);
+          if (!armed) return result;
+          log("compute-compile-held");
+          return new Promise((resolve, reject) => {
+            held.push(() => result.then(resolve, reject));
+          });
+        };
+      }
       globalThis.__retirement = {
         mark: (name) => log("mark", { name }),
         guardFor: policy === "point-guarded"
@@ -294,7 +321,9 @@ try {
       };
     }, policy);
     await page.goto(
-      `${server.resolvedUrls.local[0]}test/spikes/gpu-retirement/index.html${
+      `${server.resolvedUrls.local[0]}test/spikes/gpu-retirement/${
+        policy === "dssp" ? "dssp.html" : "index.html"
+      }${
         ["guarded", "unguarded"].includes(policy)
           ? `?guarded&${policy}`
           : policy === "dynamic"
@@ -309,6 +338,14 @@ try {
           ? "?lines"
           : policy === "attribute"
           ? "?attribute"
+          : policy === "dssp"
+          ? "?dssp"
+          : policy === "coords"
+          ? "?coords"
+          : policy === "mask"
+          ? "?mask"
+          : policy === "compute"
+          ? "?compute"
           : ""
       }`,
     );
@@ -327,6 +364,14 @@ try {
               ? "molgpu:lines:vertices"
               : new URLSearchParams(location.search).has("attribute")
               ? "molgpu:attr:producer:gpu:test"
+              : new URLSearchParams(location.search).has("dssp")
+              ? "molgpu:dssp:ssCode"
+              : new URLSearchParams(location.search).has("coords")
+              ? "molgpu:coords:provider"
+              : new URLSearchParams(location.search).has("mask")
+              ? "molgpu:coords:transform:mask"
+              : new URLSearchParams(location.search).has("compute")
+              ? "molgpu:coords:transform:mask"
               : new URLSearchParams(location.search).has("volume")
               ? "molgpu:volume:values"
               : new URLSearchParams(location.search).has("dynamic")
@@ -336,7 +381,9 @@ try {
         return s.events.some((e) =>
           (new URLSearchParams(location.search).has("efield") ||
               new URLSearchParams(location.search).has("lines") ||
-              new URLSearchParams(location.search).has("attribute")
+              new URLSearchParams(location.search).has("attribute") ||
+              new URLSearchParams(location.search).has("dssp") ||
+              new URLSearchParams(location.search).has("coords")
             ? e.type === "draw"
             : e.type === "submit") && e.ids.some((id) => ids.includes(id))
         );
@@ -350,7 +397,20 @@ try {
     });
     await page.waitForFunction(() => globalThis.__retirement.held() > 0);
     if (
-      ["dynamic", "efield", "column", "lines", "attribute"].includes(policy)
+      [
+        "dynamic",
+        "efield",
+        "column",
+        "lines",
+        "attribute",
+        "dssp",
+        "coords",
+        "mask",
+        "compute",
+      ]
+        .includes(
+          policy,
+        )
     ) {
       await page.evaluate(() => globalThis.__scene.epoch(1));
     }
@@ -438,6 +498,14 @@ try {
         ? "molgpu:lines:vertices"
         : s.policy === "attribute"
         ? "molgpu:attr:producer:gpu:test"
+        : s.policy === "dssp"
+        ? "molgpu:dssp:ssCode"
+        : s.policy === "coords"
+        ? "molgpu:coords:provider"
+        : s.policy === "mask"
+        ? "molgpu:coords:transform:mask"
+        : s.policy === "compute"
+        ? "molgpu:coords:transform:mask"
         : s.policy === "volume"
         ? "molgpu:volume:values"
         : s.policy === "dynamic"
@@ -471,6 +539,9 @@ try {
         e.ids.some((id) => original.has(id))
       ),
       noPageErrors: s.errors.length === 0,
+      computeCompileHeld: s.held.events.some((e) =>
+        e.type === "compute-compile-held"
+      ),
       oldGuardRejected: s.held.events.some((e) => e.name === "guard:3:false"),
       oldPointGuardRejected: s.held.events.some((e) =>
         e.type === "point-guard" && !e.valid
@@ -495,6 +566,14 @@ try {
     new URL(
       Deno.args.includes("--dynamic")
         ? "../../../docs/findings/evidence/2026-09-29-dynamic-retirement.json"
+        : Deno.args.includes("--compute")
+        ? "../../../docs/findings/evidence/2026-09-29-compute-retirement.json"
+        : Deno.args.includes("--mask")
+        ? "../../../docs/findings/evidence/2026-09-29-transform-mask-retirement.json"
+        : Deno.args.includes("--coords")
+        ? "../../../docs/findings/evidence/2026-09-29-coordinate-retirement.json"
+        : Deno.args.includes("--dssp")
+        ? "../../../docs/findings/evidence/2026-09-29-dssp-retirement.json"
         : Deno.args.includes("--attribute")
         ? "../../../docs/findings/evidence/2026-09-29-attribute-retirement.json"
         : Deno.args.includes("--lines")
@@ -538,6 +617,12 @@ try {
         "EField replacement must retain an old phi consumer past the fence",
       );
     }
+    if (s.policy === "compute") {
+      assert(
+        s.checks.computeCompileHeld,
+        "replacement compute pipeline was not held",
+      );
+    }
     if (s.policy === "point-guarded") {
       assert(s.checks.oldPointGuardRejected);
       assert(s.summary.gpuErrors === 0 && s.summary.postDestroy.length === 0);
@@ -565,6 +650,14 @@ try {
     const current = results.scenarios.find((s) =>
       s.policy === (Deno.args.includes("--efield")
         ? "efield"
+        : Deno.args.includes("--compute")
+        ? "compute"
+        : Deno.args.includes("--mask")
+        ? "mask"
+        : Deno.args.includes("--coords")
+        ? "coords"
+        : Deno.args.includes("--dssp")
+        ? "dssp"
         : Deno.args.includes("--attribute")
         ? "attribute"
         : Deno.args.includes("--lines")

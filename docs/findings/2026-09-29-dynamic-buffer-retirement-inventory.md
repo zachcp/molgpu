@@ -4,20 +4,20 @@ Date: 2026-09-29. `molgpu-sept-crj.15` implementation evidence on use.gpu
 0.20.0, after `19s` landed. This is a per-path inventory and a bounded repair;
 the issue remains open until the other published paths and memory cases pass.
 
-| Owner / allocation                                     | Current cleanup                                             | Last possible consumer                        | State                                                                                                                                              |
-| ------------------------------------------------------ | ----------------------------------------------------------- | --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Immutable Structure attribute                          | Owner releases references                                   | Retained styled draw                          | Fixed by `19s`; Gate 2 and CI pass.                                                                                                                |
-| Shared `VolumeData` values                             | Last viewer borrower released references                    | Retained slice/field draw                     | Fixed here; held field style change reproduced 9 submissions after destruction and 9 WebGPU errors before the repair, then 0/0.                    |
-| Root positions/radii (`ColumnSource`)                  | Immediate `destroy()`                                       | Retained representation draw                  | Open; held style plus Structure data replacement kept old positions alive until hide (0/0), so this variant did not exercise early destruction.    |
-| Coordinate `ComputeBuffer` output                      | Immediate `destroy()`                                       | Retained draw and downstream compute/readback | Open; a held Transform all-to-selected replacement withdrew the old draw before destruction (0/0), which does not establish all provider variants. |
-| GPU attribute `ComputeBuffer` output                   | Viewer releases reference; native reachability reclaims     | Retained styled draw and downstream readback  | Fixed in the follow-up: changing producer output width with a held styled draw produced 9 destroyed-buffer submissions/errors before repair.       |
-| Trajectory window/map, Transform and NormalMode inputs | Immediate `destroy()`                                       | Retained compute and downstream draw          | Open.                                                                                                                                              |
-| Superpose/Unwrap working and status buffers            | Immediate `destroy()`                                       | Dispatch and status copy                      | Open.                                                                                                                                              |
-| EField working/output buffers                          | Viewer releases references; native reachability reclaims    | Retained VolumeSlice draw or dispatch         | Fixed in the follow-up: resize with a held replacement produced 7 destroyed-phi submissions/errors before repair and 0/0 after.                    |
-| FieldLines working/output buffers                      | Viewer releases references; native reachability reclaims    | Retained LineLayer draw or dispatch           | Fixed in the follow-up: held grid replacement produced 6 destroyed-vertex submissions/errors before repair; acceptance trace follows.              |
-| Coordinate bounds and status/snapshot readback staging | Immediate or map-completion `destroy()`                     | In-flight or later retained copy/map          | Open; preserve owner, buffer and layout tokens when changing cleanup.                                                                              |
-| DSSP published `ssCode`                                | Immediate `destroy()`                                       | Retained field draw/readback                  | Open.                                                                                                                                              |
-| DSSP transient scratch                                 | Destroyed in `gpuDssp()` after its awaited mapped readbacks | That invocation's submitted dispatch/copies   | Source-reviewed as local scratch; leave in place pending the held-compute run.                                                                     |
+| Owner / allocation                                     | Current cleanup                                             | Last possible consumer                        | State                                                                                                                                               |
+| ------------------------------------------------------ | ----------------------------------------------------------- | --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Immutable Structure attribute                          | Owner releases references                                   | Retained styled draw                          | Fixed by `19s`; Gate 2 and CI pass.                                                                                                                 |
+| Shared `VolumeData` values                             | Last viewer borrower released references                    | Retained slice/field draw                     | Fixed here; held field style change reproduced 9 submissions after destruction and 9 WebGPU errors before the repair, then 0/0.                     |
+| Root positions/radii (`ColumnSource`)                  | Immediate `destroy()`                                       | Retained representation draw                  | Open; held style plus Structure data replacement kept old positions alive until hide (0/0), so this variant did not exercise early destruction.     |
+| Coordinate `ComputeBuffer` output                      | Immediate `destroy()`                                       | Retained draw and downstream compute/readback | Open; both held Transform selection and root topology row-count replacement withdrew old draws before destruction (0/0).                            |
+| GPU attribute `ComputeBuffer` output                   | Viewer releases reference; native reachability reclaims     | Retained styled draw and downstream readback  | Fixed in the follow-up: changing producer output width with a held styled draw produced 9 destroyed-buffer submissions/errors before repair.        |
+| Trajectory window/map, Transform and NormalMode inputs | Immediate `destroy()`                                       | Retained compute and downstream draw          | Open; selected Transform mask replacement submitted no work using the destroyed old mask (0/0), leaving other inputs and compute variants untested. |
+| Superpose/Unwrap working and status buffers            | Immediate `destroy()`                                       | Dispatch and status copy                      | Open.                                                                                                                                               |
+| EField working/output buffers                          | Viewer releases references; native reachability reclaims    | Retained VolumeSlice draw or dispatch         | Fixed in the follow-up: resize with a held replacement produced 7 destroyed-phi submissions/errors before repair and 0/0 after.                     |
+| FieldLines working/output buffers                      | Viewer releases references; native reachability reclaims    | Retained LineLayer draw or dispatch           | Fixed in the follow-up: held grid replacement produced 6 destroyed-vertex submissions/errors before repair; acceptance trace follows.               |
+| Coordinate bounds and status/snapshot readback staging | Immediate or map-completion `destroy()`                     | In-flight or later retained copy/map          | Open; status callback held after native map completion was safely discarded at unmount (0 errors), but pending GPU copies and other owners remain.  |
+| DSSP published `ssCode`                                | Immediate `destroy()`                                       | Retained field draw/readback                  | Open; a WobbleCoordinates generation change withdrew the old `ssCode` draw before destruction (0/0), so other publication/owner variants remain.    |
+| DSSP transient scratch                                 | Destroyed in `gpuDssp()` after its awaited mapped readbacks | That invocation's submitted dispatch/copies   | Source-reviewed as local scratch; leave in place pending the held-compute run.                                                                      |
 
 The [retirement probe](../../test/spikes/gpu-retirement/run.mjs) now has a
 `--volume` policy. It holds replacement render compilation past two frames and a
@@ -94,3 +94,37 @@ replacement. After releasing viewer ownership without explicit destruction,
 `--attribute --acceptance` observed zero post-destroy submissions and errors,
 while the old draw stayed active past the fence and stopped after hide. Other
 producer and readback combinations remain open.
+
+The `--dssp` probe coloured crambin with its published GPU `ssCode` buffer, then
+changed a WobbleCoordinates generation during held render compilation. The old
+`ssCode` buffer was destroyed only after its draw stopped submitting; there were
+no post-destroy submissions or WebGPU errors. The old draw did not remain active
+after the completed fence, so this is a negative result for that specific
+generation transition, not a general retirement guarantee.
+
+The `--coords` probe changed a Transform provider's root topology from four to
+five atom rows while render compilation was held, forcing a new output width.
+The old provider draw was withdrawn before its output was destroyed, with no
+post-destroy submissions or GPU errors. This confirms the row-count replacement
+ordering only; in-place provider variants and retained compute/readback
+consumers still need coverage.
+
+The `--mask` probe changed a selected Transform from the first two atom rows to
+the other two while render compilation was held. Its old mask buffer was
+destroyed, but no subsequent compute submission used it, and Chrome reported no
+WebGPU errors. This is a negative result for one selected-mask replacement;
+Trajectory and NormalMode inputs remain untested under retained compute work.
+
+The `--compute` variant began with a selected Transform, switched to the
+all-atom kernel, and held its replacement `createComputePipelineAsync` result.
+The probe confirmed that the compute compilation was held beyond two frames; the
+old mask was destroyed, but no later dispatch submitted it and there were no
+WebGPU errors. This establishes safe withdrawal for this one shader swap, not
+for every dynamic input owner.
+
+The separate `run-status.mjs` probe submitted a status copy, held its mapped
+completion after native `mapAsync` resolved, unmounted the owner, and then
+released the callback. Both staging buffers were destroyed, no status was
+published and Chrome reported no WebGPU errors. This confirms the epoch guard
+for a late callback after native map completion. It does not prove cleanup while
+the GPU copy itself is still in flight.

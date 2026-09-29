@@ -34,9 +34,9 @@ import {
   linear,
   volumeSample,
 } from "@molgpu/fields";
-import { createVolume, withAttributes } from "@molgpu/table";
+import { createStructure, createVolume, withAttributes } from "@molgpu/table";
 import { where } from "@molgpu/select";
-import { structure } from "../../../packages/fields/test/fixture.ts";
+import { fixture, structure } from "../../../packages/fields/test/fixture.ts";
 import { TestAttributeProducer } from "../../../packages/viewer/test/tsx/test-attribute-producer.ts";
 
 void React;
@@ -71,6 +71,11 @@ const shift = [
   1,
 ];
 const selected = where("atom", "retirement-subset", (_data, i) => i < 2);
+const otherSelected = where(
+  "atom",
+  "retirement-other-subset",
+  (_data, i) => i >= 2,
+);
 const volume = createVolume({
   values: Float32Array.from({ length: 64 }, (_, i) => i % 4),
   dims: [4, 4, 4],
@@ -84,6 +89,21 @@ const producedColor = colormap(
   linear(attribute("gpu:test", { domain: "atom" }), { domain: [0, 4] }),
   [[0, [0, 0, 1, 1]], [1, [1, 0, 0, 1]]],
 );
+const largerStructure = () => {
+  const input = fixture();
+  input.positions = Float32Array.from([...input.positions, 4, 0, 0]);
+  const atoms = input.topology.atoms;
+  atoms.count = 5;
+  atoms.id.push("5");
+  atoms.name.push("C");
+  atoms.altloc.push("");
+  atoms.residue = Uint32Array.from([...atoms.residue, 1]);
+  atoms.element = Uint8Array.from([...atoms.element, 6]);
+  atoms.occupancy = Float32Array.from([...atoms.occupancy, 1]);
+  atoms.bfactor = Float32Array.from([...atoms.bfactor, 50]);
+  atoms.radius = Float32Array.from([...atoms.radius!, 1.7]);
+  return createStructure(input);
+};
 const controls = {
   palette: (_n: number) => {},
   epoch: (_n: number) => {},
@@ -169,6 +189,10 @@ const App = () => {
   const [visible, setVisible] = useState(true);
   const [tick, setTick] = useState(0);
   const data = useMemo(() => structure(), [epoch]);
+  const providerData = useMemo(
+    () => epoch ? largerStructure() : structure(),
+    [epoch],
+  );
   const efieldData = useMemo(() => structure(), []);
   const charged = useMemo(() =>
     withAttributes(efieldData, {
@@ -252,6 +276,34 @@ const App = () => {
                     color={palette ? colors[0] : volumeColor}
                     material={{ type: "basic" }}
                   />
+                </Structure>
+              )
+              : new URLSearchParams(location.search).has("coords")
+              ? (
+                <Structure data={providerData}>
+                  <Transform matrix={shift}>
+                    <Spacefill
+                      color={colors[palette]}
+                      material={{ type: "basic" }}
+                    />
+                  </Transform>
+                </Structure>
+              )
+              : new URLSearchParams(location.search).has("mask") ||
+                  new URLSearchParams(location.search).has("compute")
+              ? (
+                <Structure data={efieldData}>
+                  <Transform
+                    matrix={shift}
+                    select={new URLSearchParams(location.search).has("compute")
+                      ? (epoch ? undefined : selected)
+                      : (epoch ? otherSelected : selected)}
+                  >
+                    <Spacefill
+                      color={colors[palette]}
+                      material={{ type: "basic" }}
+                    />
+                  </Transform>
                 </Structure>
               )
               : new URLSearchParams(location.search).has("dynamic")
