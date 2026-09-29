@@ -8,11 +8,12 @@ the issue remains open until the other published paths and memory cases pass.
 | ------------------------------------------------------ | ----------------------------------------------------------- | --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Immutable Structure attribute                          | Owner releases references                                   | Retained styled draw                          | Fixed by `19s`; Gate 2 and CI pass.                                                                                                                |
 | Shared `VolumeData` values                             | Last viewer borrower released references                    | Retained slice/field draw                     | Fixed here; held field style change reproduced 9 submissions after destruction and 9 WebGPU errors before the repair, then 0/0.                    |
-| Root positions/radii (`ColumnSource`)                  | Immediate `destroy()`                                       | Retained representation draw                  | Open; needs held replacement coverage.                                                                                                             |
+| Root positions/radii (`ColumnSource`)                  | Immediate `destroy()`                                       | Retained representation draw                  | Open; held style plus Structure data replacement kept old positions alive until hide (0/0), so this variant did not exercise early destruction.    |
 | Coordinate and GPU attribute `ComputeBuffer` output    | Immediate `destroy()`                                       | Retained draw and downstream compute/readback | Open; a held Transform all-to-selected replacement withdrew the old draw before destruction (0/0), which does not establish all provider variants. |
 | Trajectory window/map, Transform and NormalMode inputs | Immediate `destroy()`                                       | Retained compute and downstream draw          | Open.                                                                                                                                              |
 | Superpose/Unwrap working and status buffers            | Immediate `destroy()`                                       | Dispatch and status copy                      | Open.                                                                                                                                              |
-| EField and FieldLines working/output buffers           | Two-frame-plus-fence `retireBuffers()`                      | Retained draw or dispatch                     | Open; queue completion does not withdraw future retained work.                                                                                     |
+| EField working/output buffers                          | Viewer releases references; native reachability reclaims    | Retained VolumeSlice draw or dispatch         | Fixed in the follow-up: resize with a held replacement produced 7 destroyed-phi submissions/errors before repair and 0/0 after.                    |
+| FieldLines working/output buffers                      | Viewer releases references; native reachability reclaims    | Retained LineLayer draw or dispatch           | Fixed in the follow-up: held grid replacement produced 6 destroyed-vertex submissions/errors before repair; acceptance trace follows.              |
 | Coordinate bounds and status/snapshot readback staging | Immediate or map-completion `destroy()`                     | In-flight or later retained copy/map          | Open; preserve owner, buffer and layout tokens when changing cleanup.                                                                              |
 | DSSP published `ssCode`                                | Immediate `destroy()`                                       | Retained field draw/readback                  | Open.                                                                                                                                              |
 | DSSP transient scratch                                 | Destroyed in `gpuDssp()` after its awaited mapped readbacks | That invocation's submitted dispatch/copies   | Source-reviewed as local scratch; leave in place pending the held-compute run.                                                                     |
@@ -43,3 +44,32 @@ destroyed, so it produced no post-destruction submission or WebGPU error. This
 negative result is not a reason to keep immediate destruction for every
 coordinate or attribute producer path; the remaining owner and consumer variants
 above require their own coverage.
+
+The `--efield` policy keeps a `VolumeSlice` drawing EField's live `phi` buffer,
+resizes EField's grid, and holds replacement render compilation past two frames
+and a completed queue fence. With `retireBuffers()`, the old slice submitted the
+destroyed `phi` buffer seven times and Chrome reported seven uncaptured WebGPU
+errors. Releasing EField's viewer ownership without explicit destruction
+produced zero post-destroy submissions and errors; the old draw remained active
+after the fence and stopped after the subtree was hidden. This trace covers
+resize with a live slice, not all EField consumers. Its forced-GC observation
+found no reachable molecular buffer wrappers, but native GPU memory still needs
+repeat-churn coverage.
+
+The `--column` policy then replaced `Structure` data while render compilation
+was held and tracked the original root positions buffer. The old positions draw
+persisted beyond the queue fence, but `ColumnSource` kept that buffer until the
+subtree was hidden. There were no post-destroy submissions or GPU errors. This
+is a negative result for that exact ordering, not proof that all root-column
+replacements are safe.
+
+The `--lines` policy keeps `FieldLines` mounted below EField while the grid
+resizes and replacement render compilation is held. Before repair, its old
+`vertices` buffer was explicitly destroyed and then submitted by the retained
+`LineLayer` six times, with six uncaptured WebGPU errors. After the focused
+ownership change, `--lines --acceptance` observed zero post-destroy submissions
+and errors while the old draw remained active past the fence and stopped after
+hide. The last output wrapper remains reachable through the existing
+`fieldLinesTesting.last` test hook after unmount; repeated churn needs to
+account for that one retained buffer when checking native memory. With its two
+callers repaired, the frame-and-fence `retireBuffers()` helper has been removed.

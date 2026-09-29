@@ -43,7 +43,13 @@ try {
   });
   const results = { browser: browser.version(), scenarios: [] };
   for (
-    const policy of Deno.args.includes("--dynamic")
+    const policy of Deno.args.includes("--lines")
+      ? ["lines"]
+      : Deno.args.includes("--column")
+      ? ["column"]
+      : Deno.args.includes("--efield")
+      ? ["efield"]
+      : Deno.args.includes("--dynamic")
       ? ["dynamic"]
       : Deno.args.includes("--volume")
       ? ["volume"]
@@ -115,8 +121,11 @@ try {
         if (
           [
             "current",
+            "column",
+            "lines",
             "dynamic",
             "volume",
+            "efield",
             "unguarded",
             "guarded",
             "point-guarded",
@@ -175,6 +184,38 @@ try {
       ) {
         const original = GPURenderPassEncoder.prototype[method];
         GPURenderPassEncoder.prototype[method] = function (...args) {
+          const pass = passes.get(this);
+          if (pass) {
+            for (const ids of pass.slots.values()) {
+              for (const id of ids) pass.used.add(id);
+            }
+            log("draw", { ids: [...pass.used] });
+          }
+          return original.apply(this, args);
+        };
+      }
+      const beginCompute = GPUCommandEncoder.prototype.beginComputePass;
+      GPUCommandEncoder.prototype.beginComputePass = function (...args) {
+        const pass = beginCompute.apply(this, args);
+        const used = encoders.get(this) ?? new Set();
+        encoders.set(this, used);
+        passes.set(pass, { used, slots: new Map() });
+        return pass;
+      };
+      const setComputeGroup = GPUComputePassEncoder.prototype.setBindGroup;
+      GPUComputePassEncoder.prototype.setBindGroup = function (
+        slot,
+        group,
+        ...args
+      ) {
+        passes.get(this)?.slots.set(slot, groups.get(group) ?? []);
+        return setComputeGroup.call(this, slot, group, ...args);
+      };
+      for (
+        const method of ["dispatchWorkgroups", "dispatchWorkgroupsIndirect"]
+      ) {
+        const original = GPUComputePassEncoder.prototype[method];
+        GPUComputePassEncoder.prototype[method] = function (...args) {
           const pass = passes.get(this);
           if (pass) {
             for (const ids of pass.slots.values()) {
@@ -257,6 +298,12 @@ try {
           ? "?dynamic"
           : policy === "volume"
           ? "?volume"
+          : policy === "efield"
+          ? "?efield"
+          : policy === "column"
+          ? "?column"
+          : policy === "lines"
+          ? "?lines"
           : ""
       }`,
     );
@@ -267,6 +314,12 @@ try {
           b.label ===
             (new URLSearchParams(location.search).has("guarded")
               ? "molgpu:guarded-face:3"
+              : new URLSearchParams(location.search).has("efield")
+              ? "molgpu:efield:phi"
+              : new URLSearchParams(location.search).has("column")
+              ? "molgpu:positions"
+              : new URLSearchParams(location.search).has("lines")
+              ? "molgpu:lines:vertices"
               : new URLSearchParams(location.search).has("volume")
               ? "molgpu:volume:values"
               : new URLSearchParams(location.search).has("dynamic")
@@ -274,7 +327,10 @@ try {
               : "molgpu:attribute:element")
         ).map((b) => b.id);
         return s.events.some((e) =>
-          e.type === "submit" && e.ids.some((id) => ids.includes(id))
+          (new URLSearchParams(location.search).has("efield") ||
+              new URLSearchParams(location.search).has("lines")
+            ? e.type === "draw"
+            : e.type === "submit") && e.ids.some((id) => ids.includes(id))
         );
       },
       null,
@@ -285,7 +341,7 @@ try {
       globalThis.__scene.palette(1);
     });
     await page.waitForFunction(() => globalThis.__retirement.held() > 0);
-    if (policy === "dynamic") {
+    if (["dynamic", "efield", "column", "lines"].includes(policy)) {
       await page.evaluate(() => globalThis.__scene.epoch(1));
     }
     if (["guarded", "unguarded"].includes(policy)) {
@@ -364,6 +420,12 @@ try {
     const element = s.held.buffers.find((b) =>
       b.label === (["guarded", "unguarded"].includes(s.policy)
         ? "molgpu:guarded-face:3"
+        : s.policy === "efield"
+        ? "molgpu:efield:phi"
+        : s.policy === "column"
+        ? "molgpu:positions"
+        : s.policy === "lines"
+        ? "molgpu:lines:vertices"
         : s.policy === "volume"
         ? "molgpu:volume:values"
         : s.policy === "dynamic"
@@ -421,6 +483,12 @@ try {
     new URL(
       Deno.args.includes("--dynamic")
         ? "../../../docs/findings/evidence/2026-09-29-dynamic-retirement.json"
+        : Deno.args.includes("--lines")
+        ? "../../../docs/findings/evidence/2026-09-29-lines-retirement.json"
+        : Deno.args.includes("--column")
+        ? "../../../docs/findings/evidence/2026-09-29-column-retirement.json"
+        : Deno.args.includes("--efield")
+        ? "../../../docs/findings/evidence/2026-09-29-efield-retirement.json"
         : Deno.args.includes("--volume")
         ? "../../../docs/findings/evidence/2026-09-29-volume-retirement.json"
         : "../../../docs/findings/evidence/2026-09-28-gpu-retirement.json",
@@ -450,6 +518,12 @@ try {
         s.checks.noPageErrors,
       "research preconditions/withdrawal observation failed",
     );
+    if (s.policy === "efield" || s.policy === "lines") {
+      assert(
+        s.checks.oldDrawAfterCompletedFence,
+        "EField replacement must retain an old phi consumer past the fence",
+      );
+    }
     if (s.policy === "point-guarded") {
       assert(s.checks.oldPointGuardRejected);
       assert(s.summary.gpuErrors === 0 && s.summary.postDestroy.length === 0);
@@ -475,7 +549,13 @@ try {
   }
   if (Deno.args.includes("--acceptance")) {
     const current = results.scenarios.find((s) =>
-      s.policy === (Deno.args.includes("--dynamic")
+      s.policy === (Deno.args.includes("--efield")
+        ? "efield"
+        : Deno.args.includes("--lines")
+        ? "lines"
+        : Deno.args.includes("--column")
+        ? "column"
+        : Deno.args.includes("--dynamic")
         ? "dynamic"
         : Deno.args.includes("--volume")
         ? "volume"

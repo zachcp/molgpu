@@ -21,8 +21,11 @@ import type { Translucency, VectorLike, ViewerComponent } from "./types.ts";
 import { useVolume } from "./volume-context.ts";
 import { withColumns } from "./internal/representation.ts";
 import { checkOpacity, modeProps } from "./internal/opacity.ts";
-import { count, trackOwnedBuffer } from "./internal/instrumentation.ts";
-import { retireBuffers } from "./internal/retire-buffers.ts";
+import {
+  count,
+  releaseOwnedBuffer,
+  trackOwnedBuffer,
+} from "./internal/instrumentation.ts";
 import { useRepaint } from "./internal/use-repaint.ts";
 import { useBindingProbe } from "./internal/use-binding-probe.ts";
 import { viewer } from "./internal/elements.ts";
@@ -222,7 +225,10 @@ export const FieldLines: ViewerComponent<
     return { seedBuffer, out, params };
   }, [device, points, steps, step, minField, potentialCap]);
   useResource((dispose) => {
-    dispose(() => retireBuffers(device, Object.values(buffers)));
+    // A retained LineLayer can keep submitting these vertices while its
+    // replacement shader compiles. Release our ownership and let WebGPU
+    // reclaim each allocation after the last binding becomes unreachable.
+    dispose(() => Object.values(buffers).forEach(releaseOwnedBuffer));
   }, [buffers]);
   const group = useMemo(() =>
     device.createBindGroup({

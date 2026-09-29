@@ -19,9 +19,16 @@ import {
   useDeviceContext,
 } from "@use-gpu/workbench";
 import type { StorageSource } from "@use-gpu/core";
-import { Spacefill, Structure, Transform } from "@molgpu/viewer";
+import {
+  EField,
+  FieldLines,
+  Spacefill,
+  Structure,
+  Transform,
+  VolumeSlice,
+} from "@molgpu/viewer";
 import { attribute, categorical, colormap, volumeSample } from "@molgpu/fields";
-import { createVolume } from "@molgpu/table";
+import { createVolume, withAttributes } from "@molgpu/table";
 import { where } from "@molgpu/select";
 import { structure } from "../../../packages/fields/test/fixture.ts";
 
@@ -151,6 +158,16 @@ const App = () => {
   const [visible, setVisible] = useState(true);
   const [tick, setTick] = useState(0);
   const data = useMemo(() => structure(), [epoch]);
+  const efieldData = useMemo(() => structure(), []);
+  const charged = useMemo(() =>
+    withAttributes(efieldData, {
+      partialCharge: {
+        domain: "atom",
+        kind: "scalar",
+        values: Float32Array.of(1, -1, 1, -1),
+        provenance: "user",
+      },
+    }), [efieldData]);
   Object.assign(controls, {
     palette: setPalette,
     epoch: setEpoch,
@@ -178,6 +195,25 @@ const App = () => {
                     side="both"
                   />
                 </>
+              )
+              : new URLSearchParams(location.search).has("efield") ||
+                  new URLSearchParams(location.search).has("lines")
+              ? (
+                <Structure data={charged}>
+                  <EField
+                    box={{ min: [-4, -4, -4], max: [8 + epoch, 4, 4] }}
+                    spacing={1}
+                  >
+                    <Spacefill
+                      color={colors[palette]}
+                      material={{ type: "basic" }}
+                    />
+                    <VolumeSlice plane={{ axis: 2, index: 4 }} />
+                    {new URLSearchParams(location.search).has("lines")
+                      ? <FieldLines seeds={{ spacing: 4 }} steps={8} />
+                      : null}
+                  </EField>
+                </Structure>
               )
               : new URLSearchParams(location.search).has("volume")
               ? (
