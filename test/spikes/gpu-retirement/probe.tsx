@@ -71,6 +71,11 @@ const shift = [
   1,
 ];
 const selected = where("atom", "retirement-subset", (_data, i) => i < 2);
+const otherSelected = where(
+  "atom",
+  "retirement-other-subset",
+  (_data, i) => i >= 2,
+);
 const volume = createVolume({
   values: Float32Array.from({ length: 64 }, (_, i) => i % 4),
   dims: [4, 4, 4],
@@ -277,6 +282,20 @@ const App = () => {
               ? (
                 <Structure data={providerData}>
                   <Transform matrix={shift}>
+                    <Spacefill
+                      color={colors[palette]}
+                      material={{ type: "basic" }}
+                    />
+                  </Transform>
+                </Structure>
+              )
+              : new URLSearchParams(location.search).has("mask")
+              ? (
+                <Structure data={efieldData}>
+                  <Transform
+                    matrix={shift}
+                    select={epoch ? otherSelected : selected}
+                  >
                     <Spacefill
                       color={colors[palette]}
                       material={{ type: "basic" }}

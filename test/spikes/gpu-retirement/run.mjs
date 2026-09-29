@@ -47,7 +47,9 @@ try {
   });
   const results = { browser: browser.version(), scenarios: [] };
   for (
-    const policy of Deno.args.includes("--coords")
+    const policy of Deno.args.includes("--mask")
+      ? ["mask"]
+      : Deno.args.includes("--coords")
       ? ["coords"]
       : Deno.args.includes("--dssp")
       ? ["dssp"]
@@ -136,6 +138,7 @@ try {
             "attribute",
             "dssp",
             "coords",
+            "mask",
             "dynamic",
             "volume",
             "efield",
@@ -325,6 +328,8 @@ try {
           ? "?dssp"
           : policy === "coords"
           ? "?coords"
+          : policy === "mask"
+          ? "?mask"
           : ""
       }`,
     );
@@ -347,6 +352,8 @@ try {
               ? "molgpu:dssp:ssCode"
               : new URLSearchParams(location.search).has("coords")
               ? "molgpu:coords:provider"
+              : new URLSearchParams(location.search).has("mask")
+              ? "molgpu:coords:transform:mask"
               : new URLSearchParams(location.search).has("volume")
               ? "molgpu:volume:values"
               : new URLSearchParams(location.search).has("dynamic")
@@ -372,7 +379,16 @@ try {
     });
     await page.waitForFunction(() => globalThis.__retirement.held() > 0);
     if (
-      ["dynamic", "efield", "column", "lines", "attribute", "dssp", "coords"]
+      [
+        "dynamic",
+        "efield",
+        "column",
+        "lines",
+        "attribute",
+        "dssp",
+        "coords",
+        "mask",
+      ]
         .includes(
           policy,
         )
@@ -467,6 +483,8 @@ try {
         ? "molgpu:dssp:ssCode"
         : s.policy === "coords"
         ? "molgpu:coords:provider"
+        : s.policy === "mask"
+        ? "molgpu:coords:transform:mask"
         : s.policy === "volume"
         ? "molgpu:volume:values"
         : s.policy === "dynamic"
@@ -524,6 +542,8 @@ try {
     new URL(
       Deno.args.includes("--dynamic")
         ? "../../../docs/findings/evidence/2026-09-29-dynamic-retirement.json"
+        : Deno.args.includes("--mask")
+        ? "../../../docs/findings/evidence/2026-09-29-transform-mask-retirement.json"
         : Deno.args.includes("--coords")
         ? "../../../docs/findings/evidence/2026-09-29-coordinate-retirement.json"
         : Deno.args.includes("--dssp")
@@ -598,6 +618,8 @@ try {
     const current = results.scenarios.find((s) =>
       s.policy === (Deno.args.includes("--efield")
         ? "efield"
+        : Deno.args.includes("--mask")
+        ? "mask"
         : Deno.args.includes("--coords")
         ? "coords"
         : Deno.args.includes("--dssp")
