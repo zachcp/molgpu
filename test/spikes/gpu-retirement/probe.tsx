@@ -21,6 +21,7 @@ import {
 import type { StorageSource } from "@use-gpu/core";
 import {
   EField,
+  FieldLines,
   Spacefill,
   Structure,
   Transform,
@@ -195,7 +196,8 @@ const App = () => {
                   />
                 </>
               )
-              : new URLSearchParams(location.search).has("efield")
+              : new URLSearchParams(location.search).has("efield") ||
+                  new URLSearchParams(location.search).has("lines")
               ? (
                 <Structure data={charged}>
                   <EField
@@ -207,6 +209,9 @@ const App = () => {
                       material={{ type: "basic" }}
                     />
                     <VolumeSlice plane={{ axis: 2, index: 4 }} />
+                    {new URLSearchParams(location.search).has("lines")
+                      ? <FieldLines seeds={{ spacing: 4 }} steps={8} />
+                      : null}
                   </EField>
                 </Structure>
               )
