@@ -43,8 +43,11 @@ import {
   sameReadbackSource,
   sameReadbackToken,
 } from "./internal/readback-token.ts";
-import { count, trackOwnedBuffer } from "./internal/instrumentation.ts";
-import { retireBuffers } from "./internal/retire-buffers.ts";
+import {
+  count,
+  releaseOwnedBuffer,
+  trackOwnedBuffer,
+} from "./internal/instrumentation.ts";
 import { live, viewer } from "./internal/elements.ts";
 import {
   type NearestVolume,
@@ -197,7 +200,10 @@ const EFieldCompute: LC<{
     return { made, rowBuffer, packed, phi, params, pack, shapes };
   }, [device, rows, grid, physics, chunk, chunks, samples]);
   useResource((dispose) => {
-    dispose(() => retireBuffers(device, buffers.made));
+    // A retained VolumeSlice or field shader may keep submitting this phi
+    // allocation while replacement pipelines compile. Drop our ownership;
+    // WebGPU reclaims it after the last retained binding becomes unreachable.
+    dispose(() => buffers.made.forEach(releaseOwnedBuffer));
   }, [buffers]);
 
   const packGroup = useMemo(() =>
