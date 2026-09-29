@@ -73,3 +73,13 @@ hide. The last output wrapper remains reachable through the existing
 `fieldLinesTesting.last` test hook after unmount; repeated churn needs to
 account for that one retained buffer when checking native memory. With its two
 callers repaired, the frame-and-fence `retireBuffers()` helper has been removed.
+
+The separate `run-memory.mjs` probe mounted and hid a 24,987,856-byte EField
+`phi` allocation with FieldLines and VolumeSlice four times. After each hide and
+forced GC, every superseded `phi` wrapper was unreachable; the newest wrapper
+remained reachable, so the result establishes a one-buffer retention bound
+rather than complete collection at hide. Dedicated Chrome 153 macOS process-tree
+RSS after each hide was 946,544, 895,296, 885,104 and 883,216 KiB. The
+executable bound rejects growth greater than 128 MiB from the first to fourth
+hide. RSS includes browser and renderer overhead and is a proxy for native GPU
+memory, not an isolated GPU allocation measurement.

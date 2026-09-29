@@ -1,0 +1,34 @@
+{
+  "browser": "153.0.8010.53",
+  "cycles": [
+    {
+      "rssKb": 946544,
+      "phiSize": 24987856,
+      "aliveIndices": [
+        0
+      ]
+    },
+    {
+      "rssKb": 895296,
+      "phiSize": 24987856,
+      "aliveIndices": [
+        1
+      ]
+    },
+    {
+      "rssKb": 885104,
+      "phiSize": 24987856,
+      "aliveIndices": [
+        2
+      ]
+    },
+    {
+      "rssKb": 883216,
+      "phiSize": 24987856,
+      "aliveIndices": [
+        3
+      ]
+    }
+  ],
+  "errors": []
+}

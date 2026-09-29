@@ -197,19 +197,24 @@ const App = () => {
                 </>
               )
               : new URLSearchParams(location.search).has("efield") ||
-                  new URLSearchParams(location.search).has("lines")
+                  new URLSearchParams(location.search).has("lines") ||
+                  new URLSearchParams(location.search).has("memory")
               ? (
                 <Structure data={charged}>
                   <EField
                     box={{ min: [-4, -4, -4], max: [8 + epoch, 4, 4] }}
-                    spacing={1}
+                    spacing={new URLSearchParams(location.search).has("memory")
+                      ? 0.05
+                      : 1}
+                    maxSamples={8_000_000}
                   >
                     <Spacefill
                       color={colors[palette]}
                       material={{ type: "basic" }}
                     />
                     <VolumeSlice plane={{ axis: 2, index: 4 }} />
-                    {new URLSearchParams(location.search).has("lines")
+                    {new URLSearchParams(location.search).has("lines") ||
+                        new URLSearchParams(location.search).has("memory")
                       ? <FieldLines seeds={{ spacing: 4 }} steps={8} />
                       : null}
                   </EField>
