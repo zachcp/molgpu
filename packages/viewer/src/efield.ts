@@ -38,6 +38,11 @@ import {
 import { useAttributeSources } from "./internal/attribute-sources.ts";
 import { checkAtomSelection } from "./internal/representation.ts";
 import { ThrottledReadback } from "./internal/throttled-readback.ts";
+import {
+  type ReadbackToken,
+  sameReadbackSource,
+  sameReadbackToken,
+} from "./internal/readback-token.ts";
 import { count, trackOwnedBuffer } from "./internal/instrumentation.ts";
 import { retireBuffers } from "./internal/retire-buffers.ts";
 import { live, viewer } from "./internal/elements.ts";
@@ -336,14 +341,21 @@ const EFieldCompute: LC<{
       });
   }, []);
   const [published, setPublished] = useState<
-    { grid: VolumeGrid; volume: VolumeData } | null
+    { token: ReadbackToken; volume: VolumeData } | null
   >(null);
-  const latest = useRef(generation);
-  latest.current = generation;
-  const publish = (values: Float32Array, at: number) => {
-    if (at !== latest.current) return;
+  const token: ReadbackToken = {
+    owner: coordinates.resource,
+    buffer: buffers.phi,
+    bytes: samples * 4,
+    layout: grid,
+    generation,
+  };
+  const latest = useRef(token);
+  latest.current = token;
+  const publish = (values: Float32Array, copied: ReadbackToken): boolean => {
+    if (!sameReadbackToken(latest.current, copied)) return false;
     setPublished({
-      grid,
+      token: copied,
       volume: createVolume({
         values,
         dims: grid.dims,
@@ -351,8 +363,11 @@ const EFieldCompute: LC<{
         ...(grid.unit === undefined ? {} : { unit: grid.unit }),
       }, { maxSamples: Infinity }),
     });
+    return true;
   };
-  const snapshot = published?.grid === grid ? published.volume : null;
+  const snapshot = published && sameReadbackSource(published.token, token)
+    ? published.volume
+    : null;
   const demand = [...requests.values()];
 
   const value = useMemo<NearestVolume>(() =>
@@ -369,9 +384,7 @@ const EFieldCompute: LC<{
   return provide(VolumeContext, value, [
     demand.length
       ? use(ThrottledReadback, {
-        buffer: buffers.phi,
-        bytes: samples * 4,
-        generation,
+        token,
         maxHz: Math.max(...demand.map((r) => r.maxHz)),
         onPause: demand.some((r) => r.onPause),
         label: "efield:snapshot",

@@ -17,6 +17,11 @@ import type { Coordinates } from "./coordinates-context.ts";
 import type { StructureResource } from "./types.ts";
 import { createStructureResource } from "./internal/structure-resource.ts";
 import { ThrottledReadback } from "./internal/throttled-readback.ts";
+import {
+  type ReadbackToken,
+  sameReadbackSource,
+  sameReadbackToken,
+} from "./internal/readback-token.ts";
 
 export interface CoordinateSnapshot {
   readonly data: StructureData;
@@ -90,12 +95,18 @@ export const CoordinateSnapshotBoundary: LC<{
   const [published, setPublished] = useState<
     {
       data: StructureData;
-      generation: number;
-      owner: StructureResource;
+      token: ReadbackToken;
     } | null
   >(null);
-  const latest = useRef(coordinates);
-  latest.current = coordinates;
+  const token: ReadbackToken = {
+    owner: coordinates.resource,
+    buffer: coordinates.source.buffer,
+    bytes: coordinates.count * 12,
+    layout: coordinates.count,
+    generation: coordinates.generation,
+  };
+  const latest = useRef(token);
+  latest.current = token;
   const subscribe = useMemo(() => (maxHz: number, onPause: boolean) => {
     const id = ++nextId.current;
     setRequests((previous) => new Map(previous).set(id, { maxHz, onPause }));
@@ -107,7 +118,7 @@ export const CoordinateSnapshotBoundary: LC<{
       });
     };
   }, []);
-  const data = published?.owner === coordinates.resource
+  const data = published && sameReadbackSource(published.token, token)
     ? published.data
     : null;
   const snapshotResource = useMemo(
@@ -121,34 +132,35 @@ export const CoordinateSnapshotBoundary: LC<{
     snapshot: data && snapshotResource && published
       ? Object.freeze({
         data,
-        generation: published.generation,
+        generation: published.token.generation,
         resource: snapshotResource,
       })
       : null,
     subscribe,
   }), [data, snapshotResource, published, subscribe]);
-  const root = coordinates.resource.data;
-  const publish = (positions: Float32Array, generation: number) => {
-    if (latest.current.generation !== generation) return;
-    const revised = withPositions(
-      published?.owner === coordinates.resource ? published.data : root,
-      positions,
-    );
-    const data = preserveBondGraph(root, revised);
-    setPublished(Object.freeze({
-      data,
-      generation,
-      owner: coordinates.resource,
-    }));
+  const publish = (positions: Float32Array, copied: ReadbackToken): boolean => {
+    if (!sameReadbackToken(latest.current, copied)) return false;
+    const root = coordinates.resource.data;
+    setPublished((previous) => {
+      const revised = withPositions(
+        previous && sameReadbackSource(previous.token, copied)
+          ? previous.data
+          : root,
+        positions,
+      );
+      return Object.freeze({
+        data: preserveBondGraph(root, revised),
+        token: copied,
+      });
+    });
+    return true;
   };
   const maxHz = Math.max(...demand.map((request) => request.maxHz));
   const onPause = demand.some((request) => request.onPause);
   return provide(CoordinateSnapshotContext, context, [
     demand.length && coordinates.ready !== false
       ? use(ThrottledReadback, {
-        buffer: coordinates.source.buffer,
-        bytes: coordinates.count * 12,
-        generation: coordinates.generation,
+        token,
         maxHz,
         onPause,
         label: "coords:snapshot",
