@@ -15,6 +15,27 @@ const frames = (page) =>
     for (let i = 0; i < 8; i++) await new Promise(requestAnimationFrame);
   });
 
+// The canvas as drawn. A clipped page screenshot, not an element screenshot:
+// the lit-pixel check needs visible output, not a box that holds still across
+// animation frames, which Playwright's element screenshot waits for and which
+// timed out intermittently on CI's software WebGPU.
+const canvasShot = async (page) => {
+  const canvas = page.locator("#molecule-canvas canvas");
+  await canvas.scrollIntoViewIfNeeded();
+  const box = await canvas.boundingBox();
+  assert(box && box.width > 0 && box.height > 0, "the demo canvas has a size");
+  const { width, height } = page.viewportSize();
+  const x = Math.max(0, box.x), y = Math.max(0, box.y);
+  return await page.screenshot({
+    clip: {
+      x,
+      y,
+      width: Math.min(box.x + box.width, width) - x,
+      height: Math.min(box.y + box.height, height) - y,
+    },
+  });
+};
+
 const litPixels = (page, png) =>
   page.evaluate(async (base64) => {
     const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
@@ -40,6 +61,8 @@ Deno.test("site landing page and maintained gallery routes", async () => {
     server: { host: "127.0.0.1", port: 5190, strictPort: true },
   });
   let browser;
+  // The route under test, so a failure names the demo that caused it.
+  let route = "landing";
   try {
     await server.listen();
     browser = await chromium.launch({
@@ -109,6 +132,7 @@ Deno.test("site landing page and maintained gallery routes", async () => {
     await page.setViewportSize({ width: 960, height: 720 });
 
     for (const { id, title, fixture } of demos) {
+      route = `#demos/${id}`;
       await page.goto(`http://127.0.0.1:5190/#demos/${id}`);
       await page.waitForSelector(`#molecule-canvas[data-demo="${id}"]`);
       assertStrictEquals(
@@ -161,8 +185,7 @@ Deno.test("site landing page and maintained gallery routes", async () => {
         "successful mounting clears the loading status",
       );
       await frames(page);
-      const initialFrame = await page.locator("#molecule-canvas canvas")
-        .screenshot();
+      const initialFrame = await canvasShot(page);
       assert(
         await litPixels(page, initialFrame) > 0,
         `${id} produces visible WebGPU output`,
@@ -327,6 +350,7 @@ Deno.test("site landing page and maintained gallery routes", async () => {
         );
       }
     }
+    route = "overview and back";
     await page.getByRole("link", { name: "Overview" }).click();
     await page.waitForSelector("#molecule-canvas", { state: "detached" });
     assertStrictEquals(
@@ -343,6 +367,10 @@ Deno.test("site landing page and maintained gallery routes", async () => {
       "returning to demos creates one fresh viewer root",
     );
     assertEquals(errors, [], "page has no JavaScript errors");
+  } catch (error) {
+    throw new Error(`site test failed at ${route}: ${error.message}`, {
+      cause: error,
+    });
   } finally {
     await browser?.close();
     await server.close();
