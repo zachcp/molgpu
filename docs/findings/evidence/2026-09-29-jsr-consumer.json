@@ -1,0 +1,276 @@
+{
+  "date": "2026-09-30T01:20:41.178Z",
+  "deno": "2.9.7",
+  "published": [
+    "@molgpu/dynamics@0.1.0",
+    "@molgpu/fields@0.1.0",
+    "@molgpu/geo@0.1.0",
+    "@molgpu/io@0.1.0",
+    "@molgpu/select@0.1.0",
+    "@molgpu/table@0.1.0",
+    "@molgpu/timeline@0.1.0",
+    "@molgpu/viewer@0.1.0"
+  ],
+  "entries": {
+    "check": "pass",
+    "errors": [],
+    "graphs": {
+      "@molgpu/table": {
+        "modules": 13,
+        "bytes": 84761,
+        "npm": []
+      },
+      "@molgpu/geo": {
+        "modules": 5,
+        "bytes": 33927,
+        "npm": []
+      },
+      "@molgpu/timeline": {
+        "modules": 2,
+        "bytes": 17353,
+        "npm": [
+          "@use-gpu/core@0.20.0"
+        ]
+      },
+      "@molgpu/select": {
+        "modules": 20,
+        "bytes": 179273,
+        "npm": []
+      },
+      "@molgpu/fields": {
+        "modules": 18,
+        "bytes": 135678,
+        "npm": []
+      },
+      "@molgpu/dynamics": {
+        "modules": 24,
+        "bytes": 360350,
+        "npm": []
+      },
+      "@molgpu/io": {
+        "modules": 28,
+        "bytes": 173141,
+        "npm": []
+      },
+      "@molgpu/viewer": {
+        "modules": 136,
+        "bytes": 988201,
+        "npm": [
+          "@use-gpu/core@0.20.0",
+          "@use-gpu/live@0.20.0",
+          "@use-gpu/shader@0.20.0",
+          "@use-gpu/workbench@0.20.0"
+        ]
+      },
+      "@molgpu/dynamics/wgsl": {
+        "modules": 12,
+        "bytes": 86703,
+        "npm": []
+      },
+      "@molgpu/viewer/advanced": {
+        "modules": 54,
+        "bytes": 314232,
+        "npm": [
+          "@use-gpu/live@0.20.0",
+          "@use-gpu/shader@0.20.0",
+          "@use-gpu/workbench@0.20.0"
+        ]
+      }
+    }
+  },
+  "scene": {
+    "check": "pass",
+    "checkErrors": [],
+    "bundle": "pass",
+    "bundleErrors": [],
+    "chunks": {
+      "static": [
+        "chunk-FUBP3GOH.js",
+        "chunk-U67V476Y.js",
+        "scene.js"
+      ],
+      "lazy": [
+        "all-3ZYYQKFY.js",
+        "boundary-OUEO7BRT.js",
+        "ccp4-Y34ZU6K5.js",
+        "chem_comp-YFL6ILTE.js",
+        "chunk-3K73XSEC.js",
+        "chunk-523RHLWD.js",
+        "chunk-5LQZRFAF.js",
+        "chunk-6WIN4GDP.js",
+        "chunk-73OKC5BP.js",
+        "chunk-7IFDHLAM.js",
+        "chunk-7SU5TM4D.js",
+        "chunk-B7GELMXQ.js",
+        "chunk-BHUYEVV2.js",
+        "chunk-D37AAAUM.js",
+        "chunk-DYV6CAOP.js",
+        "chunk-EAMRYXDP.js",
+        "chunk-EB3HUNES.js",
+        "chunk-EEKNMNAC.js",
+        "chunk-FKZX6TVL.js",
+        "chunk-HCDW4JDK.js",
+        "chunk-HGM4OA7G.js",
+        "chunk-HMV5J3JY.js",
+        "chunk-ILBFYDWY.js",
+        "chunk-IMWLDC3S.js",
+        "chunk-K53FB33Y.js",
+        "chunk-LZFOKWBC.js",
+        "chunk-O644YIAS.js",
+        "chunk-PZYR7UFI.js",
+        "chunk-S2PZNZLK.js",
+        "chunk-T7VFY3B5.js",
+        "chunk-UZYOTTBT.js",
+        "chunk-VK4SE5W7.js",
+        "chunk-VKUZS2TU.js",
+        "chunk-VVTZTUBS.js",
+        "chunk-VWHSMCYT.js",
+        "chunk-XOFFED4H.js",
+        "chunk-YBXFPMSG.js",
+        "chunk-YQV4WI3P.js",
+        "chunk-ZDPEYLGG.js",
+        "chunk-ZQWWE5DQ.js",
+        "chunk-ZVB7Y45F.js",
+        "cif-WJJCGIHW.js",
+        "grid-SXL626RM.js",
+        "mmcif-PYUBYI53.js",
+        "mol-task-KSQF4DZY.js",
+        "molecular-surface-HYTYMP3E.js",
+        "ordered-set-UZKVIFU2.js",
+        "parser-KNTJDEIL.js",
+        "parser-VWAIMOBD.js",
+        "parser-ZWF2KTKL.js",
+        "secondary-structure-F7OYDR3W.js",
+        "src-NR2TRFMN.js",
+        "struct_conn-5MRB6T2K.js",
+        "symbol-table-7NZIPQCE.js",
+        "symbols-FTJVTC66.js",
+        "util-UTXMOS3V.js"
+      ],
+      "staticBytes": 1912563,
+      "totalBytes": 3730406,
+      "molstarStatic": []
+    },
+    "render": {
+      "preloaded": {
+        "litPixels": 3980,
+        "errors": [],
+        "molstarChunksFetched": [],
+        "chunksFetched": 3
+      },
+      "bcif": {
+        "litPixels": 54806,
+        "errors": [],
+        "molstarChunksFetched": [
+          "chem_comp-YFL6ILTE.js",
+          "cif-WJJCGIHW.js",
+          "mmcif-PYUBYI53.js",
+          "mol-task-KSQF4DZY.js",
+          "secondary-structure-F7OYDR3W.js",
+          "struct_conn-5MRB6T2K.js"
+        ],
+        "chunksFetched": 45
+      }
+    }
+  },
+  "copies": {
+    "compatible": {
+      "label": "compatible",
+      "mine": "0.1.1",
+      "theirs": "^0.1.0",
+      "sameTableModule": true,
+      "sameTimelineModule": true,
+      "viewerLoad": "SyntaxError: The requested module 'npm:@use-gpu/workbench@0.20.0' does not provide an export named 'LoopContext' at http://127.0.0.1:<registry>/@molgpu/viewer/0.1.0/src/internal/use-repaint.ts:2:10",
+      "cases": {
+        "table: their activeAtoms(my data)": {
+          "outcome": "ok",
+          "value": "[0,1]"
+        },
+        "table: their withAttributes(my data)": {
+          "outcome": "ok",
+          "value": "{\"topology\":0,\"positions\":0,\"attributes\":0}"
+        },
+        "table: their bondTopology(my data)": {
+          "outcome": "ok",
+          "value": "1"
+        },
+        "table: their attributeColumn(my data, element)": {
+          "outcome": "ok",
+          "value": "\"atom\""
+        },
+        "select: resolve(all, my data)": {
+          "outcome": "ok",
+          "value": "[0,1]"
+        },
+        "fields: evaluate(byElement, my data)": {
+          "outcome": "ok",
+          "value": "8"
+        },
+        "viewer: createStructureResource(my data)": {
+          "outcome": "error",
+          "message": "Error: viewer did not load in Deno"
+        },
+        "timeline: their sample(my curve)": {
+          "outcome": "ok",
+          "value": "0.5"
+        }
+      }
+    },
+    "divergent": {
+      "label": "divergent",
+      "mine": "0.2.0",
+      "theirs": "^0.1.0",
+      "sameTableModule": false,
+      "sameTimelineModule": false,
+      "viewerLoad": "SyntaxError: The requested module 'npm:@use-gpu/workbench@0.20.0' does not provide an export named 'LoopContext' at http://127.0.0.1:<registry>/@molgpu/viewer/0.1.0/src/internal/use-repaint.ts:2:10",
+      "cases": {
+        "table: their activeAtoms(my data)": {
+          "outcome": "ok",
+          "value": "[0,1]"
+        },
+        "table: their withAttributes(my data)": {
+          "outcome": "error",
+          "message": "TypeError: identity: expected a structure created by this module"
+        },
+        "table: their bondTopology(my data)": {
+          "outcome": "error",
+          "message": "TypeError: identity: expected a structure created by this module"
+        },
+        "table: their attributeColumn(my data, element)": {
+          "outcome": "ok",
+          "value": "\"atom\""
+        },
+        "select: resolve(all, my data)": {
+          "outcome": "ok",
+          "value": "[0,1]"
+        },
+        "fields: evaluate(byElement, my data)": {
+          "outcome": "ok",
+          "value": "8"
+        },
+        "viewer: createStructureResource(my data)": {
+          "outcome": "error",
+          "message": "Error: viewer did not load in Deno"
+        },
+        "timeline: their sample(my curve)": {
+          "outcome": "error",
+          "message": "TypeError: curve must be created by createCurve"
+        }
+      }
+    },
+    "useGpu": {
+      "consumer": "0.19.0",
+      "viewer": "0.20.0",
+      "liveVersionsInGraph": [
+        "0.19.0",
+        "0.20.0"
+      ],
+      "check": "fail",
+      "errors": [
+        "TS2322 [ERROR]: Type '{ radius: number; bearing: number; pitch: number; target: number[]; }' is not assignable to type 'OrbitCameraProps'.",
+        "error: Type checking failed."
+      ]
+    }
+  },
+  "status": "complete"
+}
