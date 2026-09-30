@@ -32,6 +32,10 @@ Deno.test("viewer postprocess", async () => {
         "@use-gpu/workbench",
         "@use-gpu/webgpu",
         "@use-gpu/core",
+        // @molgpu/timeline imports this pinned easing module. Prebundle it before
+        // navigation so Vite does not reload live modules with an Outdated
+        // Optimize Dep response during the test.
+        "@use-gpu/core/mjs/ease.mjs",
         "@use-gpu/shader",
         "@use-gpu/shader/wgsl",
         "@use-gpu/wgsl",

@@ -14,12 +14,7 @@ import {
 } from "@use-gpu/live";
 import { LoopContext, useDeviceContext } from "@use-gpu/workbench";
 import type { StorageSource } from "@use-gpu/core";
-import {
-  activeAtoms,
-  createVolume,
-  type VolumeData,
-  type VolumeGrid,
-} from "@molgpu/table";
+import { createVolume, type VolumeData, type VolumeGrid } from "@molgpu/table";
 import {
   COULOMB_PARAMS_BYTES,
   COULOMB_WORKGROUP,
@@ -37,6 +32,7 @@ import {
 } from "./internal/efield-grid.ts";
 import { useAttributeSources } from "./internal/attribute-sources.ts";
 import { checkAtomSelection } from "./internal/representation.ts";
+import { viewRows } from "./internal/view-rows.ts";
 import { ThrottledReadback } from "./internal/throttled-readback.ts";
 import {
   type ReadbackToken,
@@ -414,9 +410,9 @@ const positive = (value: number, name: string) => {
  *
  * Charges come from the `charge` column (default `partialCharge`; assign one
  * with `templateCharges`, `applyPqr` or `structureFromPqr`, then
- * `withAttributes`). The first model's primary-conformer atoms (∩ `select`)
- * are summed exactly on the GPU, tiled through workgroup memory, with the
- * dielectric model from `electrostatics()` in @molgpu/dynamics. The output is
+ * `withAttributes`). `select`'s atoms, else the first model's
+ * primary-conformer atoms, are summed exactly on the GPU, tiled through
+ * workgroup memory, with the dielectric model from `electrostatics()` in @molgpu/dynamics. The output is
  * φ in kT/e (or kcal/mol/e) on an axis-aligned grid: the summed atoms' bounds
  * at the first coordinates available, padded, `spacing` apart, or `box`. The
  * grid then stays fixed while coordinates move, so samplers never recompile;
@@ -491,12 +487,7 @@ const EFieldInner: LC<EFieldProps & { coordinates: Coordinates }> = (
   const produced = useContext(AttributesContext)?.[charge];
   const column = efieldChargeColumn(resource.data, charge, produced);
   const { active, rows } = useMemo(() => {
-    let active: Uint32Array = activeAtoms(resource.data);
-    if (select) {
-      const mark = new Uint8Array(resource.data.topology.atoms.count);
-      for (const row of select.indices) mark[row] = 1;
-      active = active.filter((row) => mark[row]);
-    }
+    const active = viewRows(resource.data, select);
     if (!column) return { active, rows: active };
     const q = column.values;
     return { active, rows: active.filter((row) => q[row] !== 0) };

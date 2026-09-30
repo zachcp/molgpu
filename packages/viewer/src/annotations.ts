@@ -8,6 +8,7 @@ import { useCoordinateSnapshot } from "./coordinate-snapshot.ts";
 import {
   checkAtomSelection,
   type ColumnSpec,
+  useActiveRows,
   withColumns,
 } from "./internal/representation.ts";
 import { applyOpacity, checkOpacity, modeProps } from "./internal/opacity.ts";
@@ -21,13 +22,12 @@ import { useRepaint } from "./internal/use-repaint.ts";
 import { count } from "./internal/instrumentation.ts";
 import { useBindingProbe } from "./internal/use-binding-probe.ts";
 
-/** A selection's centroid, or an explicit [x,y,z] point passed through. */
+/** The centroid of a label's rows (a selection's, else the default view). */
 const anchorOf = (
   data: StructureData,
-  select: Selection | null | undefined,
+  rows: Uint32Array,
   label: string,
-): Point3 => (count("geometryBuilds", label),
-  centroidOf(data, select ? select.indices : null));
+): Point3 => (count("geometryBuilds", label), centroidOf(data, rows));
 
 /**
  * LabelLayer binds a singular `position` as a vec4<f32> constant, so a bare
@@ -79,13 +79,12 @@ export const Label: ViewerComponent<{
   const { resource } = useStructure();
   const snapshot = useCoordinateSnapshot();
   const data = snapshot?.data;
-  checkAtomSelection(select, resource, "Label");
-  const selectKey = select?.id ?? "active";
+  const rows = useActiveRows(resource, select, "Label");
   const computed = useMemo(
-    () => data ? anchorOf(data, select, "label:anchor") : null,
+    () => data ? anchorOf(data, rows, "label:anchor") : null,
     [
       data,
-      selectKey,
+      rows,
       snapshot?.generation,
     ],
   );
@@ -157,16 +156,22 @@ export const Distance: ViewerComponent<{
   }
 
   const rev = snapshot?.generation;
-  const ca = useMemo(() => data ? anchorOf(data, a, "distance:anchor") : null, [
-    data,
-    a?.id,
-    rev,
-  ]);
-  const cb = useMemo(() => data ? anchorOf(data, b, "distance:anchor") : null, [
-    data,
-    b?.id,
-    rev,
-  ]);
+  const ca = useMemo(
+    () => data ? anchorOf(data, a.indices, "distance:anchor") : null,
+    [
+      data,
+      a?.id,
+      rev,
+    ],
+  );
+  const cb = useMemo(
+    () => data ? anchorOf(data, b.indices, "distance:anchor") : null,
+    [
+      data,
+      b?.id,
+      rev,
+    ],
+  );
   const dist = ca && cb ? distanceBetween(ca, cb) : null;
   const mid = ca && cb ? midpoint(ca, cb) : null;
   const text = dist == null

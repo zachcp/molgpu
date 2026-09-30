@@ -6,6 +6,12 @@ All notable changes to `@molgpu/viewer` are recorded here. The format follows
 
 ## [Unreleased]
 
+- One default view for molecular consumers: without `select`, `<Spacefill>`,
+  `<Bonds>` and `<Label>` now draw the first model's primary conformers like
+  `<Tube>`, `<Ribbon>` and `<Surface>`, instead of every retained row.
+  `<EField>` takes `select` exactly instead of intersecting it with the first
+  model, so a model-2 selection works. An empty focus falls back to the default
+  view.
 - `<Spacefill>`, `<Bonds>` and `<Surface>` share one colour-field binding plan:
   argument-free `volumeSample()` binds the nearest `<Volume>`/`<EField>`,
   annotation fields upload their atom rows, and lifted residue attributes work

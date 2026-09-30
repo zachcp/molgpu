@@ -61,6 +61,22 @@ Working, runnable examples: the typed consumer
 [`site`](../../site/README.md), whose maintained TSX demo composes public viewer
 components under an application-owned render tree.
 
+## Default view and selections
+
+A structure can retain several models and alternate conformers. Without a
+`select`, every molecular consumer (`<Spacefill>`, `<Bonds>`, `<Tube>`,
+`<Ribbon>`, `<Surface>`, `<EField>`, `<Label>` anchors and empty-focus
+fallbacks) uses one default view: the first model, with each residue's primary
+(highest-occupancy) conformer, as `activeAtoms` returns it. `select` is the one
+override and is taken exactly. It can reach another model or every conformer,
+for example `resolve(where("atom", "model 2", test), data)`, and it is never
+intersected with the default view. An empty selection draws nothing; a missing
+or `null` selection is the default view, never every retained row. Coordinate
+providers (`<Transform>`, `<Superpose>`, and so on) move every row, and their
+`select` chooses the transformed or fitted rows. `<GpuDssp>` takes its own
+`model`, defaulting to the first model. The resource's `bounds` cover every
+retained row.
+
 ## Transparency
 
 Every representation takes `opacity` (0–1), which is multiplied into the
