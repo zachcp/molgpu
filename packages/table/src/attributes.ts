@@ -183,7 +183,10 @@ export function withAttributes(
   changes: Readonly<Record<string, AttributeColumnInput | null>>,
 ): StructureData {
   if (!isStructureIdentity(data.identity)) {
-    fail("identity", "expected a structure created by this module");
+    fail(
+      "identity",
+      "expected a structure created by this module; the value may come from another copy of @molgpu/table. Align dependency versions and ranges to deduplicate @molgpu/table",
+    );
   }
   const next: Record<string, AttributeColumn> = { ...data.attributes };
   let changed = false;

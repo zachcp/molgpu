@@ -293,7 +293,11 @@ export function frameTime(
 export function sample<T extends CurveValue>(curve: Curve<T>, time: number): T {
   finite(time, "sample time");
   const state = curveStates.get(curve);
-  if (!state) throw new TypeError("curve must be created by createCurve");
+  if (!state) {
+    throw new TypeError(
+      "curve must be created by createCurve from this module; the value may come from another copy of @molgpu/timeline. Align dependency versions and ranges to deduplicate @molgpu/timeline",
+    );
+  }
   const { keyframes, splines, extrapolate } = state;
   const start = keyframes[0].time, end = keyframes.at(-1)!.time;
   const t = extrapolate === "loop" && (time < start || time >= end)

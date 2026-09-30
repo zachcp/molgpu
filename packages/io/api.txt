@@ -13,7 +13,7 @@ IoErrorCode
 IoFormat
   export type IoFormat = "bcif" | "ccp4" | "pqr" | "trajectory" | "surface" | "selection";
 OpenTrajectoryOptions
-  export interface OpenTrajectoryOptions { /** Container format; default: the file name's extension. */ readonly format?: "dcd" | "xtc" | "trr"; /** Largest whole-file download when a server ignores Range requests. */ readonly maxDownload?: number; /** Decode velocities where the format stores them (TRR). Default false. */ readonly velocities?: boolean; /** Cancels opening (the header scan); frame reads take their own signal. */ readonly signal?: AbortSignal }
+  export interface OpenTrajectoryOptions { /** Container format; default: the file name's extension. */ readonly format?: "dcd" | "xtc" | "trr"; /** Largest whole-file download when a server ignores Range requests. */ readonly maxDownload?: number; /** Decode velocities where the format stores them (TRR). Default false. */ readonly velocities?: boolean; /** Fetch implementation used for URL transport (for credentials or testing). */ readonly fetch?: typeof fetch; /** Cancels opening (the header scan); frame reads take their own signal. */ readonly signal?: AbortSignal }
 PqrApplyReport
   export interface PqrApplyReport { /** Structure atoms that received a record's charge. */ readonly matched: number; /** Structure atoms with no record, as `chain:seq:insertion:name`; they get 0. */ readonly unmatchedAtoms: readonly string[]; /** Records with no atom and no heavy atom to fold onto, same key format. */ readonly unmatchedRecords: readonly string[]; /** * Residue copies, per model and altloc conformer, whose assigned sum differs * from the PQR residue sum by > 1e-3 e. `altloc` is "" when the residue has * no alternate locations. */ readonly residueDelta: readonly { readonly residue: string; readonly model: number; readonly altloc: string; readonly pqr: number; readonly assigned: number }[] }
 PqrStructureReport
@@ -37,8 +37,8 @@ openTrajectory
 parseSelection
   export function parseSelection(language: SelectionLanguage, text: string, options?: { /** * Symbol names the caller can evaluate, for example `@molgpu/select`'s * `supportedSymbols`. Any other symbol fails with an `IoError` (code * `UNSUPPORTED_SYMBOL`) that names the source language, rather than a * later compile error. */ readonly symbols?: readonly string[] }): Promise<SelectionExpr>;
 structureFromBcif
-  export function structureFromBcif(input: FileInput): Promise<StructureData>;
+  export function structureFromBcif(input: FileInput, options?: { signal?: AbortSignal; fetch?: typeof fetch }): Promise<StructureData>;
 structureFromPqr
   export function structureFromPqr(input: string | Uint8Array): Promise<{ data: StructureData; report: PqrStructureReport }>;
 volumeFromCcp4
-  export function volumeFromCcp4(source: FileInput, options?: { maxSamples?: number }): Promise<VolumeData>;
+  export function volumeFromCcp4(source: FileInput, options?: { maxSamples?: number; signal?: AbortSignal; fetch?: typeof fetch }): Promise<VolumeData>;

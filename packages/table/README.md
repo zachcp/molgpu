@@ -14,8 +14,8 @@ dependency; importers (`@molgpu/io`) lower into it and the viewer reads from it.
 deno add jsr:@molgpu/table
 ```
 
-No runtime dependencies and no peer dependencies. Written in TypeScript
-(`src/*.ts`) with explicit types on every export, published as ES modules.
+No runtime dependencies. Written in TypeScript (`src/*.ts`) with explicit types
+on every export, published as ES modules.
 
 ## Example
 
@@ -116,10 +116,12 @@ monotonic per dataset, including branched updates. Topology/attribute
 replacement currently requires a new dataset; no trajectory system or mutable
 store is implemented. Identity is tracked in module-private state, so
 `withPositions` and `bondTopology` only accept structures made by
-`createStructure` from the same module instance. For that reason every other
-`@molgpu/*` package declares `@molgpu/table` as a **peer** dependency: an app
-installs exactly one copy and all packages share it. If `npm ls @molgpu/table`
-shows more than one copy, structures from one will be rejected by the other.
+`createStructure` from the same module instance. JSR publishes internal
+dependencies as caret ranges (for example, `jsr:@molgpu/table@^0.1.0`). Keep
+compatible versions so the application resolves one shared copy: identity and
+revision state are module-private. Values from divergent copies can be rejected
+by identity-dependent operations. Use `deno info` and the lockfile to find
+duplicate versions, then align the application and package dependency ranges.
 
 All source models and alternate locations are retained. `activeAtoms(data)` is
 an explicit default view: first encountered model, plus blank-altloc atoms and

@@ -13,9 +13,9 @@ into numbers or fixed-width vectors.
 deno add jsr:@molgpu/timeline
 ```
 
-There are no peer dependencies. The only dependency is `@use-gpu/core`, pinned
-exactly (`0.20.0`) and used for its pure easing math behind a private adapter.
-No use.gpu types appear in this package's public API.
+The only runtime dependency is `@use-gpu/core`, pinned exactly (`0.20.0`) and
+used for its pure easing math behind a private adapter. No use.gpu types appear
+in this package's public API.
 
 ## Example
 

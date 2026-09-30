@@ -492,6 +492,78 @@ Deno.test("trajectory components", async () => {
     );
     await update({ mode: "none" });
 
+    // Source replacement must withdraw the old trajectory while its successor opens.
+    await update({ mode: "reload", src: "first.xtc", frame: 0 });
+    await page.waitForFunction(() =>
+      globalThis.__trajectory.loads.length === 1
+    );
+    await page.evaluate(() => globalThis.__trajectory.loads[0].resolve());
+    await displayed({ a: 0, b: 0, t: 0 });
+    await update({ src: "second.xtc" });
+    await page.waitForFunction(() =>
+      globalThis.__trajectory.loads.length === 2
+    );
+    assertStrictEquals(
+      await page.evaluate(() => globalThis.__trajectory.state),
+      null,
+      "a pending replacement must not expose the old trajectory metadata",
+    );
+    assertStrictEquals(
+      await page.evaluate(() =>
+        globalThis.__trajectory.loads[0].signal.aborted
+      ),
+      true,
+      "replacement aborts the old loader request",
+    );
+    await update({ src: "third.xtc" });
+    await page.waitForFunction(() =>
+      globalThis.__trajectory.loads.length === 3
+    );
+    await page.evaluate(() => globalThis.__trajectory.loads[1].resolve());
+    await page.evaluate(() =>
+      new Promise((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(resolve))
+      )
+    );
+    assertStrictEquals(
+      await page.evaluate(() => globalThis.__trajectory.state),
+      null,
+      "a cancelled completion cannot clear a newer request's pending state",
+    );
+    await page.evaluate(() => globalThis.__trajectory.loads[2].resolve());
+    await displayed({ a: 0, b: 0, t: 0 });
+    await update({ mode: "none" });
+
+    await update({ mode: "reload", src: "fourth.xtc", reloadData: false });
+    await page.waitForFunction(() =>
+      globalThis.__trajectory.loads.length === 4
+    );
+    await update({ reloadData: true });
+    await displayed({ a: 0, b: 0, t: 0 });
+    assertStrictEquals(
+      await page.evaluate(() =>
+        globalThis.__trajectory.loads[3].signal.aborted
+      ),
+      true,
+      "source-to-data aborts pending transport",
+    );
+    await update({ reloadData: false });
+    await page.waitForFunction(() =>
+      globalThis.__trajectory.loads.length === 5
+    );
+    assertStrictEquals(
+      await page.evaluate(() => globalThis.__trajectory.state),
+      null,
+    );
+    await update({ mode: "none" });
+    assertStrictEquals(
+      await page.evaluate(() =>
+        globalThis.__trajectory.loads[4].signal.aborted
+      ),
+      true,
+      "unmount aborts pending transport",
+    );
+
     // 1. Integer frames and a fractional frame.
     await update({ mode: "whole", frame: 0 });
     await displayed({ a: 0, b: 0, t: 0 });
@@ -1381,6 +1453,52 @@ Deno.test("trajectory components", async () => {
       [],
       "no page or WebGPU errors",
     );
+    // A rejected source can be retried on the same component without rethrowing stale errors.
+    await update({
+      mode: "reload",
+      src: "failure.xtc",
+      frame: 0,
+      interpolate: "linear",
+      reloadData: false,
+    });
+    await page.waitForFunction(() =>
+      globalThis.__trajectory.loads.length === 6
+    );
+    const rejectedLoad = page.waitForEvent("pageerror", { timeout: 5000 });
+    await page.evaluate(() =>
+      globalThis.__trajectory.loads[5].reject(new Error("reload test failure"))
+    );
+    assert(String(await rejectedLoad).includes("reload test failure"));
+    const beforeRetry = errors.length;
+    await update({ src: "retry.xtc" });
+    await page.waitForFunction(() =>
+      globalThis.__trajectory.loads.length === 7
+    );
+    await page.evaluate(() =>
+      new Promise((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(resolve))
+      )
+    );
+    assertEquals(
+      errors.length,
+      beforeRetry,
+      "retry does not rethrow the previous load failure",
+    );
+    await page.evaluate(() => globalThis.__trajectory.loads[6].resolve());
+    await displayed({ a: 0, b: 0, t: 0 });
+    await update({ mode: "none" });
+    const rejectedFrame = page.waitForEvent("pageerror", { timeout: 5000 });
+    await update({ mode: "data-retry", badFrames: true });
+    assert(String(await rejectedFrame).includes("frame 0 failed to load"));
+    const beforeFrameRetry = errors.length;
+    await update({ badFrames: false });
+    await displayed({ a: 0, b: 0, t: 0 });
+    assertEquals(
+      errors.length,
+      beforeFrameRetry,
+      "a replacement player does not inherit frame failure",
+    );
+    await update({ mode: "none" });
     const rejectedFirst = page.waitForEvent("pageerror", { timeout: 5000 });
     await update({ mode: "scope-superpose", frame: 0 });
     const rejection = String(await rejectedFirst);

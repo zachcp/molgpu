@@ -53,7 +53,10 @@ export function elementRadius(atomicNumber: number): number {
  * every coordinate revision of one dataset. Read-only by contract. */
 export function atomRadii(data: StructureData): Float32Array {
   if (!isStructureIdentity(data.identity)) {
-    fail("identity", "expected a structure created by this module");
+    fail(
+      "identity",
+      "expected a structure created by this module; the value may come from another copy of @molgpu/table. Align dependency versions and ranges to deduplicate @molgpu/table",
+    );
   }
   const { atoms } = data.topology;
   if (atoms.radius) return atoms.radius;
@@ -98,7 +101,10 @@ export function bondTopology(
 ): Bonds {
   const { padding = .45, interChain = true } = policy;
   if (!isStructureIdentity(data.identity)) {
-    fail("identity", "expected a structure created by this module");
+    fail(
+      "identity",
+      "expected a structure created by this module; the value may come from another copy of @molgpu/table. Align dependency versions and ranges to deduplicate @molgpu/table",
+    );
   }
   finite(padding, "policy.padding");
   if (padding < 0 || padding > 1) {

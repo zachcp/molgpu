@@ -1,3 +1,4 @@
+import { useSourceRequest } from "./internal/source-request.ts";
 // <Trajectory>: a coordinate provider that plays a TrajectoryData over the
 // nearest coordinates. Frames stream through a CPU cache into a four-slot GPU
 // window; one kernel interpolates the displayed pair (optionally by minimum
@@ -9,7 +10,6 @@ import {
   type LiveElement,
   provide,
   use,
-  useAwait,
   useContext,
   useMemo,
   useResource,
@@ -280,7 +280,7 @@ const TrajectoryPlayer: LC<PlayerProps> = (
   const requestRepaint = useContext(LoopContext);
   const [, setLanded] = useState(0);
   const [failure, setFailure] = useState<
-    { index: number; error: unknown } | null
+    { player: Player; index: number; error: unknown } | null
   >(null);
   let requested: number;
   if (typeof frame === "number") requested = frame;
@@ -310,12 +310,12 @@ const TrajectoryPlayer: LC<PlayerProps> = (
       requestRepaint();
     };
     player.cache.onError = (index, error) => {
-      setFailure({ index, error });
+      setFailure({ player, index, error });
       requestRepaint();
     };
     dispose(() => player.close());
   }, [player]);
-  if (failure) {
+  if (failure?.player === player) {
     throw new Error(`<Trajectory>: frame ${failure.index} failed to load`, {
       cause: failure.error,
     });
@@ -388,9 +388,9 @@ const TrajectoryPlayer: LC<PlayerProps> = (
   );
 };
 
-const defaultLoader: TrajectoryLoader = async (src, cancelled) => {
+const defaultLoader: TrajectoryLoader = async (src, cancelled, signal) => {
   const { openTrajectory } = await import("@molgpu/io");
-  const trajectory = await openTrajectory(src);
+  const trajectory = await openTrajectory(src, { signal });
   return cancelled() ? null : trajectory;
 };
 
@@ -419,19 +419,27 @@ export const Trajectory: ViewerComponent<TrajectoryProps> = (
   if (data === undefined && src === undefined) {
     throw new TypeError("<Trajectory> requires data or src");
   }
+  if (src !== undefined && typeof src !== "string") {
+    throw new TypeError("<Trajectory> src must be a string");
+  }
+  if (typeof loader !== "function") {
+    throw new TypeError("<Trajectory> loader must be a function");
+  }
   if (!["linear", "nearest"].includes(interpolate)) {
     throw new TypeError("<Trajectory> interpolate must be linear or nearest");
   }
   if (!["none", "minimum-image"].includes(pbc)) {
     throw new TypeError("<Trajectory> pbc must be none or minimum-image");
   }
-  const [loaded, failure] = useAwait(
+  const [loaded, failure, pending] = useSourceRequest(
     data === undefined
-      ? async (cancelled: () => boolean) => await loader(src!, cancelled)
+      ? async (signal: AbortSignal) =>
+        await loader(src!, () => signal.aborted, signal)
       : null,
-    [src, loader],
+    [data, src, loader],
   );
-  if (failure) throw failure;
+  if (data === undefined && pending) return children;
+  if (data === undefined && failure) throw failure;
   const trajectory = data ?? loaded;
   if (!trajectory) return children;
   return viewer(

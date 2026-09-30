@@ -115,10 +115,11 @@ export type FocusCameraFrame = Omit<CameraFrame, "target" | "radius"> & {
 };
 export type CameraCurve = readonly (CameraFrame | FocusCameraFrame)[];
 
-/** Resolves to StructureData, or to null when `cancelled()` becomes true. */
+/** Load with a request signal; replacement/unmount aborts it and suppresses stale results. */
 export type StructureLoader = (
   src: string,
   cancelled: () => boolean,
+  signal?: AbortSignal,
 ) => StructureData | null | Promise<StructureData | null>;
 
 /**
@@ -145,10 +146,11 @@ export type StructureProps =
     error?: ViewerElement | ((failure: unknown) => ViewerElement);
   };
 
-/** Open one trajectory source; resolve null when `cancelled()` became true. */
+/** Open with a request signal; replacement/unmount aborts it and suppresses stale results. */
 export type TrajectoryLoader = (
   src: string,
   cancelled: () => boolean,
+  signal?: AbortSignal,
 ) => TrajectoryData | null | Promise<TrajectoryData | null>;
 
 /**
@@ -331,10 +333,11 @@ export interface EFieldProps {
   maxHz?: number;
 }
 
-/** Load one volume source; resolve null when `cancelled()` became true. */
+/** Load with a request signal; replacement/unmount aborts it and suppresses stale results. */
 export type VolumeLoader = (
   src: string,
   cancelled: () => boolean,
+  signal?: AbortSignal,
 ) => VolumeData | null | Promise<VolumeData | null>;
 
 /**

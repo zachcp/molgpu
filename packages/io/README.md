@@ -19,15 +19,21 @@ deno add jsr:@molgpu/io jsr:@molgpu/table
 
 ## Dependencies
 
-| Package         | Range     | Kind       | Notes                                                                                                                                                                                                                                                                                                                          |
-| --------------- | --------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `@molgpu/table` | `^0.1.0`  | peer       | Provides the `StructureData` output type; a peer so the app shares one copy (structure identity is module-private).                                                                                                                                                                                                            |
-| `molstar`       | `^5.11.0` | dependency | Installed with `io`, but loaded only inside `structureFromBcif`, `molecularSurfaceField` and `volumeFromCcp4`, through dynamic `import()`. Bundlers put it in separate lazy chunks, so code that never calls them never downloads it. If it fails to load, those calls reject with `PARSER_UNAVAILABLE` / `FIELD_UNAVAILABLE`. |
+| Package         | Range    | Kind       | Notes                                                                                                                                                                                                                                                                                                                          |
+| --------------- | -------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `@molgpu/table` | `^0.1.0` | dependency | Provides `StructureData`; compatible JSR caret ranges resolve one shared table copy.                                                                                                                                                                                                                                           |
+| `molstar`       | `5.11.0` | dependency | Installed with `io`, but loaded only inside `structureFromBcif`, `molecularSurfaceField` and `volumeFromCcp4`, through dynamic `import()`. Bundlers put it in separate lazy chunks, so code that never calls them never downloads it. If it fails to load, those calls reject with `PARSER_UNAVAILABLE` / `FIELD_UNAVAILABLE`. |
 
-Mol* was an optional peer before the move to JSR, which has no optional
-dependencies. It is now a regular dependency, because the viewer needs it for
-both `<Structure src>` and `<Surface>` anyway. It is still loaded lazily, as
-before.
+JSR publishes internal dependencies as caret ranges (for example,
+`jsr:@molgpu/table@^0.1.0`). Keep compatible versions so the application
+resolves one shared copy: identity and revision state are module-private. Values
+from divergent copies can be rejected by identity-dependent operations. Use
+`deno info` and the lockfile to find duplicate versions, then align the
+application and package dependency ranges.
+
+Mol* is a regular npm dependency, loaded lazily. IO pins the tested version
+`5.11.0` exactly; upgrades require parser and scientific-oracle validation
+before changing the published pin.
 
 ## Example
 
@@ -140,10 +146,10 @@ const pocket = resolve(compile(expr), structure);
 
 ## Place in the dependency graph
 
-`io` sits directly above `table`: it depends on `@molgpu/table` (a peer) and
-`molstar`, and `@molgpu/viewer` loads it lazily through a dynamic import. It is
-the **only** molgpu package allowed to import `molstar` at runtime, and it does
-so only through dynamic `import()` inside its functions. It must not import
+`io` sits directly above `table`: it depends on `@molgpu/table` and `molstar`,
+and `@molgpu/viewer` loads it lazily through a dynamic import. It is the
+**only** molgpu package allowed to import `molstar` at runtime, and it does so
+only through dynamic `import()` inside its functions. It must not import
 `@use-gpu/*`, `@molgpu/viewer`, or any other `@molgpu/*` package besides
 `table`, and its type declarations must not mention Mol* or use.gpu types.
 
@@ -159,3 +165,21 @@ coordinates (the 2k39 NMR models), so each reader is checked against those
 coordinates, within the format's precision, and against Mol*'s whole-file parse.
 The XTC writer implements the xdr3dfcoord bit packing with fixed-size
 small-difference runs.
+
+## Transport and cancellation
+
+`structureFromBcif` and `volumeFromCcp4` accept `signal` and an optional `fetch`
+implementation; `openTrajectory` accepts those alongside its format and size
+options. Abort is checked before and after byte reads and lazy parser loading.
+Mol* parsing/model tasks receive a cooperative abort observer; synchronous
+lowering cannot be interrupted mid-loop. An abort preserves the signal's reason.
+Frame reads take their own signal, independent of the completed opening request.
+
+HTTP Range reads require exact start/end/total metadata and body lengths. A
+strong ETag is pinned with `If-Match`; otherwise Last-Modified is pinned with
+`If-Unmodified-Since`. Changed or missing pinned validators are rejected.
+Without validators, the URL must identify immutable content: total-size
+validation cannot detect same-size changes. Servers ignoring Range are
+downloaded once under the configured size cap. Bytes, Blobs and custom
+ByteSources share the scan contract; custom implementations should honor the
+read signal, and scans also check it around reads and cached blocks.

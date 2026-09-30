@@ -70,6 +70,7 @@ export function byteSource(input: Uint8Array | Blob | ByteSource): ByteSource {
   if (
     input && typeof input === "object" &&
     Number.isSafeInteger((input as ByteSource).size) &&
+    (input as ByteSource).size >= 0 &&
     typeof (input as ByteSource).read === "function"
   ) return input as ByteSource;
   throw trajectoryError(
@@ -82,7 +83,9 @@ export function byteSource(input: Uint8Array | Blob | ByteSource): ByteSource {
  * A `ByteSource` over an HTTP resource read with `Range` requests. A server
  * that answers the probe with 200 instead of 206 ignores Range: the whole body
  * is then downloaded once, and refused with `TRAJECTORY_TOO_LARGE` when it is
- * over `maxDownload` (default 256 MiB).
+ * over `maxDownload` (default 256 MiB). Strong ETags (else Last-Modified)
+ * are pinned across reads. Without either validator, callers must use an
+ * immutable URL; total-size checks cannot detect same-size content changes.
  */
 export async function urlByteSource(
   url: string | URL,
@@ -95,10 +98,12 @@ export async function urlByteSource(
   const { maxDownload = MAX_FULL_DOWNLOAD, signal } = options;
   const get = options.fetch ?? fetch;
   const request = async (headers: HeadersInit, sig?: AbortSignal) => {
+    aborted(sig);
     let response: Response;
     try {
       response = await get(url, { headers, signal: sig });
     } catch (error) {
+      aborted(sig);
       if ((error as Error)?.name === "AbortError") throw error;
       throw trajectoryError(
         `Unable to fetch ${url}`,
@@ -117,36 +122,97 @@ export async function urlByteSource(
   };
   const probe = await request({ Range: "bytes=0-0" }, signal);
   if (probe.status === 206) {
-    const range = probe.headers.get("content-range") ?? "";
-    await probe.body?.cancel();
-    const size = Number(/\/(\d+)\s*$/.exec(range)?.[1]);
-    if (!Number.isSafeInteger(size)) {
-      throw trajectoryError(
-        `${url}: a 206 response without a total size in Content-Range`,
-        "FETCH_FAILED",
+    const parseRange = (
+      response: Response,
+      start: number,
+      end: number,
+      total?: number,
+    ): number => {
+      const match = /^bytes (\d+)-(\d+)\/(\d+)$/.exec(
+        response.headers.get("content-range") ?? "",
       );
+      const values = match?.slice(1).map(Number);
+      if (
+        response.status !== 206 || !values ||
+        !values.every(Number.isSafeInteger) ||
+        values[0] !== start || values[1] !== end - 1 || values[2] < end ||
+        (total !== undefined && values[2] !== total)
+      ) {
+        throw trajectoryError(
+          `${url}: invalid Content-Range for bytes ${start}-${end - 1}${
+            total === undefined ? "" : `/${total}`
+          }`,
+          "FETCH_FAILED",
+        );
+      }
+      return values[2];
+    };
+    let size: number;
+    try {
+      size = parseRange(probe, 0, 1);
+      const first = new Uint8Array(await probe.arrayBuffer());
+      aborted(signal);
+      if (first.byteLength !== 1) {
+        throw trajectoryError(
+          `${url}: Range probe must contain one byte`,
+          "FETCH_FAILED",
+        );
+      }
+    } catch (error) {
+      await probe.body?.cancel().catch(() => {});
+      throw error;
     }
+    const etag = probe.headers.get("etag");
+    const strong = etag && !etag.startsWith("W/") ? etag : null;
+    const modified = probe.headers.get("last-modified");
     return Object.freeze({
       size,
       async read(offset: number, length: number, sig?: AbortSignal) {
+        aborted(sig);
         const [start, end] = clip(size, offset, length);
         if (end === start) return new Uint8Array();
-        const response = await request(
-          { Range: `bytes=${start}-${end - 1}` },
-          sig,
-        );
-        const bytes = new Uint8Array(await response.arrayBuffer());
-        if (response.status !== 206 || bytes.byteLength !== end - start) {
-          throw trajectoryError(
-            `${url}: expected ${
-              end - start
-            } bytes from ${start}, got ${bytes.byteLength}`,
-            "FETCH_FAILED",
-          );
+        const headers: Record<string, string> = {
+          Range: `bytes=${start}-${end - 1}`,
+        };
+        if (strong) headers["If-Match"] = strong;
+        else if (modified) headers["If-Unmodified-Since"] = modified;
+        const response = await request(headers, sig);
+        try {
+          parseRange(response, start, end, size);
+          if (
+            (strong && response.headers.get("etag") !== strong) ||
+            (!strong && modified &&
+              response.headers.get("last-modified") !== modified)
+          ) {
+            throw trajectoryError(
+              `${url}: remote resource changed during Range reads`,
+              "FETCH_FAILED",
+            );
+          }
+          const bytes = new Uint8Array(await response.arrayBuffer());
+          aborted(sig);
+          if (bytes.byteLength !== end - start) {
+            throw trajectoryError(
+              `${url}: expected ${
+                end - start
+              } bytes from ${start}, got ${bytes.byteLength}`,
+              "FETCH_FAILED",
+            );
+          }
+          return bytes;
+        } catch (error) {
+          await response.body?.cancel().catch(() => {});
+          throw error;
         }
-        return bytes;
       },
     });
+  }
+  if (probe.status !== 200) {
+    await probe.body?.cancel();
+    throw trajectoryError(
+      `${url}: expected HTTP 200 or 206, got ${probe.status}`,
+      "FETCH_FAILED",
+    );
   }
   const declared = Number(probe.headers.get("content-length"));
   if (Number.isFinite(declared) && declared > maxDownload) {
@@ -165,7 +231,9 @@ export async function urlByteSource(
   if (reader) {
     try {
       while (true) {
+        aborted(signal);
         const { done, value } = await reader.read();
+        aborted(signal);
         if (done) break;
         length += value.byteLength;
         if (length > maxDownload) {
@@ -177,6 +245,9 @@ export async function urlByteSource(
         }
         chunks.push(value);
       }
+    } catch (error) {
+      await reader.cancel().catch(() => {});
+      throw error;
     } finally {
       reader.releaseLock();
     }
@@ -187,6 +258,7 @@ export async function urlByteSource(
     bytes.set(chunk, at);
     at += chunk.byteLength;
   }
+  aborted(signal);
   return byteSource(bytes);
 }
 
@@ -215,6 +287,7 @@ export class BlockReader {
   }
   /** A view of `length` bytes from `offset`, or fewer at the end of the file. */
   async bytes(offset: number, length: number): Promise<Uint8Array> {
+    aborted(this.#signal);
     const end = Math.min(offset + length, this.#source.size);
     if (offset < this.#start || end > this.#start + this.#block.byteLength) {
       this.#block = await this.#source.read(
@@ -222,6 +295,7 @@ export class BlockReader {
         Math.max(this.#blockSize, length),
         this.#signal,
       );
+      aborted(this.#signal);
       this.#start = offset;
       this.reads++;
     }
@@ -264,7 +338,9 @@ export async function readExactly(
   signal: AbortSignal | undefined,
   what: string,
 ): Promise<Uint8Array> {
+  aborted(signal);
   const bytes = await source.read(offset, length, signal);
+  aborted(signal);
   if (bytes.byteLength !== length) {
     throw trajectoryError(
       `${what}: expected ${length} bytes from ${offset}, got ${bytes.byteLength}`,

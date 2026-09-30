@@ -10,6 +10,8 @@
 // any criterion fails.
 import { dirname, fromFileUrl, join, relative, resolve } from "@std/path";
 import ts from "typescript";
+import { startRegistry } from "../test/spikes/jsr-consumer/registry.ts";
+import { checkPublishedImports } from "./published-imports.mjs";
 
 /** True if `path` exists (file or directory), without the TOCTOU race of a
  * separate stat-then-read; callers still just want a boolean here. */
@@ -32,8 +34,6 @@ const STABILITY = new Set(["stable", "experimental", "advanced"]);
 const VIEWER = "@molgpu/viewer";
 // Packages that cannot be imported in Node; H6 resolves their entries instead.
 const BROWSER_ONLY = new Set([VIEWER]);
-const PACKABLE =
-  /^(package\.json|README\.md|LICENSE(\.\w+)?|CHANGELOG\.md|src\/.+)$/;
 const SOURCE = /\.(mjs|js|ts|tsx|mts)$/;
 
 const readJson = (path) => JSON.parse(readFile(path));
@@ -122,37 +122,6 @@ function entries(manifest) {
         ? ({ subpath, types: target, import: target })
         : ({ subpath, types: target?.types, import: target?.import })
     );
-}
-
-/**
- * A JSR package manifest derived from a simple package shape. Internal @molgpu
- * dependencies resolve through the Deno workspace; every other dependency becomes
- * an npm: import at the same range.
- */
-function expectedDenoManifest(m) {
-  const exports = Object.fromEntries(
-    entries(m).map((e) => [e.subpath, e.import]),
-  );
-  const imports = {};
-  for (
-    const [dep, range] of Object.entries({
-      ...m.dependencies,
-      ...m.peerDependencies,
-    }).sort(([a], [b]) => a.localeCompare(b))
-  ) {
-    if (dep.startsWith("@molgpu/")) continue;
-    imports[dep] = `npm:${dep}@${range}`;
-    imports[`${dep}/`] = `npm:/${dep}@${range}/`;
-  }
-  return {
-    name: m.name,
-    version: m.version,
-    license: m.license,
-    exports: Object.keys(exports).length === 1 && exports["."]
-      ? exports["."]
-      : exports,
-    ...(Object.keys(imports).length ? { imports } : {}),
-  };
 }
 
 /** Resolve a module's exports with the TS checker: names and printed declarations. */
@@ -569,7 +538,10 @@ function wildcardExports(file) {
   );
 }
 
-function checkPackage(dir, { update = false, usage = [] } = {}) {
+function checkPackage(
+  dir,
+  { update = false, usage = [], published, publishError } = {},
+) {
   const fails = Object.fromEntries(CRITERIA.map((c) => [c, []]));
   const fail = (c, msg) => fails[c].push(msg);
   const manifestPath = join(dir, "deno.json");
@@ -577,26 +549,18 @@ function checkPackage(dir, { update = false, usage = [] } = {}) {
     return { name: relative(ROOT, dir), fails: { H1: ["no deno.json"] } };
   }
   const m = readJson(manifestPath);
-  // JSR is the source of package metadata. These compatibility defaults keep
-  // the API/import-wall checks below independent of npm manifest conventions.
-  m.description ??= "JSR package";
-  m.type = "module";
-  m.sideEffects = false;
-  m.files = ["src"];
-  m.dependencies = Object.fromEntries(
-    Object.entries(m.imports ?? {}).filter(([key]) => !key.endsWith("/")),
-  );
-  m.peerDependencies = {};
   const name = m.name ?? relative(ROOT, dir);
   const isViewer = name === VIEWER;
   const isDynamics = name === "@molgpu/dynamics";
   const src = join(dir, "src");
   const sources = walk(src, SOURCE).filter((f) => !f.endsWith(".d.ts"));
-  const declared = { ...m.dependencies, ...m.peerDependencies };
+  const declared = Object.fromEntries(
+    Object.entries(m.imports ?? {}).filter(([key]) => !key.endsWith("/")),
+  );
   const ents = entries(m);
 
   // H1 — manifest.
-  for (const key of ["name", "version", "license", "description"]) {
+  for (const key of ["name", "version", "license"]) {
     if (!m[key]) fail("H1", `missing "${key}"`);
   }
   if (m.version && !/^\d+\.\d+\.\d+(-[\w.]+)?$/.test(m.version)) {
@@ -611,11 +575,6 @@ function checkPackage(dir, { update = false, usage = [] } = {}) {
     fail("H1", "missing LICENSE-PDB2PQR file");
   }
   if (m.private) fail("H1", '"private": true');
-  if (m.type !== "module") fail("H1", '"type" must be "module"');
-  if (!("sideEffects" in m)) fail("H1", 'missing "sideEffects"');
-  if (!Array.isArray(m.files) || !m.files.includes("src")) {
-    fail("H1", '"files" must include "src"');
-  }
   if (!ents.length) fail("H1", '"exports" must be a map with a "." entry');
   else if (!ents.some((e) => e.subpath === ".")) {
     fail("H1", '"exports" has no "." entry');
@@ -625,41 +584,24 @@ function checkPackage(dir, { update = false, usage = [] } = {}) {
       fail("H1", `exports["${e.subpath}"] needs both "types" and "import"`);
     }
   }
-  const undeclared = new Set();
-  for (const file of sources) {
-    for (const spec of specifiers(file)) {
-      if (!isBare(spec)) continue;
-      const dep = pkgRoot(spec);
-      if (
-        dep !== name && !dep.startsWith("@molgpu/") && !(dep in declared)
-      ) undeclared.add(`${dep} (${relative(dir, file)})`);
+  if (!m.publish?.include?.includes("src")) {
+    fail("H1", 'deno.json publish.include must include "src"');
+  }
+  if (publishError) fail("H1", publishError);
+  else if (!published) fail("H1", "package absent from local publish upload");
+  else {
+    for (const message of checkPublishedImports(name, published)) {
+      fail("H1", message);
     }
   }
-  for (const u of undeclared) fail("H1", `undeclared import ${u}`);
-  for (const [dep, range] of Object.entries(declared)) {
-    if (isDynamics && dep.startsWith("@use-gpu/")) {
-      fail("H4", `${name} declares ${dep}; dynamics must be renderer-free`);
-    }
-    if (
-      dep.startsWith("@use-gpu/") &&
-      !new RegExp(`^npm:${dep.replace("/", "\\/")}@\\d+\\.\\d+\\.\\d+$`).test(
-        range,
-      )
-    ) fail("H1", `${dep} must be pinned exactly, got "${range}"`);
-  }
-  const denoPath = manifestPath;
   const deno = m;
-  if (!deno) {
-    fail("H1", "missing deno.json (the JSR manifest; run deno task sync:deno)");
-  } else {
-    if (!deno.publish?.include?.includes("src")) {
-      fail("H1", 'deno.json publish.include must include "src"');
+
+  if (isDynamics) {
+    for (const dep of Object.keys(declared)) {
+      if (dep.startsWith("@use-gpu/")) {
+        fail("H4", `${name} declares ${dep}; dynamics must be renderer-free`);
+      }
     }
-  }
-  // Table identity is module-private (a WeakMap brand), so every dependent must
-  // share the app's one copy of @molgpu/table rather than install its own.
-  if (m.dependencies?.["@molgpu/table"]) {
-    fail("H1", "@molgpu/table must be a peerDependency, not a dependency");
   }
 
   // H2 — declared types match the runtime, per entry.
@@ -780,7 +722,7 @@ function checkPackage(dir, { update = false, usage = [] } = {}) {
   for (const e of ents) {
     for (const entryFile of new Set([e.types, e.import].filter(Boolean))) {
       if (!exists(join(dir, entryFile))) continue;
-      for (const node of wildcardExports(join(dir, entryFile))) {
+      for (const _node of wildcardExports(join(dir, entryFile))) {
         fail(
           "H5",
           `${e.subpath}: wildcard re-export in ${entryFile}; list public names explicitly`,
@@ -854,26 +796,6 @@ function checkPackage(dir, { update = false, usage = [] } = {}) {
     }
   }
 
-  // H6 — JSR's dry-run is the package-content and import validation.
-  const packed = undefined;
-  if (packed) {
-    for (const f of packed) {
-      if (!PACKABLE.test(f)) fail("H6", `tarball would include ${f}`);
-    }
-    for (const e of ents) {
-      for (const f of [e.types, e.import]) {
-        if (f && !packed.includes(f.replace(/^\.\//, ""))) {
-          fail("H6", `tarball is missing entry file ${f}`);
-        }
-      }
-    }
-    // Node won't strip types under node_modules, so only JS entries can be imported
-    // from the packed tree; TypeScript entries are imported through Deno below.
-    const jsEntries = ents.filter((e) => !/\.ts$/.test(e.import));
-    if (!fails.H6.length && jsEntries.length) {
-      smokeImport(dir, m, jsEntries, packed, (msg) => fail("H6", msg));
-    }
-  }
   // H6 (JSR) — publishable to JSR. Runs last and only on an otherwise clean
   // package, since a manifest or import fault above would fail here too.
   if (deno && CRITERIA.every((c) => !fails[c].length)) {
@@ -889,7 +811,10 @@ function hasPublicRationale(description = "") {
 
 const firstError = (err) =>
   String(err.stderr ?? err.message).split("\n")
-    .find((l) => /error|Error/.test(l))?.replace(/\x1b\[[0-9;]*m/g, "")
+    .find((l) => /error|Error/.test(l))?.replace(
+      new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, "g"),
+      "",
+    )
     .trim() ?? "failed";
 
 /**
@@ -932,7 +857,7 @@ function jsrCheck(dir, ents, importable, fail) {
   }
 }
 
-function main(argv) {
+async function main(argv) {
   const flags = new Set(argv.filter((a) => a.startsWith("--")));
   const args = argv.filter((a) => !a.startsWith("--"));
   const dirs = args.length
@@ -970,12 +895,42 @@ function main(argv) {
     packageUsage.push(entry);
     usageByPackage.set(entry.package, packageUsage);
   }
+  // Capture the real unfurled upload without contacting the public registry.
+  const registry = startRegistry();
+  let publishError;
+  try {
+    const publishDirs = [
+      ROOT,
+      ...dirs.filter((dir) => !dir.startsWith(join(ROOT, "packages") + "/")),
+    ];
+    for (const cwd of publishDirs) {
+      const result = await new Deno.Command(Deno.execPath(), {
+        args: ["publish", "--token", "local", "--allow-dirty"],
+        cwd,
+        env: { JSR_URL: registry.url, NO_COLOR: "1" },
+        stdout: "piped",
+        stderr: "piped",
+      }).output();
+      if (!result.success) {
+        publishError = `local publish failed: ${
+          new TextDecoder().decode(result.stderr)
+        }`;
+        break;
+      }
+    }
+  } catch (error) {
+    publishError = `local publish failed: ${error}`;
+  } finally {
+    await registry.stop();
+  }
   const results = dirs.map((d) => {
     const manifest = exists(join(d, "deno.json"))
       ? readJson(join(d, "deno.json"))
       : {};
     return checkPackage(d, {
       update: flags.has("--update"),
+      published: registry.files(manifest.name, manifest.version),
+      publishError,
       usage: usageByPackage.get(manifest.name) ?? [],
     });
   });
@@ -998,4 +953,4 @@ function main(argv) {
     : 1;
 }
 
-Deno.exit(main(Deno.args));
+Deno.exit(await main(Deno.args));

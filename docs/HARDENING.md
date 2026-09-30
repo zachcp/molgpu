@@ -10,14 +10,19 @@ already exist; hardening only requires that they keep passing.
 
 ## Per-package criteria
 
-**H1 — Manifest.** `deno.json` has: `name`, a semver `version`, and `license`
-(`MIT`), `description`, `"type": "module"`, `"sideEffects": false` (or an
-explicit list), and an `exports` map of the form
-`{ ".": { "types", "import" } }`. It has no `private: true`, and `files` is set
-to `src` (npm adds README and LICENSE itself; each package keeps a copy of the
-root MIT `LICENSE`). Every bare import in `src/` is declared in `dependencies`
-or `peerDependencies`. `@use-gpu/*` versions are pinned exactly (risk R3). A
-`deno.json` (the JSR manifest) declares exports and publishes `src`.
+**H1 — Manifest and published dependencies.** `deno.json` declares `name`, a
+semver `version`, `license`, public TypeScript exports, and `publish.include`
+containing `src`. Package licenses are MIT, except dynamics' combined
+`MIT AND BSD-3-Clause` attribution. Check the files uploaded to a local JSR
+registry: internal dependencies are caret `jsr:` ranges, use.gpu dependencies
+match the reviewed exact npm pin, and no bare imports remain. Only IO may import
+Mol*, through dynamic `import()`, at the tested exact version.
+
+Compatible internal ranges must resolve a single table/timeline copy. Divergent
+copies can reject values because identity and curve state are module-private;
+inspect `deno info` and the lockfile, then align dependency ranges. The app must
+match use.gpu `0.20.0` exactly. Bundle viewer entries for the browser: direct
+Deno execution cannot link workbench's CommonJS `LoopContext` re-export.
 
 **H2 — Types match the runtime.** Each `exports` entry's `types` and `import`
 files exist (for TypeScript source they are the same `src/*.ts` file), and the
@@ -86,7 +91,7 @@ modules host both entries, its `.` is checked export by export: the types each
 
 **H7 — README.**
 
-- Covers purpose (one paragraph), install, peer dependencies, and a minimal
+- Covers purpose (one paragraph), install, dependency resolution, and a minimal
   runnable example.
 - Lists the API with its stability level.
 - Notes where the package sits in the dependency graph and what it must not
@@ -129,7 +134,7 @@ described:
   code is preserved.
 - The docs and examples gallery link to each package README.
 - A dry-run publish of the whole workspace succeeds in dependency order.
-  Actually publishing to npm is a separate human decision.
+  Actually publishing to JSR is a separate human decision.
 
 Status (2026-09-25): all packages are at `0.1.0` with a `CHANGELOG.md` (manual
 procedure in [RELEASING.md](RELEASING.md)). `geo`, `io` and `table` carry the

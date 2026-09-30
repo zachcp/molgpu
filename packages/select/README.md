@@ -15,9 +15,12 @@ WGSL. The viewer takes the resulting `Selection` and uploads its indices.
 deno add jsr:@molgpu/select jsr:@molgpu/table
 ```
 
-**Peer dependencies:** `@molgpu/table` (it provides `StructureData`). It is a
-peer so the app holds one shared copy; structure identity is module-private and
-two copies reject each other's structures.
+JSR publishes internal dependencies as caret ranges (for example,
+`jsr:@molgpu/table@^0.1.0`). Keep compatible versions so the application
+resolves one shared copy: identity and revision state are module-private. Values
+from divergent copies can be rejected by identity-dependent operations. Use
+`deno info` and the lockfile to find duplicate versions, then align the
+application and package dependency ranges.
 
 ## Example
 

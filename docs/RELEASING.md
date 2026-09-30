@@ -1,10 +1,11 @@
 # Releasing
 
-The seven `@molgpu/*` packages are versioned and released together (lockstep):
-every package carries the same version, and internal dependencies pin that exact
-version. `@molgpu/table` is the exception on the consumer side: it is a peer
-dependency (`^0.1.0`) of `select`, `fields`, `io` and `viewer`, because
-structure identity is module-private and an app must hold a single copy.
+The eight `@molgpu/*` packages are versioned and released together (lockstep).
+Internal dependencies publish as caret JSR ranges (currently `^0.1.0`), which
+resolve one copy when compatible. Keep the application on compatible table and
+timeline versions: their module-private identity/curve state rejects values from
+divergent copies. Match use.gpu's reviewed exact `0.20.0` npm dependencies in
+the application. IO publishes the tested Mol* version exactly (`5.11.0`).
 
 Changelogs are kept by hand (no changesets). Each package has its own
 `CHANGELOG.md` in [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) form.

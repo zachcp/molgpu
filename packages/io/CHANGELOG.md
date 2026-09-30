@@ -6,6 +6,11 @@ All notable changes to `@molgpu/io` are recorded here. The format follows
 
 ## [Unreleased]
 
+- Add AbortSignal and fetch options to whole-file importers; cooperate with
+  parser/model cancellation. Validate HTTP Range offsets, totals and object
+  validators; abort cached header scans. Pin the published Mol* dependency to
+  the tested 5.11.0.
+
 - **Changed (stable):** one error type. `IoError` (with `format` and `code`,
   plus `IoErrorCode` and `IoFormat`) replaces `BcifParseError`, `PqrParseError`,
   `VolumeParseError`, `TrajectoryParseError`, `SurfaceFieldError`,

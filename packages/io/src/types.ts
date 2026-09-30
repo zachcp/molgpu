@@ -33,6 +33,8 @@ export interface OpenTrajectoryOptions {
   readonly maxDownload?: number;
   /** Decode velocities where the format stores them (TRR). Default false. */
   readonly velocities?: boolean;
+  /** Fetch implementation used for URL transport (for credentials or testing). */
+  readonly fetch?: typeof fetch;
   /** Cancels opening (the header scan); frame reads take their own signal. */
   readonly signal?: AbortSignal;
 }
