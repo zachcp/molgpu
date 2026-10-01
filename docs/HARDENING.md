@@ -31,10 +31,12 @@ set of exported names is identical between them, as checked by script. It has no
 
 **H3 — No leaked dependency types.** For every package except `viewer`, the
 public entry (and anything it re-exports) mentions neither `@use-gpu/*` nor
-`molstar`. `viewer` may expose use.gpu types only from a separately named
-advanced entry (`@molgpu/viewer/advanced`), never from `.`. Because the viewer's
-modules host both entries, its `.` is checked export by export: the types each
-`.` export reaches must not name use.gpu.
+`molstar`. The viewer's `.` permits the pinned native `LiveElement` through
+`ViewerElement` for typed scene composition (crj.9/crj.21). Other use.gpu types
+belong to `@molgpu/viewer/advanced`. Because viewer modules host both entries,
+`.` is checked export by export: each reachable external type must be exactly
+`@use-gpu/live`'s `LiveElement`; `LiveComponent`, shader and GPU resource types
+remain excluded.
 
 **H4 — Import walls.**
 

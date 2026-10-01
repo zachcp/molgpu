@@ -9,6 +9,7 @@ import {
   DirectionalLight,
   OrbitCamera,
   Pass,
+  PBRMaterial,
   useDeviceContext,
 } from "@use-gpu/workbench";
 import { createStructure } from "@molgpu/table";
@@ -129,7 +130,8 @@ const MATERIALS = {
   basic: { type: "basic" },
   normal: { type: "normal" },
   // The escape-hatch wrapper form: a plain function receiving the element.
-  wrapper: (children) => children,
+  wrapper: (children) =>
+    use(PBRMaterial, { roughness: () => 0.6, metalness: 0, children }),
 };
 
 const Scene = ({ material }) =>

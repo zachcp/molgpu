@@ -1,6 +1,6 @@
-// The "." entry's types. It carries no use.gpu types: everything below is
-// owned by @molgpu/viewer. Exports that are inherently use.gpu-shaped (shader sources,
-// Live contexts, custom-shader materials) live in `@molgpu/viewer/advanced`.
+// The viewer boundary uses the pinned native LiveElement for scene composition.
+// Molecular values stay owned; shader/context APIs live in the advanced entry.
+import type { LiveElement } from "@use-gpu/live";
 import type { StructureData, TrajectoryData, VolumeData } from "@molgpu/table";
 import type { Curve } from "@molgpu/timeline";
 import type {
@@ -10,14 +10,13 @@ import type {
 } from "@molgpu/dynamics";
 import type { Selection, SelectionQuery } from "@molgpu/select";
 
-// --- Owned element, component and value types -------------------------------
+// --- Scene elements, components and owned values ---------------------------
 
 /**
  * One node of a rendered scene, as produced by JSX or by calling a component.
- * Opaque by design: its concrete shape belongs to the renderer (a use.gpu Live
- * element; `@molgpu/viewer/advanced` is where upstream types are exposed).
+ * Aliases the pinned use.gpu LiveElement so native scene composition stays typed.
  */
-export type ViewerElement = object | null | undefined | false;
+export type ViewerElement = LiveElement;
 
 /** A viewer component: a function of props that renders a scene element. Use
  *  it in JSX (`<Spacefill />`) or through the renderer's `use()`. */
@@ -63,12 +62,20 @@ export interface StructureBounds {
 export type MaterialType = "pbr" | "basic" | "normal";
 
 /**
- * A representation's `material` prop. Either a spec object — `{ type?, ...props }`
- * where `type` defaults to 'pbr' and the rest forward to the matching material
- * component — or a `(children) => element` wrapper function for full control.
+ * Constant material settings, or a native Live wrapper for shader maps, lazy
+ * values and render callbacks. PBR defaults to metalness 0 and roughness 0.6.
+ * Albedo/basic color multiply the representation's color (including alpha).
  */
 export type MaterialSpec =
-  | ({ type?: MaterialType } & Record<string, unknown>)
+  | {
+    type?: "pbr";
+    metalness?: number;
+    roughness?: number;
+    albedo?: VectorLike;
+    emissive?: VectorLike;
+  }
+  | { type: "basic"; color?: VectorLike }
+  | { type: "normal" }
   | ((children: ViewerElement) => ViewerElement);
 
 /** CPU-side owner of the values shared by one <Structure> subtree. */

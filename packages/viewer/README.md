@@ -140,17 +140,52 @@ structure's topology.
 
 ## Entries
 
-- **`@molgpu/viewer`** (`.`) carries **no use.gpu types**. Components are typed
-  with owned aliases (`ViewerComponent`, `ViewerElement`, `VectorLike`). A
-  representation's `material` prop takes a spec
-  (`{ type: "pbr" | "basic" | "normal", ...props }`, PBR by default with matte,
-  non-metallic defaults) or a `(children) => element` function that wraps the
-  representation in any workbench material, including shader materials.
+- **`@molgpu/viewer`** (`.`) uses the pinned use.gpu `LiveElement` through
+  `ViewerElement`, so molecular components compose with native Live scenes.
+  `ViewerComponent` remains a function returning that element (no `any` return).
+  Molecular values and material constants use owned types.
 - **`@molgpu/viewer/advanced`** holds the escape hatches for custom
   representations and providers: CPU coordinate, volume and attribute snapshots,
   the structure resource, GPU bounds, and use.gpu-shaped exports (shader
   sources, Live contexts, coordinate providers). Declarations that name
   `@use-gpu/*` types tie code using them to the pinned use.gpu version.
+
+### Material constants and wrappers
+
+`material` accepts these constant settings:
+
+| Kind                      | Settings                                                                 | Defaults                                                 |
+| ------------------------- | ------------------------------------------------------------------------ | -------------------------------------------------------- |
+| `pbr` (or omitted `type`) | `metalness`, `roughness`: numbers; `albedo`, `emissive`: numeric vectors | metalness 0, roughness 0.6, white albedo, black emissive |
+| `basic`                   | `color`: numeric vector                                                  | white                                                    |
+| `normal`                  | no settings                                                              | normal debug shading                                     |
+
+```tsx
+import { PBRMaterial } from "@use-gpu/workbench";
+import { Spacefill } from "@molgpu/viewer";
+
+<Spacefill material={{ roughness: 0.8, metalness: 0 }} />;
+<Spacefill
+  material={(children) => (
+    <PBRMaterial roughness={() => 0.8}>{children}</PBRMaterial>
+  )}
+/>;
+```
+
+A PBR `albedo` or basic `color` multiplies the representation's color, including
+alpha; it does not replace a per-atom color field. White preserves that color.
+Normal shading visualizes normals instead. This follows the pinned workbench
+material shaders. Native wrappers can supply lazy values, shader maps, render
+callbacks and the full upstream color syntax. Native wrappers use upstream
+material defaults (PBR roughness 0.5 unless specified).
+
+Migration: arbitrary object children no longer type-check. `ViewerElement` is
+now a native `LiveElement`; viewer components still have a checked return type.
+`MaterialSpec` no longer forwards arbitrary properties in TypeScript. Correct
+misspelled keys and move shader maps, lazy scalars, string/packed colors and
+render callbacks into a native wrapper as above. Constant colors use numeric
+arrays or typed arrays. These compile-time restrictions leave existing runtime
+material dispatch intact.
 
 ## API
 
@@ -198,7 +233,7 @@ may change before 0.1.0; _advanced_ — only from `@molgpu/viewer/advanced`.
 | `ColorStops`              | experimental | RGBA colour stops over a normalised 0–1 range, shared with `<VolumeSlice>`.                                                                                                                                             |
 | `SliceStops`              | experimental | `[t, color]` stops over 0–1 for `<VolumeSlice>`.                                                                                                                                                                        |
 | `TimelineProvider`        | stable       | Provides caller-owned global time in seconds.                                                                                                                                                                           |
-| `ViewerElement`           | experimental | Opaque rendered scene element (owned alias).                                                                                                                                                                            |
+| `ViewerElement`           | experimental | Pinned native LiveElement for scene composition.                                                                                                                                                                        |
 | `ViewerComponent`         | experimental | A component: `(props) => ViewerElement` (owned alias).                                                                                                                                                                  |
 | `VectorLike`              | experimental | Plain or typed numeric vector; the flat-colour type of every representation.                                                                                                                                            |
 | `BlendMode`               | experimental | Blend-mode names for `<Spacefill>` point-layer options.                                                                                                                                                                 |
@@ -207,7 +242,7 @@ may change before 0.1.0; _advanced_ — only from `@molgpu/viewer/advanced`.
 | `PointLayerOptions`       | experimental | Point-layer flags `<Spacefill>` forwards.                                                                                                                                                                               |
 | `useCoordinateFocus`      | experimental | Nonblocking selection focus from GPU bounds; starts with root framing.                                                                                                                                                  |
 | `MaterialType`            | experimental | `pbr`, `basic` or `normal`: the `type` of a `material` spec.                                                                                                                                                            |
-| `MaterialSpec`            | experimental | A representation's `material` prop.                                                                                                                                                                                     |
+| `MaterialSpec`            | experimental | Discriminated material constants or native Live wrapper.                                                                                                                                                                |
 | `PickingProvider`         | experimental | Owns the picking registry.                                                                                                                                                                                              |
 | `usePicking`              | experimental | Hovered and picked atom.                                                                                                                                                                                                |
 | `PickHit`                 | experimental | An atom resolved from a picking hit.                                                                                                                                                                                    |
