@@ -64,15 +64,41 @@ export function validateTrajectoryFrame(
   return frame;
 }
 
+const inRange = (index: number, frameCount: number): void => {
+  if (!Number.isInteger(index) || index < 0 || index >= frameCount) {
+    throw new RangeError(`frame ${index} out of range [0, ${frameCount})`);
+  }
+};
+
+/** Shallow-freeze a validated frame, copying its arrays unless adopted. */
+const ownFrame = (
+  frame: TrajectoryFrame,
+  atomCount: number,
+  path: string,
+  adopt: boolean,
+): TrajectoryFrame => {
+  const { positions, box, velocities } = validateTrajectoryFrame(
+    frame,
+    atomCount,
+    path,
+  );
+  const copy = (values: Float32Array) => adopt ? values : values.slice();
+  return Object.freeze({
+    positions: copy(positions),
+    ...(box === undefined ? {} : { box: copy(box) }),
+    ...(velocities === undefined ? {} : { velocities: copy(velocities) }),
+  });
+};
+
 /** An in-memory source over validated, frozen frames. */
 function memorySource(frames: readonly TrajectoryFrame[]): FrameSource {
   return Object.freeze({
     read(index: number, signal?: AbortSignal): Promise<TrajectoryFrame> {
       if (signal?.aborted) return Promise.reject(abortError());
-      if (!Number.isInteger(index) || index < 0 || index >= frames.length) {
-        return Promise.reject(
-          new RangeError(`frame ${index} out of range [0, ${frames.length})`),
-        );
+      try {
+        inRange(index, frames.length);
+      } catch (error) {
+        return Promise.reject(error);
       }
       return Promise.resolve(frames[index]);
     },
@@ -80,12 +106,46 @@ function memorySource(frames: readonly TrajectoryFrame[]): FrameSource {
 }
 
 /**
+ * Check every frame a caller's source returns before any consumer caches it.
+ * The source keeps ownership of the frame's arrays and must never write them
+ * again; consumers may retain them.
+ */
+function validatedSource(
+  source: FrameSource,
+  atomCount: number,
+  frameCount: number,
+): FrameSource {
+  return Object.freeze({
+    async read(index: number, signal?: AbortSignal): Promise<TrajectoryFrame> {
+      if (signal?.aborted) throw abortError();
+      inRange(index, frameCount);
+      const frame = await source.read(index, signal);
+      return ownFrame(
+        frame,
+        atomCount,
+        `trajectory.source.read(${index})`,
+        true,
+      );
+    },
+  });
+}
+
+/**
  * Validate `input` and wrap it as a frozen `TrajectoryData`. With `frames`,
- * each frame is validated and the trajectory reads from memory; with `source`,
- * `frameCount` is required and frames are validated by whoever decodes them.
- * `time` defaults to the frame index (`timeUnit: "index"`).
+ * each frame is validated and its arrays are copied, so callers keep ownership
+ * of their inputs. With `source`, `frameCount` is required and every frame the
+ * source returns is validated on read; the source must never write a frame's
+ * arrays after returning it. `time` defaults to the frame index
+ * (`timeUnit: "index"`).
  */
 export function createTrajectory(input: TrajectoryInput): TrajectoryData {
+  return buildTrajectory(input, false);
+}
+
+function buildTrajectory(
+  input: TrajectoryInput,
+  adoptFrames: boolean,
+): TrajectoryData {
   if (!input || typeof input !== "object") {
     fail("trajectory", "expected object");
   }
@@ -107,9 +167,7 @@ export function createTrajectory(input: TrajectoryInput): TrajectoryData {
       );
     }
     const owned = frames.map((frame, i) =>
-      Object.freeze({
-        ...validateTrajectoryFrame(frame, atomCount, `trajectory.frames[${i}]`),
-      })
+      ownFrame(frame, atomCount, `trajectory.frames[${i}]`, adoptFrames)
     );
     frameCount = owned.length;
     read = memorySource(Object.freeze(owned));
@@ -119,7 +177,7 @@ export function createTrajectory(input: TrajectoryInput): TrajectoryData {
     }
     count(input.frameCount, "trajectory.frameCount", 1);
     frameCount = input.frameCount!;
-    read = source!;
+    read = validatedSource(source!, atomCount, frameCount);
   }
   let time: Float64Array;
   if (input.time === undefined) {
@@ -285,9 +343,10 @@ export function trajectoryFromModels(data: StructureData): TrajectoryData {
     });
     return { positions };
   });
-  return createTrajectory({
+  // The frames are fresh arrays nothing else references: adopt them.
+  return buildTrajectory({
     atomCount: first.length,
     frames,
     ...(first.length === a.count ? {} : { atomMap: first }),
-  });
+  }, true);
 }

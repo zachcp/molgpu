@@ -1,5 +1,8 @@
 // Frame samples and lazy trajectory sources over fixed molecular topology.
-/** One decoded trajectory frame. Immutable by contract; sources may share it. */
+/**
+ * One decoded trajectory frame. Immutable by contract: once a source returns
+ * it, nobody writes its arrays, and consumers may retain it.
+ */
 export interface TrajectoryFrame {
   /** x, y, z per trajectory atom in Å, in trajectory atom order. */
   readonly positions: Float32Array;
@@ -8,7 +11,11 @@ export interface TrajectoryFrame {
   /** Å/ps in the layout of `positions`; only when a reader was asked for them. */
   readonly velocities?: Float32Array;
 }
-/** Decodes frames on demand, so a trajectory never has to fit in memory. */
+/**
+ * Decodes frames on demand, so a trajectory never has to fit in memory. Return
+ * fresh arrays (or ones never written again) on each read: do not reuse a
+ * decode buffer. `createTrajectory` validates every frame a source returns.
+ */
 export interface FrameSource {
   /** Decode frame `index`. Rejects with an `AbortError` when `signal` aborts. */
   read(index: number, signal?: AbortSignal): Promise<TrajectoryFrame>;
