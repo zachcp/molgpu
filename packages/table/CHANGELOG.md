@@ -6,6 +6,12 @@ All notable changes to `@molgpu/table` are recorded here. The format follows
 
 ## [Unreleased]
 
+- `createTrajectory` copies the arrays of in-memory `frames`, so later writes to
+  caller inputs no longer change the trajectory. With a `source`, every frame
+  read is validated (index range, abort, `Float32Array` type, length, finite
+  values) before any consumer sees it; a source must not reuse decode buffers
+  across reads. `createVolume` still adopts `values` as a transfer.
+
 - Identity-dependent rejection messages name duplicate @molgpu/table copies and
   explain dependency alignment for deduplication.
 

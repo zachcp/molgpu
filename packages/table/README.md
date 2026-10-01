@@ -113,15 +113,27 @@ freeze a nonempty typed array. Do not mutate them. Metadata records and string
 arrays are frozen. Use `withPositions` for coordinate updates, which copies
 positions while preserving dataset and topology identity. Position revisions are
 monotonic per dataset, including branched updates. Topology/attribute
-replacement currently requires a new dataset; no trajectory system or mutable
-store is implemented. Identity is tracked in module-private state, so
-`withPositions` and `bondTopology` only accept structures made by
-`createStructure` from the same module instance. JSR publishes internal
-dependencies as caret ranges (for example, `jsr:@molgpu/table@^0.1.0`). Keep
-compatible versions so the application resolves one shared copy: identity and
-revision state are module-private. Values from divergent copies can be rejected
-by identity-dependent operations. Use `deno info` and the lockfile to find
+replacement currently requires a new dataset; there is no mutable store.
+Identity is tracked in module-private state, so `withPositions` and
+`bondTopology` only accept structures made by `createStructure` from the same
+module instance. JSR publishes internal dependencies as caret ranges (for
+example, `jsr:@molgpu/table@^0.1.0`). Keep compatible versions so the
+application resolves one shared copy: identity and revision state are
+module-private. Values from divergent copies can be rejected by
+identity-dependent operations. Use `deno info` and the lockfile to find
 duplicate versions, then align the application and package dependency ranges.
+
+Ownership follows one rule with one exception. Constructors copy caller arrays:
+`createStructure`, `withPositions`, `withAttributes` and the in-memory `frames`
+of `createTrajectory`. `createVolume` adopts `values` as a transfer (one CPU
+copy of a large grid): do not write that array afterwards, or its `stats` go
+stale. A trajectory `source` owns the frames it returns; `createTrajectory`
+validates each read, and consumers may cache frames, so a source must not reuse
+decode buffers. Molecular values are local to one JavaScript realm: to cross a
+worker boundary, send plain columns or bytes and call the constructor on the
+receiving side (a new identity), and never transfer a buffer owned by a molgpu
+value. See
+[the data ownership decision](../../docs/findings/2026-10-01-data-ownership-decision.md).
 
 All source models and alternate locations are retained. `activeAtoms(data)` is
 an explicit default view: first encountered model, plus blank-altloc atoms and
@@ -190,66 +202,66 @@ Element identity exports:
 
 ## API
 
-| Export                    | Stability    | Description                                                                                                                           |
-| ------------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------- |
-| `createStructure`         | stable       | Validate and copy a `StructureInput` into a frozen `StructureData` with a fresh identity.                                             |
-| `withPositions`           | stable       | Replace coordinates, keeping dataset/topology identity and bumping the positions revision.                                            |
-| `withAttributes`          | experimental | Add, replace or remove validated atom or residue columns while preserving structure identity.                                         |
-| `attributeColumn`         | experimental | Resolve built-in and derived columns through one provenance-aware view.                                                               |
-| `attributeNames`          | experimental | List resolvable column names for a structure.                                                                                         |
-| `ATTRIBUTE_DOMAINS`       | experimental | Shared atom/residue domain registry for built-in and well-known columns.                                                              |
-| `AttributeDomain`         | experimental | Atom or residue row domain for an attribute.                                                                                          |
-| `AttributeValues`         | experimental | Supported numeric typed arrays for attribute values.                                                                                  |
-| `AttributeProvenance`     | experimental | Origin label for an attribute column.                                                                                                 |
-| `AttributeColumnInput`    | experimental | Input values, domain, kind and provenance for `withAttributes`.                                                                       |
-| `AttributeColumn`         | experimental | Resolved immutable-by-contract column descriptor.                                                                                     |
-| `activeAtoms`             | stable       | Atom indices for a view policy (default: first model, primary altloc conformer).                                                      |
-| `residueKey`              | stable       | Namespaced, join-safe string key for one residue row.                                                                                 |
-| `atomRadii`               | experimental | Per-atom display radii: the `atoms.radius` column, else element van der Waals defaults (cached).                                      |
-| `elementRadius`           | experimental | Van der Waals radius in Ångström for an atomic number (1.7 when unlisted).                                                            |
-| `coordinateBounds`        | stable       | Untransformed min/max/center of selected atom positions, or null when empty.                                                          |
-| `StructureData`           | stable       | Validated, identity-branded structure value accepted by every other package.                                                          |
-| `bondTopology`            | experimental | Explicit bonds, or distance-inferred covalent bonds cached per position revision and policy.                                          |
-| `spatialGrid`             | experimental | Uniform spatial hash over packed positions for neighbour queries within one cell size, optionally partitioned.                        |
-| `traceTable`              | experimental | Segmented polymer trace (guide points, tangent/normal/binormal frames, runs) for a selection.                                         |
-| `secondaryStructureTrace` | experimental | Per-sample direction vectors, helix/sheet/coil labels and block-boundary flags over a `Trace`.                                        |
-| `SS_CODES`                | experimental | DSSP letters in `ssCode` order: 0 coil, H, B, E, G, I, T, S, P (reserved).                                                            |
-| `ssKind`                  | experimental | Cartoon kind of an `ssCode` value: H/G/I helix, E/B sheet, otherwise coil.                                                            |
-| `dssp`                    | experimental | Mol*-ported DSSP: `ssCode` values per residue, per chain and model; accepts optional atom rows.                                       |
-| `withSecondaryStructure`  | experimental | Set `ssCode` by Mol*'s `auto`, `dssp` or `model` mode; computed codes carry `computed:dssp`.                                          |
-| `StructureInput`          | experimental | Unvalidated `{ topology, positions }` input to `createStructure`.                                                                     |
-| `Topology`                | experimental | The five column domains of a structure.                                                                                               |
-| `Atoms`                   | experimental | Per-atom columns (names, altloc, residue FK, element, occupancy, B-factor, optional radius).                                          |
-| `Residues`                | experimental | Per-residue columns (chain FK, label/author sequence, insertion code, component, polymer kind, optional SS).                          |
-| `Chains`                  | experimental | Per-chain columns (model, label and author chain IDs).                                                                                |
-| `Bonds`                   | experimental | Bond columns (endpoints, order, explicit/inferred provenance, optional type flags).                                                   |
-| `Links`                   | experimental | Type: source-declared bonds (chem_comp_bond templates, struct_conn) with type flags; add to inferred connectivity, not drawn.         |
-| `BOND_FLAGS`              | experimental | Bond type bits (covalent, metallic, hydrogen, disulfide, aromatic, computed) with Mol*'s values.                                      |
-| `Instances`               | experimental | Assembly rows: one chain times one column-major affine operator.                                                                      |
-| `Trace`                   | experimental | Return type of `traceTable`.                                                                                                          |
-| `SecondaryStructureTrace` | experimental | Return type of `secondaryStructureTrace`.                                                                                             |
-| `createVolume`            | experimental | Validate and wrap a grid plus index-to-world affine as a frozen `VolumeData`; adopts `values`, computes stats.                        |
-| `MAX_VOLUME_SAMPLES`      | experimental | Default `createVolume` ceiling: 256³ samples (64 MiB of scalar f32).                                                                  |
-| `sampleVolume`            | experimental | Trilinear sample at a world position; 0 outside the grid, clamped on its faces.                                                       |
-| `sampleVolumeGradient`    | experimental | World-space gradient of `sampleVolume` by central differences; zero within a step of the grid boundary.                               |
-| `volumeGradientStep`      | experimental | Default central-difference step: half the shortest grid axis.                                                                         |
-| `createVolumeGrid`        | experimental | Validate a samples-free grid (dims, transform, components, unit) for a GPU-computed volume.                                           |
-| `VolumeGrid`              | experimental | A volume's geometry without samples; every `VolumeData` is one.                                                                       |
-| `volumeIndexToWorld`      | experimental | World position of a fractional grid index.                                                                                            |
-| `volumeWorldToIndex`      | experimental | Fractional grid index of a world position.                                                                                            |
-| `volumeInverseTransform`  | experimental | Cached double-precision world-to-index affine.                                                                                        |
-| `volumeComponent`         | experimental | Scalar volume from one channel or the magnitude of a 3-component volume.                                                              |
-| `volumeLevel`             | experimental | Absolute isovalue for `number` or `{ sigma: k }` (`mean + k * sigma`).                                                                |
-| `VolumeData`              | experimental | Immutable grid: x-fastest `values`, `dims`, index-to-Å `transform`, `stats`, `components`, `unit`.                                    |
-| `VolumeInput`             | experimental | Input to `createVolume`.                                                                                                              |
-| `VolumeLevel`             | experimental | Absolute isovalue or `{ sigma }`.                                                                                                     |
-| `createTrajectory`        | experimental | Validate and freeze a trajectory from in-memory `frames` or a streaming `source` plus `frameCount`; time defaults to the frame index. |
-| `validateTrajectory`      | experimental | Throw a `TypeError` unless a trajectory can move a structure (atom count, or in-range `atomMap` rows); frames are not decoded.        |
-| `TrajectoryData`          | experimental | Immutable trajectory: `atomCount`, `frameCount`, per-frame `time` and `timeUnit`, optional `atomMap`, and a `FrameSource`.            |
-| `TrajectoryInput`         | experimental | Input to `createTrajectory`.                                                                                                          |
-| `TrajectoryFrame`         | experimental | One decoded frame: Å `positions`, optional column-major `box`, optional Å/ps `velocities`.                                            |
-| `FrameSource`             | experimental | `read(index, signal?)`: decode one frame on demand, cancellable.                                                                      |
-| `TrajectoryTimeUnit`      | experimental | `"ps"`, `"step"` or `"index"`.                                                                                                        |
+| Export                    | Stability    | Description                                                                                                                        |
+| ------------------------- | ------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `createStructure`         | stable       | Validate and copy a `StructureInput` into a frozen `StructureData` with a fresh identity.                                          |
+| `withPositions`           | stable       | Replace coordinates, keeping dataset/topology identity and bumping the positions revision.                                         |
+| `withAttributes`          | experimental | Add, replace or remove validated atom or residue columns while preserving structure identity.                                      |
+| `attributeColumn`         | experimental | Resolve built-in and derived columns through one provenance-aware view.                                                            |
+| `attributeNames`          | experimental | List resolvable column names for a structure.                                                                                      |
+| `ATTRIBUTE_DOMAINS`       | experimental | Shared atom/residue domain registry for built-in and well-known columns.                                                           |
+| `AttributeDomain`         | experimental | Atom or residue row domain for an attribute.                                                                                       |
+| `AttributeValues`         | experimental | Supported numeric typed arrays for attribute values.                                                                               |
+| `AttributeProvenance`     | experimental | Origin label for an attribute column.                                                                                              |
+| `AttributeColumnInput`    | experimental | Input values, domain, kind and provenance for `withAttributes`.                                                                    |
+| `AttributeColumn`         | experimental | Resolved immutable-by-contract column descriptor.                                                                                  |
+| `activeAtoms`             | stable       | Atom indices for a view policy (default: first model, primary altloc conformer).                                                   |
+| `residueKey`              | stable       | Namespaced, join-safe string key for one residue row.                                                                              |
+| `atomRadii`               | experimental | Per-atom display radii: the `atoms.radius` column, else element van der Waals defaults (cached).                                   |
+| `elementRadius`           | experimental | Van der Waals radius in Ångström for an atomic number (1.7 when unlisted).                                                         |
+| `coordinateBounds`        | stable       | Untransformed min/max/center of selected atom positions, or null when empty.                                                       |
+| `StructureData`           | stable       | Validated, identity-branded structure value accepted by every other package.                                                       |
+| `bondTopology`            | experimental | Explicit bonds, or distance-inferred covalent bonds cached per position revision and policy.                                       |
+| `spatialGrid`             | experimental | Uniform spatial hash over packed positions for neighbour queries within one cell size, optionally partitioned.                     |
+| `traceTable`              | experimental | Segmented polymer trace (guide points, tangent/normal/binormal frames, runs) for a selection.                                      |
+| `secondaryStructureTrace` | experimental | Per-sample direction vectors, helix/sheet/coil labels and block-boundary flags over a `Trace`.                                     |
+| `SS_CODES`                | experimental | DSSP letters in `ssCode` order: 0 coil, H, B, E, G, I, T, S, P (reserved).                                                         |
+| `ssKind`                  | experimental | Cartoon kind of an `ssCode` value: H/G/I helix, E/B sheet, otherwise coil.                                                         |
+| `dssp`                    | experimental | Mol*-ported DSSP: `ssCode` values per residue, per chain and model; accepts optional atom rows.                                    |
+| `withSecondaryStructure`  | experimental | Set `ssCode` by Mol*'s `auto`, `dssp` or `model` mode; computed codes carry `computed:dssp`.                                       |
+| `StructureInput`          | experimental | Unvalidated `{ topology, positions }` input to `createStructure`.                                                                  |
+| `Topology`                | experimental | The five column domains of a structure.                                                                                            |
+| `Atoms`                   | experimental | Per-atom columns (names, altloc, residue FK, element, occupancy, B-factor, optional radius).                                       |
+| `Residues`                | experimental | Per-residue columns (chain FK, label/author sequence, insertion code, component, polymer kind, optional SS).                       |
+| `Chains`                  | experimental | Per-chain columns (model, label and author chain IDs).                                                                             |
+| `Bonds`                   | experimental | Bond columns (endpoints, order, explicit/inferred provenance, optional type flags).                                                |
+| `Links`                   | experimental | Type: source-declared bonds (chem_comp_bond templates, struct_conn) with type flags; add to inferred connectivity, not drawn.      |
+| `BOND_FLAGS`              | experimental | Bond type bits (covalent, metallic, hydrogen, disulfide, aromatic, computed) with Mol*'s values.                                   |
+| `Instances`               | experimental | Assembly rows: one chain times one column-major affine operator.                                                                   |
+| `Trace`                   | experimental | Return type of `traceTable`.                                                                                                       |
+| `SecondaryStructureTrace` | experimental | Return type of `secondaryStructureTrace`.                                                                                          |
+| `createVolume`            | experimental | Validate and wrap a grid plus index-to-world affine as a frozen `VolumeData`; adopts `values`, computes stats.                     |
+| `MAX_VOLUME_SAMPLES`      | experimental | Default `createVolume` ceiling: 256³ samples (64 MiB of scalar f32).                                                               |
+| `sampleVolume`            | experimental | Trilinear sample at a world position; 0 outside the grid, clamped on its faces.                                                    |
+| `sampleVolumeGradient`    | experimental | World-space gradient of `sampleVolume` by central differences; zero within a step of the grid boundary.                            |
+| `volumeGradientStep`      | experimental | Default central-difference step: half the shortest grid axis.                                                                      |
+| `createVolumeGrid`        | experimental | Validate a samples-free grid (dims, transform, components, unit) for a GPU-computed volume.                                        |
+| `VolumeGrid`              | experimental | A volume's geometry without samples; every `VolumeData` is one.                                                                    |
+| `volumeIndexToWorld`      | experimental | World position of a fractional grid index.                                                                                         |
+| `volumeWorldToIndex`      | experimental | Fractional grid index of a world position.                                                                                         |
+| `volumeInverseTransform`  | experimental | Cached double-precision world-to-index affine.                                                                                     |
+| `volumeComponent`         | experimental | Scalar volume from one channel or the magnitude of a 3-component volume.                                                           |
+| `volumeLevel`             | experimental | Absolute isovalue for `number` or `{ sigma: k }` (`mean + k * sigma`).                                                             |
+| `VolumeData`              | experimental | Immutable grid: x-fastest `values`, `dims`, index-to-Å `transform`, `stats`, `components`, `unit`.                                 |
+| `VolumeInput`             | experimental | Input to `createVolume`.                                                                                                           |
+| `VolumeLevel`             | experimental | Absolute isovalue or `{ sigma }`.                                                                                                  |
+| `createTrajectory`        | experimental | Validate and freeze a trajectory from in-memory `frames` (copied) or a streaming `source` plus `frameCount` (each read validated). |
+| `validateTrajectory`      | experimental | Throw a `TypeError` unless a trajectory can move a structure (atom count, or in-range `atomMap` rows); frames are not decoded.     |
+| `TrajectoryData`          | experimental | Immutable trajectory: `atomCount`, `frameCount`, per-frame `time` and `timeUnit`, optional `atomMap`, and a `FrameSource`.         |
+| `TrajectoryInput`         | experimental | Input to `createTrajectory`.                                                                                                       |
+| `TrajectoryFrame`         | experimental | One decoded frame: Å `positions`, optional column-major `box`, optional Å/ps `velocities`.                                         |
+| `FrameSource`             | experimental | `read(index, signal?)`: decode one frame on demand, cancellable; returned arrays are never written again.                          |
+| `TrajectoryTimeUnit`      | experimental | `"ps"`, `"step"` or `"index"`.                                                                                                     |
 
 ### Element identity exports
 

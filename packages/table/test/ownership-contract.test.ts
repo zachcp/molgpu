@@ -1,6 +1,5 @@
 // Executable acceptance for the data ownership decision (molgpu-sept-crj.10):
-// docs/findings/2026-10-01-data-ownership-decision.md. Ignored tests are the
-// target behaviour owned by molgpu-sept-crj.24.
+// docs/findings/2026-10-01-data-ownership-decision.md.
 import {
   assertEquals,
   assertNotStrictEquals,
@@ -72,7 +71,6 @@ Deno.test("ownership: molecular values do not survive structured clone", () => {
 
 Deno.test({
   name: "ownership: createTrajectory copies in-memory frames [crj.24]",
-  ignore: true,
   fn: async () => {
     const positions = new Float32Array(6 * 3);
     const box = Float32Array.of(10, 0, 0, 0, 10, 0, 0, 0, 10);
@@ -91,7 +89,6 @@ Deno.test({
 
 Deno.test({
   name: "ownership: every FrameSource read is validated [crj.24]",
-  ignore: true,
   fn: async () => {
     const n = 6;
     const source = (positions: unknown): FrameSource => ({
