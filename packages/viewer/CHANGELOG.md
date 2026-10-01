@@ -6,6 +6,14 @@ All notable changes to `@molgpu/viewer` are recorded here. The format follows
 
 ## [Unreleased]
 
+- `<Trajectory>` no longer throws a failed source open or frame read. Upstream
+  coordinates pass through and the failure is reported through the new
+  `onStatus` callback (`TrajectoryStatus`: opening, ready, or error with phase
+  `source`/`frame`); without a callback each failure is logged once with
+  `console.error`. A frame failure is sticky until the trajectory changes. Prop
+  misuse, a frame curve without a timeline and periodic-image limit errors still
+  throw.
+
 - Molecular selection props now accept queries through `SelectionInput`, resolve
   at the nearest coordinate/attribute scopes, and expose optional
   pending/ready/error diagnostics. Queries refine consumer view defaults;

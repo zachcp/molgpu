@@ -284,7 +284,8 @@ may change before 0.1.0; _advanced_ — only from `@molgpu/viewer/advanced`.
 | `NormalModeProps`         | experimental | Mode vectors/mapping, amplitude, frequency, phase, and children.                                                                                                                                                        |
 | `useTrajectoryFrame`      | experimental | What the nearest `<Trajectory>` shows: requested frame, displayed pair, interpolated box; null outside one.                                                                                                             |
 | `UnitCell`                | experimental | Lines along the displayed frame's periodic box.                                                                                                                                                                         |
-| `TrajectoryProps`         | experimental | `<Trajectory>` props: `frame`, `interpolate`, `pbc`, plus exactly one of `data` or `src` (with an optional `loader`).                                                                                                   |
+| `TrajectoryProps`         | experimental | `<Trajectory>` props: `frame`, `interpolate`, `pbc`, `onStatus`, plus exactly one of `data` or `src` (with an optional `loader`).                                                                                       |
+| `TrajectoryStatus`        | experimental | `onStatus` value: `opening`, `ready` (frame count), or `error` with phase `source`/`frame`; failures pass upstream coordinates through.                                                                                 |
 | `TrajectoryLoader`        | experimental | Cancellable `(src, cancelled) => TrajectoryData` loader.                                                                                                                                                                |
 | `TrajectoryFrameState`    | experimental | Return type of `useTrajectoryFrame`.                                                                                                                                                                                    |
 | `SlicePlane`              | experimental | A grid plane `{ axis, index }` or a world plane `{ normal, point }`.                                                                                                                                                    |
@@ -519,14 +520,13 @@ failures belong to their player and do not carry into a replacement.
 Structure and Volume are dataset gates: while a `src` request is pending they
 render `loading`, on failure they render `error(failure)`, and their subtree
 mounts only with the loaded data. Trajectory layers coordinates over an existing
-structure, so it renders its children with upstream coordinates while opening
-and throws a source failure from render. use.gpu Live has no error boundary, so
-that failure currently reaches the page as an uncaught error. The planned
-contract (`molgpu-sept-s5o.18`) keeps one Trajectory component and reports
-source and frame failures through an `onStatus` callback while upstream
-coordinates pass through. To own opening and its presentation today, call
-`openTrajectory` from `@molgpu/io` and pass the result as `<Trajectory data>`,
-which is playback only.
+structure, so it renders its children with upstream coordinates while opening. A
+failed source open or frame read is not thrown (use.gpu Live has no error
+boundary): upstream coordinates keep passing through and `onStatus` receives a
+`TrajectoryStatus` (`opening`, `ready`, or `error` with phase `source` or
+`frame`). Without `onStatus`, each failure is logged once with `console.error`.
+To own opening and its presentation, call `openTrajectory` from `@molgpu/io` and
+pass the result as `<Trajectory data>`, which is playback only.
 
 A failure is kept until something changes the request: a new `src`, a new
 `loader` identity, or a remount. Re-rendering with the same props does not

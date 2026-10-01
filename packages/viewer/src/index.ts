@@ -28,6 +28,7 @@ export type {
   TrajectoryFrameState,
   TrajectoryLoader,
   TrajectoryProps,
+  TrajectoryStatus,
   TransformProps,
   Translucency,
   UnwrapProps,

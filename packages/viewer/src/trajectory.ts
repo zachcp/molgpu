@@ -12,6 +12,7 @@ import {
   use,
   useContext,
   useMemo,
+  useRef,
   useResource,
   useState,
 } from "@use-gpu/live";
@@ -25,6 +26,7 @@ import type {
   TrajectoryFrameState,
   TrajectoryLoader,
   TrajectoryProps,
+  TrajectoryStatus,
   ViewerComponent,
 } from "./types.ts";
 import { useCoordinates } from "./coordinates-context.ts";
@@ -259,11 +261,38 @@ export function useTrajectoryFrame(): TrajectoryFrameState | null {
 
 const ZERO3 = [0, 0, 0];
 
+type StatusCallback = ((status: TrajectoryStatus) => void) | undefined;
+
+/**
+ * Deliver each distinct status once, after render. A failure without a
+ * callback is logged once instead of thrown: Live has no error boundary.
+ */
+function useTrajectoryStatus(
+  onStatus: StatusCallback,
+  status: TrajectoryStatus | null,
+): void {
+  const callback = useRef<StatusCallback>(onStatus);
+  callback.current = onStatus;
+  useResource(() => {
+    if (!status) return;
+    if (callback.current) callback.current(status);
+    else if (status.status === "error") {
+      console.error(
+        status.phase === "source"
+          ? "<Trajectory>: source failed to open"
+          : `<Trajectory>: frame ${status.frame} failed to load`,
+        status.error,
+      );
+    }
+  }, [status]);
+}
+
 type PlayerProps = {
   trajectory: TrajectoryData;
   frame: number | Curve<number>;
   interpolate: "linear" | "nearest";
   pbc: "none" | "minimum-image";
+  onStatus: StatusCallback;
   children: LiveElement;
 };
 
@@ -272,7 +301,7 @@ const TrajectoryProvider: LC<PlayerProps> = (props) =>
   useCoordinates() ? use(TrajectoryPlayer, props) : props.children;
 
 const TrajectoryPlayer: LC<PlayerProps> = (
-  { trajectory, frame, interpolate, pbc, children },
+  { trajectory, frame, interpolate, pbc, onStatus, children },
 ) => {
   const upstream = useCoordinates()!;
   const time = useContext(TimelineContext);
@@ -315,14 +344,28 @@ const TrajectoryPlayer: LC<PlayerProps> = (
     };
     dispose(() => player.close());
   }, [player]);
-  if (failure?.player === player) {
-    throw new Error(`<Trajectory>: frame ${failure.index} failed to load`, {
-      cause: failure.error,
-    });
-  }
+  // A failed frame read is sticky for this player: upstream coordinates pass
+  // through (kernel mode 0) and no further frames are scheduled until the
+  // trajectory changes, which creates a new player.
+  const failed = failure?.player === player ? failure : null;
+  const failedStatus = useMemo<TrajectoryStatus | null>(
+    () =>
+      failed
+        ? Object.freeze({
+          status: "error",
+          phase: "frame" as const,
+          frame: failed.index,
+          error: failed.error,
+        })
+        : null,
+    [failed],
+  );
+  useTrajectoryStatus(onStatus, failedStatus);
 
   const clamped = Math.min(Math.max(requested, 0), trajectory.frameCount - 1);
-  const display = player.scheduler.update(requested, interpolate);
+  const display = failed
+    ? null
+    : player.scheduler.update(requested, interpolate);
   const box = player.box(display);
   const a = display ? player.cache.get(display.a)?.box : undefined;
   const minimumImage = pbc === "minimum-image" && box && a ? a : null;
@@ -400,7 +443,9 @@ const defaultLoader: TrajectoryLoader = async (src, cancelled, signal) => {
  * is a fractional frame or a timeline curve. Frames stream on demand; until
  * the first one lands, and for rows outside `atomMap`, upstream coordinates
  * show. With `src`, children render unmoved while the file opens, then
- * remount once under the trajectory.
+ * remount once under the trajectory. A failed source or frame read passes
+ * upstream coordinates through and is reported through `onStatus` (or logged
+ * once), never thrown.
  */
 export const Trajectory: ViewerComponent<TrajectoryProps> = (
   {
@@ -410,6 +455,7 @@ export const Trajectory: ViewerComponent<TrajectoryProps> = (
     frame,
     interpolate = "linear",
     pbc = "none",
+    onStatus,
     children,
   },
 ) => {
@@ -438,16 +484,34 @@ export const Trajectory: ViewerComponent<TrajectoryProps> = (
       : null,
     [data, src, loader],
   );
-  if (data === undefined && pending) return children;
-  if (data === undefined && failure) throw failure;
-  const trajectory = data ?? loaded;
-  if (!trajectory) return children;
+  const trajectory = data ?? loaded ?? null;
+  const sourceFailure = data === undefined && !pending ? failure : undefined;
+  const status = useMemo<TrajectoryStatus | null>(
+    () =>
+      pending
+        ? Object.freeze({ status: "opening" as const })
+        : sourceFailure !== undefined
+        ? Object.freeze({
+          status: "error",
+          phase: "source" as const,
+          frame: null,
+          error: sourceFailure,
+        })
+        : trajectory
+        ? Object.freeze({ status: "ready", frameCount: trajectory.frameCount })
+        : null,
+    [pending, sourceFailure, trajectory],
+  );
+  useTrajectoryStatus(onStatus, status);
+  // Pending, failed or cancelled sources pass upstream coordinates through.
+  if (!trajectory || pending || sourceFailure !== undefined) return children;
   return viewer(
     use(TrajectoryProvider, {
       trajectory,
       frame,
       interpolate,
       pbc,
+      onStatus,
       children: live(children),
     }),
   );

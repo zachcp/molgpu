@@ -8,7 +8,7 @@ import { React } from "@use-gpu/live";
 import { openTrajectory } from "@molgpu/io";
 import type { StructureData, TrajectoryData } from "@molgpu/table";
 import { Spacefill, Structure, Trajectory } from "@molgpu/viewer";
-import type { ViewerElement } from "@molgpu/viewer";
+import type { TrajectoryStatus, ViewerElement } from "@molgpu/viewer";
 
 void React;
 
@@ -46,19 +46,17 @@ export const separated = (
   </Structure>
 );
 
-// 3. Target for molgpu-sept-s5o.18: source and frame failures are reported,
-//    not thrown, and upstream coordinates keep showing. Remove the
-//    expectation when the prop lands.
+// 3. Source and frame failures are reported, not thrown, and upstream
+//    coordinates keep showing (molgpu-sept-s5o.18).
 export const reported = (
   data: StructureData,
   src: string,
-  log: (status: unknown) => void,
+  log: (status: TrajectoryStatus) => void,
 ): ViewerElement => (
   <Structure data={data}>
     <Trajectory
       src={src}
       frame={0}
-      // @ts-expect-error onStatus is the follow-up's prop.
       onStatus={log}
     >
       <Spacefill />

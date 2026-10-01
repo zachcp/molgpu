@@ -197,6 +197,22 @@ export type TrajectoryLoader = (
 ) => TrajectoryData | null | Promise<TrajectoryData | null>;
 
 /**
+ * Source and frame state of one `<Trajectory>`. On `error`, upstream
+ * coordinates pass through until the source changes; `phase` says whether
+ * opening the source or reading `frame` failed.
+ */
+export type TrajectoryStatus =
+  | { readonly status: "opening" }
+  | { readonly status: "ready"; readonly frameCount: number }
+  | {
+    readonly status: "error";
+    readonly phase: "source" | "frame";
+    /** The frame that failed to load, or null for a source failure. */
+    readonly frame: number | null;
+    readonly error: unknown;
+  };
+
+/**
  * `<Trajectory>` props: playback (`frame`, `interpolate`, `pbc`) plus exactly
  * one of `data` (opened already, e.g. with `openTrajectory` from @molgpu/io) or
  * `src` (a DCD/XTC/TRR URL streamed through @molgpu/io).
@@ -217,6 +233,12 @@ export type TrajectoryProps =
      * cross the box on screen. Default `"none"`.
      */
     pbc?: "none" | "minimum-image";
+    /**
+     * Source and frame state. Failures pass upstream coordinates through and
+     * are reported here instead of thrown; without a callback each failure is
+     * logged once with `console.error`.
+     */
+    onStatus?: (status: TrajectoryStatus) => void;
   }
   & (
     | { data: TrajectoryData; src?: undefined; loader?: undefined }
