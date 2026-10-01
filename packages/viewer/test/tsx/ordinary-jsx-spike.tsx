@@ -9,7 +9,7 @@ import { React, render } from "@use-gpu/live";
 import { AutoCanvas, WebGPU } from "@use-gpu/webgpu";
 import { AmbientLight, OrbitCamera, Pass } from "@use-gpu/workbench";
 import { comp, where, within } from "@molgpu/select";
-import { attributeColumn } from "@molgpu/table";
+import { attributeColumn, ssKind } from "@molgpu/table";
 import { byElement, byPotential } from "@molgpu/fields";
 import {
   BallAndStick,
@@ -32,10 +32,12 @@ const ligand = comp(["HEM"]);
 const site = within(5, ligand);
 const helices = where(
   "atom",
-  "DSSP alpha helices",
+  "DSSP helices (H/G/I)",
   (data, atom) =>
-    attributeColumn(data, "ssCode")
-      ?.values[data.topology.atoms.residue[atom]] === 1,
+    ssKind(
+      attributeColumn(data, "ssCode")
+        ?.values[data.topology.atoms.residue[atom]] ?? 0,
+    ) === "helix",
   ["topology", "attributes"],
 );
 const helixSite = within(5, helices);

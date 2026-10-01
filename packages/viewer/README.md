@@ -87,6 +87,21 @@ providers (`<Transform>`, `<Superpose>`, and so on) move every row, and their
 `model`, defaulting to the first model. The resource's `bounds` cover every
 retained row.
 
+The
+[ordinary JSX decision](../../docs/findings/2026-10-01-ordinary-jsx-selection-styling-decision.md)
+and its counter-review amendment specify a future `SelectionInput` contract.
+Query-valued representation props are not implemented yet. They will refine the
+first-model/primary-conformer view unless explicitly scoped to other models or
+conformers; resolved selections will continue to mean exact membership.
+Coordinate-provider queries retain their all-row default. Label, Distance and
+live focus will share the same selection contract, with explicit pending, empty
+and error diagnostics. Query membership will follow published CPU snapshots
+(normally up to 4 Hz and on pause); live atom positions and field colors may
+advance ahead of it, and coordinate/attribute snapshots may come from different
+frames. This is not a same-frame scientific synchronization guarantee.
+Follow-ups `crj.22` and `crj.20` implement these changes; the current behavior
+above remains the supported API until they land.
+
 ## Transparency
 
 Every representation takes `opacity` (0–1), which is multiplied into the
