@@ -20,8 +20,8 @@ const rangeFetch = (
     )) as typeof fetch;
 };
 const response = (
-  body = bytes.slice(0, 1),
-  range = "bytes 0-0/4",
+  body = bytes.slice(0, 2),
+  range = "bytes 0-1/4",
   etag?: string,
 ) =>
   new Response(body, {
@@ -41,6 +41,16 @@ Deno.test("Range rejects wrong probe offsets, totals and body length", async () 
       urlByteSource("https://test/run.xtc", { fetch: rangeFetch(() => result) })
     );
   }
+});
+
+Deno.test("Range probe requests two bytes and accepts a one-byte resource", async () => {
+  const source = await urlByteSource("https://test/one.xtc", {
+    fetch: rangeFetch((_call, headers) => {
+      assertEquals(headers.get("range"), "bytes=0-1");
+      return response(Uint8Array.of(1), "bytes 0-0/1");
+    }),
+  });
+  assertEquals(source.size, 1);
 });
 
 Deno.test("Range reads reject wrong offsets, changed totals and changed validators", async () => {

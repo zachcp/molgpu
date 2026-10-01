@@ -120,7 +120,9 @@ export async function urlByteSource(
     }
     return response;
   };
-  const probe = await request({ Range: "bytes=0-0" }, signal);
+  // Vite's dev server treats bytes=0-0 as open-ended. Request two bytes and
+  // accept the clipped one-byte response for a one-byte file.
+  const probe = await request({ Range: "bytes=0-1" }, signal);
   if (probe.status === 206) {
     const parseRange = (
       response: Response,
@@ -135,7 +137,9 @@ export async function urlByteSource(
       if (
         response.status !== 206 || !values ||
         !values.every(Number.isSafeInteger) ||
-        values[0] !== start || values[1] !== end - 1 || values[2] < end ||
+        values[0] !== start ||
+        values[1] !== Math.min(end, values[2]) - 1 ||
+        values[2] <= start ||
         (total !== undefined && values[2] !== total)
       ) {
         throw trajectoryError(
@@ -149,12 +153,12 @@ export async function urlByteSource(
     };
     let size: number;
     try {
-      size = parseRange(probe, 0, 1);
+      size = parseRange(probe, 0, 2);
       const first = new Uint8Array(await probe.arrayBuffer());
       aborted(signal);
-      if (first.byteLength !== 1) {
+      if (first.byteLength !== Math.min(2, size)) {
         throw trajectoryError(
-          `${url}: Range probe must contain one byte`,
+          `${url}: Range probe must contain ${Math.min(2, size)} bytes`,
           "FETCH_FAILED",
         );
       }
