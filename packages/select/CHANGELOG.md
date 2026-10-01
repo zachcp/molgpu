@@ -6,6 +6,15 @@ All notable changes to `@molgpu/select` are recorded here. The format follows
 
 ## [Unreleased]
 
+- Add query-valued `and`/`or`/`not`, named structural/secondary-structure
+  builders, declared numeric `attribute` queries and explicit model/conformer
+  view scopes. Scoped evaluation restricts candidates, proximity seeds and
+  complement inputs without changing source rows; existing unscoped query
+  domains are preserved.
+- Expose frozen `SelectionQuery.attributes` and `view` metadata; opaque
+  attribute predicates/expressions use null input names. `within.deps` now
+  includes child attribute dependencies before resolution.
+
 - Coordinate snapshots can retain the source chemical graph through
   `preserveBondGraph`, without changing declared or display bonds.
 

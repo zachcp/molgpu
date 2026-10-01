@@ -62,7 +62,7 @@ export type SelectionExpr =
 export interface CompiledExpr {
   readonly label: string;
   readonly deps: readonly RevisionStream[];
-  run(data: StructureData): Uint32Array;
+  run(data: StructureData, input?: Uint32Array): Uint32Array;
 }
 
 const fail = (message: string): never => {
@@ -1495,12 +1495,12 @@ export function compileExpr(expr: SelectionExpr): CompiledExpr {
   return Object.freeze({
     label: formatExpr(expr),
     deps: Object.freeze(deps),
-    run(data: StructureData): Uint32Array {
+    run(data: StructureData, input?: Uint32Array): Uint32Array {
       const topo = topologyCache(data);
       const ctx: Ctx = {
         data,
         topo,
-        input: topo.allAtoms,
+        input: input ?? topo.allAtoms,
         atom: -1,
         bond: -1,
         bonds: null,

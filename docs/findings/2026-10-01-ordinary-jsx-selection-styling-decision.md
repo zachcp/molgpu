@@ -280,7 +280,7 @@ amendment changes documentation and the research example, not production APIs.
    callbacks. Structure/Volume error props remain source-request presentation.
 
 4. **Keep text parsing explicit.** No ambiguous `select="..."` prop. Existing
-   `compile(await parseSelection(text, "pymol"))`, using select and io main
+   `compile(await parseSelection("pymol", text))`, using select and io main
    exports, is the supported construction path; other supported languages are
    explicit. Callers own async parsing, failure and memoization before supplying
    the query. This avoids adding lazy Mol* parser loading as another hidden
@@ -321,13 +321,13 @@ amendment changes documentation and the research example, not production APIs.
    can represent different frames. A complete tuple means available inputs, not
    same-frame scientific consistency.
 
-The example now uses public ssKind for the full H/G/I helix category; the review
-correctly identified that an alpha-helix-only predicate was not a sufficient
-ordinary helix example. Opaque predicates still index tables in this spike
-because crj.22 builders do not exist yet. Removing that authoring plumbing is
-explicitly part of crj.22 acceptance, and then crj.20 must remove the five prop
-blockers and browser-render the target. Do not claim the vocabulary gap is
-already implemented.
+The example now uses public secondaryStructure, backed by ssKind, for the full
+H/G/I helix category; the review correctly identified that an alpha-helix-only
+predicate was not a sufficient ordinary helix example. The spike originally used
+opaque table predicates; crj.22 replaces those with real public named builders
+and independent pure vocabulary tests. crj.20 must still remove the five prop
+blockers and browser-render the target; renderer adaptation is not implemented
+by crj.22.
 
 Ribbon/Tube Field colors remain optional `o4r` work, with truthful narrow
 support claims until it lands. crj.21 should document
