@@ -171,8 +171,8 @@ Deno.test("viewer components", async () => {
       }, [patch, keepHistory]);
       await settle();
     };
-    const until = (predicate) =>
-      page.waitForFunction(predicate, null, { timeout: 30000 }).then(settle);
+    const until = (predicate, arg = null) =>
+      page.waitForFunction(predicate, arg, { timeout: 30000 }).then(settle);
 
     // Count lit blobs on the canvas itself; PNG bytes and DOM state prove nothing.
     // Two identical consecutive frames are required first, so a state is measured
@@ -814,6 +814,86 @@ Deno.test("viewer components", async () => {
       blobs: protein,
       history: loaded.history,
       molstarRequests: molstar(),
+    };
+
+    // 7b. Source presentation lifecycle (molgpu-sept-s5o.2): failure is sticky
+    //     until a deliberate retry, and one Structure instance moves between
+    //     src and data without showing a stale dataset.
+    const base = (await snapshot()).pending;
+    await update({
+      mode: "lifecycle",
+      source: "src",
+      src: "/lifecycle",
+      attempt: 0,
+    });
+    await until((n) => globalThis.__viewer.snapshot().pending === n + 1, base);
+    await page.evaluate((i) => globalThis.__viewer.settle(i, "fail"), base);
+    await until(() => globalThis.__viewer.snapshot().phase === "error");
+    const lifecycleFailed = await snapshot();
+    assertEquals(
+      lifecycleFailed.history,
+      ["loading", "error"],
+      "a rejected loader shows loading, then the error prop",
+    );
+    assertMatch(lifecycleFailed.failure, /controlled failure: \/lifecycle/);
+    // An unrelated re-render with unchanged src and loader issues no request.
+    await update({ offsetX: 6 }, true);
+    assertStrictEquals(
+      (await snapshot()).pending,
+      base + 1,
+      "a re-render does not silently retry a failed source",
+    );
+    assertStrictEquals((await snapshot()).phase, "error", "failure is kept");
+    // A new key is the public retry: a fresh request, never the old failure.
+    await update({ attempt: 1 });
+    await until((n) => globalThis.__viewer.snapshot().pending === n + 2, base);
+    assertStrictEquals((await snapshot()).phase, "loading", "retry is pending");
+    await page.evaluate(
+      (i) => globalThis.__viewer.settle(i + 1, "right"),
+      base,
+    );
+    await until(() => globalThis.__viewer.snapshot().phase === "ready");
+    const retried = await snapshot();
+    assertEquals(retried.history, ["loading", "ready"], "retry then ready");
+    assertStrictEquals(retried.dataset, "right", "retry mounts its result");
+    // src -> data on the same instance mounts the data without a loading state.
+    await update({ source: "data" });
+    await until(() => globalThis.__viewer.snapshot().dataset === "left");
+    // The phase was already ready, so a direct switch records no transition.
+    assertEquals((await snapshot()).history, [], "src to data never loads");
+    // data -> src shows loading, never the previous data, until it settles.
+    await update({ source: "src", src: "/lifecycle-next" });
+    await until((n) => globalThis.__viewer.snapshot().pending === n + 3, base);
+    const reopening = await snapshot();
+    assertStrictEquals(reopening.phase, "loading", "data to src is pending");
+    assertStrictEquals(reopening.dataset, null, "no stale dataset while open");
+    assertEquals(
+      await blobs("lifecycle-pending", "components-lifecycle-pending"),
+      [],
+      "a pending source draws nothing",
+    );
+    // src -> data while pending cancels the request; a late result is ignored.
+    await update({ source: "data" }, true);
+    await until(() => globalThis.__viewer.snapshot().dataset === "left");
+    const lateCancelled = await page.evaluate(
+      (i) => globalThis.__viewer.settle(i + 2, "right"),
+      base,
+    );
+    await settle();
+    assertStrictEquals(lateCancelled, true, "switching to data cancels src");
+    const switched = await snapshot();
+    assertEquals(switched.history, ["loading", "ready"], "no stale mount");
+    assertStrictEquals(switched.dataset, "left", "data wins over a late src");
+    assertStrictEquals(
+      (await blobs("lifecycle-data", "components-lifecycle-data")).length,
+      1,
+      "the data source draws",
+    );
+    report.states.lifecycle = {
+      failed: lifecycleFailed.history,
+      retried: retried.history,
+      switched: switched.history,
+      lateCancelled,
     };
 
     // 8. Unmounting releases the subtree without leaving stale geometry.

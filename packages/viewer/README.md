@@ -495,9 +495,9 @@ The package cannot be imported in Node, so the hardening checker only resolves
 its entries. The browser proof is `deno task test:components`
 (`test/run-components.mjs`): it typechecks `test/tsx/consumer.tsx` against the
 published types, builds it with vite, and drives it in Chrome with WebGPU
-(preloaded, empty, sibling, loaded, missing and cancelled structures, with no
-uncaptured WebGPU errors). `deno task test:site` additionally checks the project
-landing page and maintained demo route.
+(preloaded, empty, sibling, loaded, missing, cancelled and retried structures,
+and src/data switches, with no uncaptured WebGPU errors). `deno task test:site`
+additionally checks the project landing page and maintained demo route.
 
 ## Source replacement and cancellation
 
@@ -513,3 +513,26 @@ renders children against upstream coordinates until the new source opens. Old
 trajectory metadata and old source errors are withdrawn immediately. A Superpose
 first-frame request follows the same replacement/cancellation rule. Frame
 failures belong to their player and do not carry into a replacement.
+
+### Presentation and retry
+
+Structure and Volume are dataset gates: while a `src` request is pending they
+render `loading`, on failure they render `error(failure)`, and their subtree
+mounts only with the loaded data. Trajectory layers coordinates over an existing
+structure, so it renders its children with upstream coordinates while opening
+and throws a source failure from render. use.gpu Live has no error boundary, so
+that failure reaches the page as an uncaught error; a typed presentation for it
+belongs with the source/playback split, not with a Trajectory `error` prop.
+
+A failure is kept until something changes the request: a new `src`, a new
+`loader` identity, or a remount. Re-rendering with the same props does not
+retry. To retry an unchanged `src`, remount with a new `key`. Live honours `key`
+only among array siblings, so return the keyed element in an array:
+
+```tsx
+return [<Structure key={`attempt-${attempt}`} src={src} error={onFailure} />];
+```
+
+Switching the same element between `src` and `data` mounts `data` immediately
+and cancels any pending request; switching back to `src` shows `loading`, never
+the previous data. `test/run-components.mjs` (case 7b) asserts each transition.
