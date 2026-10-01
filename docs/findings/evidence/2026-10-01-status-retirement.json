@@ -1,0 +1,10 @@
+{
+  "browser": "154.0.8037.59",
+  "reports": [],
+  "destroyed": [
+    "molgpu:status-probe",
+    "molgpu:status-probe:source",
+    "molgpu:status-probe"
+  ],
+  "gpuErrors": []
+}

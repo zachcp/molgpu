@@ -6,10 +6,23 @@ const spike = (name) =>
     new URL(`../../../test/spikes/gpu-retirement/${name}`, import.meta.url),
   );
 
-Deno.test("published attribute retirement and GPU memory churn", async () => {
+Deno.test("GPU retirement across held draws, compute, maps and memory churn", async () => {
   for (
     const [name, args] of [
-      ["run.mjs", ["--attribute", "--acceptance"]],
+      ["run.mjs", ["--volume", "--acceptance", "--evidence-date=2026-10-01"]],
+      ["run.mjs", ["--efield", "--acceptance", "--evidence-date=2026-10-01"]],
+      ["run.mjs", ["--lines", "--acceptance", "--evidence-date=2026-10-01"]],
+      ["run.mjs", [
+        "--attribute",
+        "--acceptance",
+        "--evidence-date=2026-10-01",
+      ]],
+      ["run-matrix.mjs", ["--passes"]],
+      ["run-matrix.mjs", ["--passes", "--same-size"]],
+      ["run-matrix.mjs", ["--inflight", "dssp"]],
+      ["run-readbacks.mjs", []],
+      ["run-status.mjs", []],
+      ["run-coordinate-memory.mjs", []],
       ["run-memory.mjs", []],
     ]
   ) {

@@ -67,6 +67,16 @@ try {
   });
   await page.addInitScript(() => {
     const phis = [];
+    const gpuErrors = [];
+    const request = GPUAdapter.prototype.requestDevice;
+    GPUAdapter.prototype.requestDevice = async function (...args) {
+      const device = await request.apply(this, args);
+      device.addEventListener(
+        "uncapturederror",
+        (e) => gpuErrors.push(e.error.message),
+      );
+      return device;
+    };
     const create = GPUDevice.prototype.createBuffer;
     GPUDevice.prototype.createBuffer = function (descriptor) {
       const buffer = create.call(this, descriptor);
@@ -77,6 +87,7 @@ try {
     };
     globalThis.__retirement = { mark: () => {} };
     globalThis.__memory = {
+      gpuErrors,
       snapshot: () =>
         phis.map(({ size, ref }) => ({ size, wrapperAlive: !!ref.deref() })),
     };
@@ -88,12 +99,13 @@ try {
   );
   const heap = await page.context().newCDPSession(page);
   const cycles = [];
-  for (let cycle = 0; cycle < 4; cycle++) {
+  for (let cycle = 0; cycle < 7; cycle++) {
     if (cycle) await page.evaluate(() => globalThis.__scene.visible(true));
     await page.waitForFunction(
       (count) => globalThis.__memory.snapshot().length >= count,
       cycle + 1,
     );
+    const mountedRssKb = await browserRssKb();
     await page.evaluate(async () => {
       for (let i = 0; i < 12; i++) await new Promise(requestAnimationFrame);
       await globalThis.__scene.fence();
@@ -105,12 +117,15 @@ try {
     const buffers = await page.evaluate(() => globalThis.__memory.snapshot());
     cycles.push({
       rssKb: await browserRssKb(),
+      mountedRssKb,
       phiSize: buffers.at(-1).size,
       aliveIndices: buffers.flatMap((entry, index) =>
         entry.wrapperAlive ? [index] : []
       ),
     });
   }
+  const gpuErrors = await page.evaluate(() => globalThis.__memory.gpuErrors);
+  assertEquals(gpuErrors, [], "uncaptured WebGPU errors");
   assertEquals(errors, [], "browser page and WebGPU errors");
   assert(cycles.every((cycle) => cycle.phiSize >= 23 * 1024 * 1024));
   assert(
@@ -120,15 +135,28 @@ try {
     "a superseded EField phi wrapper remained reachable",
   );
   assert(
-    cycles.at(-1).rssKb - cycles[0].rssKb <= 128 * 1024,
+    cycles.every((cycle) => cycle.rssKb - cycles[0].rssKb <= 128 * 1024),
     `Chrome RSS grew beyond 128 MiB after repeated release: ${
       cycles.map((c) => c.rssKb)
     }`,
   );
-  const report = { browser: browser.version(), cycles, errors };
+  assert(
+    cycles.every((cycle) =>
+      cycle.mountedRssKb - cycles[0].mountedRssKb <= 256 * 1024
+    ),
+    "mounted RSS grew beyond 256 MiB",
+  );
+  const report = {
+    browser: browser.version(),
+    postGcGrowthBoundMiB: 128,
+    mountedGrowthBoundMiB: 256,
+    cycles,
+    errors,
+    gpuErrors,
+  };
   await Deno.writeTextFile(
     new URL(
-      "../../../docs/findings/evidence/2026-09-29-field-memory-churn.json",
+      "../../../docs/findings/evidence/2026-10-01-field-memory-churn.json",
       import.meta.url,
     ),
     JSON.stringify(report, null, 2) + "\n",

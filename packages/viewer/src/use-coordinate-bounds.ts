@@ -130,7 +130,14 @@ export function useCoordinateBounds(
         label: "molgpu:coords:bounds:staging",
       })
     );
-    return { rowBuffer, params, output, staging };
+    return {
+      rowBuffer,
+      params,
+      output,
+      staging,
+      alive: true,
+      mapping: null as GPUBuffer | null,
+    };
   }, [device, rows]);
   useResource((dispose) => {
     const all = [
@@ -140,10 +147,13 @@ export function useCoordinateBounds(
       ...buffers.staging,
     ];
     for (const buffer of all) trackOwnedBuffer(buffer, "coords:bounds");
+    buffers.alive = true;
     dispose(() => {
+      buffers.alive = false;
       for (const buffer of all) {
         releaseOwnedBuffer(buffer);
-        buffer.destroy();
+        // The asynchronous run owns its staging until map completion.
+        if (buffer !== buffers.mapping) buffer.destroy();
       }
     });
   }, [buffers]);
@@ -165,13 +175,14 @@ export function useCoordinateBounds(
     const selected = rows !== null;
     let work: ReturnType<typeof setTimeout> | undefined;
     const run = async () => {
-      if (!alive) return;
+      if (!alive || !buffers.alive) return;
       if (inFlight.current) {
         work = setTimeout(run, 16);
         return;
       }
       inFlight.current = true;
       const staging = buffers.staging[next.current++ % 2];
+      buffers.mapping = staging;
       try {
         device.queue.writeBuffer(
           buffers.params,
@@ -221,6 +232,8 @@ export function useCoordinateBounds(
       } catch {
         if (alive) count("gathers", "coords:bounds:error");
       } finally {
+        buffers.mapping = null;
+        if (!buffers.alive) staging.destroy();
         inFlight.current = false;
       }
     };

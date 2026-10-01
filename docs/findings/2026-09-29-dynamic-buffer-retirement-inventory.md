@@ -4,6 +4,13 @@ Date: 2026-09-29. `molgpu-sept-crj.15` implementation evidence on use.gpu
 0.20.0, after `19s` landed. This is a per-path inventory and a bounded repair;
 the issue remains open until the other published paths and memory cases pass.
 
+2026-10-01 follow-up: the
+[expanded acceptance report](2026-10-01-gpu-retirement-acceptance.md) covers the
+remaining representative owner/input, picking/shadow, map and memory cases.
+Status and bounds staging now waits for map settlement. The historical
+observations below describe the September 29 state; use the follow-up for
+current coverage and limits. Hosted CI validation remains pending.
+
 | Owner / allocation                                     | Current cleanup                                             | Last possible consumer                        | State                                                                                                                                               |
 | ------------------------------------------------------ | ----------------------------------------------------------- | --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Immutable Structure attribute                          | Owner releases references                                   | Retained styled draw                          | Fixed by `19s`; Gate 2 and CI pass.                                                                                                                 |

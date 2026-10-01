@@ -1,7 +1,7 @@
-// Double-buffered, epoch-guarded readback of one small fixed-size status
+// Double-buffered, allocation-guarded readback of one small fixed-size status
 // buffer, shared by <Superpose> and <Unwrap>. Two staging buffers alternate
-// so a new copy never waits on the previous map; an epoch guard discards a
-// map that resolves after this owner unmounted.
+// so a new copy never waits on the previous map. Retired owners discard late
+// results and let each busy slot finish mapping before destruction.
 import { useMemo, useRef, useResource } from "@use-gpu/live";
 import { useDeviceContext } from "@use-gpu/workbench";
 import { releaseOwnedBuffer, trackOwnedBuffer } from "./instrumentation.ts";
@@ -20,7 +20,8 @@ export type StatusReadback = (
 /**
  * `report` receives the mapped bytes for the generation copied. It is never
  * called while no staging slot is free or no listener is registered, and is
- * silently dropped if this owner unmounted before the map resolved.
+ * silently dropped if this allocation owner retired before the map resolved.
+ * Busy staging slots are destroyed only after their submitted map settles.
  */
 export function useStatusReadback(
   bytes: number,
@@ -39,44 +40,46 @@ export function useStatusReadback(
       ),
     [device, bytes, label],
   );
-  const alive = useRef(true);
-  const busy = useRef([false, false]);
-  const epoch = useRef(0);
+  // Allocation-local state cannot be reactivated by a replacement owner.
+  const state = useMemo(() => ({ alive: true, busy: [false, false] }), [
+    staging,
+  ]);
   const reportRef = useRef<typeof report>(report);
   reportRef.current = report;
   useResource((dispose) => {
     for (const buffer of staging) trackOwnedBuffer(buffer, label);
-    epoch.current++;
-    alive.current = true;
-    busy.current = [false, false];
+    state.alive = true;
     dispose(() => {
-      epoch.current++;
-      alive.current = false;
-      for (const buffer of staging) {
+      state.alive = false;
+      staging.forEach((buffer, slot) => {
         releaseOwnedBuffer(buffer);
-        buffer.destroy();
-      }
+        // A submitted copy/map owns a busy slot until its completion.
+        if (!state.busy[slot]) buffer.destroy();
+      });
     });
   }, [staging]);
   return (encoder, source, generation) => {
-    const slot = busy.current.indexOf(false);
+    if (!state.alive) return;
+    const slot = state.busy.indexOf(false);
     if (!reportRef.current || slot < 0) return;
     const target = staging[slot];
-    const readEpoch = epoch.current;
-    busy.current[slot] = true;
+    state.busy[slot] = true;
     encoder.copyBufferToBuffer(source, 0, target, 0, bytes);
     return () => {
+      const finish = () => {
+        state.busy[slot] = false;
+        if (!state.alive) target.destroy();
+      };
       target.mapAsync(MAP_READ).then(() => {
-        if (epoch.current !== readEpoch) return;
-        const data = target.getMappedRange().slice(0);
-        target.unmap();
-        busy.current[slot] = false;
-        if (!alive.current) return;
-        reportRef.current?.(data, generation);
-      }, () => {
-        if (epoch.current !== readEpoch) return;
-        busy.current[slot] = false;
-      });
+        try {
+          if (!state.alive) return;
+          const data = target.getMappedRange().slice(0);
+          reportRef.current?.(data, generation);
+        } finally {
+          target.unmap();
+          finish();
+        }
+      }, finish);
     };
   };
 }
