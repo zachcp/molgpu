@@ -6,6 +6,11 @@ All notable changes to `@molgpu/viewer` are recorded here. The format follows
 
 ## [Unreleased]
 
+- Camera framing (`focusSelection`, `useCameraCurve`, `useCoordinateFocus`)
+  covers only drawn atoms. It no longer expands through `topology.instances`
+  transforms, which no representation draws; the two framing paths previously
+  disagreed on per-chain versus whole-selection operators.
+
 - `<Trajectory>` no longer throws a failed source open or frame read. Upstream
   coordinates pass through and the failure is reported through the new
   `onStatus` callback (`TrajectoryStatus`: opening, ready, or error with phase

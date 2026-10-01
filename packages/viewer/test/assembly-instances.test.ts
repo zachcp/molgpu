@@ -1,7 +1,7 @@
 // Executable acceptance for the assembly instance decision (molgpu-sept-crj.8):
 // docs/findings/2026-10-01-assembly-instances-decision.md. molgpu draws the
 // asymmetric unit; `topology.instances` is a validated data contract that no
-// representation consumes yet. The ignored case is owned by crj.26.
+// representation consumes yet, and framing covers drawn atoms only (crj.26).
 import { assert, assertEquals, assertThrows } from "@std/assert";
 import { createStructure, type StructureInput } from "@molgpu/table";
 import { structureFromBcif } from "@molgpu/io";
@@ -102,7 +102,6 @@ Deno.test("assembly: BCIF import emits one identity instance per chain", async (
 
 Deno.test({
   name: "assembly: framing covers only drawn atoms [crj.26]",
-  ignore: true,
   fn: () => {
     const frame = (transform: number[]) =>
       focusSelection(
