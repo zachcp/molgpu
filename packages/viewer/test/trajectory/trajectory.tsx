@@ -32,6 +32,7 @@ import {
   TimelineProvider,
   Trajectory,
   type TrajectoryFrameState,
+  type TrajectoryStatus,
   Transform,
   UnitCell,
   Unwrap,
@@ -485,6 +486,8 @@ interface State {
   src: string;
   reloadData: boolean;
   badFrames: boolean;
+  /** data-retry: pass onStatus (true) or rely on the console fallback. */
+  reportStatus: boolean;
   latency: number;
   matrix: number[];
   selectedRow: number;
@@ -506,6 +509,8 @@ interface Probe {
   snapshot: { generation: number; positions: number[] } | null;
   generation: number | null;
   errors: string[];
+  /** Every TrajectoryStatus reported by the reload and data-retry scenes. */
+  statuses: TrajectoryStatus[];
   frames: number[][];
   root: number[];
   gate: { generation: number; count: number } | null;
@@ -551,6 +556,7 @@ const probe: Probe = {
   snapshot: null,
   generation: null,
   errors: [],
+  statuses: [],
   frames: FRAMES.map((f) => Array.from(f.positions)),
   root: Array.from(STRUCTURE.positions),
   gate: null,
@@ -655,6 +661,10 @@ const played = (
   </Structure>
 );
 
+const recordStatus = (status: TrajectoryStatus): void => {
+  probe.statuses.push(status);
+};
+
 const reloadLoader = (
   src: string,
   _cancelled: () => boolean,
@@ -742,7 +752,11 @@ const Scene = ({ state }: { state: State }): LiveElement => {
     case "data-retry":
       return (
         <Structure data={STRUCTURE}>
-          <Trajectory data={state.badFrames ? FAILED_FRAMES : WHOLE} frame={0}>
+          <Trajectory
+            data={state.badFrames ? FAILED_FRAMES : WHOLE}
+            frame={0}
+            onStatus={state.reportStatus ? recordStatus : undefined}
+          >
             <Probe />
           </Trajectory>
         </Structure>
@@ -755,6 +769,7 @@ const Scene = ({ state }: { state: State }): LiveElement => {
               ? { data: WHOLE }
               : { src: state.src, loader: reloadLoader })}
             frame={state.frame}
+            onStatus={recordStatus}
           >
             <Probe />
           </Trajectory>
@@ -917,6 +932,7 @@ const App = (): LiveElement => {
     time: 0,
     reloadData: false,
     badFrames: false,
+    reportStatus: true,
     src: "",
     latency: 0,
     matrix: IDENTITY,

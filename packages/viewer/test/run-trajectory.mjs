@@ -9,6 +9,7 @@
 import {
   assert,
   assertEquals,
+  assertMatch,
   assertNotStrictEquals,
   assertStrictEquals,
 } from "@std/assert";
@@ -1453,7 +1454,18 @@ Deno.test("trajectory components", async () => {
       [],
       "no page or WebGPU errors",
     );
-    // A rejected source can be retried on the same component without rethrowing stale errors.
+    // Source and frame failures are reported through onStatus, never thrown
+    // (molgpu-sept-s5o.18): upstream coordinates pass through meanwhile.
+    const statuses = () =>
+      page.evaluate(() =>
+        globalThis.__trajectory.statuses.map((s) => ({
+          ...s,
+          ...(s.error === undefined ? {} : { error: String(s.error) }),
+        }))
+      );
+    const clearStatuses = () =>
+      page.evaluate(() => globalThis.__trajectory.statuses.length = 0);
+    await clearStatuses();
     await update({
       mode: "reload",
       src: "failure.xtc",
@@ -1464,40 +1476,110 @@ Deno.test("trajectory components", async () => {
     await page.waitForFunction(() =>
       globalThis.__trajectory.loads.length === 6
     );
-    const rejectedLoad = page.waitForEvent("pageerror", { timeout: 5000 });
+    const beforeSource = errors.length;
     await page.evaluate(() =>
       globalThis.__trajectory.loads[5].reject(new Error("reload test failure"))
     );
-    assert(String(await rejectedLoad).includes("reload test failure"));
-    const beforeRetry = errors.length;
+    await page.waitForFunction(() =>
+      globalThis.__trajectory.statuses.some((s) => s.status === "error")
+    );
+    await settle();
+    assertEquals(
+      await statuses(),
+      [
+        { status: "opening" },
+        {
+          status: "error",
+          phase: "source",
+          frame: null,
+          error: "Error: reload test failure",
+        },
+      ],
+      "a source failure reports opening, then a source error",
+    );
+    assertEquals(
+      errors.slice(beforeSource),
+      [],
+      "a source failure is not thrown",
+    );
+    // Children read the Structure's own coordinates, outside any trajectory.
+    assertEquals(
+      await page.evaluate(() => ({
+        trajectory: globalThis.__trajectory.state,
+        label: globalThis.__trajectory.source?.buffer?.label,
+      })),
+      { trajectory: null, label: "molgpu:positions" },
+      "a failed source passes upstream coordinates through",
+    );
+    // Retry by changing the request; the old failure is not repeated.
+    await clearStatuses();
     await update({ src: "retry.xtc" });
     await page.waitForFunction(() =>
       globalThis.__trajectory.loads.length === 7
     );
-    await page.evaluate(() =>
-      new Promise((resolve) =>
-        requestAnimationFrame(() => requestAnimationFrame(resolve))
-      )
-    );
-    assertEquals(
-      errors.length,
-      beforeRetry,
-      "retry does not rethrow the previous load failure",
-    );
     await page.evaluate(() => globalThis.__trajectory.loads[6].resolve());
     await displayed({ a: 0, b: 0, t: 0 });
+    assertEquals(
+      await statuses(),
+      [{ status: "opening" }, { status: "ready", frameCount: 4 }],
+      "retry reports opening, then ready, without the previous failure",
+    );
+    assertEquals(errors.slice(beforeSource), [], "retry raises no errors");
     await update({ mode: "none" });
-    const rejectedFrame = page.waitForEvent("pageerror", { timeout: 5000 });
+    // A frame read failure is sticky for its player and passes through.
+    await clearStatuses();
+    const beforeFrame = errors.length;
     await update({ mode: "data-retry", badFrames: true });
-    assert(String(await rejectedFrame).includes("frame 0 failed to load"));
-    const beforeFrameRetry = errors.length;
+    await page.waitForFunction(() =>
+      globalThis.__trajectory.statuses.some((s) => s.status === "error")
+    );
+    await settle();
+    assertEquals(
+      await statuses(),
+      [
+        { status: "ready", frameCount: 1 },
+        {
+          status: "error",
+          phase: "frame",
+          frame: 0,
+          error: "Error: frame retry test failure",
+        },
+      ],
+      "a frame failure reports ready, then a frame error",
+    );
+    assertEquals(
+      errors.slice(beforeFrame),
+      [],
+      "a frame failure is not thrown",
+    );
+    assertStrictEquals(
+      await page.evaluate(() => globalThis.__trajectory.state?.displayed),
+      null,
+      "a failed player displays no frame",
+    );
+    await expectRead(rootPositions, "failed frame passes upstream through");
+    await clearStatuses();
     await update({ badFrames: false });
     await displayed({ a: 0, b: 0, t: 0 });
     assertEquals(
-      errors.length,
-      beforeFrameRetry,
+      await statuses(),
+      [{ status: "ready", frameCount: 4 }],
       "a replacement player does not inherit frame failure",
     );
+    await update({ mode: "none" });
+    // Without a callback, each failure is logged once rather than thrown.
+    const beforeLogged = errors.length;
+    await update({ mode: "data-retry", badFrames: true, reportStatus: false });
+    for (let i = 0; i < 50 && errors.length === beforeLogged; i++) {
+      await settle();
+    }
+    // Further renders of the same failed player must not log again.
+    await update({ frame: 0.5 });
+    const logged = errors.slice(beforeLogged);
+    assertStrictEquals(logged.length, 1, `one console error: ${logged}`);
+    assertMatch(logged[0], /<Trajectory>: frame 0 failed to load/);
+    errors.length = beforeLogged;
+    await update({ reportStatus: true, badFrames: false });
     await update({ mode: "none" });
     const rejectedFirst = page.waitForEvent("pageerror", { timeout: 5000 });
     await update({ mode: "scope-superpose", frame: 0 });
