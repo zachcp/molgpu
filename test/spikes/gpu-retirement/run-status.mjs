@@ -56,7 +56,7 @@ try {
   await page.waitForFunction(() =>
     globalThis.__statusGate.destroyed.filter((label) =>
       label === "molgpu:status-probe"
-    ).length === 2
+    ).length === 1
   );
   await page.evaluate(async () => {
     globalThis.__statusGate.held[0]();
@@ -76,7 +76,7 @@ try {
   );
   await Deno.writeTextFile(
     new URL(
-      "../../../docs/findings/evidence/2026-09-29-status-retirement.json",
+      "../../../docs/findings/evidence/2026-10-01-status-retirement.json",
       import.meta.url,
     ),
     JSON.stringify({ browser: browser.version(), ...report }, null, 2) + "\n",

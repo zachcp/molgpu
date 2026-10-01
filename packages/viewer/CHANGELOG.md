@@ -6,6 +6,11 @@ All notable changes to `@molgpu/viewer` are recorded here. The format follows
 
 ## [Unreleased]
 
+- Status and coordinate-bounds staging survives pending GPU maps across owner
+  replacement and unmount, then retires after completion without publishing a
+  stale result. Retirement CI coverage now includes coordinate providers,
+  picking/shadow consumers, DSSP cancellation and bounded memory churn.
+
 - Source requests own pending/error state and abort on replacement,
   preloaded-data switching and unmount. Trajectory reloads withdraw stale
   metadata, retries withdraw stale errors, and frame failures belong to their

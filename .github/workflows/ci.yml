@@ -2,7 +2,14 @@ name: CI
 
 on:
   push:
+    branches: [main]
   pull_request:
+
+# Keep the newest validation for a PR or main; stale runs consume software-GPU
+# runner time without providing a merge signal.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test:
@@ -21,7 +28,11 @@ jobs:
       - run: deno task check:hardening
       - run: deno task jsr:check
 
-  webgpu:
+  webgpu-suites:
+    strategy:
+      fail-fast: false
+      matrix:
+        group: [site, retirement, efield, invalidation, viewer]
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
@@ -33,17 +44,18 @@ jobs:
         with:
           deno-version: v2.x
       - run: deno run -A npm:playwright@1.62.1 install --with-deps chrome
-      - run: deno task test:site
       - name: WebGPU browser suites
-        run: |
-          failed=()
-          for suite in packages/viewer/test/run-*.mjs \
-            packages/fields/test/run-browser.mjs; do
-            echo "::group::$suite"
-            timeout 15m deno test -A "$suite" || failed+=("$suite")
-            echo "::endgroup::"
-          done
-          if ((${#failed[@]})); then
-            printf '::error::failed: %s\n' "${failed[@]}"
-            exit 1
-          fi
+        env:
+          SUITE_GROUP: ${{ matrix.group }}
+        run: bash scripts/run-webgpu-ci.sh
+
+  # Preserve the existing required check name while requiring every group.
+  webgpu:
+    if: always()
+    needs: webgpu-suites
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require all WebGPU groups
+        env:
+          RESULT: ${{ needs.webgpu-suites.result }}
+        run: test "$RESULT" = success

@@ -1,0 +1,545 @@
+{
+  "browser": "154.0.8037.59",
+  "results": [
+    {
+      "owner": "dssp",
+      "postDestroy": [],
+      "gpuErrors": [],
+      "errors": [],
+      "trace": {
+        "events": [
+          {
+            "seq": 0,
+            "frame": 31,
+            "type": "submit",
+            "ids": []
+          },
+          {
+            "seq": 1,
+            "frame": 31,
+            "type": "copy",
+            "source": 9,
+            "target": 10
+          },
+          {
+            "seq": 2,
+            "frame": 31,
+            "type": "submit",
+            "ids": [
+              2,
+              7,
+              9,
+              8,
+              10
+            ]
+          },
+          {
+            "seq": 3,
+            "frame": 32,
+            "type": "submit",
+            "ids": []
+          },
+          {
+            "seq": 4,
+            "frame": 32,
+            "type": "copy",
+            "source": 20,
+            "target": 22
+          },
+          {
+            "seq": 5,
+            "frame": 32,
+            "type": "submit",
+            "ids": [
+              2,
+              13,
+              19,
+              14,
+              16,
+              17,
+              18,
+              15,
+              20,
+              21,
+              22
+            ]
+          },
+          {
+            "seq": 6,
+            "frame": 32,
+            "type": "dssp-map-pending",
+            "id": 22
+          },
+          {
+            "seq": 7,
+            "frame": 34,
+            "type": "draw",
+            "ids": [
+              1,
+              12,
+              6,
+              2,
+              3,
+              5,
+              4,
+              23
+            ],
+            "pass": "ColorPass"
+          },
+          {
+            "seq": 8,
+            "frame": 34,
+            "type": "draw",
+            "ids": [
+              1,
+              12,
+              6,
+              2,
+              3,
+              5,
+              4,
+              23,
+              24
+            ],
+            "pass": "ColorPass"
+          },
+          {
+            "seq": 9,
+            "frame": 34,
+            "type": "submit",
+            "ids": [
+              1,
+              12,
+              6,
+              2,
+              3,
+              5,
+              4,
+              23,
+              24
+            ]
+          },
+          {
+            "seq": 10,
+            "frame": 34,
+            "type": "mark",
+            "name": "hide"
+          },
+          {
+            "seq": 11,
+            "frame": 34,
+            "type": "release",
+            "id": 6,
+            "label": "molgpu:index"
+          },
+          {
+            "seq": 12,
+            "frame": 34,
+            "type": "destroy",
+            "id": 6
+          },
+          {
+            "seq": 13,
+            "frame": 34,
+            "type": "release",
+            "id": 7,
+            "label": "molgpu:coords:bounds:rows"
+          },
+          {
+            "seq": 14,
+            "frame": 34,
+            "type": "destroy",
+            "id": 7
+          },
+          {
+            "seq": 15,
+            "frame": 34,
+            "type": "release",
+            "id": 8,
+            "label": "molgpu:coords:bounds:params"
+          },
+          {
+            "seq": 16,
+            "frame": 34,
+            "type": "destroy",
+            "id": 8
+          },
+          {
+            "seq": 17,
+            "frame": 34,
+            "type": "release",
+            "id": 9,
+            "label": "molgpu:coords:bounds:output"
+          },
+          {
+            "seq": 18,
+            "frame": 34,
+            "type": "destroy",
+            "id": 9
+          },
+          {
+            "seq": 19,
+            "frame": 34,
+            "type": "release",
+            "id": 10,
+            "label": "molgpu:coords:bounds:staging"
+          },
+          {
+            "seq": 20,
+            "frame": 34,
+            "type": "destroy",
+            "id": 10
+          },
+          {
+            "seq": 21,
+            "frame": 34,
+            "type": "release",
+            "id": 11,
+            "label": "molgpu:coords:bounds:staging"
+          },
+          {
+            "seq": 22,
+            "frame": 34,
+            "type": "destroy",
+            "id": 11
+          },
+          {
+            "seq": 23,
+            "frame": 34,
+            "type": "release",
+            "id": 3,
+            "label": "molgpu:radii"
+          },
+          {
+            "seq": 24,
+            "frame": 34,
+            "type": "destroy",
+            "id": 3
+          },
+          {
+            "seq": 25,
+            "frame": 34,
+            "type": "release",
+            "id": 2,
+            "label": "molgpu:positions"
+          },
+          {
+            "seq": 26,
+            "frame": 34,
+            "type": "destroy",
+            "id": 2
+          },
+          {
+            "seq": 27,
+            "frame": 35,
+            "type": "draw",
+            "ids": [
+              1,
+              12,
+              24
+            ],
+            "pass": "ColorPass"
+          },
+          {
+            "seq": 28,
+            "frame": 35,
+            "type": "submit",
+            "ids": [
+              1,
+              12,
+              24
+            ]
+          },
+          {
+            "seq": 29,
+            "frame": 35,
+            "type": "dssp-map-release"
+          },
+          {
+            "seq": 30,
+            "frame": 35,
+            "type": "release",
+            "id": 13,
+            "label": "molgpu:dssp:frame-positions"
+          },
+          {
+            "seq": 31,
+            "frame": 35,
+            "type": "destroy",
+            "id": 13
+          },
+          {
+            "seq": 32,
+            "frame": 35,
+            "type": "release",
+            "id": 14,
+            "label": "molgpu:dssp:layout"
+          },
+          {
+            "seq": 33,
+            "frame": 35,
+            "type": "destroy",
+            "id": 14
+          },
+          {
+            "seq": 34,
+            "frame": 35,
+            "type": "release",
+            "id": 15,
+            "label": "molgpu:dssp:ca-map"
+          },
+          {
+            "seq": 35,
+            "frame": 35,
+            "type": "destroy",
+            "id": 15
+          },
+          {
+            "seq": 36,
+            "frame": 35,
+            "type": "release",
+            "id": 16,
+            "label": "molgpu:dssp:ca"
+          },
+          {
+            "seq": 37,
+            "frame": 35,
+            "type": "destroy",
+            "id": 16
+          },
+          {
+            "seq": 38,
+            "frame": 35,
+            "type": "release",
+            "id": 17,
+            "label": "molgpu:dssp:hydrogen"
+          },
+          {
+            "seq": 39,
+            "frame": 35,
+            "type": "destroy",
+            "id": 17
+          },
+          {
+            "seq": 40,
+            "frame": 35,
+            "type": "release",
+            "id": 18,
+            "label": "molgpu:dssp:params"
+          },
+          {
+            "seq": 41,
+            "frame": 35,
+            "type": "destroy",
+            "id": 18
+          },
+          {
+            "seq": 42,
+            "frame": 35,
+            "type": "release",
+            "id": 19,
+            "label": "molgpu:dssp:copy-params"
+          },
+          {
+            "seq": 43,
+            "frame": 35,
+            "type": "destroy",
+            "id": 19
+          },
+          {
+            "seq": 44,
+            "frame": 35,
+            "type": "release",
+            "id": 20,
+            "label": "molgpu:dssp:bounds"
+          },
+          {
+            "seq": 45,
+            "frame": 35,
+            "type": "destroy",
+            "id": 20
+          },
+          {
+            "seq": 46,
+            "frame": 35,
+            "type": "release",
+            "id": 21,
+            "label": "molgpu:dssp:bounds-params"
+          },
+          {
+            "seq": 47,
+            "frame": 35,
+            "type": "destroy",
+            "id": 21
+          },
+          {
+            "seq": 48,
+            "frame": 35,
+            "type": "release",
+            "id": 22,
+            "label": "molgpu:dssp:bounds-readback"
+          },
+          {
+            "seq": 49,
+            "frame": 35,
+            "type": "destroy",
+            "id": 22
+          }
+        ],
+        "buffers": [
+          {
+            "id": 0,
+            "label": "",
+            "size": 614400,
+            "wrapperAlive": false
+          },
+          {
+            "id": 1,
+            "label": "",
+            "size": 544,
+            "wrapperAlive": false
+          },
+          {
+            "id": 2,
+            "label": "molgpu:positions",
+            "size": 3936,
+            "wrapperAlive": false
+          },
+          {
+            "id": 3,
+            "label": "molgpu:radii",
+            "size": 1312,
+            "wrapperAlive": false
+          },
+          {
+            "id": 4,
+            "label": "molgpu:attribute:residue",
+            "size": 1308,
+            "wrapperAlive": true
+          },
+          {
+            "id": 5,
+            "label": "molgpu:attribute:ssCode",
+            "size": 184,
+            "wrapperAlive": true
+          },
+          {
+            "id": 6,
+            "label": "molgpu:index",
+            "size": 16,
+            "wrapperAlive": false
+          },
+          {
+            "id": 7,
+            "label": "molgpu:coords:bounds:rows",
+            "size": 4,
+            "wrapperAlive": false
+          },
+          {
+            "id": 8,
+            "label": "molgpu:coords:bounds:params",
+            "size": 16,
+            "wrapperAlive": false
+          },
+          {
+            "id": 9,
+            "label": "molgpu:coords:bounds:output",
+            "size": 12288,
+            "wrapperAlive": false
+          },
+          {
+            "id": 10,
+            "label": "molgpu:coords:bounds:staging",
+            "size": 12288,
+            "wrapperAlive": false
+          },
+          {
+            "id": 11,
+            "label": "molgpu:coords:bounds:staging",
+            "size": 12288,
+            "wrapperAlive": false
+          },
+          {
+            "id": 12,
+            "label": "",
+            "size": 784,
+            "wrapperAlive": false
+          },
+          {
+            "id": 13,
+            "label": "molgpu:dssp:frame-positions",
+            "size": 3924,
+            "wrapperAlive": false
+          },
+          {
+            "id": 14,
+            "label": "molgpu:dssp:layout",
+            "size": 2208,
+            "wrapperAlive": false
+          },
+          {
+            "id": 15,
+            "label": "molgpu:dssp:ca-map",
+            "size": 184,
+            "wrapperAlive": false
+          },
+          {
+            "id": 16,
+            "label": "molgpu:dssp:ca",
+            "size": 552,
+            "wrapperAlive": false
+          },
+          {
+            "id": 17,
+            "label": "molgpu:dssp:hydrogen",
+            "size": 736,
+            "wrapperAlive": false
+          },
+          {
+            "id": 18,
+            "label": "molgpu:dssp:params",
+            "size": 64,
+            "wrapperAlive": false
+          },
+          {
+            "id": 19,
+            "label": "molgpu:dssp:copy-params",
+            "size": 16,
+            "wrapperAlive": false
+          },
+          {
+            "id": 20,
+            "label": "molgpu:dssp:bounds",
+            "size": 32,
+            "wrapperAlive": false
+          },
+          {
+            "id": 21,
+            "label": "molgpu:dssp:bounds-params",
+            "size": 16,
+            "wrapperAlive": false
+          },
+          {
+            "id": 22,
+            "label": "molgpu:dssp:bounds-readback",
+            "size": 32,
+            "wrapperAlive": false
+          },
+          {
+            "id": 23,
+            "label": "",
+            "size": 32,
+            "wrapperAlive": false
+          },
+          {
+            "id": 24,
+            "label": "",
+            "size": 16,
+            "wrapperAlive": false
+          }
+        ]
+      },
+      "publishedStatus": 0
+    }
+  ]
+}

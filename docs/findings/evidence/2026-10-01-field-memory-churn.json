@@ -1,0 +1,65 @@
+{
+  "browser": "154.0.8037.59",
+  "postGcGrowthBoundMiB": 128,
+  "mountedGrowthBoundMiB": 256,
+  "cycles": [
+    {
+      "rssKb": 927536,
+      "mountedRssKb": 937632,
+      "phiSize": 24987856,
+      "aliveIndices": [
+        0
+      ]
+    },
+    {
+      "rssKb": 897344,
+      "mountedRssKb": 927536,
+      "phiSize": 24987856,
+      "aliveIndices": [
+        1
+      ]
+    },
+    {
+      "rssKb": 887040,
+      "mountedRssKb": 892944,
+      "phiSize": 24987856,
+      "aliveIndices": [
+        2
+      ]
+    },
+    {
+      "rssKb": 868464,
+      "mountedRssKb": 884528,
+      "phiSize": 24987856,
+      "aliveIndices": [
+        3
+      ]
+    },
+    {
+      "rssKb": 876976,
+      "mountedRssKb": 872128,
+      "phiSize": 24987856,
+      "aliveIndices": [
+        4
+      ]
+    },
+    {
+      "rssKb": 870144,
+      "mountedRssKb": 877520,
+      "phiSize": 24987856,
+      "aliveIndices": [
+        5
+      ]
+    },
+    {
+      "rssKb": 870736,
+      "mountedRssKb": 871088,
+      "phiSize": 24987856,
+      "aliveIndices": [
+        6
+      ]
+    }
+  ],
+  "errors": [],
+  "gpuErrors": []
+}

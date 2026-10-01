@@ -5,6 +5,13 @@ import { workspaceAliases } from "../../../scripts/workspace-aliases.mjs";
 import { webgpuBrowserArgs } from "../../../packages/viewer/test/webgpu-browser-args.mjs";
 import { assert } from "@std/assert";
 
+const evidenceDate = Deno.args.find((arg) => arg.startsWith("--evidence-date="))
+  ?.split("=")[1];
+assert(
+  !evidenceDate || /^\d{4}-\d{2}-\d{2}$/.test(evidenceDate),
+  "invalid evidence date",
+);
+
 const server = await createServer({
   root: new URL("../../../", import.meta.url).pathname,
   configFile: false,
@@ -564,7 +571,7 @@ try {
   }
   await Deno.writeTextFile(
     new URL(
-      Deno.args.includes("--dynamic")
+      (Deno.args.includes("--dynamic")
         ? "../../../docs/findings/evidence/2026-09-29-dynamic-retirement.json"
         : Deno.args.includes("--compute")
         ? "../../../docs/findings/evidence/2026-09-29-compute-retirement.json"
@@ -584,7 +591,8 @@ try {
         ? "../../../docs/findings/evidence/2026-09-29-efield-retirement.json"
         : Deno.args.includes("--volume")
         ? "../../../docs/findings/evidence/2026-09-29-volume-retirement.json"
-        : "../../../docs/findings/evidence/2026-09-28-gpu-retirement.json",
+        : "../../../docs/findings/evidence/2026-09-28-gpu-retirement.json")
+        .replace(/2026-09-(28|29)/, evidenceDate ?? "$&"),
       import.meta.url,
     ),
     JSON.stringify(
