@@ -90,11 +90,9 @@ Deno.test("empty focus has a defined full-structure fallback or no-op", () => {
     Error,
     "empty",
   );
-  assertThrows(
-    // @ts-expect-error: a resolved Selection, not a SelectionQuery
-    () => focusSelection(resource, resolve(all("atom"), data)),
-    Error,
-    "SelectionQuery",
+  assertEquals(
+    focusSelection(resource, resolve(all("atom"), data))?.target,
+    focusSelection(resource, all("atom"))?.target,
   );
 });
 

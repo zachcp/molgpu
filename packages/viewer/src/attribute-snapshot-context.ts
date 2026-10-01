@@ -1,4 +1,5 @@
 import { type LiveContext, makeContext } from "@use-gpu/live";
+import type { ReadbackToken } from "./internal/readback-token.ts";
 import type { StructureData } from "@molgpu/table";
 
 export interface AttributeSnapshot {
@@ -6,6 +7,10 @@ export interface AttributeSnapshot {
   readonly generation: number;
 }
 export interface SnapshotProvider {
+  readonly domain?: import("@molgpu/table").AttributeDomain;
+  readonly kind?: "scalar" | "code";
+  readonly token?: ReadbackToken;
+  readonly error?: unknown;
   readonly snapshot: AttributeSnapshot | null;
   readonly subscribe: (maxHz: number, onPause: boolean) => () => void;
 }

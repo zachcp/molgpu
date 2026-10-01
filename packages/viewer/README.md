@@ -89,18 +89,9 @@ retained row.
 
 The
 [ordinary JSX decision](../../docs/findings/2026-10-01-ordinary-jsx-selection-styling-decision.md)
-and its counter-review amendment specify a future `SelectionInput` contract.
-Query-valued representation props are not implemented yet. They will refine the
-first-model/primary-conformer view unless explicitly scoped to other models or
-conformers; resolved selections will continue to mean exact membership.
-Coordinate-provider queries retain their all-row default. Label, Distance and
-live focus will share the same selection contract, with explicit pending, empty
-and error diagnostics. Query membership will follow published CPU snapshots
-(normally up to 4 Hz and on pause); live atom positions and field colors may
-advance ahead of it, and coordinate/attribute snapshots may come from different
-frames. This is not a same-frame scientific synchronization guarantee.
-Follow-ups `crj.22` and `crj.20` implement these changes; the current behavior
-above remains the supported API until they land.
+and its counter-review amendment define the implemented `SelectionInput`
+contract. See [Query selections in JSX](#query-selections-in-jsx) for query
+defaults, scoped snapshots, diagnostics and publication timing.
 
 ## Transparency
 
@@ -137,6 +128,73 @@ structure (or an explicit `box` for `<Unwrap>`), and `<Superpose to="first">`
 requires one. A surrounding `<Volume>` and `<TimelineProvider>` remain available
 through nested structures because their data and time are independent of a
 structure's topology.
+
+## Query selections in JSX
+
+A `SelectionInput` is a reusable `SelectionQuery`, an exact resolved atom
+`Selection`, or null. Every representation, EField, Label, Distance (`a`/`b`),
+Transform/Superpose (`select`), Unwrap (`center`) and focus accepts it. Omitted
+or null retains each consumer's default. Representation, EField, label/distance
+and focus queries refine the first model's primary conformers. Coordinate
+provider queries evaluate all rows by default; Unwrap without `center` does no
+centering. Explicit query scopes override those defaults:
+
+```tsx
+import {
+  allConformers,
+  allModels,
+  and,
+  comp,
+  model,
+  within,
+} from "@molgpu/select";
+import { Spacefill } from "@molgpu/viewer";
+
+<Spacefill select={within(5, comp(["HEM"]))} />;
+<Spacefill select={and(model(2), allConformers())} />;
+<Spacefill select={and(allModels(), allConformers())} />;
+```
+
+The view applies throughout evaluation, including proximity seeds and
+complements. Residue/bond queries become atom membership. Resolved values stay
+exact even if resolved over every model/conformer: they must match the nearest
+dataset, atom domain and topology revision. Positions or attribute changes do
+not re-evaluate fixed membership. Use queries for changing membership.
+Ribbon/Tube include a residue only when its guide atom is selected; partial
+selections do not expand into whole residues, and missing guides break trace
+runs.
+
+Queries use the nearest Structure and coordinate/attribute scopes. Produced
+columns shadow CPU/outer columns from warmup. Named attribute queries subscribe
+only to their declared columns; opaque `where` predicates declaring attributes
+subscribe to all visible produced columns. Declare positions when a predicate
+reads them. Missing CPU columns follow the evaluator's error policy.
+
+CPU selection snapshots publish on demand at **4 Hz and on pause**. They are
+**latest-published** inputs, with independent local generations: a combined
+coordinate/attribute query may use publications from different displayed frames.
+This is not same-frame synchronization. Spacefill/Bonds can draw live positions
+and colors ahead of snapshot membership. Ribbon/Tube/Surface and label/distance
+anchors also use published coordinate snapshots. Pure `focusSelection` evaluates
+the resource's CPU data; `useCoordinateFocus` resolves scoped membership and
+uses live GPU bounds, returning null while membership or bounds are unavailable.
+
+`onSelectionStatus` reports `pending`, `ready` (atom `count`, including zero,
+and `updating`) or `error` with a named cause. Reports identify the prop slot,
+query label, opaque owner/source IDs and each input's local generation. A ready
+status can retain the last complete input tuple with `updating: true` while the
+same sources publish newer data. Owner/source/layout/topology replacement
+withdraws it immediately. Callback reports change with the resolution tuple, not
+every redraw; Distance reports `a` and `b` separately. Coordinate scientific
+`onStatus` callbacks remain separate.
+
+Pending/error draws no representation or label, passes coordinate-provider
+inputs through, and exposes no computed EField descendants. Ready-empty remains
+empty; it never becomes default membership. Selection failures stay at the
+consumer so siblings continue. Loader errors and GPU/render failures keep their
+own error paths. `warnEmptySelection` defaults false; opt in to one warning per
+stable empty query/source/revision tuple. Positional or produced-column queries
+never generate that warning.
 
 ## Entries
 
@@ -241,6 +299,10 @@ may change before 0.1.0; _advanced_ — only from `@molgpu/viewer/advanced`.
 | `DrawMode`                | stable       | `'opaque' \| 'transparent'`; transparent is chosen automatically when colour alpha × opacity < 1.                                                                                                                       |
 | `PointLayerOptions`       | experimental | Point-layer flags `<Spacefill>` forwards.                                                                                                                                                                               |
 | `useCoordinateFocus`      | experimental | Nonblocking selection focus from GPU bounds; starts with root framing.                                                                                                                                                  |
+| `SelectionInput`          | experimental | Query, exact resolved atom selection, or default/null membership.                                                                                                                                                       |
+| `SelectionSource`         | experimental | Opaque input owner/source and local generation diagnostics.                                                                                                                                                             |
+| `SelectionStatus`         | experimental | Pending, ready(count/updating), or named selection error with source tuple.                                                                                                                                             |
+| `SelectionDiagnostics`    | experimental | Optional status callback and opt-in stable-empty warning.                                                                                                                                                               |
 | `MaterialType`            | experimental | `pbr`, `basic` or `normal`: the `type` of a `material` spec.                                                                                                                                                            |
 | `MaterialSpec`            | experimental | Discriminated material constants or native Live wrapper.                                                                                                                                                                |
 | `PickingProvider`         | experimental | Owns the picking registry.                                                                                                                                                                                              |

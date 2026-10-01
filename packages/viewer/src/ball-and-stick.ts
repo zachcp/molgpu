@@ -1,3 +1,5 @@
+import type { SelectionDiagnostics, SelectionInput } from "./types.ts";
+import { SelectionConsumer } from "./internal/selection-consumer.ts";
 import type { Field } from "@molgpu/fields";
 import type { Selection } from "@molgpu/select";
 import type {
@@ -21,7 +23,7 @@ import { Bonds } from "./bonds.ts";
  * A `material` (in `...props`) forwards to both halves, so balls and sticks
  * share one shading model, and `opacity`/`mode` (also in `...props`) fade both.
  */
-export const BallAndStick: ViewerComponent<
+const BallAndStickResolved: ViewerComponent<
   {
     select?: Selection | null;
     /** A flat colour or a @molgpu/fields Field, applied to balls and sticks. */
@@ -50,3 +52,34 @@ export const BallAndStick: ViewerComponent<
     use(Bonds, { select, width: stick, endpoints, ...shared, ...props }),
   ];
 };
+
+export const BallAndStick: ViewerComponent<
+  & {
+    select?: SelectionInput;
+    /** A flat colour or a @molgpu/fields Field, applied to balls and sticks. */
+    color?: VectorLike | Field;
+    /** Ball radius scale; defaults to 0.3. */
+    ball?: number;
+    /** Stick width; defaults to 0.28. */
+    stick?: number;
+    endpoints?: "both" | "either";
+    /** Forwarded to both balls and sticks, so they share one shading model. */
+    material?: MaterialSpec;
+  }
+  & Translucency
+  & SelectionDiagnostics
+> = (props) =>
+  use(SelectionConsumer, {
+    input: props.select,
+    who: "BallAndStick",
+    onSelectionStatus: props.onSelectionStatus,
+    warnEmptySelection: props.warnEmptySelection,
+    render: (select: Selection) => {
+      const { onSelectionStatus: _status, warnEmptySelection: _warn, ...draw } =
+        props;
+      return use(BallAndStickResolved, {
+        ...draw,
+        select: props.select == null ? null : select,
+      });
+    },
+  });

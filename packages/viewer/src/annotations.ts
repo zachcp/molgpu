@@ -1,3 +1,6 @@
+import { useSelectionInput } from "./internal/use-selection-input.ts";
+import type { SelectionDiagnostics, SelectionInput } from "./types.ts";
+import { SelectionConsumer } from "./internal/selection-consumer.ts";
 import type { Selection } from "@molgpu/select";
 import type { StructureData } from "@molgpu/table";
 import type { VectorLike, ViewerComponent } from "./types.ts";
@@ -50,7 +53,7 @@ const toPoint = (
  * the anchor; `text`/`color`/`size`/`opacity` are style. Text always blends
  * (SDF glyphs draw in transparent mode); `opacity` (0–1) scales its alpha.
  */
-export const Label: ViewerComponent<{
+const LabelResolved: ViewerComponent<{
   select?: Selection | null;
   /** Explicit [x, y, z] anchor, overriding the selection centroid. */
   at?: readonly number[];
@@ -120,7 +123,7 @@ const SEGMENTS = Int32Array.of(1, 2); // 1 = start, 2 = end: one open line.
  * `opacity` (0–1) fades line and label together; below 1 the line draws in
  * transparent mode.
  */
-export const Distance: ViewerComponent<{
+const DistanceResolved: ViewerComponent<{
   a: Selection;
   b: Selection;
   color?: VectorLike;
@@ -224,4 +227,58 @@ export const Distance: ViewerComponent<{
       ...props,
     }),
   ]);
+};
+
+export const Label: ViewerComponent<
+  {
+    select?: SelectionInput;
+    /** Explicit [x, y, z] anchor, overriding the selection centroid. */
+    at?: readonly number[];
+    text?: string;
+    size?: number;
+    color?: VectorLike;
+    offset?: readonly number[];
+    family?: string;
+    /** 0–1, multiplied into the text colour's alpha (text always blends). */
+    opacity?: number;
+  } & SelectionDiagnostics
+> = (props) =>
+  use(SelectionConsumer, {
+    input: props.select,
+    who: "Label",
+    onSelectionStatus: props.onSelectionStatus,
+    warnEmptySelection: props.warnEmptySelection,
+    render: (select: Selection) => {
+      const { onSelectionStatus: _status, warnEmptySelection: _warn, ...draw } =
+        props;
+      return use(LabelResolved, {
+        ...draw,
+        select: props.select == null ? null : select,
+      });
+    },
+  });
+
+export const Distance: ViewerComponent<
+  {
+    a: SelectionInput;
+    b: SelectionInput;
+    color?: VectorLike;
+    width?: number;
+    size?: number;
+    labelColor?: VectorLike;
+    /** 0–1, fades the line and label together. */
+    opacity?: number;
+    /** Customise the label text; receives the distance in Ångström. */
+    format?: (distance: number) => string;
+  } & SelectionDiagnostics
+> = (props) => {
+  const a = useSelectionInput(props.a, "Distance", "a", props);
+  const b = useSelectionInput(props.b, "Distance", "b", props);
+  if (
+    a.status !== "ready" || b.status !== "ready" ||
+    !a.selection.indices.length || !b.selection.indices.length
+  ) return null;
+  const { onSelectionStatus: _status, warnEmptySelection: _warn, ...draw } =
+    props;
+  return use(DistanceResolved, { ...draw, a: a.selection, b: b.selection });
 };

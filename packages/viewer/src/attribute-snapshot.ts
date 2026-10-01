@@ -56,6 +56,11 @@ export function useAttributeSnapshot(
     if (enabled && context) dispose(context.subscribe(maxHz, onPause));
   }, [context?.subscribe, maxHz, onPause, enabled]);
   if (!enabled) return null;
+  if (context?.error) {
+    throw new Error(`Attribute snapshot ${name} failed`, {
+      cause: context.error,
+    });
+  }
   if (context) return context.snapshot;
   return attributeColumn(root.data, name)
     ? { data: root.data, generation: root.attributesRevision }
@@ -126,14 +131,16 @@ export const AttributeSnapshotBoundary: LC<{
   const snapshot = published && sameReadbackSource(published.token, token)
     ? published
     : null;
-  const context: SnapshotProvider = { snapshot, subscribe };
+  const context: SnapshotProvider = {
+    snapshot,
+    subscribe,
+    token,
+    error: failure && sameReadbackToken(failure.token, token)
+      ? failure.error
+      : undefined,
+  };
   const maxHz = Math.max(...demand.map((request) => request.maxHz));
   const onPause = demand.some((request) => request.onPause);
-  if (failure && sameReadbackToken(failure.token, token)) {
-    throw new Error(`Attribute snapshot ${name} failed`, {
-      cause: failure.error,
-    });
-  }
   const publish = (values: Float32Array, copied: ReadbackToken): boolean => {
     if (!sameReadbackToken(latest.current, copied)) return false;
     const data = withAttributes(root.data, {

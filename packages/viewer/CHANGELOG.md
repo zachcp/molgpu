@@ -6,6 +6,15 @@ All notable changes to `@molgpu/viewer` are recorded here. The format follows
 
 ## [Unreleased]
 
+- Molecular selection props now accept queries through `SelectionInput`, resolve
+  at the nearest coordinate/attribute scopes, and expose optional
+  pending/ready/error diagnostics. Queries refine consumer view defaults;
+  resolved atom values stay exact and now reject stale topology. CPU membership
+  uses 4 Hz/on-pause latest-published snapshots and may trail live rendering.
+  Produced attributes, including DSSP during warmup, shadow root columns.
+  Empty/pending/error selections never fall back to default draw membership;
+  selection errors leave sibling consumers mounted.
+
 - Breaking types: `ViewerElement` now aliases pinned native `LiveElement`,
   rejecting arbitrary objects while permitting native scene composition.
   `ViewerComponent` keeps a checked element return type. `MaterialSpec` now

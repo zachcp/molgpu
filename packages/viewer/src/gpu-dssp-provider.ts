@@ -309,21 +309,37 @@ const Provider: LC<GpuDsspProps & { children: LiveElement }> = ({
         : upstreamAttributes,
     [upstreamAttributes, entry],
   );
-  const snapshots = useMemo(() =>
-    current && data
-      ? Object.freeze({
-        ...upstreamSnapshots,
-        ssCode: {
-          snapshot: Object.freeze({ data, generation: current.generation }),
-          subscribe: () => noop,
-        },
-      })
-      : upstreamSnapshots, [upstreamSnapshots, current, data]);
-  if (!current || !root || !data) return children;
+  const snapshots = useMemo(
+    () =>
+      coordinates && root && layout
+        ? Object.freeze({
+          ...upstreamSnapshots,
+          ssCode: {
+            domain: "residue" as const,
+            kind: "code" as const,
+            token: {
+              owner: root,
+              buffer: coordinates.source.buffer,
+              bytes: root.data.topology.residues.count * 4,
+              layout,
+              generation: coordinates.generation,
+            },
+            snapshot: current && data
+              ? Object.freeze({ data, generation: current.generation })
+              : null,
+            subscribe: () => noop,
+          },
+        })
+        : upstreamSnapshots,
+    [upstreamSnapshots, coordinates, root, layout, current, data],
+  );
+  if (!root || !coordinates || !layout) return children;
   return provide(
-    AttributesContext,
-    attributes,
-    provide(AttributeSnapshotContext, snapshots, children),
+    AttributeSnapshotContext,
+    snapshots,
+    current && data
+      ? provide(AttributesContext, attributes, children)
+      : children,
   );
 };
 

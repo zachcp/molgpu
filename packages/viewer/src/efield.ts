@@ -1,3 +1,5 @@
+import { SelectionConsumer } from "./internal/selection-consumer.ts";
+import type { Selection } from "@molgpu/select";
 // <EField>: the electrostatic potential of the nearest coordinates and a charge
 // column, summed directly on the GPU onto a locked grid and provided as a
 // Volume (CONCEPT 9). See docs/findings/2026-09-27-efield-plan.md.
@@ -426,13 +428,25 @@ const positive = (value: number, name: string) => {
  * (`useVolumeSnapshot`). This is a Coulomb sum, not Poisson–Boltzmann: import
  * an APBS map with `<Volume>` when a solver's answer is needed.
  */
-export const EField: ViewerComponent<EFieldProps> = (props) => {
-  const coordinates = useCoordinates();
-  if (!coordinates) return null;
-  return viewer(use(EFieldInner, { ...props, coordinates }));
-};
+export const EField: ViewerComponent<EFieldProps> = (props) =>
+  use(SelectionConsumer, {
+    input: props.select,
+    who: "EField",
+    onSelectionStatus: props.onSelectionStatus,
+    warnEmptySelection: props.warnEmptySelection,
+    render: (select: Selection) => use(EFieldResolved, { ...props, select }),
+  });
 
-const EFieldInner: LC<EFieldProps & { coordinates: Coordinates }> = (
+const EFieldResolved: LC<Omit<EFieldProps, "select"> & { select: Selection }> =
+  (props) => {
+    const coordinates = useCoordinates();
+    if (!coordinates) return null;
+    return viewer(use(EFieldInner, { ...props, coordinates }));
+  };
+
+const EFieldInner: LC<
+  Omit<EFieldProps, "select"> & { select: Selection; coordinates: Coordinates }
+> = (
   {
     coordinates,
     children,

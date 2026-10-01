@@ -1,24 +1,33 @@
 import { useMemo } from "@use-gpu/live";
 import { atomRadii } from "@molgpu/table";
-import { type SelectionQuery, toAtoms } from "@molgpu/select";
-import { focusSelection } from "./camera-curve.ts";
+import { all, resolve, where } from "@molgpu/select";
 import { useStructureResource } from "./structure-context.ts";
 import { useCoordinateBounds } from "./use-coordinate-bounds.ts";
-import { useCoordinateSelection } from "./use-coordinate-selection.ts";
-import type { FocusOptions, FocusResult } from "./types.ts";
+import { useSelectionInput } from "./internal/use-selection-input.ts";
+import type { FocusOptions, FocusResult, SelectionInput } from "./types.ts";
 
-/** Nonblocking focus for the nearest coordinate stream and a reusable query. */
+/** Nonblocking focus for nearest coordinates and molecular membership.
+ * Queries use 4 Hz/on-pause snapshots with latest-published consistency;
+ * pending/error membership or unavailable bounds returns null without root fallback.
+ */
 export function useCoordinateFocus(
-  query: SelectionQuery,
+  query: SelectionInput,
   options: FocusOptions = {},
 ): FocusResult | null {
   const resource = useStructureResource();
-  const resolved = useCoordinateSelection(query);
-  const selection = useMemo(
-    () => resolved ? toAtoms(resolved, resource.data) : null,
-    [resolved, resource],
+  const resolved = useSelectionInput(
+    query,
+    "useCoordinateFocus",
+    "focus",
+    options,
   );
-  const bounds = useCoordinateBounds(selection);
+  const selection = resolved.status === "ready" ? resolved.selection : null;
+  const emptyRows = useMemo(
+    () => resolve(where("atom", "pending focus", () => false), resource.data),
+    [
+      resource,
+    ],
+  );
   const {
     empty = "structure",
     fov = Math.PI / 3,
@@ -26,15 +35,31 @@ export function useCoordinateFocus(
     padding = 1.15,
     atomRadiusScale = 1,
   } = options;
+  if (
+    !Number.isFinite(fov) || fov <= 0 || fov >= Math.PI ||
+    !Number.isFinite(aspect) || aspect <= 0 ||
+    !Number.isFinite(padding) || padding <= 0 ||
+    !Number.isFinite(atomRadiusScale) || atomRadiusScale < 0
+  ) throw new RangeError("invalid camera framing options");
+  const defaultRows = useMemo(() =>
+    resolve(all(), resource.data, {
+      view: { model: "first", altloc: "primary" },
+    }), [resource]);
+  const framingSelection =
+    selection && !selection.indices.length && empty === "structure"
+      ? defaultRows
+      : selection;
+  const bounds = useCoordinateBounds(framingSelection ?? emptyRows);
   return useMemo(() => {
-    if (!bounds || !selection) return focusSelection(resource, query, options);
-    if (!selection.indices.length) {
-      if (empty === "null") return null;
+    if (!selection) return null;
+    if (!selection.indices.length && empty !== "structure") {
       if (empty === "error") throw new RangeError("focus selection is empty");
+      return null;
     }
+    if (!bounds || !framingSelection) return null;
     const radii = atomRadii(resource.data);
     let maxRadius = 0;
-    for (const row of selection.indices) {
+    for (const row of framingSelection.indices) {
       maxRadius = Math.max(maxRadius, radii[row] * atomRadiusScale);
     }
     const { instances } = resource.data.topology;
@@ -92,6 +117,7 @@ export function useCoordinateFocus(
     query,
     bounds,
     selection,
+    framingSelection,
     empty,
     fov,
     aspect,

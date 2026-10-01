@@ -15,7 +15,7 @@ import {
   isIdentityAffine,
   validateAffine,
 } from "@molgpu/dynamics/wgsl";
-import type { Selection, SelectionQuery } from "@molgpu/select";
+import type { Selection } from "@molgpu/select";
 import { type Curve, sample } from "@molgpu/timeline";
 import { useCoordinates } from "./coordinates-context.ts";
 import { CoordinateKernel } from "./internal/coordinate-kernel.ts";
@@ -27,7 +27,7 @@ import {
 import { live, viewer } from "./internal/elements.ts";
 import { TimelineContext } from "./timeline-context.ts";
 import type { TransformProps, ViewerComponent } from "./types.ts";
-import { useCoordinateSelection } from "./use-coordinate-selection.ts";
+import { useSelectionInput } from "./internal/use-selection-input.ts";
 
 const AFFINE = wgsl`${affineWgsl}`;
 const SELECTED_AFFINE = wgsl`${affineSelectedWgsl}`;
@@ -64,15 +64,12 @@ function bitset(selection: Selection, count: number): Uint32Array {
 
 const Selected: LC<{
   matrix: readonly number[];
-  select: SelectionQuery;
+  select: Selection;
   children: LiveElement;
 }> = ({ matrix, select, children }) => {
   const upstream = useCoordinates();
-  const selection = useCoordinateSelection(select);
+  const selection = select;
   const device = useDeviceContext();
-  if (selection && selection.domain !== "atom") {
-    throw new TypeError("<Transform> select must be an atom query");
-  }
   const identity = isIdentityAffine(matrix);
   const source = useMemo<StorageSource | null>(() => {
     if (identity || !upstream || !selection?.indices.length) return null;
@@ -114,8 +111,15 @@ const Selected: LC<{
 
 /** Pure coordinate provider applying an affine to selected output atoms. */
 export const Transform: ViewerComponent<TransformProps> = (
-  { matrix, select, children },
+  { matrix, select, children, ...diagnostics },
 ) => {
+  const resolved = useSelectionInput(
+    select,
+    "Transform",
+    "select",
+    diagnostics,
+    { model: "all", altloc: "all" },
+  );
   const time = useContext(TimelineContext);
   const curve = typeof (matrix as Curve<readonly number[]>).unit === "string";
   if (curve && time === null) {
@@ -128,9 +132,10 @@ export const Transform: ViewerComponent<TransformProps> = (
     : matrix as ArrayLike<number>;
   const entries = Array.from(value);
   validateAffine(entries);
+  if (resolved.status !== "ready") return children;
   return viewer(use(select ? Selected : All, {
     matrix: entries,
-    ...(select ? { select } : {}),
+    ...(select ? { select: resolved.selection } : {}),
     children: live(children),
   }));
 };

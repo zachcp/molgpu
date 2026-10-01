@@ -1,3 +1,5 @@
+import type { SelectionDiagnostics, SelectionInput } from "./types.ts";
+import { SelectionConsumer } from "./internal/selection-consumer.ts";
 import type { Selection } from "@molgpu/select";
 import type {
   MaterialSpec,
@@ -41,9 +43,9 @@ import { useBindingProbe } from "./internal/use-binding-probe.ts";
  * empirical floor. Only `select` and `smooth` (samples per guide segment)
  * rebuild the trace/spline geometry; `radius` and `color` update bindings.
  */
-export const Tube: ViewerComponent<
+const TubeResolved: ViewerComponent<
   {
-    /** A @molgpu/select atom Selection; without one, active model/primary-altloc atoms are used. */
+    /** A molecular query or exact atom selection. Defaults to first-model/primary-altloc atoms. */
     select?: Selection | null;
     /** Ångström tube radius; defaults to 0.3. */
     radius?: number;
@@ -123,3 +125,35 @@ export const Tube: ViewerComponent<
       }),
     ));
 };
+
+export const Tube: ViewerComponent<
+  & {
+    /** A molecular query or exact atom selection. Defaults to first-model/primary-altloc atoms. */
+    select?: SelectionInput;
+    /** Ångström tube radius; defaults to 0.3. */
+    radius?: number;
+    /** Samples per guide segment; defaults to 6. */
+    smooth?: number;
+    color?: VectorLike;
+    sides?: number;
+    join?: "tangent" | "bevel" | "miter" | "round";
+    /** Wraps the shaded tube layer; without one, the ambient scene material. */
+    material?: MaterialSpec;
+  }
+  & Translucency
+  & SelectionDiagnostics
+> = (props) =>
+  use(SelectionConsumer, {
+    input: props.select,
+    who: "Tube",
+    onSelectionStatus: props.onSelectionStatus,
+    warnEmptySelection: props.warnEmptySelection,
+    render: (select: Selection) => {
+      const { onSelectionStatus: _status, warnEmptySelection: _warn, ...draw } =
+        props;
+      return use(TubeResolved, {
+        ...draw,
+        select: props.select == null ? null : select,
+      });
+    },
+  });

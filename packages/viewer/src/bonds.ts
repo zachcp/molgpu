@@ -1,3 +1,5 @@
+import type { SelectionDiagnostics, SelectionInput } from "./types.ts";
+import { SelectionConsumer } from "./internal/selection-consumer.ts";
 import type { Field } from "@molgpu/fields";
 import type { Selection } from "@molgpu/select";
 import type {
@@ -225,11 +227,11 @@ const BondLines: LC<{
  * multiplies the colour's alpha as a uniform; below 1 the sticks draw in
  * transparent mode (pair with <Pass oit>) unless an explicit `mode` is given.
  */
-export const Bonds: ViewerComponent<
+const BondsResolved: ViewerComponent<
   {
     /** Stick width; defaults to 0.3. */
     width?: number;
-    /** A @molgpu/select atom Selection for this structure. */
+    /** A molecular query or exact atom selection for this structure. */
     select?: Selection | null;
     /** Keep bonds whose endpoints are 'both' (default) or 'either' selected. */
     endpoints?: "both" | "either";
@@ -342,3 +344,36 @@ export const Bonds: ViewerComponent<
       ),
   );
 };
+
+export const Bonds: ViewerComponent<
+  & {
+    /** Stick width; defaults to 0.3. */
+    width?: number;
+    /** A molecular query or exact atom selection for this structure. */
+    select?: SelectionInput;
+    /** Keep bonds whose endpoints are 'both' (default) or 'either' selected. */
+    endpoints?: "both" | "either";
+    /** A flat colour, or a @molgpu/fields Field coloured per endpoint atom. */
+    color?: VectorLike | Field;
+    sides?: number;
+    shaded?: boolean;
+    /** Wraps the shaded stick layer; without one, the ambient scene material. */
+    material?: MaterialSpec;
+  }
+  & Translucency
+  & SelectionDiagnostics
+> = (props) =>
+  use(SelectionConsumer, {
+    input: props.select,
+    who: "Bonds",
+    onSelectionStatus: props.onSelectionStatus,
+    warnEmptySelection: props.warnEmptySelection,
+    render: (select: Selection) => {
+      const { onSelectionStatus: _status, warnEmptySelection: _warn, ...draw } =
+        props;
+      return use(BondsResolved, {
+        ...draw,
+        select: props.select == null ? null : select,
+      });
+    },
+  });

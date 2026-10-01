@@ -31,7 +31,9 @@ import { live, viewer } from "./internal/elements.ts";
 import { useStatusReadback } from "./internal/status-readback.ts";
 import { useTrajectoryFrame } from "./trajectory.ts";
 import type { UnwrapProps, UnwrapStatus, ViewerComponent } from "./types.ts";
-import { useCoordinateSelection } from "./use-coordinate-selection.ts";
+import { useSelectionInput } from "./internal/use-selection-input.ts";
+import { type Selection, where } from "@molgpu/select";
+import type { SelectionDiagnostics } from "./types.ts";
 
 const STORAGE = 0x0080;
 const UNIFORM = 0x0040;
@@ -375,15 +377,11 @@ const Unwrapped: LC<{
 
 const Centered: LC<{
   box: PeriodicBox;
-  center: NonNullable<UnwrapProps["center"]>;
+  center: Selection;
   onStatus?: (status: UnwrapStatus) => void;
   children: LiveElement;
 }> = ({ box, center, onStatus, children }) => {
-  const selection = useCoordinateSelection(center);
-  if (selection && selection.domain !== "atom") {
-    throw new TypeError("<Unwrap> center must be an atom query");
-  }
-  if (!selection) return children;
+  const selection = center;
   return use(Unwrapped, {
     box,
     centerRows: selection.indices,
@@ -393,12 +391,26 @@ const Centered: LC<{
   });
 };
 
-const Provider: LC<{
-  box: UnwrapProps["box"];
-  center: UnwrapProps["center"];
-  onStatus?: (status: UnwrapStatus) => void;
-  children: LiveElement;
-}> = ({ box, center, onStatus, children }) => {
+const NO_CENTER = where("atom", "no centering", () => false, ["topology"]);
+
+const Provider: LC<
+  SelectionDiagnostics & {
+    box: UnwrapProps["box"];
+    center: UnwrapProps["center"];
+    onStatus?: (status: UnwrapStatus) => void;
+    children: LiveElement;
+  }
+> = ({ box, center, onStatus, children, ...diagnostics }) => {
+  const resolved = useSelectionInput(
+    center ?? NO_CENTER,
+    "Unwrap",
+    "center",
+    diagnostics,
+    {
+      model: "all",
+      altloc: "all",
+    },
+  );
   const upstream = useCoordinates();
   const frame = useTrajectoryFrame();
   const raw = box === undefined ? frame?.box ?? null : box;
@@ -424,9 +436,16 @@ const Provider: LC<{
     }
   }, [failed, generation]);
   // Without a usable box, positions pass through unchanged.
-  if (!upstream || !upstream.count || !prepared) return children;
+  if (
+    !upstream || !upstream.count || !prepared || resolved.status !== "ready"
+  ) return children;
   if (center) {
-    return use(Centered, { box: prepared, center, onStatus, children });
+    return use(Centered, {
+      box: prepared,
+      center: resolved.selection,
+      onStatus,
+      children,
+    });
   }
   return use(Unwrapped, {
     box: prepared,
@@ -449,5 +468,14 @@ const Provider: LC<{
  * it cannot repair a lerp across the box (use `pbc="minimum-image"`).
  */
 export const Unwrap: ViewerComponent<UnwrapProps> = (
-  { box, center, onStatus, children },
-) => viewer(use(Provider, { box, center, onStatus, children: live(children) }));
+  { box, center, onStatus, children, ...diagnostics },
+) =>
+  viewer(
+    use(Provider, {
+      ...diagnostics,
+      box,
+      center,
+      onStatus,
+      children: live(children),
+    }),
+  );
