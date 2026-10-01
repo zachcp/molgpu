@@ -9,9 +9,21 @@ Selection
 SelectionExpr
   export type SelectionExpr = string | number | boolean | { readonly name: string } | { readonly head: SelectionExpr; readonly args?: readonly SelectionExpr[] | { readonly [name: string]: SelectionExpr } };
 SelectionQuery
-  export interface SelectionQuery { readonly type: string; readonly domain: Domain; readonly label: string; readonly deps: readonly ("topology" | "positions" | "attributes")[] }
+  export interface SelectionQuery { readonly type: string; readonly domain: Domain; readonly label: string; readonly deps: readonly ("topology" | "positions" | "attributes")[]; /** Named column inputs; null means an opaque attributes-dependent predicate. */ readonly attributes: readonly string[] | null; /** Explicit view axes; missing axes inherit the caller's evaluation defaults. */ readonly view: SelectionView }
+SelectionView
+  export interface SelectionView { readonly model?: "first" | "all" | number; readonly altloc?: "primary" | "all" }
 all
   export function all(domain?: Domain): SelectionQuery;
+allConformers
+  export function allConformers(): SelectionQuery;
+allModels
+  export function allModels(): SelectionQuery;
+and
+  export function and(first: SelectionQuery, ...others: SelectionQuery[]): SelectionQuery;
+attribute
+  export function attribute(name: string, test: (value: number) => boolean): SelectionQuery;
+chain
+  export function chain(id: string, options?: { readonly namespace?: "auth" | "label" }): SelectionQuery;
 comp
   export function comp(names: readonly string[]): SelectionQuery;
 compile
@@ -28,10 +40,26 @@ isEmpty
   export function isEmpty(sel: Selection): boolean;
 isStale
   export function isStale(sel: Selection, data: StructureData): boolean;
+ligand
+  export function ligand(): SelectionQuery;
+model
+  export function model(id: number): SelectionQuery;
+not
+  export function not(of: SelectionQuery): SelectionQuery;
+nucleic
+  export function nucleic(): SelectionQuery;
+or
+  export function or(first: SelectionQuery, ...others: SelectionQuery[]): SelectionQuery;
 preserveBondGraph
   export function preserveBondGraph(source: StructureData, snapshot: StructureData): StructureData;
+protein
+  export function protein(): SelectionQuery;
+residues
+  export function residues(range: readonly [number, number], options?: { readonly namespace?: "auth" | "label" }): SelectionQuery;
 resolve
-  export function resolve(query: SelectionQuery, data: StructureData): Selection;
+  export function resolve(query: SelectionQuery, data: StructureData, options?: { readonly view?: SelectionView }): Selection;
+secondaryStructure
+  export function secondaryStructure(kind: "helix" | "sheet" | "coil"): SelectionQuery;
 supportedSymbols
   export const supportedSymbols: readonly string[];
 toAtoms
@@ -42,7 +70,11 @@ toResidues
   export function toResidues(sel: Selection, data: StructureData): Selection;
 union
   export function union(a: Selection, b: Selection): Selection;
+water
+  export function water(): SelectionQuery;
 where
   export function where(domain: Domain, label: string, test: (data: StructureData, row: number) => boolean, deps?: readonly ("topology" | "positions" | "attributes")[]): SelectionQuery;
+withView
+  export function withView(of: SelectionQuery, view: SelectionView): SelectionQuery;
 within
   export function within(cutoff: number, of: SelectionQuery): SelectionQuery;

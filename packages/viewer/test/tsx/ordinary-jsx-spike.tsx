@@ -8,8 +8,7 @@
 import { React, render } from "@use-gpu/live";
 import { AutoCanvas, WebGPU } from "@use-gpu/webgpu";
 import { AmbientLight, OrbitCamera, Pass } from "@use-gpu/workbench";
-import { comp, where, within } from "@molgpu/select";
-import { attributeColumn, ssKind } from "@molgpu/table";
+import { comp, protein, secondaryStructure, within } from "@molgpu/select";
 import { byElement, byPotential } from "@molgpu/fields";
 import {
   BallAndStick,
@@ -30,25 +29,8 @@ void React;
 // viewer adapter. No row packing, resource handles, or revision bookkeeping.
 const ligand = comp(["HEM"]);
 const site = within(5, ligand);
-const helices = where(
-  "atom",
-  "DSSP helices (H/G/I)",
-  (data, atom) =>
-    ssKind(
-      attributeColumn(data, "ssCode")
-        ?.values[data.topology.atoms.residue[atom]] ?? 0,
-    ) === "helix",
-  ["topology", "attributes"],
-);
-const helixSite = within(5, helices);
-const protein = where(
-  "atom",
-  "protein",
-  (data, atom) =>
-    data.topology.residues.polymer[data.topology.atoms.residue[atom]] ===
-      "protein",
-  ["topology"],
-);
+const helixSite = within(5, secondaryStructure("helix"));
+const polymer = protein();
 const shift = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 2, 0, 0, 1];
 
 export interface SceneProps {
@@ -70,7 +52,7 @@ export function BaselineScene(props: SceneProps): ViewerElement {
       error={props.error}
     >
       <Trajectory src={props.trajectorySrc} frame={props.frame}>
-        <Transform matrix={shift} select={protein}>
+        <Transform matrix={shift} select={polymer}>
           <Ribbon color={[0.7, 0.8, 0.9, 1]} />
           <BallAndStick color={byElement()} />
           <EField spacing={2} maxSamples={128 ** 3}>
@@ -88,11 +70,11 @@ export function AcceptanceScene(props: SceneProps): ViewerElement {
   // Each variable uses an actual public component. The missing prop checks are
   // deliberately explicit; a green sketch is not a claim these props work yet.
   // @ts-expect-error crj.9 follow-up: Ribbon select must accept SelectionQuery.
-  const ribbon = <Ribbon select={protein} color={[0.7, 0.8, 0.9, 1]} />;
+  const ribbon = <Ribbon select={polymer} color={[0.7, 0.8, 0.9, 1]} />;
   // @ts-expect-error crj.9 follow-up: BallAndStick expands a residue query to atoms.
   const atoms = <BallAndStick select={ligand} color={byElement()} />;
   // @ts-expect-error crj.9 follow-up: EField select must accept SelectionQuery.
-  const potentialSelection: Parameters<typeof EField>[0]["select"] = protein;
+  const potentialSelection: Parameters<typeof EField>[0]["select"] = polymer;
   const potential = (
     <EField select={potentialSelection} spacing={2}>
       <Spacefill color={byPotential()} scale={0.25} />
@@ -113,7 +95,7 @@ export function AcceptanceScene(props: SceneProps): ViewerElement {
       error={props.error}
     >
       <Trajectory src={props.trajectorySrc} frame={props.frame}>
-        <Transform matrix={shift} select={protein}>
+        <Transform matrix={shift} select={polymer}>
           {ribbon}
           {atoms}
           {nearby}
