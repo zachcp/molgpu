@@ -6,6 +6,13 @@ All notable changes to `@molgpu/viewer` are recorded here. The format follows
 
 ## [Unreleased]
 
+- Breaking types: `ViewerElement` now aliases pinned native `LiveElement`,
+  rejecting arbitrary objects while permitting native scene composition.
+  `ViewerComponent` keeps a checked element return type. `MaterialSpec` now
+  accepts only discriminated PBR/basic/normal constants; use native material
+  wrappers for lazy values, shader maps, render callbacks and upstream color
+  syntax. Molecular PBR defaults remain metalness 0 and roughness 0.6.
+
 - Status and coordinate-bounds staging survives pending GPU maps across owner
   replacement and unmount, then retires after completion without publishing a
   stale result. Retirement CI coverage now includes coordinate providers,

@@ -30,7 +30,8 @@ const ROOT = resolve(dirname(fromFileUrl(import.meta.url)), "..");
 const CRITERIA = ["H1", "H2", "H3", "H4", "H5", "H6"];
 const STABILITY = new Set(["stable", "experimental", "advanced"]);
 // The one package allowed to depend on use.gpu's component layers and to expose
-// use.gpu types (from its advanced entry only). Everything else is "lower".
+// native LiveElement in "." and other use.gpu types in advanced. Everything
+// else is "lower".
 const VIEWER = "@molgpu/viewer";
 // Packages that cannot be imported in Node; H6 resolves their entries instead.
 const BROWSER_ONLY = new Set([VIEWER]);
@@ -151,7 +152,7 @@ function moduleExports(file) {
   const packageRoot = file.slice(0, file.lastIndexOf("/src/") + 1);
   out.exportedKeys = new Set();
   out.typeRefs = new Map();
-  out.externalRefs = new Map(); // export name -> upstream packages its types reach
+  out.externalRefs = new Map(); // export name -> upstream package#symbol references its types reach
   for (const exp of checker.getExportsOfModule(symbol)) {
     const target = exp.flags & ts.SymbolFlags.Alias
       ? checker.getAliasedSymbol(exp)
@@ -218,7 +219,7 @@ function collectTypeRefs(
           const upstream = file.match(
             /\/node_modules\/(@use-gpu\/[^/]+|@webgpu\/types|molstar)\//,
           );
-          if (upstream) external.add(upstream[1]);
+          if (upstream) external.add(`${upstream[1]}#${symbol.name}`);
           else if (
             file.startsWith(packageRoot) && !file.includes("/node_modules/")
           ) {
@@ -649,7 +650,8 @@ function checkPackage(
     }
   }
 
-  // H3 — no use.gpu / Mol* types in public declarations (viewer: "." entry only).
+  // H3 — lower packages stay renderer-free. Viewer "." permits only the pinned
+  // native LiveElement boundary; other use.gpu types remain advanced.
   for (const e of ents) {
     if (!e.types || !exists(join(dir, e.types))) continue;
     if (isViewer) {
@@ -658,6 +660,7 @@ function checkPackage(
       if (e.subpath !== ".") continue;
       for (const [exportName, upstream] of apis.get(".")?.externalRefs ?? []) {
         for (const spec of upstream) {
+          if (spec === "@use-gpu/live#LiveElement") continue;
           fail("H3", `"${exportName}" (.) exposes a type from "${spec}"`);
         }
       }

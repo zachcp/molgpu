@@ -7,7 +7,12 @@
  */
 import { React, render } from "@use-gpu/live";
 import { AutoCanvas, WebGPU } from "@use-gpu/webgpu";
-import { AmbientLight, OrbitCamera, Pass } from "@use-gpu/workbench";
+import {
+  AmbientLight,
+  OrbitCamera,
+  Pass,
+  PBRMaterial,
+} from "@use-gpu/workbench";
 import { comp, protein, secondaryStructure, within } from "@molgpu/select";
 import { byElement, byPotential } from "@molgpu/fields";
 import {
@@ -21,9 +26,19 @@ import {
   Trajectory,
   Transform,
 } from "@molgpu/viewer";
-import type { StructureLoader, ViewerElement } from "@molgpu/viewer";
+import type {
+  MaterialSpec,
+  StructureLoader,
+  ViewerElement,
+} from "@molgpu/viewer";
 
 void React;
+
+// Public JSX and native wrappers share the pinned LiveElement boundary.
+const matte: MaterialSpec = { roughness: 0.6, metalness: 0 };
+const lazyMaterial: MaterialSpec = (children) => (
+  <PBRMaterial roughness={() => 0.6}>{children}</PBRMaterial>
+);
 
 // Reusable molecular values; residue queries expand to atoms in the proposed
 // viewer adapter. No row packing, resource handles, or revision bookkeeping.
@@ -53,8 +68,8 @@ export function BaselineScene(props: SceneProps): ViewerElement {
     >
       <Trajectory src={props.trajectorySrc} frame={props.frame}>
         <Transform matrix={shift} select={polymer}>
-          <Ribbon color={[0.7, 0.8, 0.9, 1]} />
-          <BallAndStick color={byElement()} />
+          <Ribbon color={[0.7, 0.8, 0.9, 1]} material={matte} />
+          <BallAndStick color={byElement()} material={lazyMaterial} />
           <EField spacing={2} maxSamples={128 ** 3}>
             <Spacefill color={byPotential()} scale={0.25} />
             <Isosurface level={1} opacity={0.25} />

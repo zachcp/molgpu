@@ -47,7 +47,7 @@ Isosurface
 Label
   export const Label: ViewerComponent<{ select?: Selection | null; /** Explicit [x, y, z] anchor, overriding the selection centroid. */ at?: readonly number[]; text?: string; size?: number; color?: VectorLike; offset?: readonly number[]; family?: string; /** 0–1, multiplied into the text colour's alpha (text always blends). */ opacity?: number }>;
 MaterialSpec
-  export type MaterialSpec = ({ type?: MaterialType } & Record<string, unknown>) | ((children: ViewerElement) => ViewerElement);
+  export type MaterialSpec = { type?: "pbr"; metalness?: number; roughness?: number; albedo?: VectorLike; emissive?: VectorLike } | { type: "basic"; color?: VectorLike } | { type: "normal" } | ((children: ViewerElement) => ViewerElement);
 MaterialType
   export type MaterialType = "pbr" | "basic" | "normal";
 NormalMode
@@ -113,7 +113,7 @@ VectorLike
 ViewerComponent
   export type ViewerComponent<P = object> = (props: P) => ViewerElement;
 ViewerElement
-  export type ViewerElement = object | null | undefined | false;
+  export type ViewerElement = LiveElement;
 Volume
   export const Volume: ViewerComponent<VolumeProps>;
 VolumeLoader

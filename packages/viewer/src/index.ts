@@ -1,6 +1,6 @@
 // The "." entry: components and the hooks an application composes with. It names
-// no use.gpu type (hardening H3); use.gpu-shaped and resource-level escape
-// hatches live in ./advanced.ts.
+// the pinned LiveElement through ViewerElement (hardening H3); other use.gpu
+// types and resource-level escape hatches live in ./advanced.ts.
 export type {
   BlendMode,
   CameraCurve,
