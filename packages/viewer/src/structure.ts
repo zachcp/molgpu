@@ -1,15 +1,16 @@
+import { useSourceRequest } from "./internal/source-request.ts";
 import type {
   StructureLoader,
   StructureProps,
   ViewerComponent,
 } from "./types.ts";
-import { use, useAwait } from "@use-gpu/live";
+import { use } from "@use-gpu/live";
 import { StructureProvider } from "./structure-context.ts";
 import { live, viewer } from "./internal/elements.ts";
 
-const defaultLoader: StructureLoader = async (src, cancelled) => {
+const defaultLoader: StructureLoader = async (src, cancelled, signal) => {
   const { structureFromBcif } = await import("@molgpu/io");
-  const data = await structureFromBcif(src);
+  const data = await structureFromBcif(src, { signal });
   return cancelled() ? null : data;
 };
 
@@ -40,11 +41,12 @@ export const Structure: ViewerComponent<StructureProps> = (
     throw new TypeError("<Structure> loader must be a function");
   }
   // async, so a loader that throws synchronously still reaches the error prop.
-  const [loaded, failure, pending] = useAwait(
+  const [loaded, failure, pending] = useSourceRequest(
     data === undefined
-      ? async (cancelled: () => boolean) => await loader(src!, cancelled)
+      ? async (signal: AbortSignal) =>
+        await loader(src!, () => signal.aborted, signal)
       : null,
-    [src, loader],
+    [data, src, loader],
   );
   if (data !== undefined) {
     return viewer(

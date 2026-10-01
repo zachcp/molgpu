@@ -71,7 +71,7 @@ Spacefill
 Structure
   export const Structure: ViewerComponent<StructureProps>;
 StructureLoader
-  export type StructureLoader = (src: string, cancelled: () => boolean) => StructureData | null | Promise<StructureData | null>;
+  export type StructureLoader = (src: string, cancelled: () => boolean, signal?: AbortSignal) => StructureData | null | Promise<StructureData | null>;
 StructureProps
   export type StructureProps = { children?: ViewerElement; data: StructureData; src?: undefined; loader?: undefined; loading?: undefined; error?: undefined } | { children?: ViewerElement; src: string; data?: undefined; /** Defaults to fetch + BCIF lowering through @molgpu/io. Its identity is a * reload dependency alongside `src`, so pass a stable or memoized function. */ loader?: StructureLoader; loading?: ViewerElement | (() => ViewerElement); error?: ViewerElement | ((failure: unknown) => ViewerElement) };
 Superpose
@@ -89,7 +89,7 @@ Trajectory
 TrajectoryFrameState
   export interface TrajectoryFrameState { readonly trajectory: TrajectoryData; /** The clamped frame asked for (after sampling a curve). */ readonly requested: number; /** * Frames on screen, `a + t (b - a)`. It trails `requested` while frames * load, and is null before the first frame lands (upstream coordinates show). */ readonly displayed: { readonly a: number; readonly b: number; readonly t: number } | null; /** `a + t (b - a)` of `displayed`, or null. */ readonly frame: number | null; /** Interpolated column-major box of the displayed frames, if both have one. */ readonly box: Float32Array | null }
 TrajectoryLoader
-  export type TrajectoryLoader = (src: string, cancelled: () => boolean) => TrajectoryData | null | Promise<TrajectoryData | null>;
+  export type TrajectoryLoader = (src: string, cancelled: () => boolean, signal?: AbortSignal) => TrajectoryData | null | Promise<TrajectoryData | null>;
 TrajectoryProps
   export type TrajectoryProps = { children?: ViewerElement; /** * Fractional frame index, or a curve from timeline seconds to frames (see * `frameCurve` in @molgpu/timeline). Clamped to `[0, frameCount - 1]`. */ frame: number | Curve<number>; /** `"linear"` (default) blends neighbouring frames; `"nearest"` rounds. */ interpolate?: "linear" | "nearest"; /** * `"minimum-image"` interpolates each atom along the shortest periodic * displacement when both frames carry a box, so atoms that wrap do not * cross the box on screen. Default `"none"`. */ pbc?: "none" | "minimum-image" } & ({ data: TrajectoryData; src?: undefined; loader?: undefined } | { src: string; data?: undefined; /** Defaults to `openTrajectory(src)` (HTTP Range reads). Pass a stable function. */ loader?: TrajectoryLoader });
 Transform
@@ -117,7 +117,7 @@ ViewerElement
 Volume
   export const Volume: ViewerComponent<VolumeProps>;
 VolumeLoader
-  export type VolumeLoader = (src: string, cancelled: () => boolean) => VolumeData | null | Promise<VolumeData | null>;
+  export type VolumeLoader = (src: string, cancelled: () => boolean, signal?: AbortSignal) => VolumeData | null | Promise<VolumeData | null>;
 VolumeProps
   export type VolumeProps = { children?: ViewerElement; data: VolumeData; src?: undefined; loader?: undefined; loading?: undefined; error?: undefined } | { children?: ViewerElement; src: string; data?: undefined; /** Its identity is a reload dependency alongside `src`. */ loader?: VolumeLoader; loading?: ViewerElement | (() => ViewerElement); error?: ViewerElement | ((failure: unknown) => ViewerElement) };
 VolumeSlice

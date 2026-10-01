@@ -35,6 +35,7 @@ export async function openTrajectory(
   input: Uint8Array | Blob | ByteSource | string | URL,
   options: OpenTrajectoryOptions = {},
 ): Promise<TrajectoryData> {
+  options.signal?.throwIfAborted();
   const name = typeof input === "string" || input instanceof URL
     ? String(input)
     : typeof File !== "undefined" && input instanceof File

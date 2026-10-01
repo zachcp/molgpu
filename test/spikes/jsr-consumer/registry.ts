@@ -53,6 +53,10 @@ const exportsOf = (config: { exports?: string | Record<string, string> }) =>
 export function startRegistry(port = 0): {
   url: string;
   published: () => string[];
+  files: (
+    name: string,
+    version: string,
+  ) => Map<string, Uint8Array<ArrayBuffer>> | undefined;
   stop: () => Promise<void>;
 } {
   // "@scope/name" -> version -> files
@@ -144,6 +148,7 @@ export function startRegistry(port = 0): {
       [...packages].flatMap(([key, versions]) =>
         [...versions.keys()].map((v) => `${key}@${v}`)
       ).sort(),
+    files: (name, version) => packages.get(name)?.get(version)?.files,
     stop: () => server.shutdown(),
   };
 }

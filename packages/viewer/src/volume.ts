@@ -1,3 +1,4 @@
+import { useSourceRequest } from "./internal/source-request.ts";
 import type { VolumeData } from "@molgpu/table";
 import type { ViewerComponent, VolumeLoader, VolumeProps } from "./types.ts";
 import {
@@ -5,7 +6,6 @@ import {
   type LiveElement,
   provide,
   use,
-  useAwait,
   useMemo,
 } from "@use-gpu/live";
 import {
@@ -19,9 +19,9 @@ const noSubscription = () => noop;
 import { useVolumeSource } from "./internal/volume-buffers.ts";
 import { live, viewer } from "./internal/elements.ts";
 
-const defaultLoader: VolumeLoader = async (src, cancelled) => {
+const defaultLoader: VolumeLoader = async (src, cancelled, signal) => {
   const { volumeFromCcp4 } = await import("@molgpu/io");
-  const volume = await volumeFromCcp4(src);
+  const volume = await volumeFromCcp4(src, { signal });
   return cancelled() ? null : volume;
 };
 
@@ -71,11 +71,12 @@ export const Volume: ViewerComponent<VolumeProps> = (
   if (typeof loader !== "function") {
     throw new TypeError("<Volume> loader must be a function");
   }
-  const [loaded, failure, pending] = useAwait(
+  const [loaded, failure, pending] = useSourceRequest(
     data === undefined
-      ? async (cancelled: () => boolean) => await loader(src!, cancelled)
+      ? async (signal: AbortSignal) =>
+        await loader(src!, () => signal.aborted, signal)
       : null,
-    [src, loader],
+    [data, src, loader],
   );
   if (data !== undefined) {
     return viewer(

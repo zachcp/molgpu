@@ -13,8 +13,12 @@ say _what value_ each gets. One concept replaces MolViewSpec's `color` /
 deno add jsr:@molgpu/fields jsr:@molgpu/table
 ```
 
-Peer dependency: `@molgpu/table` (one shared copy per app, since structure
-identity is module-private). The package never imports use.gpu or Mol*.
+JSR publishes internal dependencies as caret ranges (for example,
+`jsr:@molgpu/table@^0.1.0`). Keep compatible versions so the application
+resolves one shared copy: identity and revision state are module-private. Values
+from divergent copies can be rejected by identity-dependent operations. Use
+`deno info` and the lockfile to find duplicate versions, then align the
+application and package dependency ranges.
 
 ## Example
 

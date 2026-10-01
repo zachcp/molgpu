@@ -149,6 +149,12 @@ const FRAMES: TrajectoryFrame[] = [0, 1, 2, 3].map((k) => ({
   positions: syntheticFrame(k),
 }));
 const WHOLE = createTrajectory({ atomCount: ATOMS, frames: FRAMES });
+const FAILED_FRAMES = createTrajectory({
+  atomCount: ATOMS,
+  frameCount: 1,
+  time: Float64Array.of(0),
+  source: { read: () => Promise.reject(new Error("frame retry test failure")) },
+});
 // Two trajectory atoms move topology rows 2 and 0; row 1 keeps upstream.
 const SUBSET = createTrajectory({
   atomCount: 2,
@@ -454,6 +460,8 @@ type Mode =
   | "cell"
   | "slow"
   | "snapshot"
+  | "data-retry"
+  | "reload"
   | "src"
   | "transform"
   | "transform-selected"
@@ -475,6 +483,8 @@ interface State {
   pbc: "none" | "minimum-image";
   time: number;
   src: string;
+  reloadData: boolean;
+  badFrames: boolean;
   latency: number;
   matrix: number[];
   selectedRow: number;
@@ -524,9 +534,16 @@ interface Probe {
   counters: typeof snapshotCounters;
   /** Frame 0 bounds of the gate scene, as the cell-list bounds pass reports. */
   gateBounds(n: number): number[];
+  loads: {
+    src: string;
+    resolve: (value?: TrajectoryData | null) => void;
+    reject: (error: Error) => void;
+    signal?: AbortSignal;
+  }[];
   update(patch: Partial<State>): void;
 }
 const probe: Probe = {
+  loads: [],
   mounted: false,
   device: null,
   source: null,
@@ -638,6 +655,20 @@ const played = (
   </Structure>
 );
 
+const reloadLoader = (
+  src: string,
+  _cancelled: () => boolean,
+  signal?: AbortSignal,
+): Promise<TrajectoryData | null> =>
+  new Promise((resolve, reject) => {
+    probe.loads.push({
+      src,
+      signal,
+      resolve: (value) => resolve(value === undefined ? WHOLE : value),
+      reject,
+    });
+  });
+
 const Scene = ({ state }: { state: State }): LiveElement => {
   switch (state.mode) {
     case "none":
@@ -707,6 +738,27 @@ const Scene = ({ state }: { state: State }): LiveElement => {
             </Structure>
           </Volume>
         </TimelineProvider>
+      );
+    case "data-retry":
+      return (
+        <Structure data={STRUCTURE}>
+          <Trajectory data={state.badFrames ? FAILED_FRAMES : WHOLE} frame={0}>
+            <Probe />
+          </Trajectory>
+        </Structure>
+      );
+    case "reload":
+      return (
+        <Structure data={STRUCTURE}>
+          <Trajectory
+            {...(state.reloadData
+              ? { data: WHOLE }
+              : { src: state.src, loader: reloadLoader })}
+            frame={state.frame}
+          >
+            <Probe />
+          </Trajectory>
+        </Structure>
       );
     case "src":
       return (
@@ -863,6 +915,8 @@ const App = (): LiveElement => {
     interpolate: "linear",
     pbc: "none",
     time: 0,
+    reloadData: false,
+    badFrames: false,
     src: "",
     latency: 0,
     matrix: IDENTITY,

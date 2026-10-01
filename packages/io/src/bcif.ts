@@ -60,6 +60,7 @@ const num = (
 
 async function parseBcif(
   bytes: Uint8Array,
+  signal?: AbortSignal,
 ): Promise<{ blocks: readonly (CifFrame & { categories: Categories })[] }> {
   if (!(bytes instanceof Uint8Array)) {
     throw bcifError(
@@ -71,7 +72,11 @@ async function parseBcif(
     // Keep the sole Mol* dependency behind the call boundary: consumers that
     // only use @molgpu/table never load this parser or its transitive chunks.
     const { CIF } = await import("molstar/lib/mol-io/reader/cif.js");
-    const parsed = await CIF.parseBinary(bytes).run();
+    signal?.throwIfAborted();
+    const parsed = await CIF.parseBinary(bytes).run((progress) => {
+      if (signal?.aborted) progress.requestAbort("request cancelled");
+    });
+    signal?.throwIfAborted();
     if (parsed.isError) {
       throw bcifError(parsed.message, "INVALID_BCIF");
     }
@@ -79,6 +84,7 @@ async function parseBcif(
       blocks: readonly (CifFrame & { categories: Categories })[];
     };
   } catch (error) {
+    signal?.throwIfAborted();
     if (error instanceof IoError) throw error;
     throw bcifError(
       "Unable to load the optional Mol* BCIF parser",
@@ -174,7 +180,7 @@ function readLinks(
 }
 
 /** Build Mol*'s normalized model once for entity, annotation and bond semantics. */
-async function mmcifSemantics(frame: CifFrame) {
+async function mmcifSemantics(frame: CifFrame, signal?: AbortSignal) {
   try {
     const [
       { trajectoryFromMmCIF },
@@ -195,8 +201,13 @@ async function mmcifSemantics(frame: CifFrame) {
       ),
       import("molstar/lib/mol-task/index.js"),
     ]);
-    const trajectory = await trajectoryFromMmCIF(frame).run();
+    signal?.throwIfAborted();
+    const trajectory = await trajectoryFromMmCIF(frame).run((progress) => {
+      if (signal?.aborted) progress.requestAbort("request cancelled");
+    });
+    signal?.throwIfAborted();
     const model = await Task.resolveInContext(trajectory.getFrameAtIndex(0));
+    signal?.throwIfAborted();
     return {
       model,
       secondary: ModelSecondaryStructure.Provider.get(model),
@@ -204,6 +215,7 @@ async function mmcifSemantics(frame: CifFrame) {
       structConnections: StructConn.Provider.get(model)?.entries,
     };
   } catch (error) {
+    signal?.throwIfAborted();
     if (error instanceof IoError) throw error;
     throw bcifError(
       "Unable to build the Mol* mmCIF model",
@@ -298,8 +310,12 @@ function readSecondaryStructure(
  */
 export async function structureFromBcif(
   input: FileInput,
+  options: { signal?: AbortSignal; fetch?: typeof fetch } = {},
 ): Promise<StructureData> {
-  const parsed = await parseBcif(await readInput(input, "BCIF", bcifError));
+  const parsed = await parseBcif(
+    await readInput(input, "BCIF", bcifError, options),
+    options.signal,
+  );
   const categories = parsed.blocks[0]?.categories ?? {};
   const atom = categories.atom_site;
   if (!atom) {
@@ -396,7 +412,7 @@ export async function structureFromBcif(
   const hasConnections =
     !!(categories.chem_comp_bond || categories.struct_conn);
   const semantics = hasEntity || ssAnnotated || hasConnections
-    ? await mmcifSemantics(parsed.blocks[0]!)
+    ? await mmcifSemantics(parsed.blocks[0]!, options.signal)
     : undefined;
   const { types: entityTypes, subtypes: entitySubtypes } =
     semantics && hasEntity ? entityMetadata(semantics, chains) : {

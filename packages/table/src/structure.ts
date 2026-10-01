@@ -276,7 +276,10 @@ export function withPositions(
   positions: Float32Array,
 ): StructureData {
   if (!isStructureIdentity(data.identity)) {
-    fail("identity", "expected a structure created by this module");
+    fail(
+      "identity",
+      "expected a structure created by this module; the value may come from another copy of @molgpu/table. Align dependency versions and ranges to deduplicate @molgpu/table",
+    );
   }
   column(positions, data.topology.atoms.count * 3, Float32Array, "positions");
   positions.forEach((v, i) => finite(v, `positions[${i}]`));

@@ -6,6 +6,9 @@ All notable changes to `@molgpu/table` are recorded here. The format follows
 
 ## [Unreleased]
 
+- Identity-dependent rejection messages name duplicate @molgpu/table copies and
+  explain dependency alignment for deduplication.
+
 - Remove test-only validators, frame conversion/lookup helpers, per-frame DSSP,
   and `selectBonds` from the package entry. Constructors continue to validate;
   tests import implementation helpers directly.

@@ -126,9 +126,10 @@ function preflight(bytes: Uint8Array, maxSamples: number): Preflight {
  */
 export async function volumeFromCcp4(
   source: FileInput,
-  options: { maxSamples?: number } = {},
+  options: { maxSamples?: number; signal?: AbortSignal; fetch?: typeof fetch } =
+    {},
 ): Promise<VolumeData> {
-  const bytes = await readInput(source, "CCP4/MRC", volumeError);
+  const bytes = await readInput(source, "CCP4/MRC", volumeError, options);
   const { maxSamples = MAX_VOLUME_SAMPLES } = options;
   const header = preflight(bytes, maxSamples);
   const input = header.little ? bytes : toLittleEndian(bytes, header);
@@ -140,6 +141,7 @@ export async function volumeFromCcp4(
       import("molstar/lib/mol-model/volume/grid.js"),
     ]);
   } catch (error) {
+    options.signal?.throwIfAborted();
     throw volumeError(
       "Unable to load the optional Mol* CCP4 reader",
       "PARSER_UNAVAILABLE",
@@ -149,19 +151,26 @@ export async function volumeFromCcp4(
   const [{ parse }, { volumeFromCcp4: toVolume }, { Grid }] = modules;
   let grid;
   try {
-    const parsed = await parse(input, "map").run();
+    options.signal?.throwIfAborted();
+    const observe = (progress: { requestAbort: (reason: string) => void }) => {
+      if (options.signal?.aborted) progress.requestAbort("request cancelled");
+    };
+    const parsed = await parse(input, "map").run(observe);
+    options.signal?.throwIfAborted();
     if (parsed.isError) throw new Error(parsed.message);
     // Mol*'s parser fills values without awaiting the slice read; one more
     // turn lets that promise settle before the values are used.
     await Promise.resolve();
-    grid = (await toVolume(parsed.result).run()).grid;
+    grid = (await toVolume(parsed.result).run(observe)).grid;
   } catch (error) {
+    options.signal?.throwIfAborted();
     throw volumeError(
       "Mol* rejected the CCP4/MRC map",
       "INVALID_MAP",
       error,
     );
   }
+  options.signal?.throwIfAborted();
   const { space, data } = grid.cells;
   const { dims, values } = gridToXFast(space, data);
   try {
@@ -171,6 +180,7 @@ export async function volumeFromCcp4(
       transform: Float32Array.from(Grid.getGridToCartesianTransform(grid)),
     }, { maxSamples });
   } catch (error) {
+    options.signal?.throwIfAborted();
     throw volumeError(
       "The CCP4/MRC map is not a valid volume",
       "INVALID_MAP",

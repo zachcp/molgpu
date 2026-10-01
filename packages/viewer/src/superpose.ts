@@ -1,3 +1,4 @@
+import { useSourceRequest } from "./internal/source-request.ts";
 // <Superpose>: a coordinate provider that rigidly fits live coordinates onto a
 // reference. The fit runs on the GPU against the same upstream generation it
 // moves: centroid, then centered covariance and a 3×3 proper-rotation solve,
@@ -6,7 +7,6 @@ import {
   type LC,
   type LiveElement,
   use,
-  useAwait,
   useMemo,
   useResource,
 } from "@use-gpu/live";
@@ -87,8 +87,9 @@ function referenceOf(
 async function firstFrame(
   trajectory: TrajectoryData,
   count: number,
+  signal?: AbortSignal,
 ): Promise<Float32Array> {
-  const frame = await trajectory.source.read(0);
+  const frame = await trajectory.source.read(0, signal);
   const positions = new Float32Array(count * 3).fill(NaN);
   const map = trajectory.atomMap;
   for (let i = 0; i < trajectory.atomCount; i++) {
@@ -270,18 +271,20 @@ const Resolve: LC<{
     throw new Error('<Superpose to="first"> needs a <Trajectory> ancestor');
   }
   const trajectory = to === "first" ? frame!.trajectory : null;
-  const [first, failure] = useAwait(
-    trajectory ? () => firstFrame(trajectory, upstream.count) : null,
+  const [first, failure, pending] = useSourceRequest(
+    trajectory
+      ? (signal) => firstFrame(trajectory, upstream.count, signal)
+      : null,
     [trajectory, upstream.count],
   );
-  if (failure) {
+  if (!pending && failure) {
     throw new Error("<Superpose>: the trajectory's first frame failed", {
       cause: failure,
     });
   }
   let reference: Reference | null;
   if (to === "first") {
-    reference = first ? referenceOf(first, first) : null;
+    reference = !pending && first ? referenceOf(first, first) : null;
   } else {
     const positions = to instanceof Float32Array
       ? to

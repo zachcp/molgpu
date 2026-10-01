@@ -16,15 +16,25 @@ with WebGPU only.
 deno add jsr:@molgpu/viewer jsr:@molgpu/table npm:@use-gpu/live@0.20.0 npm:@use-gpu/workbench@0.20.0 npm:@use-gpu/shader@0.20.0 npm:@use-gpu/core@0.20.0
 ```
 
-### Peer dependencies
+### Dependency resolution
 
-The use.gpu packages are peers, pinned exactly (their APIs move between
-releases): `@use-gpu/live`, `@use-gpu/workbench`, `@use-gpu/shader` and
-`@use-gpu/core`, all `0.20.0`. An application also needs `@use-gpu/webgpu` (for
-`<WebGPU>`/`<AutoCanvas>`), and `@use-gpu/glyph` if it uses `<Label>` or
-`<Distance>`. `@molgpu/table` is also a peer, so the app and every `@molgpu/*`
-package share one copy (structure identity is module-private). The other
-`@molgpu/*` packages are regular dependencies.
+The use.gpu packages are exact npm dependencies, all `0.20.0`. Match that
+version in the application, including `@use-gpu/webgpu` for
+`<WebGPU>`/`<AutoCanvas>` and `@use-gpu/glyph` for `<Label>` or `<Distance>`.
+Multiple Live copies do not share contexts and can cause type or runtime
+failures.
+
+JSR publishes internal dependencies as caret ranges (for example,
+`jsr:@molgpu/table@^0.1.0`). Keep compatible versions so the application
+resolves one shared copy: identity and revision state are module-private. Values
+from divergent copies can be rejected by identity-dependent operations. Use
+`deno info` and the lockfile to find duplicate versions, then align the
+application and package dependency ranges.
+
+Bundle the viewer for the browser (for example, with Vite or `deno bundle`).
+Direct execution under Deno cannot link the pinned workbench's CommonJS entry:
+its re-exports do not expose `LoopContext` to Deno. Bundlers resolve the ESM
+`module` entry. Public entries still type-check under Deno.
 
 ## Example
 
@@ -376,3 +386,18 @@ published types, builds it with vite, and drives it in Chrome with WebGPU
 (preloaded, empty, sibling, loaded, missing and cancelled structures, with no
 uncaptured WebGPU errors). `deno task test:site` additionally checks the project
 landing page and maintained demo route.
+
+## Source replacement and cancellation
+
+Structure, Volume and Trajectory loaders receive `(src, cancelled, signal)`. The
+optional third argument preserves existing two-argument loaders. Default loaders
+forward the request signal through IO transport and supported decoding.
+Replacement, switching to preloaded data and unmount abort the old request; late
+results and errors are ignored. Custom loaders that ignore the signal still have
+stale publication suppressed, but their work is not necessarily aborted.
+
+During replacement, Structure/Volume show their loading value and Trajectory
+renders children against upstream coordinates until the new source opens. Old
+trajectory metadata and old source errors are withdrawn immediately. A Superpose
+first-frame request follows the same replacement/cancellation rule. Frame
+failures belong to their player and do not carry into a replacement.

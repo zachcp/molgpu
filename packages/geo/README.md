@@ -13,7 +13,7 @@ future headless backend.
 deno add jsr:@molgpu/geo
 ```
 
-No runtime dependencies and no peer dependencies.
+No runtime dependencies.
 
 ## Example
 

@@ -6,6 +6,11 @@ All notable changes to `@molgpu/viewer` are recorded here. The format follows
 
 ## [Unreleased]
 
+- Source requests own pending/error state and abort on replacement,
+  preloaded-data switching and unmount. Trajectory reloads withdraw stale
+  metadata, retries withdraw stale errors, and frame failures belong to their
+  player. Loaders receive an optional third AbortSignal argument.
+
 - One default view for molecular consumers: without `select`, `<Spacefill>`,
   `<Bonds>` and `<Label>` now draw the first model's primary conformers like
   `<Tube>`, `<Ribbon>` and `<Surface>`, instead of every retained row.
