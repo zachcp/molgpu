@@ -521,8 +521,12 @@ render `loading`, on failure they render `error(failure)`, and their subtree
 mounts only with the loaded data. Trajectory layers coordinates over an existing
 structure, so it renders its children with upstream coordinates while opening
 and throws a source failure from render. use.gpu Live has no error boundary, so
-that failure reaches the page as an uncaught error; a typed presentation for it
-belongs with the source/playback split, not with a Trajectory `error` prop.
+that failure currently reaches the page as an uncaught error. The planned
+contract (`molgpu-sept-s5o.18`) keeps one Trajectory component and reports
+source and frame failures through an `onStatus` callback while upstream
+coordinates pass through. To own opening and its presentation today, call
+`openTrajectory` from `@molgpu/io` and pass the result as `<Trajectory data>`,
+which is playback only.
 
 A failure is kept until something changes the request: a new `src`, a new
 `loader` identity, or a remount. Re-rendering with the same props does not

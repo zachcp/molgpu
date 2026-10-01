@@ -48,7 +48,7 @@
     "check:hardening": "deno run -A scripts/check-hardening.mjs",
     "jsr:check": "deno publish --dry-run --allow-dirty",
     "typecheck": "deno check packages/*/src/index.ts packages/*/test/*.test.ts test/selection/*.test.ts",
-    "typecheck:components": "deno check packages/viewer/test/tsx/consumer.tsx packages/viewer/test/tsx/diagnostics.ts packages/viewer/test/tsx/coordinates-sketch.tsx packages/viewer/test/tsx/ordinary-jsx-spike.tsx packages/viewer/test/tsx/ordinary-jsx-types-spike.ts packages/viewer/test/selection/selection.tsx packages/viewer/test/volume/volume.tsx packages/viewer/test/trajectory/trajectory.tsx packages/viewer/test/efield/efield.tsx",
+    "typecheck:components": "deno check packages/viewer/test/tsx/consumer.tsx packages/viewer/test/tsx/diagnostics.ts packages/viewer/test/tsx/coordinates-sketch.tsx packages/viewer/test/tsx/ordinary-jsx-spike.tsx packages/viewer/test/tsx/ordinary-jsx-types-spike.ts packages/viewer/test/tsx/trajectory-source-spike.tsx packages/viewer/test/selection/selection.tsx packages/viewer/test/volume/volume.tsx packages/viewer/test/trajectory/trajectory.tsx packages/viewer/test/efield/efield.tsx",
     "typecheck:site": "deno check site/src/main.tsx",
     "build:site": "deno run -A npm:vite@8.3.0 build --config site/vite.config.mjs",
     "dev:site": "deno run -A npm:vite@8.3.0 --config site/vite.config.mjs",
