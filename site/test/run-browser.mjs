@@ -15,24 +15,20 @@ const frames = (page) =>
     for (let i = 0; i < 8; i++) await new Promise(requestAnimationFrame);
   });
 
-// The canvas as drawn. A clipped page screenshot, not an element screenshot:
-// the lit-pixel check needs visible output, not a box that holds still across
-// animation frames, which Playwright's element screenshot waits for and which
-// timed out intermittently on CI's software WebGPU.
+// Inspect the rendered canvas itself. Page screenshots ask Chrome's compositor
+// to capture the whole surface and intermittently stall on CI's software GPU.
+// Canvas PNG readback preserves the visible-output assertion without that path.
 const canvasShot = async (page) => {
   const canvas = page.locator("#molecule-canvas canvas");
   await canvas.scrollIntoViewIfNeeded();
   const box = await canvas.boundingBox();
   assert(box && box.width > 0 && box.height > 0, "the demo canvas has a size");
-  const { width, height } = page.viewportSize();
-  const x = Math.max(0, box.x), y = Math.max(0, box.y);
-  return await page.screenshot({
-    clip: {
-      x,
-      y,
-      width: Math.min(box.x + box.width, width) - x,
-      height: Math.min(box.y + box.height, height) - y,
-    },
+  return await canvas.evaluate((element) => {
+    const png = element.toDataURL("image/png");
+    if (!png.startsWith("data:image/png;base64,")) {
+      throw new Error("The rendered canvas did not produce a PNG");
+    }
+    return png.slice("data:image/png;base64,".length);
   });
 };
 
@@ -51,7 +47,7 @@ const litPixels = (page, png) =>
       if (data[i] + data[i + 1] + data[i + 2] > 120) count++;
     }
     return count;
-  }, png.toString("base64"));
+  }, png);
 
 Deno.test("site landing page and maintained gallery routes", async () => {
   const root = fromFileUrl(new URL("../", import.meta.url));
