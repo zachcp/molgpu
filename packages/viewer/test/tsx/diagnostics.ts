@@ -19,6 +19,7 @@ export type Mode =
   | "remote"
   | "missing"
   | "controlled"
+  | "lifecycle"
   | "offset"
   | "bonds"
   | "attributes"
@@ -33,12 +34,17 @@ export interface State {
   mounted: boolean;
   offsetX: number;
   attributeName: "ssCode" | "formalCharge" | "partialCharge" | "gpu:test";
+  /** Lifecycle mode: the same Structure instance switches between src and data. */
+  source: "src" | "data";
+  /** Lifecycle mode: the Structure key, so a retry is a deliberate remount. */
+  attempt: number;
 }
 /** One in-flight load handed to the test rather than resolved by the fixture. */
 export interface Pending {
   src: string;
   cancelled: () => boolean;
   settle: (data: StructureData | null) => void;
+  fail: (error: Error) => void;
 }
 
 export interface Probe {
@@ -49,6 +55,8 @@ export interface Probe {
   failure: string | null;
   /** Atom count seen through useStructureResource() when the subtree was ready. */
   atoms: number | null;
+  /** Which fixture dataset the ready subtree received. */
+  dataset: "left" | "right" | "other" | null;
   missingCoordinatesError: string | null;
   rootPositionReads: { cpu: string; gpu: string } | null;
   coordinateSource: StorageSource | null;
@@ -87,11 +95,15 @@ export interface Probe {
     history: Phase[];
     failure: string | null;
     atoms: number | null;
+    dataset: Probe["dataset"];
     pending: number;
     errors: string[];
   };
-  /** Resolve the nth outstanding load; reports whether Live had cancelled it. */
-  settle(index: number, which: "left" | "right" | null): boolean;
+  /**
+   * Resolve (or, with "fail", reject) the nth outstanding load; reports
+   * whether Live had cancelled it.
+   */
+  settle(index: number, which: "left" | "right" | "fail" | null): boolean;
   /** Runtime messages for the prop combinations the type system also rejects. */
   invalid(): string[];
 }
@@ -102,6 +114,7 @@ export const probe: Probe = {
   history: [],
   failure: null,
   atoms: null,
+  dataset: null,
   missingCoordinatesError: null,
   rootPositionReads: null,
   coordinateSource: null,
@@ -124,12 +137,14 @@ export const probe: Probe = {
     probe.history = [];
     probe.failure = null;
     probe.atoms = null;
+    probe.dataset = null;
   },
   snapshot: () => ({
     phase: probe.phase,
     history: [...probe.history],
     failure: probe.failure,
     atoms: probe.atoms,
+    dataset: probe.dataset,
     pending: probe.pending.length,
     errors: [...probe.errors],
   }),

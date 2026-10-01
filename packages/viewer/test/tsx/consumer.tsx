@@ -199,14 +199,18 @@ const attributesB = withAttributes(attributesA, {
 
 /** Hands each in-flight request to the test instead of resolving it. */
 const controlledLoader: StructureLoader = (src, cancelled) =>
-  new Promise<StructureData | null>((settle) => {
-    probe.pending.push({ src, cancelled, settle });
+  new Promise<StructureData | null>((settle, fail) => {
+    probe.pending.push({ src, cancelled, settle, fail });
   });
 
 probe.settle = (index, which) => {
   const request = probe.pending[index];
   if (!request) throw new Error(`No pending load at ${index}`);
   const cancelled = request.cancelled();
+  if (which === "fail" && !cancelled) {
+    request.fail(new Error(`controlled failure: ${request.src}`));
+    return cancelled;
+  }
   // Mirror the default loader: a cancelled request must resolve to null.
   request.settle(
     cancelled
@@ -246,7 +250,9 @@ const report = (next: Phase, failure: unknown = null): null => {
 
 /** Reports readiness from inside the loaded subtree, then draws it. */
 const Ready = (): LiveElement => {
-  probe.atoms = useStructureResource().data.topology.atoms.count;
+  const { data } = useStructureResource();
+  probe.atoms = data.topology.atoms.count;
+  probe.dataset = data === left ? "left" : data === right ? "right" : "other";
   return [report("ready"), <Spacefill key="ready-spacefill" />];
 };
 
@@ -313,9 +319,9 @@ const FIRST_TWO = resolve(
 const NO_ATOMS = resolve(where("atom", "none", () => false), bonded);
 
 const Scene = (
-  { mode, src, offsetX, attributeName }: Pick<
+  { mode, src, offsetX, attributeName, source, attempt }: Pick<
     State,
-    "mode" | "src" | "offsetX" | "attributeName"
+    "mode" | "src" | "offsetX" | "attributeName" | "source" | "attempt"
   >,
 ): LiveElement => {
   if (mode === "preloaded") {
@@ -443,6 +449,30 @@ const Scene = (
       </Structure>,
     ];
   }
+  if (mode === "lifecycle") {
+    // Live honours `key` only among array siblings; a lone keyed child is
+    // reconciled in place. The array makes a new attempt a real remount, while
+    // switching source keeps the same instance.
+    return [
+      source === "data"
+        ? (
+          <Structure key={`attempt-${attempt}`} data={left}>
+            <Ready />
+          </Structure>
+        )
+        : (
+          <Structure
+            key={`attempt-${attempt}`}
+            src={src}
+            loader={controlledLoader}
+            loading={() => report("loading")}
+            error={(f: unknown) => report("error", f)}
+          >
+            <Ready />
+          </Structure>
+        ),
+    ];
+  }
   return mode === "controlled"
     ? (
       <Structure
@@ -472,6 +502,8 @@ const App = (): LiveElement => {
     mounted: true,
     offsetX: 5,
     attributeName: "gpu:test",
+    source: "src",
+    attempt: 0,
   });
   try {
     useCoordinates();
@@ -484,7 +516,7 @@ const App = (): LiveElement => {
   // 1CRN's own centre, so the loaded protein is framed rather than clipped.
   const protein = useOne<[number, number, number]>(() => [10.59, 10.21, 6.08]);
   const remote = state.mode === "remote" || state.mode === "missing" ||
-    state.mode === "controlled";
+    state.mode === "controlled" || state.mode === "lifecycle";
   return (
     // bearing 0 keeps both sibling structures the same distance from the
     // camera, so their on-screen sizes compare their radii and nothing else.
@@ -508,6 +540,8 @@ const App = (): LiveElement => {
               src={state.src}
               offsetX={state.offsetX}
               attributeName={state.attributeName}
+              source={state.source}
+              attempt={state.attempt}
             />
           )
           : null}
