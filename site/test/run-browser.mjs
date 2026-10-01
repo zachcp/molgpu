@@ -10,44 +10,50 @@ import { chromium } from "playwright";
 import { webgpuBrowserArgs } from "../../packages/viewer/test/webgpu-browser-args.mjs";
 import { demos } from "../src/demos/registry.ts";
 
-const frames = (page) =>
-  page.evaluate(async () => {
-    for (let i = 0; i < 8; i++) await new Promise(requestAnimationFrame);
-  });
-
-// Inspect the rendered canvas itself. Page screenshots ask Chrome's compositor
-// to capture the whole surface and intermittently stall on CI's software GPU.
-// Canvas PNG readback preserves the visible-output assertion without that path.
-const canvasShot = async (page) => {
+// Wait for rendered molecular output, not a frame count or page compositor
+// screenshot. Software-GPU shader compilation can outlast several animation
+// frames; a blank canvas must keep waiting and eventually fail the same budget.
+const waitForVisibleCanvas = async (page) => {
   const canvas = page.locator("#molecule-canvas canvas");
   await canvas.scrollIntoViewIfNeeded();
   const box = await canvas.boundingBox();
   assert(box && box.width > 0 && box.height > 0, "the demo canvas has a size");
-  return await canvas.evaluate((element) => {
-    const png = element.toDataURL("image/png");
-    if (!png.startsWith("data:image/png;base64,")) {
-      throw new Error("The rendered canvas did not produce a PNG");
-    }
-    return png.slice("data:image/png;base64,".length);
-  });
+  const rendered = await page.waitForFunction(
+    async () => {
+      const canvas = document.querySelector("#molecule-canvas canvas");
+      if (!canvas) return false;
+      const png = canvas.toDataURL("image/png");
+      if (!png.startsWith("data:image/png;base64,")) return false;
+      const bytes = Uint8Array.from(
+        atob(png.slice("data:image/png;base64,".length)),
+        (c) => c.charCodeAt(0),
+      );
+      const bitmap = await createImageBitmap(
+        new Blob([bytes], { type: "image/png" }),
+      );
+      try {
+        const snapshot = new OffscreenCanvas(bitmap.width, bitmap.height);
+        const context = snapshot.getContext("2d");
+        context.drawImage(bitmap, 0, 0);
+        const { data } = context.getImageData(
+          0,
+          0,
+          bitmap.width,
+          bitmap.height,
+        );
+        for (let i = 0; i < data.length; i += 4) {
+          if (data[i] + data[i + 1] + data[i + 2] > 120) return true;
+        }
+        return false;
+      } finally {
+        bitmap.close();
+      }
+    },
+    null,
+    { timeout: 30000, polling: 100 },
+  );
+  await rendered.dispose();
 };
-
-const litPixels = (page, png) =>
-  page.evaluate(async (base64) => {
-    const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
-    const bmp = await createImageBitmap(
-      new Blob([bytes], { type: "image/png" }),
-    );
-    const canvas = new OffscreenCanvas(bmp.width, bmp.height);
-    const ctx = canvas.getContext("2d");
-    ctx.drawImage(bmp, 0, 0);
-    const { data } = ctx.getImageData(0, 0, bmp.width, bmp.height);
-    let count = 0;
-    for (let i = 0; i < data.length; i += 4) {
-      if (data[i] + data[i + 1] + data[i + 2] > 120) count++;
-    }
-    return count;
-  }, png);
 
 Deno.test("site landing page and maintained gallery routes", async () => {
   const root = fromFileUrl(new URL("../", import.meta.url));
@@ -180,12 +186,7 @@ Deno.test("site landing page and maintained gallery routes", async () => {
         "",
         "successful mounting clears the loading status",
       );
-      await frames(page);
-      const initialFrame = await canvasShot(page);
-      assert(
-        await litPixels(page, initialFrame) > 0,
-        `${id} produces visible WebGPU output`,
-      );
+      await waitForVisibleCanvas(page);
       await page.locator("#molecule-canvas").hover();
       await page.mouse.down();
       await page.mouse.move(600, 420, { steps: 4 });

@@ -6,11 +6,13 @@ capture did not return. This was an operation timeout, not the 15-minute suite
 limit or 60-minute job limit. The same commit's push run 36862068290 passed the
 site and complete WebGPU suite, including the expanded retirement acceptance.
 
-The site test now reads the rendered canvas as a PNG with `toDataURL` and keeps
-the positive lit-pixel assertion and canvas size/interaction checks. This avoids
-page compositor capture; it does not raise the timeout or retry failed scenes.
-All maintained routes passed locally in 16 seconds. Hosted software-GPU
-validation is required for the changed capture path.
+The site test now reads the rendered canvas as a PNG with `toDataURL` and waits
+up to 30 seconds for positive lit pixels, preserving canvas size/interaction
+checks. This avoids page compositor capture; it does not raise the timeout or
+retry failed scenes. The first matrix run correctly rejected a blank trajectory
+canvas: its shaders had not finished within the previous fixed eight-frame wait.
+Readiness now polls actual rendered pixels within the existing 30-second budget.
+Hosted validation is required for the corrected readiness barrier.
 
 ## Keep complete coverage and shorten the critical path
 
