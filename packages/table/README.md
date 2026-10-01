@@ -147,7 +147,10 @@ source supplied any; otherwise it infers covalent bonds from distances (cached
 per position revision and policy). Each instance row applies one operator to one
 chain; atoms are not duplicated for assemblies. Imports must supply identity
 rows for chains displayed without assembly expansion. Empty instance tables are
-valid data, but represent no explicit assembly instances.
+valid data, but represent no explicit assembly instances. Biological assemblies
+are not rendered yet: importers emit one identity row per chain, and
+`@molgpu/viewer` draws the asymmetric unit only (see
+[the assembly instance decision](../../docs/findings/2026-10-01-assembly-instances-decision.md)).
 
 `residueKey` includes model, both chain namespaces, label/author sequence,
 insertion code and component. Never join annotations using sequence number
