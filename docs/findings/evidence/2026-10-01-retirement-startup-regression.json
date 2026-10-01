@@ -1,0 +1,215 @@
+{
+  "browser": "154.0.8037.59",
+  "results": [
+    {
+      "variant": "passes",
+      "owner": "root",
+      "initialPickingHeld": 0,
+      "initialPickingReleased": 18,
+      "firstMolecularDraw": {
+        "ColorPass": 14,
+        "PickingPass": 25,
+        "ShadowPass": 12
+      },
+      "replacementArmed": 28,
+      "postDestroy": [],
+      "gpuErrors": [],
+      "pageErrors": []
+    },
+    {
+      "variant": "passes",
+      "owner": "transform",
+      "initialPickingHeld": 9,
+      "initialPickingReleased": 26,
+      "firstMolecularDraw": {
+        "ColorPass": 21,
+        "PickingPass": 33,
+        "ShadowPass": 19
+      },
+      "replacementArmed": 36,
+      "postDestroy": [],
+      "gpuErrors": [],
+      "pageErrors": []
+    },
+    {
+      "variant": "passes",
+      "owner": "trajectory",
+      "initialPickingHeld": 9,
+      "initialPickingReleased": 34,
+      "firstMolecularDraw": {
+        "ColorPass": 29,
+        "PickingPass": 41,
+        "ShadowPass": 27
+      },
+      "replacementArmed": 44,
+      "postDestroy": [],
+      "gpuErrors": [],
+      "pageErrors": []
+    },
+    {
+      "variant": "passes",
+      "owner": "normal",
+      "initialPickingHeld": 9,
+      "initialPickingReleased": 33,
+      "firstMolecularDraw": {
+        "ColorPass": 28,
+        "PickingPass": 40,
+        "ShadowPass": 26
+      },
+      "replacementArmed": 43,
+      "postDestroy": [],
+      "gpuErrors": [],
+      "pageErrors": []
+    },
+    {
+      "variant": "passes",
+      "owner": "superpose",
+      "initialPickingHeld": 2,
+      "initialPickingReleased": 23,
+      "firstMolecularDraw": {
+        "ColorPass": 18,
+        "PickingPass": 30,
+        "ShadowPass": 16
+      },
+      "replacementArmed": 33,
+      "postDestroy": [],
+      "gpuErrors": [],
+      "pageErrors": []
+    },
+    {
+      "variant": "passes",
+      "owner": "unwrap",
+      "initialPickingHeld": 2,
+      "initialPickingReleased": 27,
+      "firstMolecularDraw": {
+        "ColorPass": 22,
+        "PickingPass": 34,
+        "ShadowPass": 15
+      },
+      "replacementArmed": 37,
+      "postDestroy": [],
+      "gpuErrors": [],
+      "pageErrors": []
+    },
+    {
+      "variant": "passes",
+      "owner": "dssp",
+      "initialPickingHeld": 0,
+      "initialPickingReleased": 26,
+      "firstMolecularDraw": {
+        "ColorPass": 16,
+        "PickingPass": 101,
+        "ShadowPass": 14
+      },
+      "replacementArmed": 112,
+      "postDestroy": [],
+      "gpuErrors": [],
+      "pageErrors": []
+    },
+    {
+      "variant": "same-size",
+      "owner": "root",
+      "initialPickingHeld": 0,
+      "initialPickingReleased": 29,
+      "firstMolecularDraw": {
+        "ColorPass": 18,
+        "PickingPass": 36,
+        "ShadowPass": 11
+      },
+      "replacementArmed": 39,
+      "postDestroy": [],
+      "gpuErrors": [],
+      "pageErrors": []
+    },
+    {
+      "variant": "same-size",
+      "owner": "transform",
+      "initialPickingHeld": 9,
+      "initialPickingReleased": 33,
+      "firstMolecularDraw": {
+        "ColorPass": 28,
+        "PickingPass": 40,
+        "ShadowPass": 26
+      },
+      "replacementArmed": 43,
+      "postDestroy": [],
+      "gpuErrors": [],
+      "pageErrors": []
+    },
+    {
+      "variant": "same-size",
+      "owner": "trajectory",
+      "initialPickingHeld": 9,
+      "initialPickingReleased": 33,
+      "firstMolecularDraw": {
+        "ColorPass": 28,
+        "PickingPass": 40,
+        "ShadowPass": 26
+      },
+      "replacementArmed": 43,
+      "postDestroy": [],
+      "gpuErrors": [],
+      "pageErrors": []
+    },
+    {
+      "variant": "same-size",
+      "owner": "normal",
+      "initialPickingHeld": 9,
+      "initialPickingReleased": 34,
+      "firstMolecularDraw": {
+        "ColorPass": 29,
+        "PickingPass": 41,
+        "ShadowPass": 27
+      },
+      "replacementArmed": 44,
+      "postDestroy": [],
+      "gpuErrors": [],
+      "pageErrors": []
+    },
+    {
+      "variant": "same-size",
+      "owner": "superpose",
+      "initialPickingHeld": 2,
+      "initialPickingReleased": 27,
+      "firstMolecularDraw": {
+        "ColorPass": 22,
+        "PickingPass": 34,
+        "ShadowPass": 15
+      },
+      "replacementArmed": 37,
+      "postDestroy": [],
+      "gpuErrors": [],
+      "pageErrors": []
+    },
+    {
+      "variant": "same-size",
+      "owner": "unwrap",
+      "initialPickingHeld": 2,
+      "initialPickingReleased": 22,
+      "firstMolecularDraw": {
+        "ColorPass": 18,
+        "PickingPass": 29,
+        "ShadowPass": 16
+      },
+      "replacementArmed": 32,
+      "postDestroy": [],
+      "gpuErrors": [],
+      "pageErrors": []
+    },
+    {
+      "variant": "same-size",
+      "owner": "dssp",
+      "initialPickingHeld": 0,
+      "initialPickingReleased": 31,
+      "firstMolecularDraw": {
+        "ColorPass": 20,
+        "PickingPass": 38,
+        "ShadowPass": 13
+      },
+      "replacementArmed": 117,
+      "postDestroy": [],
+      "gpuErrors": [],
+      "pageErrors": []
+    }
+  ]
+}

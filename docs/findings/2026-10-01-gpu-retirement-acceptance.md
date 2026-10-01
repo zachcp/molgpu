@@ -142,3 +142,27 @@ all possible extension consumers. The contributor guide's historical Gate 2 skip
 statement is stale relative to the current CI glob, which includes every
 `run-*.mjs` viewer suite. This work does not claim that entire glob was run
 locally. No publish or deployment was performed.
+
+## PR #42 CI startup regression
+
+The first hosted runs (36858946555 and 36858915214) failed the matrix's picking
+assertion for Transform and NormalMode respectively. The startup barrier
+accepted any draw, including the sibling, before molecular picking compilation
+finished. The corrected barrier requires actual molecular color, picking and
+shadow draws before replacement is armed. Draw evidence now records only that
+draw's bound buffers; submission evidence still accumulates all uses.
+
+Both matrix variants deliberately hold initial picking compilation, demonstrate
+that the old any-draw condition can be satisfied while replacement readiness is
+false, then release it and await all molecular passes. The arm guard rejects
+premature replacement.
+[Startup regression evidence](evidence/2026-10-01-retirement-startup-regression.json)
+records the first molecular draws before arming for all fourteen owner cases.
+
+The push run also failed postprocess loading with Vite's `Outdated Optimize Dep`
+response. This was reproduced locally. The postprocess harness now uses an
+isolated cold dependency cache, explicitly prebundles its lazy BCIF/surface
+adapter entries, and disables late optimizer discovery. Page and GPU error
+assertions remain strict. Two fresh-cache postprocess runs and the full expanded
+retirement runner passed locally after these fixes; fixed memory budgets are
+unchanged. Hosted validation remains pending for the follow-up commit.

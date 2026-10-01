@@ -44,6 +44,8 @@ try {
       const passes = new WeakMap();
       const commands = new WeakMap();
       const held = [];
+      const initialPicking = [];
+      let pickingReleased = false;
       let armed = false;
       const mapped = [];
       let frame = 0;
@@ -132,7 +134,10 @@ try {
             for (const ids of pass.slots.values()) {
               for (const id of ids) pass.used.add(id);
             }
-            log("draw", { ids: [...pass.used], pass: pass.label });
+            log("draw", {
+              ids: [...new Set([...pass.slots.values()].flat())],
+              pass: pass.label,
+            });
           }
           return original.apply(this, args);
         };
@@ -215,6 +220,17 @@ try {
       const compile = GPUDevice.prototype.createRenderPipelineAsync;
       GPUDevice.prototype.createRenderPipelineAsync = function (desc) {
         const result = compile.call(this, desc);
+        // The pinned workbench uses rg32uint for picking. Hold its first
+        // compilation to exercise slow startup independently of color draws.
+        if (
+          !pickingReleased && location.search.includes("passes") &&
+          desc.fragment?.targets.some((target) => target?.format === "rg32uint")
+        ) {
+          log("initial-picking-held");
+          return new Promise((resolve, reject) => {
+            initialPicking.push(() => result.then(resolve, reject));
+          });
+        }
         if (!armed) return result;
         log("compile-held");
         return new Promise((resolve, reject) => {
@@ -249,9 +265,31 @@ try {
           )
         );
       };
+      const molecularDrawn = (pass) =>
+        events.some((event) =>
+          event.type === "draw" && event.pass?.includes(pass) &&
+          event.ids.some((id) =>
+            records[id]?.ref.deref()?.label.startsWith("molgpu:")
+          )
+        );
+      const ready = () =>
+        globalThis.__scene?.snapshots > 0 &&
+        globalThis.__scene?.bounds > 0 && molecularDrawn("ColorPass") &&
+        (!location.search.includes("passes") ||
+          ["PickingPass", "ShadowPass"].every(molecularDrawn));
       globalThis.__retirement = {
+        ready,
+        initialPicking: () => initialPicking.length,
+        releaseInitialPicking: () => {
+          pickingReleased = true;
+          log("initial-picking-release");
+          initialPicking.splice(0).forEach((release) => release());
+        },
         mark: (name) => log("mark", { name }),
         arm: () => {
+          if (!ready()) {
+            throw new Error("Molecular passes must draw before replacement");
+          }
           armed = true;
           log("armed");
         },
@@ -305,10 +343,36 @@ try {
         globalThis.__scene.unmount();
       });
     } else {
-      await page.waitForFunction(() =>
-        globalThis.__scene?.snapshots > 0 && globalThis.__scene?.bounds > 0 &&
-        globalThis.__retirement.snapshot().events.some((e) => e.type === "draw")
-      );
+      if (Deno.args.includes("--passes")) {
+        await page.waitForFunction(() =>
+          globalThis.__retirement.initialPicking() > 0 &&
+          globalThis.__scene?.snapshots > 0 && globalThis.__scene?.bounds > 0 &&
+          globalThis.__retirement.snapshot().events.some((event) =>
+            event.type === "draw"
+          )
+        );
+        assertEquals(
+          await page.evaluate(() => globalThis.__retirement.ready()),
+          false,
+          "held picking compilation must prevent replacement readiness",
+        );
+        assertEquals(
+          await page.evaluate(() => {
+            try {
+              globalThis.__retirement.arm();
+              return true;
+            } catch {
+              return false;
+            }
+          }),
+          false,
+          "the old any-draw barrier must not permit replacement",
+        );
+        await page.evaluate(() =>
+          globalThis.__retirement.releaseInitialPicking()
+        );
+      }
+      await page.waitForFunction(() => globalThis.__retirement.ready());
       if (owner === "dssp") {
         await page.waitForFunction(() => globalThis.__scene.status > 0);
       }

@@ -12,12 +12,18 @@ import { workspaceAliases } from "../../../scripts/workspace-aliases.mjs";
 
 Deno.test("viewer postprocess", async () => {
   const root = fromFileUrl(new URL("../../../", import.meta.url));
+  const cacheDir = await Deno.makeTempDir({
+    prefix: "molgpu-postprocess-vite-",
+  });
   const server = await createServer({
+    cacheDir,
     root,
     configFile: false,
     resolve: { alias: workspaceAliases() },
     server: { host: "127.0.0.1", port: 5212, strictPort: true },
     optimizeDeps: {
+      // Lazy workspace imports must not trigger a second optimization mid-mount.
+      noDiscovery: true,
       entries: ["packages/viewer/test/postprocess.html"],
       exclude: [
         "@molgpu/fields",
@@ -39,10 +45,17 @@ Deno.test("viewer postprocess", async () => {
         "@use-gpu/shader",
         "@use-gpu/shader/wgsl",
         "@use-gpu/wgsl",
-        // Surface's optional Mol* adapter loads this parser after mount.
-        // Prebundle it before navigation so Vite does not invalidate live
-        // modules with an Outdated Optimize Dep response during the test.
-        "molstar/lib/mol-io/reader/xtc/parser.js",
+        // Prebundle every lazy BCIF and surface adapter entry before navigation.
+        // Late discovery can invalidate modules during the initial BCIF fetch.
+        "molstar/lib/mol-io/reader/cif.js",
+        "molstar/lib/mol-model-formats/structure/mmcif.js",
+        "molstar/lib/mol-model-formats/structure/property/secondary-structure.js",
+        "molstar/lib/mol-model-formats/structure/property/bonds/chem_comp.js",
+        "molstar/lib/mol-model-formats/structure/property/bonds/struct_conn.js",
+        "molstar/lib/mol-task/index.js",
+        "molstar/lib/mol-math/geometry/molecular-surface.js",
+        "molstar/lib/mol-math/geometry/boundary.js",
+        "molstar/lib/mol-data/int/ordered-set.js",
       ],
     },
   });
@@ -150,5 +163,6 @@ Deno.test("viewer postprocess", async () => {
   } finally {
     await browser?.close();
     await server.close();
+    await Deno.remove(cacheDir, { recursive: true });
   }
 });
