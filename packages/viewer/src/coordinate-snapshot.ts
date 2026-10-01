@@ -30,6 +30,7 @@ export interface CoordinateSnapshot {
 }
 
 interface SnapshotContextValue {
+  readonly token?: ReadbackToken;
   readonly snapshot: CoordinateSnapshot | null;
   readonly subscribe: (maxHz: number, onPause: boolean) => () => void;
 }
@@ -129,6 +130,7 @@ export const CoordinateSnapshotBoundary: LC<{
     if (snapshotResource) dispose(() => snapshotResource.dispose());
   }, [snapshotResource]);
   const context = useMemo<SnapshotContextValue>(() => ({
+    token,
     snapshot: data && snapshotResource && published
       ? Object.freeze({
         data,
@@ -137,7 +139,16 @@ export const CoordinateSnapshotBoundary: LC<{
       })
       : null,
     subscribe,
-  }), [data, snapshotResource, published, subscribe]);
+  }), [
+    data,
+    snapshotResource,
+    published,
+    subscribe,
+    token.owner,
+    token.buffer,
+    token.layout,
+    token.generation,
+  ]);
   const publish = (positions: Float32Array, copied: ReadbackToken): boolean => {
     if (!sameReadbackToken(latest.current, copied)) return false;
     const root = coordinates.resource.data;

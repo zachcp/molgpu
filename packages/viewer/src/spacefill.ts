@@ -1,5 +1,6 @@
+import type { SelectionDiagnostics, SelectionInput } from "./types.ts";
+import { useSelectionInput } from "./internal/use-selection-input.ts";
 import type { Field } from "@molgpu/fields";
-import type { Selection } from "@molgpu/select";
 import type {
   MaterialSpec,
   PointLayerOptions,
@@ -210,8 +211,8 @@ export const Spacefill: ViewerComponent<
   & {
     /** Multiplies each atom's Ångström radius; defaults to 1. */
     scale?: number;
-    /** A @molgpu/select atom Selection for this structure; restricts the draw. */
-    select?: Selection | null;
+    /** A molecular query or exact atom selection for this structure; restricts the draw. */
+    select?: SelectionInput;
     /** A flat colour, or a @molgpu/fields Field composed shader-side per atom. */
     color?: VectorLike | Field;
     /** Wraps the shaded point layer; without one, the ambient scene material. */
@@ -222,10 +223,13 @@ export const Spacefill: ViewerComponent<
   }
   & Translucency
   & PointLayerOptions
+  & SelectionDiagnostics
 > = (
   {
     scale = 1,
-    select,
+    select: input,
+    onSelectionStatus,
+    warnEmptySelection,
     color = [0.72, 0.72, 0.76, 1],
     opacity = 1,
     mode,
@@ -234,6 +238,15 @@ export const Spacefill: ViewerComponent<
     ...props
   },
 ) => {
+  const result = useSelectionInput(input, "Spacefill", "select", {
+    onSelectionStatus,
+    warnEmptySelection,
+  });
+  const select = input == null
+    ? null
+    : result.status === "ready"
+    ? result.selection
+    : null;
   useRepaint();
   useBindingProbe("spacefill", color, opacity, scale);
   const { resource, sources } = useStructure();
@@ -254,7 +267,10 @@ export const Spacefill: ViewerComponent<
   const drawMode = modeProps(mode, flatAlpha(color, !!field) * opacity);
 
   const n = indices ? indices.length : data.topology.atoms.count;
-  if (!sources || !coordinates || coordinates.ready === false || n === 0) {
+  if (
+    result.status !== "ready" || !result.selection.indices.length || !sources ||
+    !coordinates || coordinates.ready === false || n === 0
+  ) {
     return null;
   }
 

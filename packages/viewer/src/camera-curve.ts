@@ -1,4 +1,9 @@
-import { resolve, type SelectionQuery, toAtoms } from "@molgpu/select";
+import { all } from "@molgpu/select";
+import {
+  notifySelectionStatus,
+  selectionSourceId as sourceId,
+} from "./internal/selection-diagnostics.ts";
+import { resolveSelectionInput } from "./internal/selection-resolution.ts";
 import { createCurve, sample } from "@molgpu/timeline";
 import { atomRadii, type StructureData } from "@molgpu/table";
 import { gauge } from "./internal/instrumentation.ts";
@@ -10,6 +15,8 @@ import type {
   FocusCameraFrame,
   FocusOptions,
   FocusResult,
+  SelectionInput,
+  SelectionStatus,
   StructureBounds,
   StructureResource,
 } from "./types.ts";
@@ -31,12 +38,18 @@ const point = (value: unknown, name: string): number[] => {
 };
 const focusCache = new WeakMap<
   StructureResource,
-  WeakMap<SelectionQuery, Framings>
+  WeakMap<object, Framings>
 >();
 // Framings per (resource, query). The options key includes the continuous
 // `aspect`, so a resizing canvas would otherwise add an entry per size: keep
 // the most recently used ones.
 const MAX_FRAMINGS = 64;
+const DEFAULT_FOCUS = all();
+const focusStatuses = new WeakMap<
+  StructureResource,
+  WeakMap<object, SelectionStatus>
+>();
+const warnedEmpty = new WeakSet<SelectionStatus>();
 const remember = <V extends FocusResult | null>(
   byOptions: Framings,
   key: string,
@@ -112,7 +125,7 @@ const displayBounds = (
  * the explicit neutral camera. Pass empty:'null' for a no-op result instead. */
 export function focusSelection(
   resource: StructureResource,
-  query: SelectionQuery,
+  query: SelectionInput,
   options: FocusOptions = {},
 ): FocusResult | null {
   const {
@@ -125,9 +138,7 @@ export function focusSelection(
   if (!resource?.data || typeof resource.dispose !== "function") {
     throw new TypeError("focusSelection requires a StructureResource");
   }
-  if (!query || typeof query.type !== "string") {
-    throw new TypeError("focusSelection requires a reusable SelectionQuery");
-  }
+
   if (!["structure", "null", "error"].includes(empty)) {
     throw new TypeError("empty must be structure, null, or error");
   }
@@ -151,9 +162,28 @@ export function focusSelection(
   void resource.bounds; // also rejects a disposed resource before any cache hit
   let byQuery = focusCache.get(resource);
   if (!byQuery) focusCache.set(resource, byQuery = new WeakMap());
-  let byOptions = byQuery.get(query);
-  if (!byOptions) byQuery.set(query, byOptions = new Map());
+  const key = query ?? DEFAULT_FOCUS;
+  let byOptions = byQuery.get(key);
+  if (!byOptions) byQuery.set(key, byOptions = new Map());
   const cacheKey = `${empty}|${fov}|${aspect}|${padding}|${atomRadiusScale}`;
+  let statuses = focusStatuses.get(resource);
+  if (!statuses) focusStatuses.set(resource, statuses = new WeakMap());
+  let status = statuses.get(key);
+  const report = (value: SelectionStatus) => {
+    notifySelectionStatus(options.onSelectionStatus, value);
+    if (
+      options.warnEmptySelection && query && !("indices" in query) &&
+      !query.deps.includes("positions") && value.status === "ready" &&
+      value.count === 0 && !warnedEmpty.has(value)
+    ) {
+      warnedEmpty.add(value);
+      console.warn(
+        `focusSelection: empty selection '${query.label}'`,
+        query.view,
+      );
+    }
+  };
+  if (status) report(status);
   if (byOptions.has(cacheKey)) {
     return remember(
       byOptions,
@@ -162,7 +192,54 @@ export function focusSelection(
     );
   }
   const data = resource.data;
-  let indices = toAtoms(resolve(query, data), data).indices;
+  const resolution = resolveSelectionInput(
+    query,
+    data,
+    data,
+    undefined,
+    "focusSelection",
+  );
+  if (!status) {
+    status = {
+      slot: "focus",
+      label: query?.label ?? "default",
+      consistency: "latest-published",
+      sources: [
+        {
+          kind: "topology",
+          owner: sourceId(resource),
+          source: sourceId(data.identity),
+          generation: resource.topologyRevision,
+        },
+        {
+          kind: "positions",
+          owner: sourceId(resource),
+          source: sourceId(data.identity),
+          generation: resource.positionsRevision,
+        },
+        ...(query && !("indices" in query) && query.deps.includes("attributes")
+          ? (query.attributes ?? ["*"]).map((name) => ({
+            kind: "attribute" as const,
+            name,
+            owner: sourceId(resource),
+            source: sourceId(data.identity),
+            generation: resource.attributesRevision,
+          }))
+          : []),
+      ],
+      ...(resolution.status === "ready"
+        ? {
+          status: "ready",
+          count: resolution.selection.indices.length,
+          updating: false,
+        }
+        : resolution),
+    };
+    statuses.set(key, status);
+  }
+  report(status);
+  if (resolution.status !== "ready") return null;
+  let indices = resolution.selection.indices;
   if (!indices.length) {
     if (empty === "error") throw new RangeError("focus selection is empty");
     if (empty === "null") return remember(byOptions, cacheKey, null);
@@ -220,10 +297,11 @@ export function createCameraCurve(frames: CameraCurve): CameraCurve {
     previous = frame.time;
     finite(frame.bearing, `frame ${i} bearing`);
     finite(frame.pitch, `frame ${i} pitch`);
-    if ("focus" in frame && frame.focus) {
+    if ("focus" in frame) {
       if (
         frame.target !== undefined || frame.radius !== undefined ||
-        typeof frame.focus.type !== "string"
+        (frame.focus != null && !("indices" in frame.focus) &&
+          typeof frame.focus.type !== "string")
       ) {
         throw new TypeError(
           "camera frame focus must be a query without target or radius",
@@ -254,7 +332,7 @@ export function sampleCamera(
 ): CameraPose {
   finite(time, "sample time");
   const resolved = curve.map((frame) => {
-    const view = "focus" in frame && frame.focus
+    const view = "focus" in frame
       ? focusSelection(resource, frame.focus, options)
       : frame as CameraFrame;
     if (!view) {

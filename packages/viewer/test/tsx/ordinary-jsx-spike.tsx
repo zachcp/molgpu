@@ -1,9 +1,7 @@
 /**
  * crj.9 public acceptance scene. No declared/mock components or advanced imports.
- * BaselineScene can be mounted today; AcceptanceScene is the implementation
- * target. Its five expected errors identify real missing public query props.
- * Remove those directives when the query-prop follow-up lands, then run both
- * scenes in the browser gate (including replacement and uncaptured GPU errors).
+ * BaselineScene and AcceptanceScene use real public query props. Browser
+ * coverage mounts AcceptanceScene alongside controlled snapshot consumers.
  */
 import { React, render } from "@use-gpu/live";
 import { AutoCanvas, WebGPU } from "@use-gpu/webgpu";
@@ -28,7 +26,9 @@ import {
 } from "@molgpu/viewer";
 import type {
   MaterialSpec,
+  SelectionStatus,
   StructureLoader,
+  TrajectoryLoader,
   ViewerElement,
 } from "@molgpu/viewer";
 
@@ -53,6 +53,8 @@ export interface SceneProps {
   trajectorySrc: string;
   frame: number;
   loader?: StructureLoader;
+  trajectoryLoader?: TrajectoryLoader;
+  onSelectionStatus?: (status: SelectionStatus) => void;
   loading?: ViewerElement;
   error?: (failure: unknown) => ViewerElement;
 }
@@ -66,7 +68,11 @@ export function BaselineScene(props: SceneProps): ViewerElement {
       loading={props.loading}
       error={props.error}
     >
-      <Trajectory src={props.trajectorySrc} frame={props.frame}>
+      <Trajectory
+        src={props.trajectorySrc}
+        loader={props.trajectoryLoader}
+        frame={props.frame}
+      >
         <Transform matrix={shift} select={polymer}>
           <Ribbon color={[0.7, 0.8, 0.9, 1]} material={matte} />
           <BallAndStick color={byElement()} material={lazyMaterial} />
@@ -82,13 +88,9 @@ export function BaselineScene(props: SceneProps): ViewerElement {
 
 /** Target: the same source-owned scene with subtree-local query selections. */
 export function AcceptanceScene(props: SceneProps): ViewerElement {
-  // Each variable uses an actual public component. The missing prop checks are
-  // deliberately explicit; a green sketch is not a claim these props work yet.
-  // @ts-expect-error crj.9 follow-up: Ribbon select must accept SelectionQuery.
+  // Every selection is a reusable public molecular value.
   const ribbon = <Ribbon select={polymer} color={[0.7, 0.8, 0.9, 1]} />;
-  // @ts-expect-error crj.9 follow-up: BallAndStick expands a residue query to atoms.
   const atoms = <BallAndStick select={ligand} color={byElement()} />;
-  // @ts-expect-error crj.9 follow-up: EField select must accept SelectionQuery.
   const potentialSelection: Parameters<typeof EField>[0]["select"] = polymer;
   const potential = (
     <EField select={potentialSelection} spacing={2}>
@@ -96,11 +98,14 @@ export function AcceptanceScene(props: SceneProps): ViewerElement {
       <Isosurface level={1} opacity={0.25} />
     </EField>
   );
-  // @ts-expect-error crj.9 follow-up: Spacefill resolves within at nearest coordinates.
   const nearby = <Spacefill select={site} color={byElement()} scale={0.3} />;
   const helixNeighbors = (
-    // @ts-expect-error crj.9 follow-up: combined coordinate/GPU-attribute snapshots.
-    <Spacefill select={helixSite} color={[1, 0.4, 0.2, 1]} scale={0.2} />
+    <Spacefill
+      onSelectionStatus={props.onSelectionStatus}
+      select={helixSite}
+      color={[1, 0.4, 0.2, 1]}
+      scale={0.2}
+    />
   );
   return (
     <Structure
@@ -109,7 +114,11 @@ export function AcceptanceScene(props: SceneProps): ViewerElement {
       loading={props.loading}
       error={props.error}
     >
-      <Trajectory src={props.trajectorySrc} frame={props.frame}>
+      <Trajectory
+        src={props.trajectorySrc}
+        loader={props.trajectoryLoader}
+        frame={props.frame}
+      >
         <Transform matrix={shift} select={polymer}>
           {ribbon}
           {atoms}

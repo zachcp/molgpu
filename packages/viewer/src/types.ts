@@ -10,6 +10,42 @@ import type {
 } from "@molgpu/dynamics";
 import type { Selection, SelectionQuery } from "@molgpu/select";
 
+/** Reusable query, exact resolved atom membership, or the consumer's default. */
+export type SelectionInput = SelectionQuery | Selection | null;
+
+/** Opaque diagnostic source identity; generations are local to each source. */
+export interface SelectionSource {
+  readonly kind: "topology" | "positions" | "attribute";
+  readonly name?: string;
+  readonly owner: string;
+  readonly source: string;
+  readonly generation: number;
+}
+
+/** Resolution at the nearest scope; published inputs may trail live rendering. */
+export type SelectionStatus =
+  & {
+    readonly slot: "select" | "center" | "a" | "b" | "focus";
+    readonly label: string;
+    readonly sources: readonly SelectionSource[];
+    readonly consistency: "latest-published";
+  }
+  & (
+    | { readonly status: "pending" }
+    | {
+      readonly status: "ready";
+      readonly count: number;
+      readonly updating: boolean;
+    }
+    | { readonly status: "error"; readonly error: Error }
+  );
+
+/** Optional diagnostics; empty membership is valid and warnings default off. */
+export interface SelectionDiagnostics {
+  onSelectionStatus?: (status: SelectionStatus) => void;
+  warnEmptySelection?: boolean;
+}
+
 // --- Scene elements, components and owned values ---------------------------
 
 /**
@@ -96,7 +132,7 @@ export interface CameraPose {
   readonly bearing: number;
   readonly pitch: number;
 }
-export interface FocusOptions {
+export interface FocusOptions extends SelectionDiagnostics {
   /** Empty query falls back to the full structure by default. */
   readonly empty?: "structure" | "null" | "error";
   readonly fov?: number;
@@ -116,7 +152,7 @@ export interface CameraFrame extends CameraPose {
   readonly bezier?: readonly [number, number, number, number];
 }
 export type FocusCameraFrame = Omit<CameraFrame, "target" | "radius"> & {
-  readonly focus: SelectionQuery;
+  readonly focus: SelectionInput;
   readonly target?: never;
   readonly radius?: never;
 };
@@ -193,15 +229,15 @@ export type TrajectoryProps =
   );
 
 /** Apply a column-major 4x4 affine to all atoms or an atom selection. */
-export interface TransformProps {
+export interface TransformProps extends SelectionDiagnostics {
   children?: ViewerElement;
   matrix: ArrayLike<number> | Curve<readonly number[]>;
   /** Unlike Superpose, this selects output rows. Other rows pass through. */
-  select?: SelectionQuery;
+  select?: SelectionInput;
 }
 
 /** Rigidly fit upstream coordinates onto a reference. */
-export interface SuperposeProps {
+export interface SuperposeProps extends SelectionDiagnostics {
   children?: ViewerElement;
   /**
    * Reference positions in topology row order: packed xyz, a `StructureData`
@@ -211,7 +247,7 @@ export interface SuperposeProps {
   to: Float32Array | StructureData | "first";
   /** Fit atoms (at least three, not collinear). Unlike Transform, every
    * output atom moves. Omitted means all atoms. */
-  select?: SelectionQuery;
+  select?: SelectionInput;
   /** Align centroids (default). False rotates about the source centroid. */
   translate?: boolean;
   /** Reports the GPU fit result asynchronously; busy readbacks may skip frames. */
@@ -246,7 +282,7 @@ export interface UnwrapStatus {
 }
 
 /** Make covalent components whole on a periodic frame. */
-export interface UnwrapProps {
+export interface UnwrapProps extends SelectionDiagnostics {
   children?: ViewerElement;
   /**
    * Column-major 3×3 box vectors (a, b, c as columns). Defaults to the
@@ -255,7 +291,7 @@ export interface UnwrapProps {
   box?: ArrayLike<number> | null;
   /** Move each component holding these atoms so their centroid lies in the
    * primary cell. */
-  center?: SelectionQuery;
+  center?: SelectionInput;
   /** Called asynchronously after unwrapped frames, and when a box is missing
    * or invalid. Frames may be skipped while earlier reports are in flight. */
   onStatus?: (status: UnwrapStatus) => void;
@@ -296,10 +332,10 @@ export interface TrajectoryFrameState {
  * `<EField>` props. Physics defaults follow `electrostatics()` in
  * @molgpu/dynamics: ε = 4r, 1 Å distance clamp, output in kT/e at 298.15 K.
  */
-export interface EFieldProps {
+export interface EFieldProps extends SelectionDiagnostics {
   children?: ViewerElement;
-  /** Summed atoms (∩ first model, primary altloc); default every active atom. */
-  select?: Selection | null;
+  /** Summed molecular query or exact atom selection; default first-model/primary-altloc atoms. */
+  select?: SelectionInput;
   /** Charge column (e per atom); defaults to `partialCharge`. */
   charge?: string;
   /** `vacuum`, `distance` (ε = D·r, the default) or `debye`. */

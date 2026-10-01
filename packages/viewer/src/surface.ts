@@ -1,3 +1,5 @@
+import type { SelectionDiagnostics, SelectionInput } from "./types.ts";
+import { SelectionConsumer } from "./internal/selection-consumer.ts";
 import type { Selection } from "@molgpu/select";
 import type { Field } from "@molgpu/fields";
 import type { StructureData } from "@molgpu/table";
@@ -134,9 +136,9 @@ const FieldFaces: LC<{
  * itself follows coordinate snapshots (4 Hz and on pause), so under playback
  * the colour can sample a newer frame than the mesh shows.
  */
-export const Surface: ViewerComponent<
+const SurfaceResolved: ViewerComponent<
   {
-    /** A @molgpu/select atom Selection; without one, active model/primary-altloc atoms are used. */
+    /** A molecular query or exact atom selection. Defaults to first-model/primary-altloc atoms. */
     select?: Selection | null;
     /** Ångström probe radius; defaults to 1.4 (water). */
     probeRadius?: number;
@@ -244,3 +246,40 @@ export const Surface: ViewerComponent<
       })
       : faces(map));
 };
+
+export const Surface: ViewerComponent<
+  & {
+    /** A molecular query or exact atom selection. Defaults to first-model/primary-altloc atoms. */
+    select?: SelectionInput;
+    /** Ångström probe radius; defaults to 1.4 (water). */
+    probeRadius?: number;
+    /** Grid spacing in Ångströms; defaults to 0.5. Smaller is finer and slower. */
+    resolution?: number;
+    /** Grid byte budget override; defaults to 256 MiB. */
+    maxBytes?: number;
+    /** A flat colour or an atom/position Field such as `byElement()` or `byPotential()`. */
+    color?: VectorLike | Field;
+    /** Å along the vertex normal where a colour field samples; default 1.4. */
+    sampleOffset?: number;
+    /** Wraps the shaded face layer; without one, the ambient scene material. */
+    material?: MaterialSpec;
+    loading?: ViewerElement | (() => ViewerElement);
+    error?: ViewerElement | ((failure: unknown) => ViewerElement);
+  }
+  & Translucency
+  & SelectionDiagnostics
+> = (props) =>
+  use(SelectionConsumer, {
+    input: props.select,
+    who: "Surface",
+    onSelectionStatus: props.onSelectionStatus,
+    warnEmptySelection: props.warnEmptySelection,
+    render: (select: Selection) => {
+      const { onSelectionStatus: _status, warnEmptySelection: _warn, ...draw } =
+        props;
+      return use(SurfaceResolved, {
+        ...draw,
+        select: props.select == null ? null : select,
+      });
+    },
+  });

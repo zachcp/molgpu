@@ -29,7 +29,9 @@ import type {
   SuperposeStatus,
   ViewerComponent,
 } from "./types.ts";
-import { useCoordinateSelection } from "./use-coordinate-selection.ts";
+import { useSelectionInput } from "./internal/use-selection-input.ts";
+import type { Selection } from "@molgpu/select";
+import type { SelectionDiagnostics } from "./types.ts";
 
 const STORAGE = 0x0080;
 const UNIFORM = 0x0040;
@@ -312,21 +314,13 @@ const Resolve: LC<{
 
 const Select: LC<{
   to: SuperposeProps["to"];
-  select: NonNullable<SuperposeProps["select"]>;
+  select: Selection;
   translate: boolean;
   onStatus?: (status: SuperposeStatus) => void;
   children: LiveElement;
 }> = ({ to, select, translate, onStatus, children }) => {
-  const selection = useCoordinateSelection(select);
-  if (selection && selection.domain !== "atom") {
-    throw new TypeError("<Superpose> select must be an atom query");
-  }
-  if (!selection) return children;
-  if (selection.indices.length < 3) {
-    throw new RangeError(
-      "<Superpose> needs at least three fit atoms",
-    );
-  }
+  const selection = select;
+  if (selection.indices.length < 3) return children;
   return use(Resolve, {
     to,
     rows: selection.indices,
@@ -337,16 +331,35 @@ const Select: LC<{
   });
 };
 
-const Provider: LC<{
-  to: SuperposeProps["to"];
-  select: SuperposeProps["select"];
-  translate: boolean;
-  onStatus?: (status: SuperposeStatus) => void;
-  children: LiveElement;
-}> = ({ to, select, translate, onStatus, children }) => {
+const Provider: LC<
+  SelectionDiagnostics & {
+    to: SuperposeProps["to"];
+    select: SuperposeProps["select"];
+    translate: boolean;
+    onStatus?: (status: SuperposeStatus) => void;
+    children: LiveElement;
+  }
+> = ({ to, select, translate, onStatus, children, ...diagnostics }) => {
+  const resolved = useSelectionInput(
+    select,
+    "Superpose",
+    "select",
+    diagnostics,
+    { model: "all", altloc: "all" },
+  );
   const upstream = useCoordinates();
-  if (!upstream || !upstream.count) return children;
-  if (select) return use(Select, { to, select, translate, onStatus, children });
+  if (!upstream || !upstream.count || resolved.status !== "ready") {
+    return children;
+  }
+  if (select) {
+    return use(Select, {
+      to,
+      select: resolved.selection,
+      translate,
+      onStatus,
+      children,
+    });
+  }
   if (upstream.count < 3) {
     throw new RangeError("<Superpose> needs at least three fit atoms");
   }
@@ -371,7 +384,7 @@ const Provider: LC<{
  * throws.
  */
 export const Superpose: ViewerComponent<SuperposeProps> = (
-  { to, select, translate = true, onStatus, children },
+  { to, select, translate = true, onStatus, children, ...diagnostics },
 ) => {
   if (
     to !== "first" && !(to instanceof Float32Array) &&
@@ -383,6 +396,7 @@ export const Superpose: ViewerComponent<SuperposeProps> = (
   }
   return viewer(
     use(Provider, {
+      ...diagnostics,
       to,
       select,
       translate,

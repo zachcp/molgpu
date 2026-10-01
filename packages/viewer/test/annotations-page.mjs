@@ -117,12 +117,12 @@ const data = createStructure({
     },
   },
 });
-const selA = resolve(where("atom", "a", (_d, i) => i < 2), data); // rows 0,1
-const selB = resolve(where("atom", "b", (_d, i) => i >= 2), data); // rows 2,3
-probe.centroidA = centroidOf(data, selA.indices);
+const selA = where("atom", "a", (_d, i) => i < 2); // rows 0,1
+const selB = where("atom", "b", (_d, i) => i >= 2); // rows 2,3
+probe.centroidA = centroidOf(data, resolve(selA, data).indices);
 probe.distance = Math.hypot(
-  ...centroidOf(data, selA.indices).map((v, i) =>
-    v - centroidOf(data, selB.indices)[i]
+  ...centroidOf(data, resolve(selA, data).indices).map((v, i) =>
+    v - centroidOf(data, resolve(selB, data).indices)[i]
   ),
 );
 

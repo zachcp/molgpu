@@ -1,4 +1,4 @@
-import { type LiveElement, use, useMemo } from "@use-gpu/live";
+import { type LiveElement, use, useMemo, useRef } from "@use-gpu/live";
 import type { StorageSource } from "@use-gpu/core";
 import type { Field } from "@molgpu/fields";
 import type { Selection } from "@molgpu/select";
@@ -32,7 +32,7 @@ export function useActiveRows(
   who: string,
 ): Uint32Array {
   checkAtomSelection(select, resource, who);
-  return useMemo(
+  const rows = useMemo(
     () =>
       select ? select.indices : (
         count("topologyBuilds", `${who.toLowerCase()}:activeAtoms`),
@@ -40,6 +40,27 @@ export function useActiveRows(
       ),
     [resource.identity, resource.topologyRevision, select?.id ?? "active"],
   );
+  const previous = useRef({
+    rows,
+    identity: resource.identity,
+    topology: resource.topologyRevision,
+  });
+  // Published query revisions can change while membership stays identical.
+  // Geometry adapters key their row packing by array identity, not query tokens.
+  if (
+    previous.current.identity !== resource.identity ||
+    previous.current.topology !== resource.topologyRevision ||
+    (previous.current.rows !== rows &&
+      (previous.current.rows.length !== rows.length ||
+        rows.some((row, index) => row !== previous.current.rows[index])))
+  ) {
+    previous.current = {
+      rows,
+      identity: resource.identity,
+      topology: resource.topologyRevision,
+    };
+  }
+  return previous.current.rows;
 }
 
 /** A @molgpu/fields Field (vs a flat VectorLike colour). */

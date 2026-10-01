@@ -1,3 +1,5 @@
+import type { SelectionDiagnostics, SelectionInput } from "./types.ts";
+import { SelectionConsumer } from "./internal/selection-consumer.ts";
 import type { Selection } from "@molgpu/select";
 import type {
   MaterialSpec,
@@ -74,9 +76,9 @@ function useStableProjection(
  * (samples per guide segment), and cartoon secondary-structure codes rebuild
  * geometry; color and opacity update bindings.
  */
-export const Ribbon: ViewerComponent<
+const RibbonResolved: ViewerComponent<
   {
-    /** A @molgpu/select atom Selection; without one, active model/primary-altloc atoms are used. */
+    /** A molecular query or exact atom selection. Defaults to first-model/primary-altloc atoms. */
     select?: Selection | null;
     /** Samples per guide segment; defaults to 8. */
     smooth?: number;
@@ -215,3 +217,38 @@ export const Ribbon: ViewerComponent<
       }),
     ));
 };
+
+export const Ribbon: ViewerComponent<
+  & {
+    /** A molecular query or exact atom selection. Defaults to first-model/primary-altloc atoms. */
+    select?: SelectionInput;
+    /** Samples per guide segment; defaults to 8. */
+    smooth?: number;
+    color?: VectorLike;
+    /** Wraps the shaded ribbon layer; without one, the ambient scene material. */
+    material?: MaterialSpec;
+    /**
+     * `"model"` (default) draws the structure's `ssCode`. `"dssp"` runs DSSP
+     * on each coordinate snapshot the ribbon draws, over the primary-altloc
+     * atoms of every model the drawn atoms belong to, so codes always come
+     * from the displayed coordinates of the displayed models.
+     */
+    secondaryStructure?: "model" | "dssp";
+  }
+  & Translucency
+  & SelectionDiagnostics
+> = (props) =>
+  use(SelectionConsumer, {
+    input: props.select,
+    who: "Ribbon",
+    onSelectionStatus: props.onSelectionStatus,
+    warnEmptySelection: props.warnEmptySelection,
+    render: (select: Selection) => {
+      const { onSelectionStatus: _status, warnEmptySelection: _warn, ...draw } =
+        props;
+      return use(RibbonResolved, {
+        ...draw,
+        select: props.select == null ? null : select,
+      });
+    },
+  });
