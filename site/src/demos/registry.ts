@@ -89,11 +89,12 @@ export const demos: readonly DemoDefinition[] = [
   },
   {
     id: "ribbon",
-    title: "Secondary-structure ribbon",
+    title: "Secondary-structure cartoon",
     summary:
-      "The annotated 1CRN fixture supplies the secondary structure of a protein cartoon.",
+      "1CRN's imported annotation shapes a Mol*-style cartoon: helix ribbons, sheet arrows and coil tubes, coloured by secondary structure.",
     fixture: "1crn",
-    assertion: "ribbon receives real imported secondary structure",
+    assertion:
+      "cartoon draws helix, sheet and coil from the imported annotation",
   },
   {
     id: "surface",
@@ -193,7 +194,12 @@ const timelineFocus = new WeakMap<
 export const demoCamera = (data: StructureData, id: DemoId, time = 0) => {
   const whole = cameraFor(
     data,
-    id === "lighting" ? 2.2 : id === "efield" ? 2.4 : 1.7,
+    id === "lighting" ? 2.2 : id === "efield"
+      ? 2.4
+      // The cartoon spans only the backbone, so frame it closer.
+      : id === "ribbon"
+      ? 1.2
+      : 1.7,
   );
   if (id !== "timeline") return whole;
   let focus = timelineFocus.get(data);

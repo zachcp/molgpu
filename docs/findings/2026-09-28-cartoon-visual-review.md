@@ -1,5 +1,8 @@
 # Cartoon visual review — 2026-09-28
 
+> Superseded: the gap list below was resolved by
+> [2026-10-02-cartoon-parity.md](2026-10-02-cartoon-parity.md).
+
 Work item: `molgpu-sept-bxl`; site follow-up: `molgpu-sept-fwf`. Reference: the
 installed Mol* 5.11.0 viewer and its default `cartoon` representation, rendered
 from the same BCIF as `@molgpu/viewer`.

@@ -36,7 +36,7 @@ import { Spacefill } from "../src/spacefill.ts";
 import { Bonds } from "../src/bonds.ts";
 import { BallAndStick } from "../src/ball-and-stick.ts";
 import { Tube } from "../src/tube.ts";
-import { Ribbon } from "../src/ribbon.ts";
+import { Cartoon, Ribbon } from "../src/ribbon.ts";
 import { Surface } from "../src/surface.ts";
 import { Distance, Label } from "../src/annotations.ts";
 import { TimelineProvider } from "../src/timeline-context.ts";
@@ -214,6 +214,7 @@ const KINDS = {
   ballAndStick: BallAndStick,
   tube: Tube,
   ribbon: Ribbon,
+  cartoon: Cartoon,
   surface: Surface,
   label: Label,
   distance: Distance,

@@ -6,6 +6,15 @@ All notable changes to `@molgpu/viewer` are recorded here. The format follows
 
 ## [Unreleased]
 
+- `<Ribbon>` geometry is now a port of Mol*'s default cartoon trace: per-residue
+  half-shifted segments with terminal extension and overhang, flat box sheets
+  with a 1.5× arrowhead on the last residue, elliptical helix and round coil
+  tubes, and flat nucleic strands. A single-residue run is drawn as a sphere
+  instead of being dropped.
+
+- `<Cartoon>` (experimental) composes the `<Ribbon>` trace with nucleotide base
+  rings and dashed polymer-gap cylinders in one mesh; `RibbonProps` types both.
+
 - `pointerToPlane` and `projectToPointer` map a pointer to the view-normal plane
   through an anchor and back, from a projection-view matrix, for dragging an
   `<ElasticNetwork tug>` target. The site gains an elastic network demo: the

@@ -4,6 +4,8 @@ import { chromium } from "playwright";
 import { workspaceAliases } from "../../../scripts/workspace-aliases.mjs";
 import { webgpuBrowserArgs } from "./webgpu-browser-args.mjs";
 
+// Screenshots are review evidence, not a cross-platform pixel oracle.
+const out = Deno.env.get("CARTOON_COMPARE_OUT") ?? "/tmp";
 const root = fromFileUrl(new URL("../../../", import.meta.url));
 const server = await createServer({
   root,
@@ -36,7 +38,8 @@ try {
     headless: true,
     args: webgpuBrowserArgs,
   });
-  for (const id of ["1crn", "2k39"]) {
+  const ids = Deno.args.length ? Deno.args : ["1crn", "2k39", "1bna", "1tqn"];
+  for (const [id, view] of ids.flatMap((id) => [[id, "front"], [id, "side"]])) {
     const page = await browser.newPage({
       viewport: { width: 1280, height: 900 },
     });
@@ -45,7 +48,7 @@ try {
     });
     page.on("pageerror", (error) => console.error(id, error));
     await page.goto(
-      `http://127.0.0.1:5210/packages/viewer/test/cartoon-compare.html?id=${id}`,
+      `http://127.0.0.1:5210/packages/viewer/test/cartoon-compare.html?id=${id}&view=${view}`,
     );
     await page.waitForFunction(() => globalThis.__cartoonCompare?.ready, null, {
       timeout: 60000,
@@ -62,8 +65,8 @@ try {
     if (result.errors.length) {
       throw new Error(`${id}: viewer errors: ${result.errors.join("; ")}`);
     }
-    console.log(id, result);
-    await page.screenshot({ path: `/tmp/${id}-cartoon-compare.png` });
+    console.log(id, view, result);
+    await page.screenshot({ path: `${out}/${id}-${view}.png` });
     await page.close();
   }
 } finally {
