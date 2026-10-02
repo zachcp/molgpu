@@ -61,6 +61,7 @@
     "test:viewer:surface": "deno test -A packages/viewer/test/run-surface.mjs",
     "test:viewer:ribbon": "deno test -A packages/viewer/test/run-ribbon.mjs",
     "test:viewer:dssp": "deno test -A packages/viewer/test/run-gpu-dssp.mjs",
+    "test:viewer:ses": "deno test -A packages/viewer/test/run-ses-field.mjs",
     "test:viewer:materials": "deno test -A packages/viewer/test/run-materials.mjs",
     "test:viewer:postprocess": "deno test -A packages/viewer/test/run-postprocess.mjs",
     "test:viewer:picking": "deno test -A packages/viewer/test/run-picking.mjs",
