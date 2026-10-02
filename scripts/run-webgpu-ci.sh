@@ -29,7 +29,11 @@ for suite in site/test/run-browser.mjs packages/viewer/test/run-*.mjs \
   fi
   echo "::group::$suite"
   started=$SECONDS
-  timeout 15m deno test -A "$suite"
+  # Elastic's full RMSF and thermalisation oracles exceed 15m on SwiftShader.
+  # Preserve their sample counts and leave time for replacement/unmount checks.
+  suite_timeout=15m
+  [[ "$suite" == */run-elastic.mjs ]] && suite_timeout=30m
+  timeout "$suite_timeout" deno test -A "$suite"
   result=$?
   elapsed=$((SECONDS - started))
   printf '| `%s` | %s | %s |\n' "$suite" "$elapsed" "$result" >> "$summary"

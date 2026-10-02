@@ -171,8 +171,11 @@ Deno.test("elastic network", async (t) => {
       }, n);
     const update = (patch) =>
       page.evaluate((p) => globalThis.__elastic.update(p), patch);
-    const reach = (step) =>
-      page.evaluate((s) => globalThis.__elastic.reach(s), step);
+    const reach = (step, timeoutMs = 120_000) =>
+      page.evaluate(
+        ([s, ms]) => globalThis.__elastic.reach(s, ms),
+        [step, timeoutMs],
+      );
     const call = (name, ...args) =>
       page.evaluate(
         ([name, args]) => globalThis.__elastic[name](...args),
@@ -331,7 +334,9 @@ Deno.test("elastic network", async (t) => {
             maxStepsPerFrame: 5000,
           });
           const started = Date.now();
-          await reach(100_000);
+          // SwiftShader CI reaches only ~55k steps in two minutes for 4c7r.
+          // Keep the full scientific run, with a bounded software-GPU budget.
+          await reach(100_000, 600_000);
           const seconds = (Date.now() - started) / 1000;
           const nodes = Float32Array.from(await call("readNodes"));
           assert(nodes.every(Number.isFinite));
