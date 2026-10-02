@@ -39,7 +39,8 @@ const owner = nearestAtomAttribution(mesh.positions, atoms, 4); // Uint32Array p
 ```
 
 The ribbon kernels are driven one segment at a time. See
-`packages/viewer/src/internal/ribbon-geometry.mjs` for a complete caller:
+`packages/viewer/src/internal/ribbon-geometry.ts` for a complete caller (an
+internal reference, not an import path):
 
 ```js
 const state = createCurveSegmentState(linearSegments);
