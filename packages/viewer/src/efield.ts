@@ -18,6 +18,7 @@ import { LoopContext, useDeviceContext } from "@use-gpu/workbench";
 import type { StorageSource } from "@use-gpu/core";
 import { createVolume, type VolumeData, type VolumeGrid } from "@molgpu/table";
 import {
+  COULOMB_CUTOFF_BRICK,
   COULOMB_GRID_BLOCK,
   COULOMB_PARAMS_BYTES,
   COULOMB_WORKGROUP,
@@ -32,6 +33,7 @@ import {
   efieldChargeColumn,
   efieldGrid,
   rowBounds,
+  spatialOrder,
 } from "./internal/efield-grid.ts";
 import { useAttributeSources } from "./internal/attribute-sources.ts";
 import { checkAtomSelection } from "./internal/representation.ts";
@@ -76,7 +78,12 @@ export const efieldTesting: {
   gate: Promise<void> | null;
 } = { pairsPerDispatch: 2 ** 30, gate: null };
 
-type Pipelines = { pack: GPUComputePipeline; grid: GPUComputePipeline };
+type Pipelines = {
+  pack: GPUComputePipeline;
+  grid: GPUComputePipeline;
+  cutoff: GPUComputePipeline;
+  tiles: GPUComputePipeline;
+};
 const pipelineCache = new WeakMap<GPUDevice, Pipelines>();
 
 function pipelines(device: GPUDevice): Pipelines {
@@ -92,11 +99,23 @@ function pipelines(device: GPUDevice): Pipelines {
         compute: { module, entryPoint },
         label: `molgpu:efield:${entryPoint}`,
       });
-    cached = { pack: make("packAtoms"), grid: make("sumGrid") };
+    cached = {
+      pack: make("packAtoms"),
+      grid: make("sumGrid"),
+      cutoff: make("sumGridCutoff"),
+      tiles: make("tileBounds"),
+    };
     pipelineCache.set(device, cached);
   }
   return cached;
 }
+
+/**
+ * Å cells of the Morton order a cutoff sums atoms in: small enough that a
+ * 64-atom tile is compact at protein density, so whole tiles fall outside the
+ * cutoff of most sample bricks.
+ */
+const ORDER_CELL = 2;
 
 /** Workgroups for `count` invocations, folded into 2D past the 1D limit. */
 function dispatchShape(invocations: number) {
@@ -130,13 +149,29 @@ const EFieldCompute: LC<{
   const atoms = rows.length;
   // Each dispatch covers a range of samples against every atom, so no
   // dispatch reads or rewrites another's output.
-  const chunk = Math.max(
-    COULOMB_WORKGROUP,
-    Math.floor(
-      efieldTesting.pairsPerDispatch / Math.max(1, atoms) / COULOMB_WORKGROUP,
-    ) * COULOMB_WORKGROUP,
-  );
-  const chunks = Math.max(1, Math.ceil(samples / chunk));
+  // With a cutoff, a dispatch covers a range of sample bricks instead; its
+  // pair bound counts every brick sample against every atom.
+  const cutoff = physics.cutoff > 0;
+  const [bx, by, bz] = COULOMB_CUTOFF_BRICK;
+  const brickSamples = bx * by * bz;
+  const units = cutoff
+    ? Math.ceil(nx / bx) * Math.ceil(ny / by) * Math.ceil(nz / bz)
+    : samples;
+  const chunk = cutoff
+    ? Math.max(
+      1,
+      Math.floor(
+        efieldTesting.pairsPerDispatch / Math.max(1, atoms) / brickSamples,
+      ),
+    )
+    : Math.max(
+      COULOMB_WORKGROUP,
+      Math.floor(
+        efieldTesting.pairsPerDispatch / Math.max(1, atoms) /
+          COULOMB_WORKGROUP,
+      ) * COULOMB_WORKGROUP,
+    );
+  const chunks = Math.max(1, Math.ceil(units / chunk));
 
   const buffers = useMemo(() => {
     const made: GPUBuffer[] = [];
@@ -156,6 +191,14 @@ const EFieldCompute: LC<{
       count("uploadBytes", "efield:rows", rows.byteLength);
     }
     const packed = make(atoms * 16, STORAGE, "efield:packed");
+    // Two vec4 per 64-atom tile: the cutoff pass's tile bounding boxes.
+    const tileCount = Math.ceil(atoms / COULOMB_WORKGROUP);
+    const tileBoxes = make(
+      Math.max(1, tileCount) * 32,
+      STORAGE,
+      "efield:tile-boxes",
+    );
+    const tileShape = dispatchShape(tileCount * COULOMB_WORKGROUP);
     const phi = make(samples * 4, STORAGE | COPY_SRC | COPY_DST, "efield:phi");
     const params = make(
       (chunks + 1) * PARAMS_STRIDE,
@@ -177,10 +220,13 @@ const EFieldCompute: LC<{
     );
     for (let c = 0; c < chunks; c++) {
       const offset = c * chunk;
-      const invocations = Math.min(chunk, samples - offset);
-      // Each sumGrid invocation writes COULOMB_GRID_BLOCK consecutive samples.
+      const invocations = Math.min(chunk, units - offset);
+      // Each sumGrid invocation writes COULOMB_GRID_BLOCK consecutive samples;
+      // each sumGridCutoff workgroup writes one brick.
       const shape = dispatchShape(
-        Math.ceil(invocations / COULOMB_GRID_BLOCK),
+        cutoff
+          ? invocations * COULOMB_WORKGROUP
+          : Math.ceil(invocations / COULOMB_GRID_BLOCK),
       );
       shapes.push(shape);
       bytes.set(
@@ -199,8 +245,18 @@ const EFieldCompute: LC<{
     }
     device.queue.writeBuffer(params, 0, bytes);
     count("uploadBytes", "efield:params", bytes.byteLength);
-    return { made, rowBuffer, packed, phi, params, pack, shapes };
-  }, [device, rows, grid, physics, chunk, chunks, samples]);
+    return {
+      made,
+      rowBuffer,
+      packed,
+      phi,
+      params,
+      pack,
+      shapes,
+      tileBoxes,
+      tileShape,
+    };
+  }, [device, rows, grid, physics, chunk, chunks, units]);
   useResource((dispose) => {
     // A retained VolumeSlice or field shader may keep submitting this phi
     // allocation while replacement pipelines compile. Drop our ownership;
@@ -228,11 +284,29 @@ const EFieldCompute: LC<{
         ],
       })
       : null, [buffers, coordinates.source.buffer, charges.buffer]);
+  const tileGroup = useMemo(() =>
+    atoms && cutoff
+      ? device.createBindGroup({
+        layout: pipes.tiles.getBindGroupLayout(0),
+        entries: [
+          { binding: 3, resource: { buffer: buffers.packed } },
+          {
+            binding: 4,
+            resource: {
+              buffer: buffers.params,
+              offset: 0,
+              size: COULOMB_PARAMS_BYTES,
+            },
+          },
+          { binding: 8, resource: { buffer: buffers.tileBoxes } },
+        ],
+      })
+      : null, [buffers, cutoff]);
   const gridGroups = useMemo(
     () =>
       Array.from({ length: chunks }, (_, c) =>
         device.createBindGroup({
-          layout: pipes.grid.getBindGroupLayout(0),
+          layout: (cutoff ? pipes.cutoff : pipes.grid).getBindGroupLayout(0),
           entries: [
             { binding: 3, resource: { buffer: buffers.packed } },
             {
@@ -244,6 +318,9 @@ const EFieldCompute: LC<{
               },
             },
             { binding: 5, resource: { buffer: buffers.phi } },
+            ...(cutoff
+              ? [{ binding: 8, resource: { buffer: buffers.tileBoxes } }]
+              : []),
           ],
         })),
     [buffers],
@@ -291,7 +368,12 @@ const EFieldCompute: LC<{
       pass.setBindGroup(0, packGroup);
       pass.dispatchWorkgroups(buffers.pack.x, buffers.pack.y);
     }
-    pass.setPipeline(pipes.grid);
+    if (tileGroup) {
+      pass.setPipeline(pipes.tiles);
+      pass.setBindGroup(0, tileGroup);
+      pass.dispatchWorkgroups(buffers.tileShape.x, buffers.tileShape.y);
+    }
+    pass.setPipeline(cutoff ? pipes.cutoff : pipes.grid);
     gridGroups.forEach((group, c) => {
       pass.setBindGroup(0, group);
       pass.dispatchWorkgroups(buffers.shapes[c].x, buffers.shapes[c].y);
@@ -318,6 +400,7 @@ const EFieldCompute: LC<{
     coordinates.source.buffer,
     charges,
     packGroup,
+    tileGroup,
     gridGroups,
     wake,
   ]);
@@ -462,6 +545,8 @@ const EFieldInner: LC<
     temperature,
     minDistance,
     unit,
+    cutoff,
+    switchWidth,
     spacing = 1,
     padding = 8,
     box,
@@ -499,8 +584,19 @@ const EFieldInner: LC<
         temperature,
         minDistance,
         unit,
+        ...(cutoff === undefined ? {} : { cutoff }),
+        ...(switchWidth === undefined ? {} : { switchWidth }),
       }),
-    [model, epsilon, ionicStrength, temperature, minDistance, unit],
+    [
+      model,
+      epsilon,
+      ionicStrength,
+      temperature,
+      minDistance,
+      unit,
+      cutoff,
+      switchWidth,
+    ],
   );
   const produced = useContext(AttributesContext)?.[charge];
   const column = efieldChargeColumn(resource.data, charge, produced);
@@ -510,6 +606,17 @@ const EFieldInner: LC<
     const q = column.values;
     return { active, rows: active.filter((row) => q[row] !== 0) };
   }, [resource.identity, resource.topologyRevision, select?.id, column]);
+  // A cutoff skips atom tiles far from each sample brick, which pays only when
+  // a tile's atoms are close together. Order rows by the structure's own
+  // positions (a locality hint only: tile bounds are taken from the live
+  // coordinates each pass, so motion costs speed, never correctness).
+  const summed = useMemo(
+    () =>
+      physics.cutoff > 0
+        ? spatialOrder(resource.data.positions, rows, ORDER_CELL)
+        : rows,
+    [rows, physics.cutoff > 0, resource.identity],
+  );
   const { sources } = useAttributeSources(resource.data, [charge]);
   const charges = sources[`attr:${charge}`] as StorageSource;
 
@@ -555,7 +662,7 @@ const EFieldInner: LC<
     coordinates,
     grid: stable,
     physics,
-    rows,
+    rows: summed,
     charges,
     range: display,
     maxHz,

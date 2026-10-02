@@ -6,6 +6,11 @@ All notable changes to `@molgpu/viewer` are recorded here. The format follows
 
 ## [Unreleased]
 
+- `<EField>` accepts optional `cutoff` and `switchWidth`. The exact sum stays
+  the default; with a cutoff, far atom tiles are skipped and pair terms are
+  switched off smoothly (128³ × 50k atoms: 1.25 s → 0.42 s with a 12 Å cutoff).
+  See docs/findings/2026-10-02-efield-cutoff.md for the error vs the exact sum.
+
 - `<EField>` sums the potential about 4× faster on large grids (128³ × 50k
   atoms: 5.4 s → 1.25 s with the default distance model; Debye 5.5 s → 2.2 s).
   Each dispatch is bounded at 2³⁰ pairs, the same wall time as before.

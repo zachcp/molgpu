@@ -9,6 +9,7 @@ import {
   coulombField,
   coulombGrid,
   coulombPotential,
+  coulombSwitch,
   debyeKappa,
   GAS_CONSTANT_KCAL,
   gridPoints,
@@ -215,4 +216,54 @@ Deno.test("coulombParams lays out the WGSL uniform", () => {
   assertEquals(f[19], 1);
   assertEquals([...u.subarray(24, 27)], [2, 3, 2]);
   assert(f[15] > 0.12 && f[15] < 0.13);
+});
+
+Deno.test("cutoff switching is C1 at both ends and zero beyond the cutoff", () => {
+  const p = electrostatics({ cutoff: 12, switchWidth: 2 });
+  assertEquals([p.cutoff, p.switchOn], [12, 10]);
+  const h = 1e-6;
+  for (const r of [10, 12]) {
+    const [below, dBelow] = coulombSwitch(p, r - h);
+    const [above, dAbove] = coulombSwitch(p, r + h);
+    assertAlmostEquals(below, above, 1e-6, `S continuous at ${r}`);
+    assertAlmostEquals(dBelow, dAbove, 1e-4, `dS/dr continuous at ${r}`);
+  }
+  assertEquals(coulombSwitch(p, 9), [1, 0]);
+  assertEquals(coulombSwitch(p, 12.5), [0, 0]);
+  // S' matches a central difference inside the switching region.
+  for (const r of [10.3, 11, 11.7]) {
+    const numeric = (coulombSwitch(p, r + h)[0] - coulombSwitch(p, r - h)[0]) /
+      (2 * h);
+    assertAlmostEquals(coulombSwitch(p, r)[1], numeric, 1e-5);
+  }
+  // Without a cutoff the switch is the identity.
+  assertEquals(coulombSwitch(electrostatics({}), 1e6), [1, 0]);
+});
+
+Deno.test("a cutoff potential is exact inside switchOn, zero beyond, and its field is -grad", () => {
+  const atoms = [0, 0, 0, 1];
+  for (const model of ["vacuum", "distance", "debye"] as const) {
+    const exact = electrostatics({ model });
+    const cut = electrostatics({ model, cutoff: 12, switchWidth: 3 });
+    const inside = [5, 0, 0];
+    assertAlmostEquals(
+      coulombPotential(inside, atoms, cut)[0],
+      coulombPotential(inside, atoms, exact)[0],
+      1e-12,
+    );
+    assertEquals(coulombPotential([12, 0, 0, 20, 0, 0], atoms, cut)[0], 0);
+    // In the switching region E = -dphi/dr still holds.
+    for (const x of [9.5, 10.5, 11.5]) {
+      const h = 1e-4;
+      const [phiMinus, phiPlus] = coulombPotential(
+        [x - h, 0, 0, x + h, 0, 0],
+        atoms,
+        cut,
+      );
+      const field = coulombField([x, 0, 0], atoms, cut)[0];
+      assertAlmostEquals(field, -(phiPlus - phiMinus) / (2 * h), 1e-6);
+    }
+  }
+  assertThrows(() => electrostatics({ cutoff: 2, switchWidth: 2 }), RangeError);
+  assertThrows(() => electrostatics({ switchWidth: 2 }), TypeError);
 });

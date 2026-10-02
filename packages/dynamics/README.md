@@ -92,6 +92,7 @@ tested against (`applyAffine`, `unwrapFrame`, `applyNormalMode`,
 | `normalModeWgsl`         | advanced  | WGSL for additive guide-node displacement.                                           |
 | `coulombWgsl`            | advanced  | WGSL for tiled direct Coulomb sums: `packAtoms`, `sumGrid` and `sumPoints`.          |
 | `COULOMB_GRID_BLOCK`     | advanced  | Grid samples per `sumGrid` invocation; dispatch `ceil(count / COULOMB_GRID_BLOCK)`.  |
+| `COULOMB_CUTOFF_BRICK`   | advanced  | Samples per `sumGridCutoff` workgroup brick (16×4×4).                                |
 | `coulombParams`          | advanced  | Encode the 112-byte uniform for one `coulombWgsl` dispatch.                          |
 | `CoulombDispatch`        | advanced  | One dispatch's sample range, atom range and grid.                                    |
 | `COULOMB_PARAMS_BYTES`   | advanced  | Size of the `coulombWgsl` uniform (112 bytes).                                       |

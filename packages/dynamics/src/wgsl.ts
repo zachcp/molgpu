@@ -30,6 +30,7 @@ export {
 export { createUnwrapForest, type UnwrapForest } from "./pbc.ts";
 export { normalModeWgsl, validateNormalMode } from "./normal-mode.ts";
 export {
+  COULOMB_CUTOFF_BRICK,
   COULOMB_GRID_BLOCK,
   COULOMB_MODEL_CODE,
   COULOMB_PARAMS_BYTES,

@@ -5,6 +5,13 @@ All notable changes to `@molgpu/dynamics` are recorded here. See
 
 ## [Unreleased]
 
+- `ElectrostaticsOptions` gain optional `cutoff` and `switchWidth`. The CHARMM
+  switching function (C¹ at both ends) is applied by the CPU reference, by
+  `coulombWgsl`'s `kernel` (`sumPoints`), and by the new `sumGridCutoff` entry,
+  which skips 64-atom tiles beyond the cutoff using `tileBounds`. The params
+  uniform carries the cutoff in `origin.w` and the switch start in `dims.w`.
+  `sumGrid` still sums exactly.
+
 - `coulombWgsl`'s `sumGrid` computes `COULOMB_GRID_BLOCK` (4) consecutive grid
   samples per invocation, chooses the potential model once per tile, and clamps
   `r²` instead of taking a square root where the model allows. Dispatch

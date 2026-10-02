@@ -372,6 +372,14 @@ export interface EFieldProps extends SelectionDiagnostics {
   minDistance?: number;
   /** Output unit; defaults to `kT/e`. */
   unit?: PotentialUnit;
+  /**
+   * Optional cutoff in Å. Omitted (the default) sums every pair exactly. With
+   * a cutoff, pair terms are smoothly switched off between
+   * `cutoff − switchWidth` and `cutoff`, and far atom tiles are skipped.
+   */
+  cutoff?: number;
+  /** Width in Å of the switching region below `cutoff`; defaults to 2. */
+  switchWidth?: number;
   /** Grid spacing in Å; defaults to 1. */
   spacing?: number;
   /** Å added around the summed atoms' bounds; defaults to 8. */
