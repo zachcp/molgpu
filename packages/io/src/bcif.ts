@@ -182,25 +182,13 @@ function readLinks(
 /** Build Mol*'s normalized model once for entity, annotation and bond semantics. */
 async function mmcifSemantics(frame: CifFrame, signal?: AbortSignal) {
   try {
-    const [
-      { trajectoryFromMmCIF },
-      { ModelSecondaryStructure },
-      { ComponentBond },
-      { StructConn },
-      { Task },
-    ] = await Promise.all([
-      import("molstar/lib/mol-model-formats/structure/mmcif.js"),
-      import(
-        "molstar/lib/mol-model-formats/structure/property/secondary-structure.js"
-      ),
-      import(
-        "molstar/lib/mol-model-formats/structure/property/bonds/chem_comp.js"
-      ),
-      import(
-        "molstar/lib/mol-model-formats/structure/property/bonds/struct_conn.js"
-      ),
-      import("molstar/lib/mol-task/index.js"),
-    ]);
+    const {
+      trajectoryFromMmCIF,
+      ModelSecondaryStructure,
+      ComponentBond,
+      StructConn,
+      Task,
+    } = await import("./molstar-model.ts");
     signal?.throwIfAborted();
     const trajectory = await trajectoryFromMmCIF(frame).run((progress) => {
       if (signal?.aborted) progress.requestAbort("request cancelled");
@@ -251,11 +239,9 @@ async function assemblyInstances(
   chains: readonly ChainRow[],
   id: string,
 ) {
-  const [{ ModelSymmetry }, { Symmetry }] = await Promise.all([
-    import("molstar/lib/mol-model-formats/structure/property/symmetry.js"),
-    import("molstar/lib/mol-model/structure/model/properties/symmetry.js"),
-  ]);
-  ModelSymmetry.Provider.get(semantics.model);
+  // findAssembly reads (and on first use computes) the model's symmetry.
+  const { Symmetry } = await import("./molstar-model.ts");
+
   const assembly = Symmetry.findAssembly(semantics.model, id);
   if (!assembly) {
     throw bcifError(
