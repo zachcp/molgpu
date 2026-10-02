@@ -1,5 +1,5 @@
+import { useDispatchObservation } from "./internal/dispatch-observation.ts";
 import {
-  gather,
   type LC,
   type LiveElement,
   provide,
@@ -9,7 +9,6 @@ import {
   useRef,
   useResource,
   useState,
-  yeet,
 } from "@use-gpu/live";
 import type { StorageSource, StorageTarget } from "@use-gpu/core";
 import type { ShaderModule } from "@use-gpu/shader";
@@ -132,19 +131,12 @@ export const AttributeProducer: LC<{
     ...sources,
   ]);
   const [submittedGeneration, setSubmittedGeneration] = useState(-1);
-  const notified = useRef(-1);
-  const mounted = useRef(true);
-  useResource((dispose) => {
-    mounted.current = true;
-    dispose(() => {
-      mounted.current = false;
-    });
-  }, []);
+  const observe = useDispatchObservation(generation, setSubmittedGeneration);
   const ready = submittedGeneration === generation;
   const output = () =>
     use(Compute, {
       immediate: true,
-      children: coordinates.ready === false ? null : gather(
+      children: coordinates.ready === false ? null : observe(
         use(Kernel, {
           shader: kernel,
           source: coordinates.source,
@@ -154,30 +146,6 @@ export const AttributeProducer: LC<{
           version: generation,
           size: [count, 1],
         }),
-        (calls: { compute?: (...args: unknown[]) => unknown }[]) => {
-          const call = calls.find((item) => item?.compute);
-          return call?.compute
-            ? yeet({
-              compute: (
-                pass: unknown,
-                countDispatch: (...args: number[]) => void,
-              ) => {
-                let dispatched = false;
-                const result = call.compute!(pass, (...counts: number[]) => {
-                  dispatched = true;
-                  countDispatch(...counts);
-                });
-                if (dispatched && notified.current !== generation) {
-                  notified.current = generation;
-                  queueMicrotask(() => {
-                    if (mounted.current) setSubmittedGeneration(generation);
-                  });
-                }
-                return result;
-              },
-            })
-            : null;
-        },
       ),
     });
   return use(ComputeBuffer, {
