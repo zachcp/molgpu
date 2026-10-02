@@ -53,3 +53,38 @@ Deno.test("published use.gpu imports retain lower-package walls", () => {
     true,
   );
 });
+
+Deno.test("io may statically import Mol* only from a lazily loaded module", () => {
+  const files = (extra: string) =>
+    new Map([
+      [
+        "/src/index.ts",
+        new TextEncoder().encode(
+          `${extra}export const load = () => import("./molstar-model.ts");`,
+        ),
+      ],
+      [
+        "/src/molstar-model.ts",
+        new TextEncoder().encode(
+          'export { Task } from "npm:/molstar@5.11.0/lib/mol-task/index.js";',
+        ),
+      ],
+    ]);
+  assertEquals(checkPublishedImports("@molgpu/io", files("")), []);
+  // A static import of that module puts Mol* in the static graph.
+  assertEquals(
+    checkPublishedImports(
+      "@molgpu/io",
+      files('import "./molstar-model.ts";\n'),
+    ).length > 0,
+    true,
+  );
+  // So does exporting it as a package entry.
+  assertEquals(
+    checkPublishedImports("@molgpu/io", files(""), [
+      "/src/index.ts",
+      "/src/molstar-model.ts",
+    ]).length > 0,
+    true,
+  );
+});

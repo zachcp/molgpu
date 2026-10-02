@@ -591,7 +591,11 @@ function checkPackage(
   if (publishError) fail("H1", publishError);
   else if (!published) fail("H1", "package absent from local publish upload");
   else {
-    for (const message of checkPublishedImports(name, published)) {
+    const entryFiles = ents
+      .map((e) => e.import)
+      .filter((target) => typeof target === "string")
+      .map((target) => "/" + target.replace(/^\.\//, ""));
+    for (const message of checkPublishedImports(name, published, entryFiles)) {
       fail("H1", message);
     }
   }

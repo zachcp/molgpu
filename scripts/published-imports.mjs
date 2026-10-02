@@ -1,16 +1,50 @@
 import ts from "typescript";
+import { posix } from "node:path";
 
-/** Validate actual unfurled JSR upload sources, including dynamic imports. */
-export function checkPublishedImports(name, files) {
+const SOURCE = /\.(ts|tsx|js|mjs|mts)$/;
+
+/**
+ * Validate actual unfurled JSR upload sources, including dynamic imports.
+ * `entries` are the package's export targets ("/src/index.ts"). In io, Mol*
+ * stays out of the static module graph: a file may import Mol* statically
+ * only if it is not an entry and no published file imports it statically,
+ * so it is reachable through import() alone.
+ */
+export function checkPublishedImports(
+  name,
+  files,
+  entries = ["/src/index.ts"],
+) {
   const errors = [];
-  for (const [path, bytes] of files) {
-    if (!/\.(ts|tsx|js|mjs|mts)$/.test(path)) continue;
-    const sf = ts.createSourceFile(
+  const parsed = [...files]
+    .filter(([path]) => SOURCE.test(path))
+    .map(([path, bytes]) => [
       path,
-      new TextDecoder().decode(bytes),
-      ts.ScriptTarget.Latest,
-      true,
-    );
+      ts.createSourceFile(
+        path,
+        new TextDecoder().decode(bytes),
+        ts.ScriptTarget.Latest,
+        true,
+      ),
+    ]);
+  // Files some published file imports statically (value or re-export).
+  const staticTargets = new Set(entries);
+  for (const [path, sf] of parsed) {
+    for (const node of sf.statements) {
+      if (
+        (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) &&
+        node.moduleSpecifier && ts.isStringLiteral(node.moduleSpecifier) &&
+        node.moduleSpecifier.text.startsWith(".") &&
+        !(node.isTypeOnly || node.importClause?.isTypeOnly)
+      ) {
+        staticTargets.add(
+          posix.join(posix.dirname(path), node.moduleSpecifier.text),
+        );
+      }
+    }
+  }
+  for (const [path, sf] of parsed) {
+    const lazyOnly = !staticTargets.has(path);
     const check = (specifier, dynamic = false, typeOnly = false) => {
       if (/^(\.|\/|node:)/.test(specifier)) return;
       const where = `${path}: ${specifier}`;
@@ -39,7 +73,7 @@ export function checkPublishedImports(name, files) {
         errors.push(`use.gpu must match exact reviewed pin 0.20.0: ${where}`);
       }
       if (/^npm:\/?molstar(?:@|\/|$)/.test(specifier)) {
-        if (name !== "@molgpu/io" || (!dynamic && !typeOnly)) {
+        if (name !== "@molgpu/io" || (!dynamic && !typeOnly && !lazyOnly)) {
           errors.push(`Mol* must be a dynamic import in io: ${where}`);
         }
         if (!/^npm:\/?molstar@5\.11\.0(\/|$)/.test(specifier)) {
