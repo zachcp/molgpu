@@ -87,3 +87,34 @@ export function copyRows(
   }
   return Uint32Array.from(out);
 }
+
+/** Copies sharing one set of rows: their geometry can be built once. */
+export interface CopyGroup {
+  readonly rows: Uint32Array;
+  readonly copies: readonly InstanceCopy[];
+}
+
+const groupsCache = new WeakMap<
+  readonly InstanceCopy[],
+  readonly CopyGroup[]
+>();
+
+/** `copies` grouped by identical row sets, in first-copy order. */
+export function copyGroups(
+  copies: readonly InstanceCopy[],
+): readonly CopyGroup[] {
+  const cached = groupsCache.get(copies);
+  if (cached) return cached;
+  const groups: { rows: Uint32Array; copies: InstanceCopy[] }[] = [];
+  for (const copy of copies) {
+    const group = groups.find((g) =>
+      g.rows.length === copy.rows.length &&
+      g.rows.every((row, i) => row === copy.rows[i])
+    );
+    if (group) group.copies.push(copy);
+    else groups.push({ rows: copy.rows, copies: [copy] });
+  }
+  const frozen = Object.freeze(groups.map((g) => Object.freeze(g)));
+  groupsCache.set(copies, frozen);
+  return frozen;
+}

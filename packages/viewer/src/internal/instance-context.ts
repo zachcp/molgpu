@@ -9,3 +9,10 @@ export { copyRows } from "./instance-plan.ts";
 export const InstanceContext: LiveContext<InstanceCopy | null> = makeContext<
   InstanceCopy | null
 >(null, "InstanceContext");
+
+/**
+ * Operators a model-space geometry (Ribbon, Tube, Surface) is drawn under:
+ * the geometry is built once and drawn once per copy, or null outside copies.
+ */
+export const DrawCopiesContext: LiveContext<readonly InstanceCopy[] | null> =
+  makeContext<readonly InstanceCopy[] | null>(null, "DrawCopiesContext");

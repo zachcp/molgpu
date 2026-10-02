@@ -34,6 +34,7 @@ import {
   modeProps,
 } from "./internal/opacity.ts";
 import { withMaterial } from "./internal/with-material.ts";
+import { CopyDraws, withGeometryCopies } from "./internal/instance-copies.ts";
 import { buildTubeGeometry } from "./internal/tube-geometry.ts";
 import { lineWidthForRadius } from "./internal/line-size.ts";
 import { useRepaint } from "./internal/use-repaint.ts";
@@ -143,22 +144,28 @@ const TubeResolved: ViewerComponent<
     map: Record<string, StorageSource | null>,
     colors?: ShaderSource,
   ) =>
-    withMaterial(
-      material,
-      use(LineLayer, {
-        positions: map.positions!,
-        segments: map.segments!,
-        width,
-        color: drawColor,
-        ...(colors ? { colors } : {}),
-        shaded: true,
-        sides,
-        join,
-        depth: -1,
-        ...drawMode,
-        ...props,
-      }),
-    );
+    use(CopyDraws, {
+      positions: map.positions!,
+      render: (positions: ShaderSource) =>
+        withMaterial(
+          material,
+          use(LineLayer, {
+            positions,
+            // A copy's positions are a transformed getter with no length.
+            count: built.count,
+            segments: map.segments!,
+            width,
+            color: drawColor,
+            ...(colors ? { colors } : {}),
+            shaded: true,
+            sides,
+            join,
+            depth: -1,
+            ...drawMode,
+            ...props,
+          }),
+        ),
+    });
   return withColumns(specs, (map) =>
     field
       ? use(VertexFieldColors, {
@@ -196,7 +203,7 @@ export const Tube: ViewerComponent<
   }
   & Translucency
   & SelectionDiagnostics
-> = (props) =>
+> = withGeometryCopies((props) =>
   use(SelectionConsumer, {
     input: props.select,
     who: "Tube",
@@ -210,4 +217,5 @@ export const Tube: ViewerComponent<
         select: props.select == null ? null : select,
       });
     },
-  });
+  })
+);

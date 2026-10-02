@@ -465,15 +465,17 @@ the partials; `useCoordinateFocus()` applies radius padding for camera targets.
 Spacefill, Bonds and BallAndStick draw one copy per assembly operator in
 `topology.instances` (an identity-only table draws as is): each copy applies its
 operator to the nearest live coordinates, after every coordinate provider, and
-draws only its chains' rows. Atoms are never duplicated. Other representations
-still draw the asymmetric unit. Camera framing covers every copy
-(`focusSelection` exactly per copy; `useCoordinateFocus` by transforming the
-selection's GPU bounds with each operator), and a pick on a copy reports its
-`operatorId`. `<Label>` and `<Distance>` draw once per copy that holds their
-atoms, anchored with that copy's coordinates; a label with an explicit `at`
-draws once. `useCameraCurve()` remains a CPU resource operation; pass a snapshot
-resource when using it under a coordinate provider. The snapshot, selection and
-bounds hooks are on `@molgpu/viewer/advanced`.
+draws only its chains' rows. Atoms are never duplicated. Ribbon, Tube and
+Surface build their CPU geometry once per group of copies sharing the same
+chains, in model space, and draw it under each copy's operator, so assembly
+copies never multiply geometry builds or coordinate snapshots. Camera framing
+covers every copy (`focusSelection` exactly per copy; `useCoordinateFocus` by
+transforming the selection's GPU bounds with each operator), and a pick on a
+copy reports its `operatorId`. `<Label>` and `<Distance>` draw once per copy
+that holds their atoms, anchored with that copy's coordinates; a label with an
+explicit `at` draws once. `useCameraCurve()` remains a CPU resource operation;
+pass a snapshot resource when using it under a coordinate provider. The
+snapshot, selection and bounds hooks are on `@molgpu/viewer/advanced`.
 
 The [coordinate-stream gallery page](../../site/README.md) scrubs a wobble
 transform with live atoms and bonds, snapshot ribbon, and GPU focus.
