@@ -31,6 +31,7 @@ import {
   withAttributes,
 } from "@molgpu/table";
 import { structure } from "./fixture.ts";
+import { NUMERIC_CASES } from "./numeric-cases.ts";
 import { WRAP_CASES } from "./wrap-cases.ts";
 
 const RED: Color = [1, 0, 0, 1],
@@ -453,4 +454,93 @@ Deno.test("attribute fields use the table's built-in domain registry", () => {
   for (const [name, domain] of Object.entries(ATTRIBUTE_DOMAINS)) {
     assertEquals(attribute(name).domain, domain, name);
   }
+});
+
+Deno.test("numeric constructors reject nonfinite parameters", () => {
+  for (const value of [NaN, Infinity, -Infinity]) {
+    assertThrows(() => constant(value), TypeError);
+    assertThrows(() => constant([value, 0, 0, 1]), TypeError);
+    assertThrows(() => linear(constant(0), { domain: [value, 1] }), TypeError);
+    assertThrows(() => linear(constant(0), { domain: [0, value] }), TypeError);
+    assertThrows(
+      () => linear(constant(0), { domain: [0, 1], range: [value, 1] }),
+      TypeError,
+    );
+    assertThrows(
+      () => linear(constant(0), { domain: [0, 1], range: [0, value] }),
+      TypeError,
+    );
+    assertThrows(() => categorical(constant(0), { [value]: 1 }, 0), TypeError);
+    assertThrows(() => categorical(constant(0), { 0: value }, 0), TypeError);
+    assertThrows(() => categorical(constant(0), { 0: 1 }, value), TypeError);
+    assertThrows(() => curve([[0, value], [1, 1]]), TypeError);
+    assertThrows(
+      () => colormap(constant(0), [[value, RED], [1, BLUE]]),
+      TypeError,
+    );
+  }
+});
+
+Deno.test("numeric tuples reject missing endpoint or color components", () => {
+  assertThrows(() => constant(new Array(4) as unknown as Color), TypeError);
+  assertThrows(
+    () => linear(constant(0), { domain: new Array(2) as [number, number] }),
+    TypeError,
+  );
+  assertThrows(
+    () =>
+      linear(constant(0), {
+        domain: [0, 1],
+        range: new Array(2) as [number, number],
+      }),
+    TypeError,
+  );
+});
+
+Deno.test("WGSL literals round to finite f32 with valid exponents and signed zero", () => {
+  for (const value of NUMERIC_CASES) {
+    const field = constant(value);
+    const rounded = Math.fround(value);
+    const text = Object.is(rounded, -0) ? "-0.0" : String(rounded);
+    const expected = /[.e]/.test(text) ? text : `${text}.0`;
+    for (const target of ["raw", "link"] as const) {
+      assert(compile(field, { target }).wgsl.includes(`return ${expected};`));
+    }
+    const values = numeric(evaluate(field, structure(), { domain: "atom" }));
+    assert(Object.is(values[0], rounded));
+  }
+});
+
+Deno.test("WGSL rejects f32 overflow and collapsed affine spans", () => {
+  for (const value of [1e40, -1e40, Number.MAX_VALUE]) {
+    assertThrows(() => compile(constant(value)), TypeError, "f32");
+    assertThrows(() => compile(constant([value, 0, 0, 1])), TypeError, "f32");
+  }
+  assertThrows(
+    () => compile(linear(constant(0), { domain: [-3e38, 3e38] })),
+    TypeError,
+    "f32",
+  );
+  assertThrows(
+    () =>
+      compile(linear(constant(0), { domain: [0, 1], range: [-3e38, 3e38] })),
+    TypeError,
+    "f32",
+  );
+  assertThrows(
+    () => compile(linear(constant(0), { domain: [0, 1e-50] })),
+    TypeError,
+    "span",
+  );
+  assertThrows(() => compile(curve([[0, 0], [1e-50, 1]])), TypeError, "span");
+  assertThrows(
+    () => compile(colormap(constant(0), [[1, RED], [1 + 1e-10, BLUE]])),
+    TypeError,
+    "span",
+  );
+  assertThrows(
+    () => compile(linear(constant(1), { domain: [1, 1 + 1e-10] })),
+    TypeError,
+    "span",
+  );
 });

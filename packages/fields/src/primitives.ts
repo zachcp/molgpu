@@ -22,6 +22,7 @@ import {
   type VolumeData,
   type VolumeGrid,
 } from "@molgpu/table";
+import { f32Literal as f32, f32Span } from "./internal-numeric.ts";
 import { sampleVolumeWgsl } from "./volume.ts";
 import type {
   Binding,
@@ -188,7 +189,8 @@ const reconcileDomain = (
 const field = (node: FieldNode): Field => Object.freeze(node);
 const asColorArray = (v: unknown, where: string): Color => {
   if (
-    !Array.isArray(v) || v.length !== 4 || !v.every((x) => Number.isFinite(x))
+    !Array.isArray(v) || v.length !== 4 ||
+    !Array.from(v).every((x) => Number.isFinite(x))
   ) fail(where, "expected [r,g,b,a]");
   return Object.freeze([...v]) as unknown as Color;
 };
@@ -196,6 +198,7 @@ const asColorArray = (v: unknown, where: string): Color => {
 /** A single value for every row. Number -> scalar, [r,g,b,a] -> colour, string -> label. */
 export function constant(value: number | string | Color): Field {
   if (typeof value === "number") {
+    if (!Number.isFinite(value)) fail("constant", "expected a finite number");
     return field({ kind: "constant", type: SCALAR, domain: "any", value });
   }
   if (typeof value === "string") {
@@ -263,7 +266,10 @@ export function categorical(
   ): [number, number | Color] => [Number(k), v]);
   if (!entries.length) fail("categorical.cases", "expected at least one case");
   const type = valueType(entries[0][1], "categorical.cases");
-  for (const [, v] of entries) {
+  for (const [category, v] of entries) {
+    if (!Number.isFinite(category)) {
+      fail("categorical.cases", "category must be finite");
+    }
     if (!sameType(valueType(v, "categorical.cases"), type)) {
       fail("categorical.cases", "all cases must share a type");
     }
@@ -305,11 +311,18 @@ export function linear(
   if (input.type.kind !== "scalar") {
     fail("linear.input", "expected a scalar field");
   }
-  if (!Array.isArray(dom) || dom.length !== 2 || dom[0] === dom[1]) {
-    fail("linear.domain", "expected [lo,hi] with lo != hi");
+  if (
+    !Array.isArray(dom) || dom.length !== 2 || !Number.isFinite(dom[0]) ||
+    !Number.isFinite(dom[1]) ||
+    dom[0] === dom[1]
+  ) {
+    fail("linear.domain", "expected finite [lo,hi] with lo != hi");
   }
-  if (!Array.isArray(range) || range.length !== 2) {
-    fail("linear.range", "expected [a,b]");
+  if (
+    !Array.isArray(range) || range.length !== 2 || !Number.isFinite(range[0]) ||
+    !Number.isFinite(range[1])
+  ) {
+    fail("linear.range", "expected finite [a,b]");
   }
   if (!["clamp", "wrap", "fail"].includes(overflow)) {
     fail("linear.overflow", "expected clamp, wrap, or fail");
@@ -676,7 +689,6 @@ export function evaluate(
 
 // ---- WGSL code generation --------------------------------------------------
 
-const f32 = (x: number): string => (Number.isInteger(x) ? `${x}.0` : `${x}`);
 const vec4 = (c: readonly number[]): string =>
   `vec4<f32>(${c.map(f32).join(", ")})`;
 
@@ -882,7 +894,7 @@ function emit(
       }
       const inner = emit(node.input, ctx);
       const u = `((${inner.expr}) - ${f32(node.lo)}) / ${
-        f32(node.hi - node.lo)
+        f32Span(node.lo, node.hi)
       }`;
       let clamped: string;
       if (node.overflow === "wrap") {
@@ -909,7 +921,7 @@ function emit(
         const [t0, c0] = node.table[i - 1], [t1, c1] = node.table[i];
         body += `  if (x <= ${f32(t1)}) { return mix(${vec4(c0)}, ${
           vec4(c1)
-        }, (x - ${f32(t0)}) / ${f32(t1 - t0)}); }\n`;
+        }, (x - ${f32(t0)}) / ${f32Span(t0, t1)}); }\n`;
       }
       body += `  return ${vec4(node.table[node.table.length - 1][1])};`;
       ctx.helpers.push(`fn ${name}(x: f32) -> vec4<f32> {\n${body}\n}`);
@@ -934,8 +946,8 @@ function emit(
       const lo = node.table[0][0], hi = node.table[node.table.length - 1][0];
       let body = node.overflow === "wrap"
         ? `  let xc = ${f32(lo)} + fract((x - ${f32(lo)}) / ${
-          f32(hi - lo)
-        }) * ${f32(hi - lo)};\n`
+          f32Span(lo, hi)
+        }) * ${f32Span(lo, hi)};\n`
         : `  let xc = clamp(x, ${f32(lo)}, ${f32(hi)});\n`;
       body += `  if (xc <= ${f32(node.table[0][0])}) { return ${
         f32(node.table[0][1])
@@ -944,7 +956,7 @@ function emit(
         const [t0, v0] = node.table[i - 1], [t1, v1] = node.table[i];
         body += `  if (xc <= ${f32(t1)}) { return mix(${f32(v0)}, ${
           f32(v1)
-        }, (xc - ${f32(t0)}) / ${f32(t1 - t0)}); }\n`;
+        }, (xc - ${f32(t0)}) / ${f32Span(t0, t1)}); }\n`;
       }
       body += `  return ${f32(node.table[node.table.length - 1][1])};`;
       ctx.helpers.push(`fn ${name}(x: f32) -> f32 {\n${body}\n}`);

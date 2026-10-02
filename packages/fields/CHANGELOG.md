@@ -6,6 +6,12 @@ All notable changes to `@molgpu/fields` are recorded here. The format follows
 
 ## [Unreleased]
 
+- Scalar constants, linear endpoints and categorical keys reject nonfinite
+  parameters. WGSL literal generation now rounds to finite f32, handles exponent
+  notation and signed zero, and rejects overflowing or collapsed interpolation
+  spans. Volume generators use the same private literal serializer. CPU
+  calculations retain JavaScript precision.
+
 - Generated WGSL for `linear(..., { overflow: "wrap" })` preserves both domain
   endpoints like the CPU evaluator, including reversed domains, and wraps only
   outside the closed domain. Curve wrap retains its periodic endpoint behavior.

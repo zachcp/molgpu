@@ -14,6 +14,7 @@ import {
   COLOR,
   colormap,
   compile,
+  constant,
   curve,
   evaluate,
   linear,
@@ -27,6 +28,7 @@ import {
   withAttributes,
 } from "@molgpu/table";
 import { structure } from "./fixture.ts";
+import { NUMERIC_CASES } from "./numeric-cases.ts";
 import { WRAP_CASES } from "./wrap-cases.ts";
 
 Deno.test("fields GPU parity", async () => {
@@ -123,6 +125,13 @@ Deno.test("fields GPU parity", async () => {
     },
   };
 
+  NUMERIC_CASES.forEach((value, index) => {
+    cases[`numericLiteral${index}`] = {
+      field: constant(value),
+      domain: "atom",
+      exact: true,
+    };
+  });
   WRAP_CASES.forEach(({ domain, values, expected }, index) => {
     const field = linear(
       annotation("atom", SCALAR, Float32Array.from(values)),
@@ -156,15 +165,16 @@ Deno.test("fields GPU parity", async () => {
     : data.topology.residues.count);
 
   // Build the compute module and payload for each case on the Node side.
-  const jobs = Object.entries(cases).map(([name, { field, domain, t }]) => {
-    const compiled = compile(field, { domain });
-    const components = compiled.valueType.components;
-    const rows = n(domain);
-    const K = compiled.bindings.length;
-    const write = components === 4
-      ? "outp[row*4u+0u]=v.x; outp[row*4u+1u]=v.y; outp[row*4u+2u]=v.z; outp[row*4u+3u]=v.w;"
-      : "outp[row]=v;";
-    const wgsl = `${compiled.wgsl}
+  const jobs = Object.entries(cases).map(
+    ([name, { field, domain, t, exact }]) => {
+      const compiled = compile(field, { domain });
+      const components = compiled.valueType.components;
+      const rows = n(domain);
+      const K = compiled.bindings.length;
+      const write = components === 4
+        ? "outp[row*4u+0u]=v.x; outp[row*4u+1u]=v.y; outp[row*4u+2u]=v.z; outp[row*4u+3u]=v.w;"
+        : "outp[row]=v;";
+      const wgsl = `${compiled.wgsl}
 @group(0) @binding(${K}) var<storage, read_write> outp: array<f32>;
 @compute @workgroup_size(64)
 fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
@@ -173,14 +183,24 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
   let v = evalField(row);
   ${write}
 }`;
-    const inputs = compiled.bindings.map((b) => ({
-      binding: b.binding,
-      kind: b.kind,
-      data: [...b.fill(b.kind === "uniform" ? { t } : data)],
-    }));
-    const cpu = [...evaluate(field, data, { domain, t })];
-    return { name, wgsl, inputs, outBinding: K, rows, components, cpu };
-  });
+      const inputs = compiled.bindings.map((b) => ({
+        binding: b.binding,
+        kind: b.kind,
+        data: [...b.fill(b.kind === "uniform" ? { t } : data)],
+      }));
+      const cpu = [...evaluate(field, data, { domain, t })];
+      return {
+        name,
+        wgsl,
+        inputs,
+        outBinding: K,
+        rows,
+        components,
+        cpu,
+        exact,
+      };
+    },
+  );
 
   // volumeSample: a sheared, rotated grid; positions are fed directly so the
   // case covers interior, face, corner and outside points, not just 4 atoms.
@@ -399,6 +419,16 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
         job.cpu.length,
         `${job.name} length`,
       );
+      if (job.exact) {
+        job.cpu.forEach((expected, i) =>
+          assert(
+            expected === 0
+              ? out.result[i] === 0
+              : Object.is(out.result[i], expected),
+            `${job.name} row ${i}: exact finite f32 literal (either zero sign is valid in WGSL)`,
+          )
+        );
+      }
       const tolerance = job.tolerance ?? 1e-5;
       let maxErr = 0;
       for (let i = 0; i < job.cpu.length; i++) {

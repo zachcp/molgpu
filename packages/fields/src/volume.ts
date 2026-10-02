@@ -6,10 +6,7 @@ import {
   volumeInverseTransform,
 } from "@molgpu/table";
 
-const f32 = (x: number): string => {
-  const s = `${Math.fround(x)}`;
-  return /[.e]/.test(s) ? s : `${s}.0`;
-};
+import { f32Literal as f32 } from "./internal-numeric.ts";
 
 /**
  * WGSL source for `fn <name>(p: vec3<f32>) -> f32`: a trilinear sample of a

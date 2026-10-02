@@ -159,6 +159,25 @@ representation rather than evaluating it yourself.
   (uniform, same for every row). Curve `wrap` is periodic over the half-open
   stop interval: the last stop time wraps to the first stop value.
 
+## Numeric input policy
+
+Constructor parameters must be finite JavaScript numbers: scalar/color
+constants, linear domain/range endpoints, category keys/values/fallbacks, and
+curve/colormap stops. CPU calculations retain JavaScript precision; numeric
+outputs are packed as `Float32Array`. Finite values outside f32 range can
+therefore overflow CPU outputs.
+
+WGSL compilation rounds literal parameters to f32, emits valid
+decimal/scientific notation and preserves signed zero in literals. It rejects
+parameters or derived spans that overflow f32, and interpolation intervals whose
+endpoints or width collapse in f32. Very small values may round to signed zero;
+representable subnormal literals are accepted. GPU arithmetic may flush
+subnormal values to zero, as allowed by
+[WGSL floating-point rules](https://www.w3.org/TR/WGSL/#floating-point-evaluation).
+This policy also applies to baked coefficients in the volume WGSL generators. It
+does not validate runtime attribute/annotation columns or guarantee finite
+results for every arithmetic expression.
+
 ## Two evaluators, one definition
 
 - `evaluate(field, data, { t?, domain? })` runs on the CPU and returns a packed
