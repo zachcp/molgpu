@@ -4,77 +4,29 @@
 // offscreen targets those passes need, with molgpu layers in the pass. OIT is
 // the transparent-surface pass.
 import { assert, assertEquals } from "@std/assert";
-import { fromFileUrl } from "@std/path";
-import { createServer } from "vite";
-import { chromium } from "playwright";
-import { webgpuBrowserArgs } from "./webgpu-browser-args.mjs";
-import { workspaceAliases } from "../../../scripts/workspace-aliases.mjs";
+import {
+  captureErrors,
+  launchWebGpuBrowser,
+  startDevServer,
+} from "./harness.mjs";
 
 Deno.test("viewer postprocess", async () => {
-  const root = fromFileUrl(new URL("../../../", import.meta.url));
   const cacheDir = await Deno.makeTempDir({
     prefix: "molgpu-postprocess-vite-",
   });
-  const server = await createServer({
+  const server = await startDevServer({
+    port: 5212,
+    entries: ["packages/viewer/test/postprocess.html"],
     cacheDir,
-    root,
-    configFile: false,
-    resolve: { alias: workspaceAliases() },
-    server: { host: "127.0.0.1", port: 5212, strictPort: true },
-    optimizeDeps: {
-      // Lazy workspace imports must not trigger a second optimization mid-mount.
-      noDiscovery: true,
-      entries: ["packages/viewer/test/postprocess.html"],
-      exclude: [
-        "@molgpu/fields",
-        "@molgpu/table",
-        "@molgpu/io",
-        "@molgpu/geo",
-        "@molgpu/select",
-        "@molgpu/viewer",
-      ],
-      include: [
-        "@use-gpu/live",
-        "@use-gpu/workbench",
-        "@use-gpu/webgpu",
-        "@use-gpu/core",
-        // @molgpu/timeline imports this pinned easing module. Prebundle it before
-        // navigation so Vite does not reload live modules with an Outdated
-        // Optimize Dep response during the test.
-        "@use-gpu/core/mjs/ease.mjs",
-        "@use-gpu/shader",
-        "@use-gpu/shader/wgsl",
-        "@use-gpu/wgsl",
-        // Prebundle every lazy BCIF and surface adapter entry before navigation.
-        // Late discovery can invalidate modules during the initial BCIF fetch.
-        "molstar/lib/mol-io/reader/cif.js",
-        "molstar/lib/mol-model-formats/structure/mmcif.js",
-        "molstar/lib/mol-model-formats/structure/property/secondary-structure.js",
-        "molstar/lib/mol-model-formats/structure/property/bonds/chem_comp.js",
-        "molstar/lib/mol-model-formats/structure/property/bonds/struct_conn.js",
-        "molstar/lib/mol-task/index.js",
-        "molstar/lib/mol-math/geometry/molecular-surface.js",
-        "molstar/lib/mol-math/geometry/boundary.js",
-        "molstar/lib/mol-data/int/ordered-set.js",
-      ],
-    },
+    noDiscovery: true,
   });
   let browser;
   try {
-    await server.listen();
-    browser = await chromium.launch({
-      channel: "chrome",
-      headless: true,
-      args: webgpuBrowserArgs,
-    });
+    browser = await launchWebGpuBrowser();
     const page = await browser.newPage({
       viewport: { width: 640, height: 480 },
     });
-    const errors = [];
-    page.on("pageerror", (e) => errors.push(String(e)));
-    page.on("console", (m) => {
-      if (m.type() === "error") errors.push(m.text());
-    });
+    const errors = captureErrors(page);
     await page.goto(
       "http://127.0.0.1:5212/packages/viewer/test/postprocess.html",
     );

@@ -9,9 +9,8 @@
 import { assert, assertEquals, assertStrictEquals } from "@std/assert";
 import { extname, fromFileUrl, normalize } from "@std/path";
 import { build } from "vite";
-import { chromium } from "playwright";
-import { webgpuBrowserArgs } from "./webgpu-browser-args.mjs";
 import { coulombField } from "../../dynamics/src/electrostatics.ts";
+import { launchWebGpuBrowser } from "./harness.mjs";
 
 /**
  * max |gpu − cpu| / max |cpu|: f32 tiles cannot hold pointwise relative error
@@ -64,11 +63,7 @@ Deno.test("electric fields", async () => {
   const report = { date: new Date().toISOString(), states: {} };
   let browser;
   try {
-    browser = await chromium.launch({
-      channel: "chrome",
-      headless: true,
-      args: webgpuBrowserArgs,
-    });
+    browser = await launchWebGpuBrowser();
     const page = await browser.newPage({
       viewport: { width: 800, height: 600 },
       deviceScaleFactor: 1,

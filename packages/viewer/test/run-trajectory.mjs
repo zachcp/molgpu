@@ -15,8 +15,6 @@ import {
 } from "@std/assert";
 import { extname, fromFileUrl, normalize } from "@std/path";
 import { build } from "vite";
-import { chromium } from "playwright";
-import { webgpuBrowserArgs } from "./webgpu-browser-args.mjs";
 import { applyAffine } from "../../dynamics/src/affine.ts";
 import {
   cellListWgsl,
@@ -29,6 +27,7 @@ import { unwrapFrame } from "../../dynamics/src/pbc.ts";
 import { writeXtc } from "../../io/test/trajectory-fixture.ts";
 import { structureFromBcif } from "@molgpu/io";
 import { interpolatePositions } from "../src/internal/frame-window.ts";
+import { captureErrors, launchWebGpuBrowser } from "./harness.mjs";
 
 async function runGpuCellList(page, positions, cutoff) {
   const cpu = createCellList(Float32Array.from(positions), cutoff, {
@@ -306,20 +305,12 @@ Deno.test("trajectory components", async () => {
   );
   let browser;
   try {
-    browser = await chromium.launch({
-      channel: "chrome",
-      headless: true,
-      args: webgpuBrowserArgs,
-    });
+    browser = await launchWebGpuBrowser();
     const page = await browser.newPage({
       viewport: { width: 640, height: 480 },
       deviceScaleFactor: 1,
     });
-    const errors = [];
-    page.on("pageerror", (e) => errors.push(String(e)));
-    page.on("console", (m) => {
-      if (m.type() === "error") errors.push(m.text());
-    });
+    const errors = captureErrors(page);
     await page.goto(`http://127.0.0.1:${PORT}/`);
     await page.waitForFunction(() => globalThis.__trajectory?.mounted, null, {
       timeout: 30000,

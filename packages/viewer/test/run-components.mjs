@@ -15,8 +15,7 @@ import {
 } from "@std/assert";
 import { extname, fromFileUrl, normalize } from "@std/path";
 import { build } from "vite";
-import { chromium } from "playwright";
-import { webgpuBrowserArgs } from "./webgpu-browser-args.mjs";
+import { launchWebGpuBrowser } from "./harness.mjs";
 
 Deno.test("viewer components", async () => {
   const root = fromFileUrl(new URL("../../../", import.meta.url));
@@ -86,11 +85,7 @@ Deno.test("viewer components", async () => {
 
   let browser;
   try {
-    browser = await chromium.launch({
-      channel: "chrome",
-      headless: true,
-      args: webgpuBrowserArgs,
-    });
+    browser = await launchWebGpuBrowser();
     const page = await browser.newPage({
       viewport: { width: 800, height: 600 },
       deviceScaleFactor: 1,
