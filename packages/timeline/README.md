@@ -49,7 +49,9 @@ explicit spline controls. With `automatic: true` the curve derives smooth knots
 and easing itself, and frames must not set `ease` or `knots`. `type: 'angle'`
 interpolates along the short arc. Out-of-range samples clamp by default, or wrap
 with `extrapolate: 'loop'`. Invalid beats or frames throw `TypeError` or
-`RangeError` at construction; `sample` throws only for a non-finite time.
+`RangeError` at construction. `sample` rejects non-finite time or a curve that
+was not created by the same installed copy of this package. Keep one resolved
+version of `@molgpu/timeline` when sharing curves with the viewer.
 
 ## API
 
@@ -68,56 +70,81 @@ with `extrapolate: 'loop'`. Invalid beats or frames throw `TypeError` or
 | `frameTime`      | experimental | Seconds at which a frame starts, for placing beats at frames.                                                                               |
 | `FramePlayback`  | experimental | `frameCurve` options: `frames`, `fps`, `start`, `loop`.                                                                                     |
 
+## Trajectory timing
+
+Use `frameCurve` to convert seconds to a fractional frame index, and `frameTime`
+to place a named beat at the start of a frame:
+
+```ts
+import { frameCurve, frameTime, sample } from "@molgpu/timeline";
+
+const playback = { frames: 60, fps: 30, start: 1, loop: true };
+const frames = frameCurve(playback);
+sample(frames, 1.5); // 15
+frameTime(playback, 15); // 1.5 seconds
+```
+
+The curve spans `frames / fps` seconds. Its final interval lets a trajectory
+hold the last frame for `1 / fps` before looping. With `loop: true`, samples
+before `start` wrap too; without looping they clamp to frame 0.
+
 ## Using it with the viewer
 
-In a use.gpu scene, `@molgpu/viewer` supplies a controlled `TimelineProvider`.
-Its `time` prop is the global second value; no clock runs in the viewer either.
-Fields with a `curve:t` binding read this value automatically, and
-`useTimelineSample(curve)` samples a camera or other component prop at the same
-time. Updating `time` can be driven by a slider, narration, or an export loop;
-setting an earlier value rewinds deterministically.
+`@molgpu/viewer` supplies a controlled `TimelineProvider`. Set its `time` prop
+in seconds from a slider, animation callback, narration or frame-export loop.
+The provider does not run a clock. Fields with a `curve:t` binding and
+trajectory frame curves read that time automatically:
 
-```js
-import { TimelineProvider, useTimelineSample } from "@molgpu/viewer";
+```tsx
+import {
+  Spacefill,
+  Structure,
+  TimelineProvider,
+  Trajectory,
+} from "@molgpu/viewer";
+import { frameCurve } from "@molgpu/timeline";
 
-// Inside a TimelineProvider descendant:
-const radius = useTimelineSample(cameraRadius);
-// OrbitCamera receives radius; Spacefill's colour field receives the same t.
+const frames = frameCurve({ frames: 60, fps: 30 });
+
+// `seconds` is controlled by your application. The trajectory must match the
+// structure's atom order (or supply the appropriate trajectory atom map).
+<TimelineProvider time={seconds}>
+  <Structure src="/structure.bcif">
+    <Trajectory src="/frames.dcd" frame={frames}>
+      <Spacefill />
+    </Trajectory>
+  </Structure>
+</TimelineProvider>;
 ```
 
-For camera keyframes that focus a selection, use a reusable `@molgpu/select`
-query and an explicit current `StructureResource`:
+For an ordinary camera property, use `sample(cameraRadius, seconds)` and pass
+that number to the application's `OrbitCamera`. For selection-focused camera
+keyframes, `useCameraCurve` samples a `CameraCurve` array inside a Live
+component:
 
-```js
+```ts
 import { element } from "@molgpu/select";
-import { createCameraCurve, useCameraCurve } from "@molgpu/viewer";
+import { type CameraCurve, useCameraCurve } from "@molgpu/viewer";
+import { useStructureResource } from "@molgpu/viewer/advanced";
 
-const camera = createCameraCurve([
+const camera: CameraCurve = [
   { time: 0, target: [0, 0, 0], radius: 25, bearing: 0, pitch: 0 },
   { time: 2, focus: element(8), bearing: 0.8, pitch: 0.2 },
-]);
+];
 
-// Inside TimelineProvider: pass the pose to OrbitCamera.
-const pose = useCameraCurve(camera, currentStructureResource);
+// Inside a Live component beneath TimelineProvider and Structure:
+const pose = useCameraCurve(camera, useStructureResource());
+// Pass pose.target, pose.radius, pose.bearing and pose.pitch to OrbitCamera.
 ```
 
-The focus query resolves against the resource's current data when sampled.
-Framing includes assembly instances and displayed atom radii; `atomRadiusScale`
-matches a representation's radius scale. An empty query falls back to framing
-the full structure by default. `focusSelection` also accepts `empty: 'null'` for
-callers that want a no-op result.
+Focus queries read the supplied resource's CPU data. Under a coordinate
+provider, pass the resource from `useCoordinateSnapshot()` to follow published
+positions, or use `useCoordinateFocus` for GPU bounds. Empty focus queries frame
+the first model's primary conformers by default; `empty: "null"` on
+`useCoordinateFocus` returns no focus result instead.
 
-## Place in the dependency graph
+## Dependencies
 
-`timeline` is a lower, pure package. It depends on no other `@molgpu/*` package;
-`@molgpu/viewer` depends on it (the provider, `useTimelineSample`, and camera
-curves).
-
-It must not import:
-
-- `molstar` (only `@molgpu/io` does, at runtime);
-- `@use-gpu/live`, `@use-gpu/workbench`, or `@use-gpu/shader` (only
-  `@molgpu/viewer` does) — so no components, clocks, or rendering here;
-- `@use-gpu/core` outside `src/internal/`. The adapter in
-  `src/internal/upstream-interpolation.ts` is the only file that imports it, and
-  the public types never mention `@use-gpu/*`.
+This package is renderer-free and has no dependency on other `@molgpu/*`
+packages. Its private interpolation adapter uses pure math from the pinned
+`@use-gpu/core`; public values are plain numbers, arrays and immutable curves.

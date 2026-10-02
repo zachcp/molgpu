@@ -1,8 +1,34 @@
 # molgpu
 
-Molecular visualization on WebGPU, built as small ESM packages. At the bottom
-are plain-data tables and kernels; at the top are [use.gpu](https://usegpu.live)
-Live components.
+Molecular visualization on WebGPU, built as small ESM packages. Use the data
+packages for loading, selection and scientific calculations, or compose
+[use.gpu](https://usegpu.live) Live components to draw a molecular scene. The
+viewer runs in a browser with WebGPU; your application supplies the canvas,
+device, camera, lights and render passes.
+
+## Get started
+
+All eight packages are available on
+[JSR](https://jsr.io/packages?search=molgpu). For a data-only workflow, install
+the loader and selection packages:
+
+```sh
+deno add jsr:@molgpu/io jsr:@molgpu/select
+```
+
+```ts
+import { structureFromBcif } from "@molgpu/io";
+import { comp, resolve } from "@molgpu/select";
+
+const data = await structureFromBcif("https://models.rcsb.org/1crn.bcif");
+const cysteines = resolve(comp(["CYS"]), data);
+console.log(data.topology.atoms.count, cysteines.indices.length);
+```
+
+Save this as `example.ts` and run `deno run --allow-net example.ts`. For
+rendering, start with the
+[viewer setup and scene example](packages/viewer/README.md). Use the same
+use.gpu version as the viewer (`0.20.0`) throughout your application.
 
 ## Packages
 
@@ -17,9 +43,12 @@ Live components.
 | [`@molgpu/dynamics`](packages/dynamics/README.md) | Coordinate transforms, secondary structure, charges, and dynamics kernels.                         |
 | [`@molgpu/viewer`](packages/viewer/README.md)     | use.gpu components: structures, representations, materials, lights, picking, annotations, cameras. |
 
-Each package has a `CHANGELOG.md` next to its README.
+The table links open local guides; the
+[JSR package pages](https://jsr.io/packages?search=molgpu) also provide
+generated API documentation. Each package has a `CHANGELOG.md` next to its
+README.
 
-## Docs and examples
+## Contributor docs and examples
 
 - [Project site](site/README.md): the landing page and maintained WebGPU
   demonstrations.

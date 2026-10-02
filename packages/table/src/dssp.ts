@@ -5,14 +5,12 @@
 // (oldDefinition and oldOrdering true: DSSP 2.x turns/helices, alpha helices
 // preferred over 3-10). No polyproline (P) code: Mol* has none.
 //
-// It lives in @molgpu/table rather than @molgpu/geo (INVARIANT 3's usual home
-// for ported kernels) because it is a traversal of structure rows (chains,
-// residues, named backbone atoms); geo has no table dependency.
+// This algorithm traverses structure rows (chains,
+// residues and named backbone atoms).
 //
 // A unit is one chain in one model, as Mol*'s atomic units are: H-bonds
 // between chains are not searched (Mol*'s own TODO), so inter-chain sheets are
-// not found. Kept Mol* behaviour (docs/findings/2026-09-27-secondary-structure-
-// plan.md §3): list neighbours across sequence gaps, the OXT acceptor skip,
+// not found. Preserved Mol* behaviour: list neighbours across sequence gaps, the OXT acceptor skip,
 // the energy operation order and -9.9 cap, the inclusive 9 Å CA search, the
 // CA–N(i+1) 2.5 Å bend check, bridges tested only for i !== j, and ladder
 // last-wins with the nextLadder === 0 sentinel. Fixed: Mol*'s assignBends reads

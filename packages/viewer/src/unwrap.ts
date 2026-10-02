@@ -458,7 +458,7 @@ const Provider: LC<
 
 /**
  * Make each covalent component whole on the displayed periodic frame (a
- * coordinate provider, INVARIANT 6). Each component's atoms are placed by
+ * coordinate provider). Each component's atoms are placed by
  * exact nearest-image bond vectors from its root along a spanning forest of
  * the structure's covalent bonds, built once per topology. `box` defaults to
  * the nearest `<Trajectory>`'s displayed box; without a usable box, positions

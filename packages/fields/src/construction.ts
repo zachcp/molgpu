@@ -1,18 +1,4 @@
-// @molgpu/fields — typed per-row value descriptions with one pure CPU evaluator
-// and a renderer-free WGSL code generator.
-//
-// A Field<T, Domain> assigns a value of type T to every row of a domain (atom or
-// residue). Selections say WHICH rows; fields say WHAT VALUE each row gets — a
-// colour, a radius, an opacity, a category. One concept replaces MolViewSpec's
-// color / color_from_source x categorical / continuous x domain / overflow
-// matrix.
-//
-// The package is renderer-free: it never imports use.gpu and never returns a
-// ShaderSource. `evaluate` computes values on the CPU (for tests, labels, and
-// annotation joins); `compile` emits a WGSL string plus a plain-data binding
-// schema that the viewer lowers to GPU sources. Numeric/vector fields lower;
-// string fields are CPU-only. There is no arbitrary JS->WGSL and no user parser.
-
+// Field construction and numeric table inputs.
 import {
   ATTRIBUTE_DOMAINS,
   attributeColumn,
@@ -120,7 +106,7 @@ export const resolvedAttribute = (
 };
 
 /** Min/max of a column over a dataset, for auto-ranging a built-in field's
- *  domain. Returns [lo, lo+1] for an empty or constant column. */
+ *  domain. Returns [0, 1] for an empty column and [lo, lo+1] for a constant column. */
 export function columnRange(
   data: StructureData,
   name: string,
@@ -191,7 +177,7 @@ export function constant(value: number | string | Color): Field {
  * Read a numeric table column as a scalar field on that column's domain. A
  * custom `<ns>:<name>` column needs `options.domain`; `lift: true` reads a
  * residue column onto atoms through `atoms.residue` (implicit for built-in
- * residue columns).
+ * residue columns when `{ domain: "atom" }` is requested).
  */
 export function attribute(
   name: string,
@@ -345,7 +331,9 @@ export function colormap(
 /**
  * Externally supplied per-row values (the shape an annotation join produces).
  * `values` is a typed array (scalar) or length-4N array (colour). `missing` is a
- * boolean mask; absent rows take `fallback` ('fallback' policy) or throw ('fail').
+ * numeric presence mask (nonzero = present, zero = missing); absent rows take
+ * `fallback` ('fallback' policy) or throw ('fail'). Arrays are retained; treat
+ * them as read-only for the lifetime of the field.
  */
 export function annotation(
   domain: Domain,
@@ -424,7 +412,8 @@ export const volumeId = (volume: VolumeData): number => {
  * Without an argument it samples the nearest viewer volume (`<Volume>` or
  * `<EField>`): the binding is `volume:nearest`, `compile` takes that volume's
  * grid as `options.volume`, and the viewer binds its live samples. That form
- * is GPU-only; `evaluate` throws and names the explicit form.
+ * needs explicit CPU samples for `evaluate(field, data, { volume })`; without
+ * that context, evaluation throws.
  */
 export function volumeSample(volume?: VolumeData): Field {
   if (volume === undefined) {

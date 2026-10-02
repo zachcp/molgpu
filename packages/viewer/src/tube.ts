@@ -181,6 +181,9 @@ const TubeResolved: ViewerComponent<
       : tube(map));
 };
 
+/** Draw a polymer backbone tube from published coordinate snapshots.
+ * A residue participates only when its guide atom is selected. Color fields
+ * read guide-atom values; changing color or opacity preserves geometry. */
 export const Tube: ViewerComponent<
   & {
     /** A molecular query or exact atom selection. Defaults to first-model/primary-altloc atoms. */

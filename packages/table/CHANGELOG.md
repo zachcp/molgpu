@@ -2,17 +2,21 @@
 
 All notable changes to `@molgpu/table` are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); see
-[docs/RELEASING.md](../../docs/RELEASING.md) for the procedure.
+[release procedure](https://github.com/zachcp/molgpu/blob/main/docs/RELEASING.md)
+for the procedure.
 
 ## [Unreleased]
+
+- Clarify package examples, generated API documentation and data contracts;
+  remove internal work-tracking shorthand from published documentation.
 
 - `Trace` gains `atom`: the guide atom row of each sample (CA, or the nucleic
   trace atom), so trace consumers can read atom-domain columns.
 
-- Before first publish, remove the deprecated `atoms.formalCharge` and
-  `residues.secondaryStructure` topology columns (and `legacySsCodes`); set the
-  `formalCharge` and `ssCode` attributes with `withAttributes`. Built-in views
-  of topology columns now report provenance `topology` instead of `legacy`.
+- Remove the deprecated `atoms.formalCharge` and `residues.secondaryStructure`
+  topology columns (and `legacySsCodes`); set the `formalCharge` and `ssCode`
+  attributes with `withAttributes`. Built-in views of topology columns now
+  report provenance `topology` instead of `legacy`.
 
 - Remove the unexported `frame-ss.ts` per-frame DSSP cache from the published
   source; the io DSSP oracle now runs per-frame DSSP with public `dssp` and
@@ -38,32 +42,31 @@ All notable changes to `@molgpu/table` are recorded here. The format follows
 
 - `frameSecondaryStructure(data, trajectory, { rows, maxBytes })` runs DSSP on
   integer trajectory frames read from `TrajectoryData.source`, cached with a
-  byte cap; `timeline(frames)` returns an SS-vs-time matrix (Phase 15, efv.8).
-- DSSP (Phase 15, efv.5). `dssp(data, { rows })` ports Mol* 5.11's DSSP (per
-  chain and model, Mol*'s default options) and returns `ssCode` values per
-  residue. `withSecondaryStructure(data, { mode })` sets `ssCode` with
-  provenance `computed:dssp` by Mol*'s modes: `auto` (the default) keeps an
-  imported, legacy or user column and computes when it is absent or `default`,
-  `dssp` always computes, `model` keeps the data. The port fixes Mol*'s bend
-  bug, so bends (S) are also assigned outside a model's first chain.
-- Secondary-structure codes (Phase 15, efv.3). `SS_CODES` lists the DSSP letters
-  in `ssCode` order (0 coil, H, B, E, G, I, T, S, P) and `ssKind(code)` projects
-  a code to helix, sheet or coil. `secondaryStructureTrace` reads the `ssCode`
-  attribute, and a hand-built structure's `residues.secondaryStructure` resolves
-  as `ssCode` with provenance `legacy`. `Residues.secondaryStructure` is
-  deprecated.
+  byte cap; `timeline(frames)` returns an SS-vs-time matrix.
+- DSSP. `dssp(data, { rows })` ports Mol* 5.11's DSSP (per chain and model,
+  Mol*'s default options) and returns `ssCode` values per residue.
+  `withSecondaryStructure(data, { mode })` sets `ssCode` with provenance
+  `computed:dssp` by Mol*'s modes: `auto` (the default) keeps an imported,
+  legacy or user column and computes when it is absent or `default`, `dssp`
+  always computes, `model` keeps the data. The port fixes Mol*'s bend bug, so
+  bends (S) are also assigned outside a model's first chain.
+- Secondary-structure codes. `SS_CODES` lists the DSSP letters in `ssCode` order
+  (0 coil, H, B, E, G, I, T, S, P) and `ssKind(code)` projects a code to helix,
+  sheet or coil. `secondaryStructureTrace` reads the `ssCode` attribute, and a
+  hand-built structure's `residues.secondaryStructure` resolves as `ssCode` with
+  provenance `legacy`. `Residues.secondaryStructure` is deprecated.
 - `Atoms.formalCharge` is deprecated. Set the derived `formalCharge` attribute
-  with `withAttributes`; `@molgpu/io` now writes only that (Phase 14).
-- Derived attribute channels (Phase 10): `withAttributes` validates and copies
-  atom or residue columns, advancing the attribute revision. `attributeColumn`
-  and `attributeNames` resolve built-in and derived columns with provenance.
+  with `withAttributes`; `@molgpu/io` now writes only that.
+- Derived attribute channels: `withAttributes` validates and copies atom or
+  residue columns, advancing the attribute revision. `attributeColumn` and
+  `attributeNames` resolve built-in and derived columns with provenance.
 
-- Trajectories (Phase 12). New experimental `createTrajectory`,
-  `validateTrajectory`, `validateTrajectoryFrame`, `frameAtTime` and
-  `trajectoryFromModels`, with the `TrajectoryData`, `TrajectoryInput`,
-  `TrajectoryFrame`, `FrameSource` and `TrajectoryTimeUnit` types. A
-  `FrameSource` decodes frames on demand; `trajectoryFromModels` plays a
-  multi-model structure as frames over its first model through `atomMap`.
+- Trajectories. New experimental `createTrajectory`, `validateTrajectory`,
+  `validateTrajectoryFrame`, `frameAtTime` and `trajectoryFromModels`, with the
+  `TrajectoryData`, `TrajectoryInput`, `TrajectoryFrame`, `FrameSource` and
+  `TrajectoryTimeUnit` types. A `FrameSource` decodes frames on demand;
+  `trajectoryFromModels` plays a multi-model structure as frames over its first
+  model through `atomMap`.
 - `VolumeData`: an immutable grid with an index-to-world affine that may rotate
   and shear. New experimental `createVolume`, `validateVolume`,
   `MAX_VOLUME_SAMPLES`, `sampleVolume`, `volumeIndexToWorld`,

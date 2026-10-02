@@ -23,6 +23,7 @@ import {
   sameReadbackToken,
 } from "./internal/readback-token.ts";
 
+/** Latest completed CPU coordinates with their resource and local source generation. */
 export interface CoordinateSnapshot {
   readonly data: StructureData;
   readonly generation: number;

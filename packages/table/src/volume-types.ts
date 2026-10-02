@@ -1,5 +1,5 @@
 // Scalar/vector volume samples and their affine grid geometry.
-/** Input to `createVolume` / `validateVolume`. */
+/** Input to `createVolume`; its `values` array is adopted, not copied. */
 export interface VolumeInput {
   /**
    * Samples laid out x-fastest: grid point `(i, j, k)` is at
@@ -28,7 +28,7 @@ export interface VolumeGrid {
   readonly unit?: string;
 }
 
-/** A validated, immutable grid of samples with its index-to-world affine. */
+/** A validated grid of samples with its index-to-world affine. Arrays are read-only by contract. */
 export interface VolumeData {
   readonly values: Float32Array;
   readonly dims: readonly [number, number, number];

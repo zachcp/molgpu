@@ -321,6 +321,9 @@ const SurfaceResolved: ViewerComponent<
   });
 };
 
+/** Draw a solvent-excluded molecular surface around the selected atoms.
+ * Supported moving grids update GPU geometry; other cases use CPU snapshots.
+ * Resolution and probeRadius control geometry; color and opacity style it. */
 export const Surface: ViewerComponent<
   & {
     /** A molecular query or exact atom selection. Defaults to first-model/primary-altloc atoms. */

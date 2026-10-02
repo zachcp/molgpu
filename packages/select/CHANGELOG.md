@@ -2,14 +2,18 @@
 
 All notable changes to `@molgpu/select` are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); see
-[docs/RELEASING.md](../../docs/RELEASING.md) for the procedure.
+[release procedure](https://github.com/zachcp/molgpu/blob/main/docs/RELEASING.md)
+for the procedure.
 
 ## [Unreleased]
 
-- Follow Mol* 5.12.0 (molgpu-sept-lsq). Computed bond graphs give hydrogens that
-  a residue's chem_comp_bond template does not bond (e.g. N-terminal H1/H3)
-  distance-based bonds. `mass` uses Mol* 5.12's corrected atomic weights; the
-  carbon (12.011) divergence is gone, and iodine is now 126.9.
+- Clarify package examples, generated API documentation and data contracts;
+  remove internal work-tracking shorthand from published documentation.
+
+- Follow Mol* 5.12.0. Computed bond graphs give hydrogens that a residue's
+  chem_comp_bond template does not bond (e.g. N-terminal H1/H3) distance-based
+  bonds. `mass` uses Mol* 5.12's corrected atomic weights; the carbon (12.011)
+  divergence is gone, and iodine is now 126.9.
 
 - Add query-valued `and`/`or`/`not`, named structural/secondary-structure
   builders, declared numeric `attribute` queries and explicit model/conformer
@@ -23,11 +27,11 @@ All notable changes to `@molgpu/select` are recorded here. The format follows
 - Coordinate snapshots can retain the source chemical graph through
   `preserveBondGraph`, without changing declared or display bonds.
 
-- Fine secondary-structure flags (Phase 15, efv.6; closes 922.16). Each `ssCode`
-  maps to Mol*'s flags for its DSSP letter: alpha, 3-10 and pi helices, sheet
-  and bridge strands, turns and bends. VMD `structure` letters and PyMOL `ss`
-  lists match Mol* on imported and DSSP-computed secondary structure. An
-  imported helix whose class Mol* flags without alpha still carries alpha here.
+- Fine secondary-structure flags. Each `ssCode` maps to Mol*'s flags for its
+  DSSP letter: alpha, 3-10 and pi helices, sheet and bridge strands, turns and
+  bends. VMD `structure` letters and PyMOL `ss` lists match Mol* on imported and
+  DSSP-computed secondary structure. An imported helix whose class Mol* flags
+  without alpha still carries alpha here.
 - `secondary-structure-flags` reads the `ssCode` attribute (through
   `attributeColumn`) with an `attributes` dependency, so a new secondary-
   structure assignment re-resolves selections.
@@ -44,5 +48,5 @@ change in 0.x minor releases.
   and revision-bound `resolve`, set operations and atom/residue/bond domain
   conversions. `SelectionQuery` is opaque: only `type`, `domain`, `label` and
   `deps` are public.
-- `@molgpu/table` is a peer dependency, so an app holds one shared copy
-  (structure identity is module-private).
+- Depends on `@molgpu/table`. Align compatible JSR dependency ranges so the
+  application resolves one shared copy; structure identity is module-private.

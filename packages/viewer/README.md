@@ -13,7 +13,7 @@ scene. It runs in a browser with WebGPU only.
 ## Install
 
 ```sh
-deno add jsr:@molgpu/viewer jsr:@molgpu/table npm:@use-gpu/live@0.20.0 npm:@use-gpu/workbench@0.20.0 npm:@use-gpu/shader@0.20.0 npm:@use-gpu/core@0.20.0
+deno add jsr:@molgpu/viewer jsr:@molgpu/table npm:@use-gpu/live@0.20.0 npm:@use-gpu/webgpu@0.20.0 npm:@use-gpu/workbench@0.20.0 npm:@use-gpu/shader@0.20.0 npm:@use-gpu/core@0.20.0
 ```
 
 ### Dependency resolution
@@ -38,6 +38,10 @@ its re-exports do not expose `LoopContext` to Deno. Bundlers resolve the ESM
 
 ## Example
 
+Create an HTML element with `id="root"` and serve a BinaryCIF file at
+`/1crn.bcif`. Use the classic JSX transform with `React.createElement` from
+`@use-gpu/live` (imported below), then bundle and serve the application.
+
 ```jsx
 import { React, render } from "@use-gpu/live";
 import { AutoCanvas, WebGPU } from "@use-gpu/webgpu";
@@ -50,7 +54,7 @@ import {
 import { Spacefill, Structure } from "@molgpu/viewer";
 
 render(
-  <WebGPU>
+  <WebGPU fallback={null}>
     <AutoCanvas selector="#root" samples={4}>
       <OrbitCamera radius={40} target={[10.6, 10.2, 6.1]}>
         <Pass lights>
@@ -66,18 +70,14 @@ render(
 );
 ```
 
-Working, runnable examples: the typed consumer
-[`test/tsx/consumer.tsx`](test/tsx/consumer.tsx) and the project
-[`site`](../../site/README.md), whose maintained TSX demo composes public viewer
-components under an application-owned render tree.
+Working examples: the
+[typed consumer](https://github.com/zachcp/molgpu/blob/main/packages/viewer/test/tsx/consumer.tsx)
+and the project
+[site examples](https://github.com/zachcp/molgpu/blob/main/site/README.md),
+whose maintained TSX demo composes public viewer components under an
+application-owned render tree.
 
 ## Default view and selections
-
-Component signatures use concrete inline props or exported domain contracts.
-Named props are provided when useful independently; `<Ribbon>` and `<Cartoon>`
-share `RibbonProps`. `VectorLike` is the shared plain/typed vector contract for
-colours and spatial values. These supported types remain available from the
-existing entries; no alias migration is needed.
 
 A structure can retain several models and alternate conformers. Without a
 `select`, every molecular consumer (`<Spacefill>`, `<Bonds>`, `<Tube>`,
@@ -85,19 +85,15 @@ A structure can retain several models and alternate conformers. Without a
 fallbacks) uses one default view: the first model, with each residue's primary
 (highest-occupancy) conformer, as `activeAtoms` returns it. `select` is the one
 override and is taken exactly. It can reach another model or every conformer,
-for example `resolve(where("atom", "model 2", test), data)`, and it is never
-intersected with the default view. An empty selection draws nothing; a missing
-or `null` selection is the default view, never every retained row. Coordinate
-providers (`<Transform>`, `<Superpose>`, and so on) move every row, and their
-`select` chooses the transformed or fitted rows. `<GpuDssp>` takes its own
-`model`, defaulting to the first model. The resource's `bounds` cover every
-retained row.
+for example `select={model(2)}`, and it is never intersected with the default
+view. An empty selection draws nothing; a missing or `null` selection is the
+default view, never every retained row. Coordinate providers (`<Transform>`,
+`<Superpose>`, and so on) move every row, and their `select` chooses the
+transformed or fitted rows. `<GpuDssp>` takes its own `model`, defaulting to the
+first model. The resource's `bounds` cover every retained row.
 
-The
-[ordinary JSX decision](../../docs/findings/2026-10-01-ordinary-jsx-selection-styling-decision.md)
-and its counter-review amendment define the implemented `SelectionInput`
-contract. See [Query selections in JSX](#query-selections-in-jsx) for query
-defaults, scoped snapshots, diagnostics and publication timing.
+See [Query selections in JSX](#query-selections-in-jsx) for reusable queries and
+selection status callbacks.
 
 ## Transparency
 
@@ -107,18 +103,18 @@ colour's alpha. That works the same whether `color` is a flat colour or a
 transparent mode on its own. Add `oit` to the workbench `<Pass>` so overlapping
 translucent geometry composites correctly:
 
-```js
-use(Pass, {
-  lights: true,
-  oit: true,
-  children: use(Structure, {
-    data,
-    children: [
-      use(BallAndStick, { color: byElement() }),
-      use(Surface, { opacity: 0.3 }),
-    ],
-  }),
-});
+```tsx
+import { byElement } from "@molgpu/fields";
+import { BallAndStick, Structure, Surface } from "@molgpu/viewer";
+import { Pass } from "@use-gpu/workbench";
+
+// Inside the application-owned WebGPU, canvas and camera:
+<Pass lights oit>
+  <Structure src="/1crn.bcif">
+    <BallAndStick color={byElement()} />
+    <Surface opacity={0.3} />
+  </Structure>
+</Pass>;
 ```
 
 `opacity` is a uniform, so animating it never rebuilds or re-uploads geometry.
@@ -170,49 +166,40 @@ Ribbon/Tube include a residue only when its guide atom is selected; partial
 selections do not expand into whole residues, and missing guides break trace
 runs.
 
-Queries use the nearest Structure and coordinate/attribute scopes. Produced
-columns shadow CPU/outer columns from warmup. Named attribute queries subscribe
-only to their declared columns; opaque `where` predicates declaring attributes
-subscribe to all visible produced columns. Declare positions when a predicate
-reads them. Missing CPU columns follow the evaluator's error policy.
+Queries read the nearest `<Structure>` and any coordinate or attribute providers
+above the consumer. A GPU-produced column overrides the same CPU column. For
+custom `where` predicates, declare dependencies such as positions or attributes
+so membership updates when those inputs change.
 
-CPU selection snapshots publish on demand at **4 Hz and on pause**. They are
-**latest-published** inputs, with independent local generations: a combined
-coordinate/attribute query may use publications from different displayed frames.
-This is not same-frame synchronization. Spacefill/Bonds can draw live positions
-and colors ahead of snapshot membership. Ribbon/Tube/Surface and label/distance
-anchors also use published coordinate snapshots. Pure `focusSelection` evaluates
-the resource's CPU data; `useCoordinateFocus` resolves scoped membership and
-uses live GPU bounds, returning null while membership or bounds are unavailable.
+Queries that read GPU results evaluate CPU snapshots, published on demand at **4
+Hz and on pause**. Membership can lag live atoms and bonds; combined
+coordinate/attribute queries can use snapshots from different frames.
+`useCoordinateFocus` uses this membership with GPU bounds and returns null while
+membership or bounds are unavailable. `useCameraCurve` instead reads the CPU
+resource passed to it. See [Coordinate consumers](#coordinate-consumers) for
+which representations use live positions or snapshots.
 
-`onSelectionStatus` reports `pending`, `ready` (atom `count`, including zero,
-and `updating`) or `error` with a named cause. Reports identify the prop slot,
-query label, opaque owner/source IDs and each input's local generation. A ready
-status can retain the last complete input tuple with `updating: true` while the
-same sources publish newer data. Owner/source/layout/topology replacement
-withdraws it immediately. Callback reports change with the resolution tuple, not
-every redraw; Distance reports `a` and `b` separately. Coordinate scientific
-`onStatus` callbacks remain separate.
+Use `onSelectionStatus` to handle `pending`, `ready` or `error`. A ready report
+includes the atom `count` (zero is valid) and `updating`, which indicates that a
+new snapshot is pending. Reports also contain the prop slot, query label and
+source identities with local generations; those generations are comparable only
+within the same source. Reports change when resolution inputs change, rather
+than on every draw. Distance reports `a` and `b` separately.
 
-Pending/error draws no representation or label, passes coordinate-provider
-inputs through, and exposes no computed EField descendants. Ready-empty remains
-empty; it never becomes default membership. Selection failures stay at the
-consumer so siblings continue. Loader errors and GPU/render failures keep their
-own error paths. `warnEmptySelection` defaults false; opt in to one warning per
-stable empty query/source/revision tuple. Positional or produced-column queries
-never generate that warning.
+Pending or failed selections hide that consumer's representation or label;
+coordinate providers pass upstream positions through, and EField exposes no
+computed volume. Empty selections stay empty. Siblings continue rendering.
+`warnEmptySelection` opts into warnings for stable empty queries; it defaults
+false and excludes position-dependent or produced-column queries.
 
 ## Entries
 
-- **`@molgpu/viewer`** (`.`) uses the pinned use.gpu `LiveElement` through
-  `ViewerElement`, so molecular components compose with native Live scenes.
-  `ViewerComponent` remains a function returning that element (no `any` return).
-  Molecular values and material constants use owned types.
-- **`@molgpu/viewer/advanced`** holds the escape hatches for custom
-  representations and providers: CPU coordinate, volume and attribute snapshots,
-  the structure resource, GPU bounds, and use.gpu-shaped exports (shader
-  sources, Live contexts, coordinate providers). Declarations that name
-  `@use-gpu/*` types tie code using them to the pinned use.gpu version.
+- **`@molgpu/viewer`**: scene components, selection diagnostics, picking and
+  camera hooks. `ViewerElement` is compatible with the pinned use.gpu
+  `LiveElement`; `VectorLike` accepts plain or typed numeric arrays.
+- **`@molgpu/viewer/advanced`**: custom coordinate/attribute providers, GPU
+  sources, CPU snapshots and resource access. These APIs require familiarity
+  with the pinned use.gpu version.
 
 ### Material constants and wrappers
 
@@ -243,18 +230,11 @@ material shaders. Native wrappers can supply lazy values, shader maps, render
 callbacks and the full upstream color syntax. Native wrappers use upstream
 material defaults (PBR roughness 0.5 unless specified).
 
-Migration: arbitrary object children no longer type-check. `ViewerElement` is
-now a native `LiveElement`; viewer components still have a checked return type.
-`MaterialSpec` no longer forwards arbitrary properties in TypeScript. Correct
-misspelled keys and move shader maps, lazy scalars, string/packed colors and
-render callbacks into a native wrapper as above. Constant colors use numeric
-arrays or typed arrays. These compile-time restrictions leave existing runtime
-material dispatch intact.
-
 ## API
 
 Stability: _stable_ — relied on by the examples and settled; _experimental_ —
-may change before 0.1.0; _advanced_ — only from `@molgpu/viewer/advanced`.
+may change in 0.x minor releases; _advanced_ — only from
+`@molgpu/viewer/advanced`.
 
 | Name                      | Stability    | Description                                                                                                                                                                                                             |
 | ------------------------- | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -312,7 +292,7 @@ may change before 0.1.0; _advanced_ — only from `@molgpu/viewer/advanced`.
 | `Translucency`            | stable       | `opacity` (0–1, a uniform) and `mode`, shared by every representation.                                                                                                                                                  |
 | `DrawMode`                | stable       | `'opaque' \| 'transparent'`; transparent is chosen automatically when colour alpha × opacity < 1.                                                                                                                       |
 | `PointLayerOptions`       | experimental | Point-layer flags `<Spacefill>` forwards.                                                                                                                                                                               |
-| `useCoordinateFocus`      | experimental | Nonblocking selection focus from GPU bounds; starts with root framing.                                                                                                                                                  |
+| `useCoordinateFocus`      | experimental | Focus nearest coordinates using GPU bounds; returns null while inputs are pending.                                                                                                                                      |
 | `SelectionInput`          | experimental | Query, exact resolved atom selection, or default/null membership.                                                                                                                                                       |
 | `SelectionSource`         | experimental | Opaque input owner/source and local generation diagnostics.                                                                                                                                                             |
 | `SelectionStatus`         | experimental | Pending, ready(count/updating), or named selection error with source tuple.                                                                                                                                             |
@@ -395,8 +375,29 @@ coordinates and a charge column on the GPU, so the representations below it work
 as they do under `<Volume>`:
 
 ```tsx
-<Structure data={withAttributes(data, { partialCharge })}>
-  <EField select={protein}>
+import { withAttributes } from "@molgpu/table";
+import { protein } from "@molgpu/select";
+import { byPotential } from "@molgpu/fields";
+import {
+  EField,
+  FieldLines,
+  Isosurface,
+  Structure,
+  Surface,
+} from "@molgpu/viewer";
+
+// `data` is StructureData; `charges` has one Float32 value per atom, in elementary charges.
+const charged = withAttributes(data, {
+  partialCharge: {
+    domain: "atom",
+    kind: "scalar",
+    values: charges,
+    provenance: "user",
+  },
+});
+
+<Structure data={charged}>
+  <EField select={protein()}>
     <Surface color={byPotential()} />
     <Isosurface level={5} color={[0.3, 0.4, 1, 1]} />
     <FieldLines seeds={{ spacing: 4 }} colorRange={[0, 2]} />
@@ -405,9 +406,9 @@ as they do under `<Volume>`:
 ```
 
 Assign charges first with `templateCharges` (@molgpu/dynamics), `applyPqr` or
-`structureFromPqr`; a missing column throws by name. Only the first model's
-primary-conformer atoms are summed. Pass a `select` that leaves out water if the
-charges include it.
+`structureFromPqr`; a missing column throws by name. By default, only the first
+model's primary conformers are summed. An explicit `select` overrides this view.
+Exclude water if its charges should not contribute.
 
 - **Physics.** The default model is a distance-dependent dielectric (ε = 4r,
   ChimeraX's coulombic default). `model="debye"` screens with an ionic strength,
@@ -416,10 +417,9 @@ charges include it.
   Poisson–Boltzmann: import an APBS map with `<Volume>` for that.
 - **Grid.** The grid is placed around selected atoms with nonzero CPU charges,
   padded by 8 Å at 1 Å spacing, or set with `box`. GPU-produced charges use all
-  selected active atoms for bounds. It stays fixed while coordinates move.
-- **Cost.** Direct summation runs at about 2e10 pairs per second on an Apple
-  silicon laptop. `maxPairs` (samples × charged atoms, default 2³⁴) refuses
-  larger sums and names a spacing that fits.
+  selected atoms for bounds. It stays fixed while coordinates move.
+- **Cost.** `maxPairs` (samples × charged atoms, default 2³⁴) refuses larger
+  sums and names a spacing that fits.
 - **Live updates.** Each coordinate generation recomputes on the GPU, one
   computation at a time. Slices, `volumeSample()` colours, field lines and
   arrows follow live. `<Isosurface>` follows CPU snapshots.
@@ -433,7 +433,13 @@ charges include it.
 re-provides coordinates: each atom moves with its residue's guide node.
 
 ```tsx
-const network = elasticNetworkData(snapshot.positions, snapshot.topology, {
+import { elasticNetworkData } from "@molgpu/dynamics";
+import { frameCurve } from "@molgpu/timeline";
+import { ElasticNetwork, Spacefill } from "@molgpu/viewer";
+
+// `data` is your reference StructureData; put this provider beneath Structure
+// and TimelineProvider. `setStatus` is the application's status callback.
+const network = elasticNetworkData(data.positions, data.topology, {
   version: 1,
 }); // CA guides, 15 Å springs, k = 1 kcal/mol/Å²
 
@@ -455,12 +461,12 @@ projected off rigid-body motion, so the molecule neither drifts nor rotates. A
 residue moves rigidly with its CA, so side chains do not rotate and peptide
 bonds stretch with neighbouring node displacements. Live representations
 (`<Spacefill>`, `<BallAndStick>`) follow every generation; `<Ribbon>`, `<Tube>`
-and `<Surface>` read coordinate snapshots and follow at the snapshot rate. At
-about 100k atoms (12k CA nodes) an Apple M-series GPU runs about 1,500 steps/s,
-so the default 20 steps per frame costs about 13 ms; `status.lagging` reports
-when the budget trails the target.
+read coordinate snapshots and follow at the snapshot rate. `<Surface>` uses GPU
+updates where supported, otherwise snapshots. `status.lagging` reports when the
+integration budget trails the target; performance depends on the network and
+GPU.
 
-## Attribute channels
+## Computed attributes
 
 `<AttributeProducer>` from `@molgpu/viewer/advanced` computes one `f32` atom or
 residue column from a WGSL kernel and makes it available to descendant fields as
@@ -487,6 +493,8 @@ and reruns CPU DSSP; an overflow on a static `<Structure>` raises
 `onStatus` reports the bridge count, direct near-threshold acceptor and bend
 centres (excluding dependent residues), and the fallback reason if any.
 
+## Ribbon and cartoon
+
 `<Ribbon>` is a port of the polymer-trace visual of Mol*'s default Cartoon: one
 segment per residue, helices as flat elliptical ribbons, coil as a round tube,
 sheets as flat boxes whose last residue forms an arrowhead, and nucleic strands
@@ -508,38 +516,40 @@ rounded profiles and cyclic polymers.
 
 ## Coordinate consumers
 
-`<Spacefill>` and `<Bonds>` read the nearest GPU coordinate source each draw.
-`<Ribbon>`, `<Tube>`, `<Label>`, and `<Distance>` rebuild from the latest
-`useCoordinateSnapshot()` result. Snapshots are shared below each provider,
-default to 4 Hz during motion, and publish once more after a pause. `<Surface>`
-rebuilds supported moving-coordinate grids on the GPU, with one job in flight
-and the latest request winning; root/static coordinates and unsupported GPU
-cases use the CPU snapshot fallback. They are asynchronous; CPU geometry is
-absent until the first snapshot arrives. The latest completed positions can
-remain visible during an update to the same source; replacing the source buffer
-or structure starts pending again. `useCoordinateSelection()` resolves `within`
-and other position-dependent queries against that snapshot. Topology-only
-queries resolve directly against the root data. Picking keeps atom-row IDs, so
-its result follows live geometry. `useCoordinateBounds()` reduces
-min/max/centroid on the GPU and reads back only the partials;
-`useCoordinateFocus()` applies radius padding for camera targets. Spacefill,
-Bonds and BallAndStick draw one copy per assembly operator in
-`topology.instances` (an identity-only table draws as is): each copy applies its
-operator to the nearest live coordinates, after every coordinate provider, and
-draws only its chains' rows. Atoms are never duplicated. Ribbon, Tube and
-Surface build their CPU geometry once per group of copies sharing the same
-chains, in model space, and draw it under each copy's operator, so assembly
-copies never multiply geometry builds or coordinate snapshots. Camera framing
-covers every copy (`focusSelection` exactly per copy; `useCoordinateFocus` by
-transforming the selection's GPU bounds with each operator), and a pick on a
-copy reports its `operatorId`. `<Label>` and `<Distance>` draw once per copy
-that holds their atoms, anchored with that copy's coordinates; a label with an
-explicit `at` draws once. `useCameraCurve()` remains a CPU resource operation;
-pass a snapshot resource when using it under a coordinate provider. The
-snapshot, selection and bounds hooks are on `@molgpu/viewer/advanced`.
+| Consumer                       | Coordinate input                                                                                |
+| ------------------------------ | ----------------------------------------------------------------------------------------------- |
+| Spacefill, Bonds, BallAndStick | Nearest GPU coordinates on every draw.                                                          |
+| Ribbon, Tube, Label, Distance  | Shared CPU snapshots, normally 4 Hz during motion and once more on pause.                       |
+| Surface                        | GPU geometry updates for supported moving grids; CPU snapshots for static or unsupported cases. |
+| useCoordinateFocus             | GPU bounds with selection membership from published inputs.                                     |
+| useCameraCurve                 | CPU data from the resource explicitly passed to the hook.                                       |
 
-The [coordinate-stream gallery page](../../site/README.md) scrubs a wobble
-transform with live atoms and bonds, snapshot ribbon, and GPU focus.
+Snapshots and geometry jobs are asynchronous. Geometry can be absent until the
+first result arrives. During updates to the same source, the last completed
+result can remain visible; replacing the source buffer or structure starts
+pending again. Surface runs one job at a time, with the latest request winning.
+Picking returns atom-row identities for the geometry being drawn.
+
+The snapshot, selection and bounds hooks are in `@molgpu/viewer/advanced`.
+`useCoordinateSelection` reads published positions and root CPU attributes; use
+a component `select` prop to query GPU-produced attributes. To use
+`useCameraCurve` below a coordinate provider, pass a snapshot resource.
+
+### Assembly copies
+
+Representations draw one copy per assembly operator in `topology.instances`,
+using only that copy's chains. Identity-only tables draw as supplied. Operators
+apply after coordinate providers, so every copy follows the nearest positions
+without duplicating atoms. Ribbon, Tube and Surface share geometry among copies
+with the same chains.
+
+Camera framing covers every copy. A picked atom reports its `operatorId`. Label
+and Distance draw once per copy containing their selected atoms; a label with an
+explicit `at` draws once.
+
+The
+[coordinate examples](https://github.com/zachcp/molgpu/blob/main/site/README.md)
+scrub a transform with live atoms and bonds, snapshot ribbon and GPU focus.
 
 ## Authoring a coordinate provider
 
@@ -552,29 +562,15 @@ buffer (destroyed on unmount). Its generation identifies requested content;
 then follows queue order, while CPU snapshots appear after a mapped copy. The
 kernel links `getSize()`, one getter per arg, one per extra `sources` entry,
 then `getInput(i) -> vec3<f32>`, and writes `output[i * 3u + k]`.
-[`site/src/demos/coordinates.ts`](../../site/src/demos/coordinates.ts) is a
-complete example.
+[coordinate provider example](https://github.com/zachcp/molgpu/blob/main/site/src/demos/coordinates.ts)
+is a complete example.
 
-## Place in the dependency graph
+## Dependencies
 
-`viewer` is the top of the graph. It depends on `@molgpu/table`, `io`, `select`,
-`fields`, `geo`, `dynamics` (including `./wgsl`) and `timeline`; no other
-workspace package depends on it. It is the only package that imports
-`@use-gpu/live`, `@use-gpu/workbench` or `@use-gpu/shader`, and the only one
-allowed to expose use.gpu types. The main entry uses native `LiveElement`
-through `ViewerElement`; other upstream types belong to `./advanced`. It must
-not import `molstar` at runtime: Mol* parsing goes through `@molgpu/io`, which
-`<Structure src>` loads lazily. Consumers must not reach into `src/internal`.
-
-## Browser smoke check
-
-The package cannot be imported in Node, so the hardening checker only resolves
-its entries. The browser proof is `deno task test:components`
-(`test/run-components.mjs`): it typechecks `test/tsx/consumer.tsx` against the
-published types, builds it with vite, and drives it in Chrome with WebGPU
-(preloaded, empty, sibling, loaded, missing, cancelled and retried structures,
-and src/data switches, with no uncaptured WebGPU errors). `deno task test:site`
-additionally checks the project landing page and maintained demo route.
+The viewer combines the renderer-free `@molgpu/*` packages with use.gpu Live,
+workbench and shader APIs. BinaryCIF parsing loads lazily through `@molgpu/io`;
+preloaded `<Structure data={data}>` does not load a parser. Use the main or
+advanced public entry instead of importing source files.
 
 ## Source replacement and cancellation
 
@@ -596,7 +592,7 @@ into a replacement.
 
 ### Presentation and retry
 
-Structure and Volume are dataset gates: while a `src` request is pending they
+Structure and Volume wait for a dataset: while a `src` request is pending they
 render `loading`, on failure they render `error(failure)`, and their subtree
 mounts only with the loaded data. Trajectory layers coordinates over an existing
 structure, so it renders its children with upstream coordinates while opening. A
@@ -626,5 +622,4 @@ return [<Structure key={`attempt-${attempt}`} src={src} error={onFailure} />];
 ```
 
 Switching the same element between `src` and `data` mounts `data` immediately
-and cancels any pending request; switching back to `src` shows `loading`, never
-the previous data. `test/run-components.mjs` (case 7b) asserts each transition.
+and cancels any pending request; switching back to `src` shows `loading`.

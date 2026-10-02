@@ -1,3 +1,10 @@
+/**
+ * Import structures, trajectories, selection expressions and volume maps into
+ * plain molecular data. Parsers load on demand; import failures use `IoError`.
+ * Coordinates are in Ångström. See the README for format and transport examples.
+ *
+ * @module
+ */
 export type { FileInput } from "./input.ts";
 export type {
   ByteSource,

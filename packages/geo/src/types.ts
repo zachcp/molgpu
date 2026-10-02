@@ -1,8 +1,9 @@
 // Pure geometry kernels: typed arrays and plain vec3 arrays in, owned typed
 // arrays out. No Mol*, use.gpu, or GPU types.
 
+/** Scalar grid and world-coordinate mapping for isosurface extraction. */
 export interface MarchingCubesInput {
-  /** Scalar grid, x-major: `values[x + nx * (y + ny * z)]`. */
+  /** Scalar grid, x-fastest: `values[x + nx * (y + ny * z)]`. */
   readonly values: Float32Array;
   /** Grid dimensions `[nx, ny, nz]`, each an integer ≥ 2. */
   readonly dims: readonly [number, number, number];
@@ -20,6 +21,7 @@ export interface MarchingCubesInput {
   readonly transform?: ArrayLike<number>;
 }
 
+/** Owned mesh arrays; positions and normals are packed xyz, indices are triangle triples. */
 export interface MarchingCubesMesh {
   readonly positions: Float32Array;
   readonly normals: Float32Array;

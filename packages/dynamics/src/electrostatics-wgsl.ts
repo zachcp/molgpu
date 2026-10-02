@@ -9,8 +9,8 @@ export const COULOMB_CUTOFF_BRICK: readonly [number, number, number] = Object
   .freeze([16, 4, 4]);
 
 /**
- * WGSL for tiled direct Coulomb summation (see `coulombPotential` for the
- * physics), in three entry points of one module:
+ * WGSL for tiled direct Coulomb summation with physics configured by
+ * `electrostatics`, in five entry points of one module:
  *
  * 1. `packAtoms` (one invocation per summed atom): gathers `(x, y, z, q)` from the
  *    live packed-xyz positions and the per-row charge column through a row

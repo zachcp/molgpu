@@ -64,7 +64,10 @@ export const identityKey = (
  * `fields`, which must include a chain field so a bare sequence number can never
  * be the whole key. Rows with no record are `missing` (policy `fallback` or
  * `fail`); records that collide on a key follow `duplicate` (`error`/`first`/
- * `last`). A residue/chain annotation is lifted to atoms unless `lift` is false.
+ * `last`). Residue annotations lift to atoms by default; `lift: false` retains
+ * residue rows. Chain annotations require lifting because fields have only atom
+ * and residue domains. Include model and insertion-code fields when needed to
+ * distinguish records.
  */
 export function joinAnnotation<R>(
   data: StructureData,

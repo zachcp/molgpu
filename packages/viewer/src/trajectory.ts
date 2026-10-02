@@ -482,8 +482,7 @@ const defaultLoader: TrajectoryLoader = async (src, cancelled, signal) => {
 };
 
 /**
- * Play a trajectory over the nearest coordinates (a coordinate provider,
- * INVARIANT 6): descendants see its frames; topology never changes. `frame`
+ * Play a trajectory over the nearest coordinates (a coordinate provider): descendants see its frames; topology never changes. `frame`
  * is a fractional frame or a timeline curve. Frames stream on demand; until
  * the first one lands, and for rows outside `atomMap`, upstream coordinates
  * show. With `src`, children render unmoved while the file opens and stay

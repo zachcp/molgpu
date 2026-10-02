@@ -14,6 +14,7 @@ export interface Atoms {
   /** Per-atom chemical component, present only when some residue mixes components (microheterogeneity); residues.comp is then the residue's first atom's. */
   readonly comp?: readonly string[];
 }
+/** Residue columns; atom rows reference these through `Atoms.residue`. */
 export interface Residues {
   readonly count: number;
   readonly chain: Uint32Array;
@@ -26,6 +27,7 @@ export interface Residues {
   /** 1 when the residue's first atom is not a group_PDB ATOM record (a HETATM). Absent when the source has no group_PDB. */
   readonly het?: Uint8Array;
 }
+/** Chain identifiers and model membership; residue rows reference `chain`. */
 export interface Chains {
   readonly count: number;
   readonly model: Int32Array;
@@ -38,6 +40,7 @@ export interface Chains {
   /** Entity subtype as Mol* assigns it (entity_poly / pdbx_entity_branch type, else derived from the component: "polypeptide(L)", "oligosaccharide", "other", ...). Absent with entityId. */
   readonly entitySubtype?: readonly string[];
 }
+/** Declared or inferred atom-pair connectivity with order and provenance. */
 export interface Bonds {
   readonly count: number;
   readonly a: Uint32Array;
@@ -73,6 +76,7 @@ export interface Instances {
   readonly operatorId: readonly string[];
   readonly transform: Float64Array;
 }
+/** Column tables for atoms, residues, chains, bonds and assembly instances. */
 export interface Topology {
   readonly atoms: Atoms;
   readonly residues: Residues;
@@ -81,11 +85,14 @@ export interface Topology {
   readonly instances: Instances;
   readonly links?: Links;
 }
+/** Unvalidated topology and packed XYZ coordinates in Å, copied by `createStructure`. */
 export interface StructureInput {
   readonly topology: Topology;
   readonly positions: Float32Array;
 }
+/** Row domain of a numeric attribute column. */
 export type AttributeDomain = "atom" | "residue";
+/** Supported numeric typed arrays for attribute columns. */
 export type AttributeValues =
   | Float32Array
   | Int8Array
@@ -101,17 +108,20 @@ export type AttributeProvenance =
   | `template:${string}`
   | `computed:${string}`
   | `gpu:${string}`;
+/** A numeric column and its row domain, interpretation and provenance. */
 export interface AttributeColumnInput {
   readonly domain: AttributeDomain;
   readonly values: AttributeValues;
   readonly provenance: AttributeProvenance;
   readonly kind: "scalar" | "code";
 }
+/** Named, immutable-by-contract numeric column resolved by `attributeColumn`. */
 export interface AttributeColumn extends AttributeColumnInput {
   readonly name: string;
 }
 /** Private nominal brand for dataset identity; deliberately not exported. */
 declare const brand: unique symbol;
+/** Validated structure with stable dataset identity and per-stream revisions. */
 export interface StructureData extends StructureInput {
   readonly identity: { readonly [brand]: true };
   readonly attributes?: Readonly<Record<string, AttributeColumn>>;

@@ -3,7 +3,9 @@ import { resolve, type Selection, type SelectionQuery } from "@molgpu/select";
 import { useCoordinateSnapshot } from "./coordinate-snapshot.ts";
 import { useStructureResource } from "./structure-context.ts";
 
-/** Resolve a reusable query against published positions when it reads them. */
+/** Resolve a query against published positions and root CPU attributes.
+ * Returns null while a required coordinate snapshot is pending. This hook does
+ * not merge GPU-produced attributes; use component select props for those. */
 export function useCoordinateSelection(
   query: SelectionQuery,
 ): Selection | null {

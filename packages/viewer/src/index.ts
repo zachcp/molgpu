@@ -1,6 +1,11 @@
-// The "." entry: components and the hooks an application composes with. It names
-// the pinned LiveElement through ViewerElement (hardening H3); other use.gpu
-// types and resource-level escape hatches live in ./advanced.ts.
+/**
+ * Molecular scene components for a caller-owned use.gpu WebGPU scene.
+ * Put representations beneath Structure; the application supplies its canvas,
+ * device, camera, lights and render pass. Selection props accept reusable queries
+ * or exact atom selections. Advanced GPU and snapshot APIs use the /advanced entry.
+ *
+ * @module
+ */
 export type {
   BlendMode,
   CameraCurve,

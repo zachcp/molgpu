@@ -1,5 +1,6 @@
 import type { AffineMatrix } from "./affine.ts";
 
+/** Rigid fit result; the matrix can transform every row, not only fit rows. */
 export interface KabschFit {
   /** Column-major proper rigid transform mapping source into reference. */
   readonly matrix: AffineMatrix;

@@ -1,3 +1,10 @@
+/**
+ * Advanced shader sources, buffer layouts and dispatch helpers for molecular
+ * computation. The caller compiles shaders, owns GPU resources and orders
+ * dispatches. Individual exports document their binding and uniform contracts.
+ *
+ * @module
+ */
 // @molgpu/dynamics/wgsl: WGSL sources, buffer layouts and dispatch planning
 // for the GPU paths in @molgpu/viewer. Strings and plain data only; this
 // package still never imports @use-gpu/*.

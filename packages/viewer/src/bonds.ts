@@ -346,6 +346,8 @@ const BondsResolved: ViewerComponent<
   );
 };
 
+/** Draw bond sticks from the nearest live GPU coordinates. Select queries or
+ * exact atom selections; both endpoints must match unless endpoints is either. */
 export const Bonds: ViewerComponent<
   & {
     /** Stick width; defaults to 0.3. */

@@ -38,15 +38,36 @@ const atoms = new Float32Array([2, 3.5, 3.5, 5, 3.5, 3.5]);
 const owner = nearestAtomAttribution(mesh.positions, atoms, 4); // Uint32Array per vertex
 ```
 
-The ribbon kernels are driven one segment at a time. See
-`packages/viewer/src/internal/ribbon-geometry.ts` for a complete caller (an
-internal reference, not an import path):
+The ribbon kernels fill reusable buffers for one curve segment:
 
-```js
-const state = createCurveSegmentState(linearSegments);
-interpolateCurveSegment(state, controls, 0.5, 0.5); // points, tangents, normals, binormals
-interpolateSizes(state, w0, w1, w2, h0, h1, h2, 0.5); // widths and heights
+```ts
+import {
+  createCurveSegmentState,
+  interpolateCurveSegment,
+  interpolateSizes,
+} from "@molgpu/geo";
+
+const state = createCurveSegmentState(8); // 9 samples
+const controls = {
+  p0: [0, 0, 0],
+  p1: [1, 0, 0],
+  p2: [2, 0.5, 0],
+  p3: [3, 0.5, 0],
+  p4: [4, 0, 0],
+  d12: [0, 0, 1],
+  d23: [0, 0, 1],
+  secStrucFirst: false,
+  secStrucLast: false,
+};
+interpolateCurveSegment(state, controls, 0.5, 0.5);
+interpolateSizes(state, 1, 1, 1, 0.2, 0.2, 0.2, 0.5);
+console.log(state.curvePoints, state.widthValues);
 ```
+
+Both interpolators mutate `state`. Copy its arrays before reusing it when a
+consumer needs to retain an earlier segment. The example produces a segment
+centered on `p2`, halfway toward each adjacent guide point; direction vectors
+orient its cross-section.
 
 `origin`/`spacing` are shorthand for a diagonal index-to-world affine. Normals
 use its inverse transpose, and negative determinant transforms reverse triangle
@@ -56,7 +77,7 @@ winding. Both forms validate the affine before extracting geometry.
 
 | Export                    | Stability    | Description                                                                        |
 | ------------------------- | ------------ | ---------------------------------------------------------------------------------- |
-| `marchingCubes`           | stable       | Indexed isosurface mesh from an x-major scalar grid.                               |
+| `marchingCubes`           | stable       | Indexed isosurface mesh from an x-fastest scalar grid.                             |
 | `MarchingCubesInput`      | stable       | Grid, isovalue, and origin/spacing or a full index-to-world affine `transform`.    |
 | `MarchingCubesMesh`       | stable       | Positions, normals, indices and counts returned by `marchingCubes`.                |
 | `marchingCubesTables`     | experimental | The lookup tables `marchingCubes` reads, packed flat (for example for a GPU port). |
@@ -71,14 +92,6 @@ winding. Both forms validate the affine before extracting geometry.
 The curve-segment kernels are experimental because they mirror Mol*'s
 mutable-state calling convention. They may later be wrapped in a whole-trace
 API.
-
-## Place in the graph
-
-`geo` sits at the bottom of the graph next to `@molgpu/table`, and
-`@molgpu/viewer` consumes it. It must not import Mol* or any `@use-gpu/*`
-package at runtime, and it has no dependencies at all (see `docs/DESIGN.md`).
-This is what keeps it renderer-free for a future headless backend. The tests may
-import Mol* as a golden-file oracle.
 
 ## Provenance
 

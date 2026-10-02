@@ -239,6 +239,8 @@ const DistanceResolved: ViewerComponent<{
   ]);
 };
 
+/** Text anchored to selected atom centroids, using published coordinates.
+ * Requires FontLoader and SDFFontProvider ancestors; at overrides the anchor. */
 export const Label: ViewerComponent<
   {
     select?: SelectionInput;
@@ -277,6 +279,8 @@ const LabelOnce: typeof Label = (props) =>
  */
 const LabelCopies = withInstances(LabelOnce);
 
+/** Line and distance label between two selection centroids, in angstroms.
+ * Anchors follow published coordinate snapshots; font providers are required. */
 export const Distance: ViewerComponent<
   {
     a: SelectionInput;

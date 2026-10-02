@@ -1,3 +1,10 @@
+/**
+ * Deterministic timeline values sampled at explicit times in seconds.
+ * Create named beats with createTimeline, keyframe curves with createCurve,
+ * and read values with sample. This package has no clock or renderer.
+ *
+ * @module
+ */
 import {
   automatic,
   bezier,
@@ -11,10 +18,12 @@ import {
 /** A sampled curve value: a number, or a fresh fixed-width vector. */
 export type CurveValue = number | readonly number[];
 
+/** A named instant in seconds. */
 export interface Beat {
   readonly name: string;
   readonly time: number;
 }
+/** Immutable named beats; look up an anchor with time(name). */
 export interface Timeline {
   readonly unit: "seconds";
   readonly beats: readonly Beat[];
@@ -46,6 +55,7 @@ export interface Curve<T extends CurveValue> {
   readonly extrapolate: "clamp" | "loop";
 }
 
+/** Interpolation and out-of-range behavior for createCurve. */
 export interface CurveOptions {
   /** `'angle'` interpolates along the short arc. Default `'number'`. */
   readonly type?: "number" | "angle";
@@ -86,7 +96,7 @@ const freezeFrame = (frame: Frame): Frame =>
     ]) as Knots,
   });
 
-/** Named instants in one global clock. Beats need unique nonempty names and
+/** Named instants on a caller-controlled timeline. Beats need unique nonempty names and
  * times strictly increasing from 0 or later. All times are seconds. */
 export function createTimeline(beats: readonly Beat[]): Timeline {
   if (!Array.isArray(beats) || !beats.length) {
@@ -263,7 +273,7 @@ const checkPlayback = (p: { fps: number; start?: number }) => {
  * `i` starts at `start + i / fps`. It maps `[start, start + frames / fps]` to
  * `[0, frames]`; a trajectory clamps to its last frame, so every frame,
  * including the last, is on screen for `1 / fps` (and a looped curve does not
- * skip the last frame). Before `start` it holds frame 0.
+ * skip the last frame). Without looping, times before `start` hold frame 0; looped curves wrap.
  */
 export function frameCurve(playback: FramePlayback): Curve<number> {
   checkPlayback(playback);
@@ -287,7 +297,8 @@ export function frameTime(
   return (playback.start ?? 0) + frame / playback.fps;
 }
 
-/** Pure arbitrary-time sample in seconds. Throws TypeError for non-finite time.
+/** Pure arbitrary-time sample in seconds. Throws TypeError for non-finite time
+ * or a curve not created by this installed copy of the package.
  * Repeated, reversed and out-of-range reads do not depend on wall time or
  * previous samples. Returned vectors are fresh arrays the caller owns. */
 export function sample<T extends CurveValue>(curve: Curve<T>, time: number): T {

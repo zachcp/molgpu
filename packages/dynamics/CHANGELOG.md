@@ -1,9 +1,11 @@
 # Changelog
 
-All notable changes to `@molgpu/dynamics` are recorded here. See
-[docs/RELEASING.md](../../docs/RELEASING.md) for the release procedure.
+All notable changes to `@molgpu/dynamics` are recorded here.
 
 ## [Unreleased]
+
+- Clarify package usage and data ownership, add complete examples, and remove
+  internal planning references from public documentation.
 
 - The manifest `license` is now `MIT` (JSR rejects compound SPDX expressions);
   the BSD-3-Clause PDB2PQR notice still ships as `LICENSE-PDB2PQR`.

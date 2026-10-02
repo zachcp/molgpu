@@ -2,6 +2,7 @@
 // getElementFromAtomicNumber table; uppercase output preserves MolQL's
 // core.element-symbol values, including its legacy Uut/Uup/Uus/Uuo spellings.
 // D and T are accepted as hydrogen aliases; 0 is the unknown element.
+/** Uppercase MolQL-compatible element symbols indexed by atomic number; 0 is unknown. */
 export const ELEMENT_SYMBOL: readonly string[] = Object.freeze([
   "",
   "H",

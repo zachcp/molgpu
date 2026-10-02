@@ -3,18 +3,15 @@
 // Pure geometry (a uniform-grid nearest-neighbor search), no Mol* types.
 
 /**
- * `atomIndex[v]` = the atom in `atomPositions` nearest to vertex `v` of
- * `positions`, exactly (never approximate). `cellSize` is a performance
- * hint, not a correctness bound: pass roughly the largest expected
- * vertex-to-nearest-atom distance (for a molecular surface: probe radius +
- * the largest atom radius + the field resolution). A radius-2 cell window
- * (5x5x5) around a vertex is searched first; if the closest atom found
- * there is within `2 * cellSize` of the vertex, no atom outside the window
- * could possibly be closer — an unsearched cell at Chebyshev distance 3 is
- * always at least `2 * cellSize` away — so that result is certified
- * correct. Widely scattered atoms widen the effective cell size to bound the
- * grid's memory; the same certificate then uses the wider size. Otherwise (including an empty window) this falls back to an
- * exhaustive scan, which is always correct, only slower.
+ * Return the nearest atom index for each vertex, using packed xyz coordinates
+ * in the same units and coordinate frame. Inputs are unchanged; output has
+ * one `u32` per vertex. At least one atom is required.
+ *
+ * `cellSize` is a positive finite performance hint, not a distance cutoff.
+ * For molecular surfaces, start with probe radius + largest atom radius +
+ * grid spacing. A bounded grid search is used when it can certify the nearest
+ * result; otherwise the function scans all atoms. Scattered atoms widen cells
+ * to limit grid memory. Supply finite coordinates.
  */
 export function nearestAtomAttribution(
   positions: Float32Array,

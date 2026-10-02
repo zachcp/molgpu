@@ -22,7 +22,7 @@ export const MAX_ELASTIC_DIM = 192;
 /** How `solveElasticModes` diagonalises the Hessian or Kirchhoff matrix. */
 export interface ElasticSolveOptions {
   /**
-   * `"dense"` is exact Jacobi and limited to `MAX_ELASTIC_DIM`; `"lanczos"` is
+   * `"dense"` uses Jacobi rotations, limited to 192 scalar dimensions; `"lanczos"` is
    * sparse and matrix-free. `"auto"` (the default) picks dense up to the
    * limit and Lanczos above it.
    */

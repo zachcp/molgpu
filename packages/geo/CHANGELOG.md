@@ -1,10 +1,12 @@
 # Changelog
 
 All notable changes to `@molgpu/geo` are recorded here. The format follows
-[Keep a Changelog](https://keepachangelog.com/en/1.1.0/); see
-[docs/RELEASING.md](../../docs/RELEASING.md) for the procedure.
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
+
+- Clarify package usage and data ownership, add complete examples, and remove
+  internal planning references from public documentation.
 
 - Marching-cubes origin/spacing now use the full affine normal and reflection
   rules; transforms are validated before scalar-cell construction.

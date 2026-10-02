@@ -2,9 +2,13 @@
 
 All notable changes to `@molgpu/viewer` are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); see
-[docs/RELEASING.md](../../docs/RELEASING.md) for the procedure.
+[release guide](https://github.com/zachcp/molgpu/blob/main/docs/RELEASING.md)
+for the procedure.
 
 ## [Unreleased]
+
+- Clarify published documentation, correct public-entry examples and add JSR
+  module summaries. Documentation changes only.
 
 - `<Superpose to="first">` passes upstream coordinates through during trajectory
   opening/replacement and first-reference read failures. `SuperposeStatus` now
@@ -263,47 +267,46 @@ All notable changes to `@molgpu/viewer` are recorded here. The format follows
 - Add experimental `<NormalMode mode amplitude frequency phase>` for precomputed
   guide-node modes. Its animation changes a uniform and composes with
   Trajectory. Only a zero `amplitude` passes through; an animated scale that
-  lands on zero keeps the kernel and its mode buffers mounted (9g3.10).
+  lands on zero keeps the kernel and its mode buffers mounted.
 - `<Ribbon secondaryStructure="dssp">` runs DSSP on each coordinate snapshot it
   draws, so codes always come from the displayed coordinates (under a
   `<Trajectory>` or any coordinate provider). DSSP covers every model the drawn
   atoms belong to, so a selection of model 2 (or of several models) gets its own
-  models' codes (efv.10). The default, `"model"`, draws the structure's `ssCode`
-  (Phase 15, efv.8).
+  models' codes. The default, `"model"`, draws the structure's `ssCode`.
 - `<Ribbon>` and `<Tube>` key their trace on topology and coordinates only, so
   an attribute edit (charges, a new `ssCode`) no longer rebuilds it. `<Ribbon>`
   rebuilds its mesh only when the cartoon projection of `ssCode` changes.
-- Derived attribute channels (Phase 10): shared GPU column uploads across
-  representations, an advanced `AttributeProducer` for kernel-written columns,
-  and demand-driven `useAttributeSnapshot` CPU readback. `byChain()` now reads
-  the table resolver correctly in Spacefill and Bonds.
+- Derived attribute channels: shared GPU column uploads across representations,
+  an advanced `AttributeProducer` for kernel-written columns, and demand-driven
+  `useAttributeSnapshot` CPU readback. `byChain()` now reads the table resolver
+  correctly in Spacefill and Bonds.
 
-- Trajectories (Phase 12). New experimental `<Trajectory data|src frame>`
-  coordinate provider, `useTrajectoryFrame` and `<UnitCell>`, with the
-  `TrajectoryProps`, `PreloadedTrajectoryProps`, `LoadedTrajectoryProps`,
-  `TrajectoryPlayback`, `TrajectoryLoader` and `TrajectoryFrameState` types; new
-  advanced `TrajectoryContext`. Frames stream through a byte-capped CPU cache
-  with prefetch into a four-slot GPU window; one kernel interpolates the
-  displayed pair (`interpolate`, `pbc="minimum-image"`) and scatters a subset
-  through `atomMap`. `frame` takes a timeline curve.
+- Trajectories. New experimental `<Trajectory data|src frame>` coordinate
+  provider, `useTrajectoryFrame` and `<UnitCell>`, with the `TrajectoryProps`,
+  `PreloadedTrajectoryProps`, `LoadedTrajectoryProps`, `TrajectoryPlayback`,
+  `TrajectoryLoader` and `TrajectoryFrameState` types; new advanced
+  `TrajectoryContext`. Frames stream through a byte-capped CPU cache with
+  prefetch into a four-slot GPU window; one kernel interpolates the displayed
+  pair (`interpolate`, `pbc="minimum-image"`) and scatters a subset through
+  `atomMap`. `frame` takes a timeline curve.
 - Fixed: a snapshot readback in flight when a new coordinate generation landed
   never rescheduled, so `<Ribbon>`, `<Tube>`, `<Surface>` and annotations below
   a provider could stay empty until the next change.
-- Volumes (Phase 11). New experimental `<Volume data|src>`, `<Isosurface level>`
-  and `<VolumeSlice plane>`, with the `VolumeProps`, `VolumeLoader`,
-  `SlicePlane` and `SliceStops` types; new advanced `VolumeContext` and
-  `useVolume`. A volume uploads once per `VolumeData` identity to a refcounted
-  GPU buffer shared by every consumer. Isosurfaces remesh only on a new volume
-  or level, and slices move by uniforms.
+- Volumes. New experimental `<Volume data|src>`, `<Isosurface level>` and
+  `<VolumeSlice plane>`, with the `VolumeProps`, `VolumeLoader`, `SlicePlane`
+  and `SliceStops` types; new advanced `VolumeContext` and `useVolume`. A volume
+  uploads once per `VolumeData` identity to a refcounted GPU buffer shared by
+  every consumer. Isosurfaces remesh only on a new volume or level, and slices
+  move by uniforms.
 - `useField` binds `volumeSample` inputs: `volume:<n>` to the shared volume
   buffer, and `positions` to the drawn rows' positions (`<Spacefill>` and
   `<Bonds>` supply them).
 - `<Surface>` extracts its mesh through the field's full affine transform.
-- Coordinate stream (Phase 9). Positions are a GPU stream that child providers
-  re-provide without changing topology. New experimental
-  `useCoordinateSnapshot`, `useCoordinateSelection`, `useCoordinateBounds` and
-  `useCoordinateFocus`; new advanced `CoordinatesContext`, `useCoordinates`,
-  `IdentityCoordinates` and `WobbleCoordinates`.
+- Coordinate stream. Positions are a GPU stream that child providers re-provide
+  without changing topology. New experimental `useCoordinateSnapshot`,
+  `useCoordinateSelection`, `useCoordinateBounds` and `useCoordinateFocus`; new
+  advanced `CoordinatesContext`, `useCoordinates`, `IdentityCoordinates` and
+  `WobbleCoordinates`.
 - `<Bonds>` read endpoint positions from the nearest coordinate stream in the
   vertex shader. Moving coordinates no longer rebuild CPU bond columns.
 - `<Ribbon>`, `<Tube>`, `<Surface>`, `<Label>` and `<Distance>` rebuild from a

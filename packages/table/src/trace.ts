@@ -1,5 +1,5 @@
 // Residue-level polymer trace: the segmented guide/frame values shared by
-// tube and ribbon/arrow cartoons (0sj.5, 0sj.6). Pure derivation from an
+// tube and ribbon/arrow cartoons. Pure derivation from an
 // already-validated Structure plus an explicit atom selection — no geometry,
 // no GPU types.
 //
@@ -8,7 +8,7 @@
 // per polymer kind, with a coarse-model fallback). Frame propagation itself
 // (central-difference tangent, Gram-Schmidt normal against a carried
 // reference) is this project's own — the chemistry-informed frames from
-// secondary structure are 0sj.2's job, not this one's.
+// secondary structure are derived by secondaryStructureTrace.
 import type { StructureData } from "./structure-types.ts";
 import type { Trace } from "./trace-types.ts";
 

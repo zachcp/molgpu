@@ -1,3 +1,10 @@
+/**
+ * Molecular fitting, periodic boundaries, charge assignment, elastic modes and
+ * CPU Langevin simulation over plain data. Coordinates use Ångström units.
+ * GPU shader sources and buffer contracts are available from the `./wgsl` entry.
+ *
+ * @module
+ */
 // @molgpu/dynamics: charges, normal modes, Langevin dynamics, electrostatics,
 // periodic boxes and fitting on plain data. No renderer dependency. The WGSL sources and buffer
 // layouts @molgpu/viewer dispatches are on the ./wgsl entry.

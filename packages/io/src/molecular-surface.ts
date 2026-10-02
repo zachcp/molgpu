@@ -10,16 +10,14 @@ import { gridToXFast } from "./grid.ts";
 const surfaceError = errorFor("surface");
 
 /**
- * Solvent-excluded-surface scalar field over a set of atoms, via Mol*'s
- * calcMolecularSurface — kept behind this runtime import boundary exactly
- * like parseBcif, so consumers of @molgpu/table/@molgpu/geo alone never
- * load it. `atoms` is plain owned columns (x/y/z/radius Float32Array[count]),
- * never a Mol* Structure/Unit. `values` is x-fastest
- * (values[i + nx * (j + ny * k)]), the layout @molgpu/geo's marchingCubes
- * reads, so the field feeds it directly.
- * `transform` is a column-major scale+translate Mat4 — read its diagonal as
- * `spacing` and its translation row as `origin` — and `level` is the isovalue
- * (the solvent-excluded-surface convention: the probe radius itself).
+ * Compute a solvent-excluded surface grid from finite atom coordinates and
+ * positive van der Waals radii, in Ångström. Mol* loads on demand.
+ *
+ * Returns owned arrays with x-fastest values (`i + nx * (j + ny * k)`).
+ * `transform` maps grid indices to Ångström using a column-major 4×4 matrix;
+ * spacing is at entries 0, 5 and 10, and origin at 12, 13 and 14. `level`
+ * equals the probe radius. Pass the result directly to `@molgpu/geo`'s
+ * `marchingCubes`. `maxSamples` limits grid samples, not total memory use.
  */
 export async function molecularSurfaceField(
   atoms: SurfaceFieldAtoms,
@@ -121,7 +119,7 @@ export async function molecularSurfaceField(
     // each atom's SEARCH radius to already include the probe — Mol*'s own
     // callers (mol-repr/.../util/molecular-surface.js) build exactly this
     // `r + probeRadius` array before calling it. Skipping that (as an
-    // earlier version of this function, and the s3 spike, both did) starves
+    // earlier version of this function did) starves
     // the internal neighbor search near convex/protruding regions, so the
     // "unvisited" (-1001 sentinel) region reaches much closer to the true
     // isosurface than expected — producing a sparse, fragmented mesh instead
