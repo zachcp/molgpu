@@ -56,15 +56,19 @@ Everything else in the design is a function of this table.
 
 **Coordinates are a stream over the table.** Topology (atoms, residues, bonds,
 radii, attribute columns) is fixed by `<Structure>`; positions are not. A
-coordinate provider (`<Trajectory>`, `<Superpose>`, `<NormalMode>`, later
+coordinate provider (`<Trajectory>`, `<Superpose>`, `<NormalMode>`,
 `<ElasticNetwork>`) reads the nearest coordinates, runs a GPU kernel and
 re-provides new ones to its children. It never changes atom count or order.
-Providers are child nodes on purpose: they transform data, not appearance, so
-the "modifiers are props" rule below does not apply. Topology stays in
-`StructureContext`; coordinates live in their own context with a content
-`version`, so re-providing one never re-provides the other. Derived per-row
-columns (charges, DSSP codes, kernel outputs) follow the same idea: they are
-added after import with provenance and bump `revision.attributes`. Built-in
+`<ElasticNetwork>` is the first stateful provider: its output depends on
+integration history, but time stays caller-owned. It advances toward a target
+step the application sets, never from the frame loop, and a checkpoint ring
+restores any recorded step, so a stateful run scrubs like a pure transform
+(CONCEPT 8). Providers are child nodes on purpose: they transform data, not
+appearance, so the "modifiers are props" rule below does not apply. Topology
+stays in `StructureContext`; coordinates live in their own context with a
+content `version`, so re-providing one never re-provides the other. Derived
+per-row columns (charges, DSSP codes, kernel outputs) follow the same idea: they
+are added after import with provenance and bump `revision.attributes`. Built-in
 topology and derived columns resolve through `attributeColumn`; viewer
 representations share one GPU upload per immutable column object. A scoped
 `AttributeProducer` can provide a live GPU column, while CPU consumers request a

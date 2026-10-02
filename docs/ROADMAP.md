@@ -302,9 +302,13 @@ change. Delivered: [plan](findings/2026-09-27-efield-plan.md),
 ## Phase 17 — Stateful dynamics, elastic network first
 
 Transforms with an integrator clock, starting with `<ElasticNetwork>` Langevin
-dynamics. Live stateful output is not scrubbable; recording into a trajectory
-ring buffer makes it scrubbable again. Physics grows one rung at a time;
-force-field parameterisation and protonation stay out of scope.
+dynamics. The application owns progress (a target `step`, which can be a
+timeline curve); a GPU ring of integrator checkpoints makes a run scrubbable.
+Interactive tugging uses picking and `pointerToPlane`. Physics grows one rung at
+a time; force-field parameterisation and protonation stay out of scope (ahc.7,
+ahc.8 remain on demand). Delivered:
+[plan and counter-review](findings/2026-10-02-stateful-dynamics-plan.md),
+[gate](findings/2026-10-02-phase17-gate.md).
 
 ---
 
