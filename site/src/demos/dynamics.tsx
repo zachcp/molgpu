@@ -1,4 +1,3 @@
-// deno-lint-ignore-file jsx-key
 /** @jsx LiveReact.createElement */
 import {
   React as LiveReact,
