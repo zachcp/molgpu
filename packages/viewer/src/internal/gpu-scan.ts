@@ -2,7 +2,9 @@
 // scans, a recursive scan of the block sums, then a pass adding each block's
 // offset back. Workgroups fold into two dispatch dimensions, so any count a
 // storage binding can hold scans (the cell-list scan in @molgpu/dynamics
-// dispatches one dimension and is sized for cell grids).
+// dispatches one dimension and is sized for cell grids). It encodes into the
+// caller's raw command encoder, inside jobs that read results back between
+// submissions (see docs/findings/2026-10-02-native-compute-audit.md).
 const BLOCK = 256;
 
 const scan = (load: string, input: string) => `

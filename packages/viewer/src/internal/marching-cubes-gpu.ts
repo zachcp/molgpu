@@ -4,7 +4,9 @@
 // same tables, normals from interpolated clamped central differences, and the
 // same affine and inverse-transpose mapping. Each cube's vertex and index
 // counts are scanned so every cube writes its own contiguous range; only the
-// two totals are read back, to size the output.
+// two totals are read back, to size the output. Raw WebGPU, not use.gpu
+// Kernel: the output is allocated from that readback between submissions of
+// one cancellable job (see docs/findings/2026-10-02-native-compute-audit.md).
 import { marchingCubesTables } from "@molgpu/geo";
 import {
   dispatchFolded,

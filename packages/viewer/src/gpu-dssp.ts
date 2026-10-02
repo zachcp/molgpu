@@ -1,3 +1,9 @@
+// GPU DSSP from packed live coordinates. Raw WebGPU, not use.gpu Kernel: one
+// computation freezes a coordinate generation, sizes its cell grid from a
+// bounds readback, reads overflow status back for exact CPU recovery, and can
+// be cancelled, across several submissions; Kernel dispatches once per frame
+// in the frame's compute pass and has no readback-sized stages or abort (see
+// docs/findings/2026-10-02-native-compute-audit.md).
 import { CellListLimitError } from "@molgpu/dynamics";
 import {
   cellListWgsl,
@@ -9,6 +15,7 @@ import {
 } from "@molgpu/dynamics/wgsl";
 import { dssp, type StructureData, withPositions } from "@molgpu/table";
 import { COPY_POSITIONS } from "./internal/copy-positions-wgsl.ts";
+import { encodeExclusiveScan } from "./internal/gpu-scan.ts";
 
 const MAP_READ = 0x0001;
 const COPY_SRC = 0x0004;
@@ -22,9 +29,6 @@ type PipelineName =
   | "cellBounds"
   | "cellMergeBounds"
   | "cellCount"
-  | "cellScanCounts"
-  | "cellScanValues"
-  | "cellAddOffsets"
   | "cellScatter"
   | "alpha"
   | "threeTen"
@@ -389,57 +393,16 @@ export async function gpuDssp(
     ], Math.ceil(caCount / GROUP));
     pass.end();
 
-    // Hierarchical exclusive scan of atomic cell counts. The extra zero
-    // count yields offsets[cellCount] for the neighbour loops.
-    interface ScanLevel {
-      offsets: GPUBuffer;
-      count: number;
-    }
-    const levels: ScanLevel[] = [];
-    let input = counts;
-    let scanCount = cells + 1;
-    let atomic = true;
-    while (true) {
-      const groups = Math.ceil(scanCount / 256);
-      const offsets = make(scanCount * 4, STORAGE | COPY_SRC, "offsets");
-      const sums = make(groups * 4, STORAGE, "scan-sums");
-      const scanParams = make(
-        16,
-        UNIFORM | COPY_DST,
-        "scan-params",
-        Uint32Array.of(scanCount, 0, 0, 0),
-      );
-      const scanPass = encoder.beginComputePass();
-      dispatch(scanPass, atomic ? "cellScanCounts" : "cellScanValues", [
-        [0, input],
-        [1, offsets],
-        [2, sums],
-        [3, scanParams],
-      ], groups);
-      scanPass.end();
-      levels.push({ offsets, count: scanCount });
-      if (groups === 1) break;
-      input = sums;
-      scanCount = groups;
-      atomic = false;
-    }
-    for (let level = levels.length - 2; level >= 0; level--) {
-      const child = levels[level], parent = levels[level + 1];
-      const scanParams = make(
-        16,
-        UNIFORM | COPY_DST,
-        "add-params",
-        Uint32Array.of(child.count, 0, 0, 0),
-      );
-      const add = encoder.beginComputePass();
-      dispatch(add, "cellAddOffsets", [
-        [0, child.offsets],
-        [1, parent.offsets],
-        [2, scanParams],
-      ], Math.ceil(child.count / GROUP));
-      add.end();
-    }
-    const offsets = levels[0].offsets;
+    // Exclusive scan of atomic cell counts. The extra zero count yields
+    // offsets[cellCount] for the neighbour loops.
+    const offsets = encodeExclusiveScan(
+      device,
+      encoder,
+      counts,
+      cells + 1,
+      true,
+      make,
+    );
     const cursor = make(cells * 4, STORAGE | COPY_DST, "cursor");
     encoder.copyBufferToBuffer(offsets, 0, cursor, 0, cells * 4);
     const scatter = encoder.beginComputePass();
