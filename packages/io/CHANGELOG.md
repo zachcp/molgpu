@@ -6,6 +6,11 @@ All notable changes to `@molgpu/io` are recorded here. The format follows
 
 ## [Unreleased]
 
+- `structureFromBcif(input, { assembly })` expands a `pdbx_struct_assembly` into
+  `topology.instances` rows (chain × operator, Mol*'s operator-expression
+  expansion; `operatorId` lists the `pdbx_struct_oper_list` ids). New error code
+  `UNKNOWN_ASSEMBLY`. The default output is unchanged.
+
 - Add AbortSignal and fetch options to whole-file importers; cooperate with
   parser/model cancellation. Validate HTTP Range offsets, totals and object
   validators; abort cached header scans. Pin the published Mol* dependency to

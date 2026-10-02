@@ -79,6 +79,12 @@ maps to Angstrom through `field.transform` (column-major; spacing on the
 diagonal, origin in elements 12–14), and the surface is the `field.level`
 isosurface.
 
+`structureFromBcif(input, { assembly: "2" })` expands a biological assembly into
+`topology.instances`: one row per (chain, operator) of that
+`pdbx_struct_assembly`, with operator expressions expanded as Mol* does. Atoms
+are never duplicated. Without `assembly`, each chain gets one identity row (the
+asymmetric unit); an unknown id fails with `UNKNOWN_ASSEMBLY`.
+
 ## API
 
 | Export                  | Stability    | Description                                                                                                                                                                                           |

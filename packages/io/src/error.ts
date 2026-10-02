@@ -46,7 +46,9 @@ export type IoErrorCode =
   /** The optional Mol* parser or decoder is absent or failed to load. */
   | "PARSER_UNAVAILABLE"
   /** The optional Mol* surface code is absent, failed to load, or threw (`surface`). */
-  | "FIELD_UNAVAILABLE";
+  | "FIELD_UNAVAILABLE"
+  /** The requested biological assembly id is not in the file (`bcif`). */
+  | "UNKNOWN_ASSEMBLY";
 
 /** Every failure @molgpu/io raises: which importer, a stable code, and the cause. */
 export class IoError extends Error {

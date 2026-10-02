@@ -227,6 +227,72 @@ async function mmcifSemantics(frame: CifFrame, signal?: AbortSignal) {
 
 type MmcifSemantics = Awaited<ReturnType<typeof mmcifSemantics>>;
 
+/** One identity instance row per chain: the asymmetric unit. */
+function identityInstances(chainCount: number) {
+  return {
+    count: chainCount,
+    chain: Uint32Array.from({ length: chainCount }, (_, i) => i),
+    operatorId: new Array<string>(chainCount).fill("identity"),
+    transform: Float64Array.from(
+      { length: chainCount * 16 },
+      (_, i) =>
+        i % 16 === 0 || i % 16 === 5 || i % 16 === 10 || i % 16 === 15 ? 1 : 0,
+    ),
+  };
+}
+
+/**
+ * Instance rows of one biological assembly, from Mol*'s own expansion of
+ * pdbx_struct_assembly_gen operator expressions: every chain row (in every
+ * model) whose label_asym_id an operator group lists, times each operator.
+ */
+async function assemblyInstances(
+  semantics: MmcifSemantics,
+  chains: readonly ChainRow[],
+  id: string,
+) {
+  const [{ ModelSymmetry }, { Symmetry }] = await Promise.all([
+    import("molstar/lib/mol-model-formats/structure/property/symmetry.js"),
+    import("molstar/lib/mol-model/structure/model/properties/symmetry.js"),
+  ]);
+  ModelSymmetry.Provider.get(semantics.model);
+  const assembly = Symmetry.findAssembly(semantics.model, id);
+  if (!assembly) {
+    throw bcifError(
+      `no biological assembly with id "${id}"`,
+      "UNKNOWN_ASSEMBLY",
+    );
+  }
+  const byAsym = new Map<string, number[]>();
+  chains.forEach((chain, row) => {
+    let rows = byAsym.get(chain.labelId);
+    if (!rows) byAsym.set(chain.labelId, rows = []);
+    rows.push(row);
+  });
+  const chain: number[] = [],
+    operatorId: string[] = [],
+    transform: number[] = [];
+  for (const group of assembly.operatorGroups) {
+    for (const asym of group.asymIds ?? []) {
+      for (const row of byAsym.get(asym) ?? []) {
+        for (const operator of group.operators) {
+          chain.push(row);
+          operatorId.push(
+            operator.assembly?.operList.join("x") ?? operator.name,
+          );
+          for (let k = 0; k < 16; k++) transform.push(operator.matrix[k]);
+        }
+      }
+    }
+  }
+  return {
+    count: chain.length,
+    chain: Uint32Array.from(chain),
+    operatorId,
+    transform: Float64Array.from(transform),
+  };
+}
+
 function entityMetadata(
   semantics: MmcifSemantics,
   chains: readonly ChainRow[],
@@ -307,11 +373,26 @@ function readSecondaryStructure(
 /**
  * Lower a BinaryCIF mmCIF block to renderer-independent owned table columns.
  * `input` is the bytes, a `Blob`/`File`, or a URL fetched once.
+ *
+ * `topology.instances` is one identity row per chain (the asymmetric unit)
+ * unless `assembly` names a `pdbx_struct_assembly` id. Then it holds one row
+ * per (chain, operator) of that assembly, with operator expressions expanded
+ * as Mol* does and `operatorId` naming the `pdbx_struct_oper_list` ids
+ * (joined by "x" for products). Chains the assembly does not use get no row.
+ * Atoms are never duplicated. An unknown id fails with `UNKNOWN_ASSEMBLY`.
  */
 export async function structureFromBcif(
   input: FileInput,
-  options: { signal?: AbortSignal; fetch?: typeof fetch } = {},
+  options: {
+    signal?: AbortSignal;
+    fetch?: typeof fetch;
+    /** A `pdbx_struct_assembly.id` to expand into instance rows. */
+    assembly?: string;
+  } = {},
 ): Promise<StructureData> {
+  if (options.assembly !== undefined && typeof options.assembly !== "string") {
+    throw bcifError("assembly must be a string id", "INVALID_INPUT");
+  }
   const parsed = await parseBcif(
     await readInput(input, "BCIF", bcifError, options),
     options.signal,
@@ -411,9 +492,13 @@ export async function structureFromBcif(
     categories.struct_sheet_range);
   const hasConnections =
     !!(categories.chem_comp_bond || categories.struct_conn);
-  const semantics = hasEntity || ssAnnotated || hasConnections
-    ? await mmcifSemantics(parsed.blocks[0]!, options.signal)
-    : undefined;
+  const semantics =
+    hasEntity || ssAnnotated || hasConnections || options.assembly !== undefined
+      ? await mmcifSemantics(parsed.blocks[0]!, options.signal)
+      : undefined;
+  const instances = options.assembly === undefined
+    ? identityInstances(chains.length)
+    : await assemblyInstances(semantics!, chains, options.assembly);
   const { types: entityTypes, subtypes: entitySubtypes } =
     semantics && hasEntity ? entityMetadata(semantics, chains) : {
       types: new Map<string, string>(),
@@ -480,18 +565,7 @@ export async function structureFromBcif(
         source: [],
       },
       ...(links ? { links } : {}),
-      instances: {
-        count: chainCount,
-        chain: Uint32Array.from({ length: chainCount }, (_, i) => i),
-        operatorId: new Array(chainCount).fill("identity"),
-        transform: Float64Array.from(
-          { length: chainCount * 16 },
-          (_, i) =>
-            i % 16 === 0 || i % 16 === 5 || i % 16 === 10 || i % 16 === 15
-              ? 1
-              : 0,
-        ),
-      },
+      instances,
     },
   });
   // Every io structure resolves formalCharge, as in Mol*: imported values, or
