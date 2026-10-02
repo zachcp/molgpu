@@ -1,9 +1,10 @@
 # Current architecture and reading guide
 
-Reviewed 2026-10-02 at `e2b4df7`. This is the navigation and composition map;
-package READMEs describe supported APIs, dated findings retain decisions and
-evidence, and Beads track remaining work. [DESIGN](DESIGN.md) records intent and
-[ROADMAP](ROADMAP.md) retains historical phase outcomes.
+Reviewed 2026-10-02 against `origin/main` at `9b1c5b1`. This is the navigation
+and composition map; package READMEs describe supported APIs, dated findings
+retain decisions and evidence, and Beads track remaining work.
+[DESIGN](DESIGN.md) records intent and [ROADMAP](ROADMAP.md) retains historical
+phase outcomes.
 
 ## Package boundaries
 
@@ -63,10 +64,12 @@ plus `<Trajectory data>` already lets an application own source opening.
 Separate internal request, cache/window, playback and metadata modules when it
 removes coupling; no extra public source component is required.
 
-The second review identifies an unresolved exception: a pending `Trajectory src`
-with `Superpose to="first"` beneath it reaches a missing-metadata throw. Treat
-that composition as requiring repair, not as a guaranteed pending pass-through.
-See the [second-pass review](findings/2026-10-02-second-pass-review.md).
+A pending or failed `Trajectory src` retains its structure-owned scope.
+`Superpose to="first"` passes upstream coordinates through while the source or
+first-frame reference is unavailable and reports its state through `onStatus`.
+An absent Trajectory ancestor remains an error. See the
+[source recovery evidence](findings/2026-10-02-superpose-source-recovery.md) and
+[implementation completion](findings/2026-10-02-ktr-implementation-completion.md).
 
 ## Live and snapshot policies
 
@@ -106,9 +109,10 @@ it once.
   and [public-composition gate](findings/2026-10-02-crj13-architecture-gate.md).
 - [Second-pass plan](findings/2026-10-02-second-pass-plan.md) and
   [second-pass conclusions](findings/2026-10-02-second-pass-review.md), tracked
-  by `molgpu-sept-ktr`.
+  with
+  [implementation completion](findings/2026-10-02-ktr-implementation-completion.md).
 
-The September 28 review motivated the closed `crj` repairs. Its findings remain
-historical evidence; read the current gate and second-pass conclusions before
-treating an old failure as open. Browser coverage work (`s5o.11`) and the
-ordered native-kernel experiment (`s5o.22`) remain separately tracked.
+The September 28 review motivated the completed architecture repairs. Its
+findings remain historical evidence; read the current gate and implementation
+completion before treating an old failure as open. Browser coverage work and the
+ordered native-kernel experiment remain separately tracked in the issue tracker.

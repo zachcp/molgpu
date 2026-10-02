@@ -2,9 +2,13 @@
 
 All notable changes to `@molgpu/timeline` are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); see
-[docs/RELEASING.md](../../docs/RELEASING.md) for the procedure.
+[release guide](https://github.com/zachcp/molgpu/blob/main/docs/RELEASING.md)
+for the procedure.
 
 ## [Unreleased]
+
+- Clarify published documentation, correct public-entry examples and add JSR
+  module summaries. Documentation changes only.
 
 - Curve rejection messages name duplicate @molgpu/timeline copies and explain
   dependency alignment for deduplication.

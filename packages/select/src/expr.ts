@@ -10,8 +10,8 @@
 //
 // The language is closed. Only the symbols in SPECS below compile; anything
 // else, including an unsupported argument of a supported symbol, throws at
-// compile time. Adding a symbol needs its own bead (lkd.14 as amended by
-// docs/findings/2026-09-26-molql-selection-spike.md §4.7).
+// compile time. Each added symbol needs explicit argument validation and
+// semantic tests against the corresponding Mol* evaluator.
 
 import {
   attributeColumn,

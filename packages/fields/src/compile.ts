@@ -42,7 +42,7 @@ const vec4 = (c: readonly number[]): string =>
 
 /**
  * Lower a numeric field to WGSL plus a plain-data binding schema. Returns
- * `{ valueType, domain, bindings, wgsl }`. `bindings` describe storage/uniform
+ * `{ valueType, domain, target, entry, bindings, wgsl }`. `bindings` describe storage/uniform
  * inputs the shader needs and how to fill each from data (pure functions, not
  * ShaderSources). Two targets: `raw` (default) emits a self-contained module
  * with `@group(0)` bindings and `fn evalField(row) -> T`, runnable in a plain

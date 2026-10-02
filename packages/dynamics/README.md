@@ -7,12 +7,28 @@ plain buffer contracts on `@molgpu/dynamics/wgsl`; `@molgpu/viewer` owns the
 WebGPU resources and live coordinate providers. This package imports no
 renderer, WebGPU, or `@use-gpu/*` modules.
 
-Time-dependent functions take explicit time arguments, so evaluating the same
-input again while scrubbing gives the same output. CPU functions can run in a
-worker; the package does not manage a worker or a simulation clock.
+CPU functions can run in a worker; the package does not manage a worker or a
+simulation clock. `langevinStep` advances a mutable simulation state. Replaying
+it requires the same initial state, parameters, seed and number of steps.
 
-The Phase 13 contract is in
-[the dynamics plan](../../docs/findings/2026-09-26-dynamics-plan.md).
+## Fit coordinates
+
+```ts
+import { fitKabsch, minimumImage, periodicBox } from "@molgpu/dynamics";
+
+const reference = new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]);
+const source = new Float32Array([2, 3, 0, 3, 3, 0, 2, 4, 0]);
+const fit = fitKabsch(source, reference);
+console.log(fit.rmsd); // approximately 0 Å
+console.log(fit.matrix); // column-major 4×4 transform; inputs stay unchanged
+
+const box = periodicBox([10, 0, 0, 0, 10, 0, 0, 0, 10]);
+console.log(minimumImage([9, 0, 0], box.matrix)); // [-1, 0, 0] Å
+```
+
+Coordinates are packed `[x0, y0, z0, x1, y1, z1, ...]` in Ångström. A fit
+requires matching atom order and at least three non-collinear points. It returns
+a transform; apply that matrix in your renderer or coordinate adapter.
 
 ## Install
 
@@ -124,75 +140,85 @@ application can run in a worker, not only a test oracle.
 | `langevinUniform`         | advanced  | Encode the `langevinWgsl` uniform from a system and resolved params.                 |
 | `LANGEVIN_PARAMS_BYTES`   | advanced  | Size of the `langevinWgsl` uniform (112 bytes).                                      |
 
-The internal `coulombPotential`/`coulombField` are the f64 oracle for
-`coulombWgsl`, which the viewer's `<EField>` dispatches. The physics and budgets
-are recorded in
-[the electric-field plan](../../docs/findings/2026-09-27-efield-plan.md).
+## GPU integration
 
-`langevinStep` is the reference for `langevinWgsl`: BAOAB Langevin over a CSR
-spring network in Å, ps, amu and kcal/mol. Step n draws Philox-4x32-10 noise
-under key (seed, n), so a run depends only on its inputs and replays bitwise on
-one device. After each OU kick, the velocities lose their net momentum and
-angular momentum about the reference centroid, so an elastic network neither
-drifts nor rotates and samples kT·H⁺ in 3N − 6 degrees of freedom. Its full-step
-kinetic temperature is low by about (ω dt)²/4 per mode, as BAOAB's is. The
-design and its counter-review are in
-[the stateful dynamics plan](../../docs/findings/2026-10-02-stateful-dynamics-plan.md).
+The `./wgsl` entry supplies source strings and plain buffer descriptions. It
+does not compile shaders, allocate GPU buffers or schedule dispatches. See each
+export's API documentation for binding order, uniform layout and dispatch order.
+Use `@molgpu/viewer` components for the managed rendering path.
 
-The CPU function returns a new array. Unselected rows retain their exact input
-values. The viewer compiles the WGSL strings and owns every GPU resource.
+DSSP secondary-structure calculation uses `prepareDsspLayout` to select one
+model's protein residues, GPU stages for backbone and hydrogen-bond analysis,
+and `finishDssp` for CPU ladder and sheet completion. Kabsch fitting, periodic
+unwrapping and Langevin integration also require ordered stages over the same
+coordinate source. The caller owns buffers and synchronizes readback.
 
-## GPU DSSP
+`planCellList` checks coordinate bounds and device limits before allocating a
+dense neighbour grid. A stale generation returns `null`; invalid coordinates or
+exceeded limits throw. Generation numbers are local to their source: retain
+source identity alongside a readback when coordinating multiple providers.
+Candidate and pair capacity overflows must be handled explicitly.
 
-GPU DSSP uses `prepareDsspLayout(data, rows)` to pack one model's protein
-residues in chain and sequence order. `dsspWgsl` supplies H placement, bounded
-H-bond search over the CA cell list, turns, three ordered helix passes, bends,
-and bridge emission. `finishDssp(layout, flags, bridges)` restores canonical
-bridge order and completes sequential ladders and sheets on the CPU. The viewer
-owns the WebGPU buffers and dispatches; no renderer object crosses into this
-package.
-
-## Cell grid buffer contract
-
-The internal CPU reference `createCellList(positions, cellSize, options)` uses
-packed xyz coordinates and topology row numbers. `rows`, when supplied, must be
-sorted and unique. Queries accept a cutoff no greater than `cellSize`, inspect
-at most `maxCandidates` (4096 by default), and fail explicitly if that bound is
-exceeded. The dense grid defaults to at most four cells per indexed row. The CPU
-reference and GPU stages use a cell width of `cellSize * (1 + 1e-6)` to keep
-floating-point boundary pairs in adjacent cells.
-
-`cellListWgsl` exposes separate `bounds`, `mergeBounds`, `count`, `scanCounts`,
-`scanValues`, `addOffsets`, `scatter`, and `pairs` entry-point strings. The
-caller owns and clears buffers, checks the compact bounds summary for invalid
-coordinates, tags that summary with its source generation, and calls
-`planCellList` before allocating the grid. A stale readback returns `null`;
-invalid coordinates, excessive cells, and device storage limits throw. `count`,
-`scatter`, and `pairs` share a 64-byte uniform:
+The cell-grid `count`, `scatter` and `pairs` stages share a 64-byte uniform:
 `config = (selectedCount, hasRowMap, maxCandidates, maxPairs)`,
 `dims = (nx, ny, nz, cellCount)`, `origin.xyz`, and
-`scales = (1/cellWidth, cutoff², 0, 0)`. Pair output uses unordered topology
-rows; atomic scatter makes result order unspecified. An overflow flag signals
-candidate or pair capacity exhaustion.
+`scales = (1/cellWidth, cutoff², 0, 0)`. Cell width is `cellSize * (1 + 1e-6)`
+to preserve adjacent cells at floating-point boundaries. Pair outputs are
+unordered topology-row pairs; atomic scatter leaves their array order
+unspecified. Clear buffers and check the overflow flag.
 
-At one million rows, each atom-side `u32` array uses 4 MB and packed coordinates
-use 12 MB. A grid of at most four million cells uses at most 32 MB for counts
-and offsets, plus scan scratch and result buffers. `planCellList` reports
-persistent and scratch bytes separately and a lower bound for coordinate reads
-(2 passes × 12 bytes per row). The caller reads only compact grid metadata back
-to the CPU, rather than whole coordinate frames.
+For one million rows, each atom-side `u32` array occupies 4 MB and packed xyz
+coordinates occupy 12 MB. Four million cells need 32 MB for counts and offsets,
+plus scratch and result buffers. `planCellList` reports persistent and scratch
+bytes separately and a lower bound of two coordinate reads (24 bytes per row).
+These are decimal memory sizes and buffer accounting, not timing measurements.
 
-For a one-cell-per-row chain, the planner reports the following decimal MB (1 MB
-= 1,000,000 bytes), excluding the existing coordinate buffer and optional pair
-output:
+## Langevin simulation
 
-|      Rows | Grid cells | Persistent | Scratch | Bounds + count coordinate reads |
-| --------: | ---------: | ---------: | ------: | ------------------------------: |
-|   100,000 |     99,999 |    1.60 MB | 0.45 MB |                         2.40 MB |
-| 1,000,000 |    999,999 |   16.00 MB | 4.52 MB |                        24.00 MB |
+The CPU integrator advances a spring network in Å, ps, amu and kcal/mol. It uses
+BAOAB (force kick, drift, stochastic thermostat, drift, force kick) and seeded
+Philox noise. It removes linear and angular momentum about the reference frame.
+`langevinParams` rejects a step when its frequency bound times `dt` exceeds 1.
+`langevinStep` mutates its state; clone state arrays if retaining snapshots.
 
-These are buffer accounting results, not GPU timing measurements. Later stages
-also read and write grid indexes and pair output according to occupancy.
+```ts
+import {
+  buildElasticNetwork,
+  enmSprings,
+  kineticTemperature,
+  langevinInit,
+  langevinParams,
+  langevinStep,
+  langevinSystem,
+} from "@molgpu/dynamics";
+
+// Four guide nodes in a tetrahedron, coordinates in Å.
+const positions = new Float32Array([
+  0,
+  0,
+  0,
+  4,
+  0,
+  0,
+  0,
+  4,
+  0,
+  0,
+  0,
+  4,
+]);
+const contacts = buildElasticNetwork(positions, [0, 1, 2, 3], 8);
+const system = langevinSystem(enmSprings(contacts, positions), positions);
+const params = langevinParams(system, { seed: 42, dt: 0.002 });
+const state = langevinInit(system, params);
+langevinStep(system, params, state, 100);
+console.log(state.step, kineticTemperature(system, state));
+```
+
+Instantaneous temperature fluctuates; a single sample is not an equilibrium
+check. Use `"f64"` state storage for a CPU scientific reference and `"f32"` for
+comparison with GPU results. Repeated runs on one device are deterministic; CPU
+and GPU results should be compared with numerical tolerances.
 
 ## Kabsch reference
 
@@ -204,60 +230,17 @@ with fewer than three rows. The returned matrix applies to **all** output rows;
 false the source rotates about its own centroid, which stays put. This CPU
 result is the oracle for the live `<Superpose>` viewer provider.
 
-`superposeWgsl` is that fit on the GPU, as three entry points run in order on
-one upstream generation. `centroid` and `covariance` each run as one workgroup
-of 128 lanes and sum in a fixed order, so a fit is deterministic. Coordinates
-are taken relative to the first fit row, so a large common offset does not swamp
-small shape differences in f32. `covariance` then solves Horn's quaternion with
-4×4 Jacobi rotations on lane 0, and `apply` moves every row by
-`R (p - c_source) + c_target`. A nearly collinear live frame writes no rotation
-and passes through. The bindings, in order, are:
+## Periodic boundaries
 
-| Binding | Buffer                                                        |
-| ------: | ------------------------------------------------------------- |
-|       0 | upstream packed xyz `f32`                                     |
-|       1 | fit rows `u32` (read only when `selected`)                    |
-|       2 | reference packed xyz `f32` for the fit rows, in fit order     |
-|       3 | 144-byte read-write fit state                                 |
-|       4 | uniform `(fitCount, selected, translate, atomCount)` as `u32` |
-|       5 | packed xyz `f32` output                                       |
+`minimumImage(delta, box)` finds the nearest Cartesian displacement for an
+orthogonal or skew periodic box. `periodicBox` validates and inverts the
+column-major 3×3 box vectors. Near-singular boxes are rejected and excessive
+exact-image searches raise `PbcSearchLimitError`.
 
-`centroid` and `covariance` use bindings 0–4, and `apply` uses 0 and 3–5. In the
-viewer tests the GPU RMSD matches `fitKabsch` within 1e-5 Å at a 1000 Å offset.
-
-## Periodic reference
-
-`minimumImage(delta, box)` searches the exact nearest Cartesian image in a
-column-major 3×3 periodic box. It rejects near-singular boxes and uses a bounded
-candidate search. `createUnwrapForest(topology)` uses only bonds explicitly
-marked covalent, filtering different models and incompatible alternate
-locations. Build this forest once per topology version. The internal CPU
-reference `unwrapFrame` traverses it for each displayed frame, makes each
-molecule whole, checks non-tree ring edges for closure, and can move each
-selected component's centroid into the primary box. Missing or invalid boxes
-pass positions through with an explicit status. This CPU path is the reference
-for the live `<Unwrap>` viewer provider.
-
-`unwrapWgsl` is that traversal on the GPU, in five entry points run in order on
-one upstream generation:
-
-1. `link` stores each row's exact nearest image from its forest parent. It uses
-   the same bounded lattice search as `minimumImage`, capped at `maxCandidates`
-   and counted in `status[1]` where the CPU throws.
-2. For forests of depth at most 32, `propagate` visits one topology level per
-   dispatch. Each non-root link is accumulated once, in place, from a parent
-   already relative to its root. Deeper forests use `jump` pointer jumping in
-   `ceil(log2(depth))` rounds. Both preserve cross-row bond continuity.
-3. `centerSums` computes, per centered component, the lattice shift that moves
-   its center rows' centroid into the primary cell.
-4. `place` writes each row as its root position plus its displacement, minus
-   that shift.
-5. `rings` counts non-tree covalent edges that do not close within 1e-3 Å.
-
-Displacements travel as f32 bits in `vec4<u32>` links, so no GPU flushes a
-denormal pointer. The binding table and uniform layout are documented on
-`unwrapWgsl`. Use `periodicBox(box)` to validate a box and get the inverse the
-kernels take.
+For advanced GPU unwrapping, `createUnwrapForest` uses explicitly covalent bonds
+and filters incompatible models and alternate locations. Build the forest once
+per topology version; it describes connectivity rather than trajectory history.
+`unwrapWgsl` documents the stages, closure checks and buffer layout.
 
 ## Mode application
 
@@ -300,7 +283,16 @@ unsupported element parameter.
 
 Sources are combined explicitly, with provenance describing both methods:
 
+This example assumes `data` is a `StructureData` loaded by `@molgpu/io`:
+
 ```ts
+import {
+  gasteigerCharges,
+  residueNetCharge,
+  templateCharges,
+} from "@molgpu/dynamics";
+import { withAttributes } from "@molgpu/table";
+
 const amber = templateCharges(data);
 const het = gasteigerCharges(data, { exclude: amber.assigned });
 const values = amber.values.slice();
@@ -347,9 +339,7 @@ reorthogonalisation on a matrix-free product over the contacts. Each connected
 component's translations are projected out exactly, and repeated eigenvalues
 restart the Krylov space orthogonally. The basis is capped at about 320 MB of
 f64 vectors (`maxIterations` overrides it), and running out throws instead of
-returning unconverged modes. On an Apple M1, the first five ANM modes of 1tqn
-(468 CA, 1,404 dimensions) take about 0.2 s, and ten modes of 1a4y (1,166 CA,
-3,498 dimensions) about 2 s. Run large systems in a worker.
+returning unconverged modes. Run large systems in a worker.
 
 Both paths match ProDy 2.6.1 (`gamma = 1`, ANM 15 Å, GNM 7.3 Å) on the corpus CA
 atoms of 1crn and 1tqn: eigenvalues within 1e-6 relative and vector overlaps

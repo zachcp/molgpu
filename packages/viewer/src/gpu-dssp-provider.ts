@@ -29,6 +29,7 @@ import type { ViewerComponent, ViewerElement } from "./types.ts";
 /** How long codes from an older coordinate generation stay published. */
 const HOLD_MS = 1000;
 
+/** Progress diagnostics for a published GPU secondary-structure calculation. */
 export interface GpuDsspStatus {
   readonly generation: number;
   /** Directly flagged acceptor and bend-centre rows, excluding dependents. */
@@ -38,6 +39,7 @@ export interface GpuDsspStatus {
   readonly fallbackReason?: string;
 }
 
+/** Model selection, bounded-work overflow policy and publication callback. */
 export interface GpuDsspProps {
   /** Active primary-altloc atoms from this model; defaults to the first model. */
   readonly model?: "first" | number;

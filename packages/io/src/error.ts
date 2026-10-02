@@ -43,14 +43,15 @@ export type IoErrorCode =
   | "INVALID_SELECTION"
   /** The text uses a symbol outside `options.symbols` (`selection`). */
   | "UNSUPPORTED_SYMBOL"
-  /** The optional Mol* parser or decoder is absent or failed to load. */
+  /** The Mol* parser or decoder failed to load. */
   | "PARSER_UNAVAILABLE"
-  /** The optional Mol* surface code is absent, failed to load, or threw (`surface`). */
+  /** The Mol* surface code failed to load or compute (`surface`). */
   | "FIELD_UNAVAILABLE"
   /** The requested biological assembly id is not in the file (`bcif`). */
   | "UNKNOWN_ASSEMBLY";
 
-/** Every failure @molgpu/io raises: which importer, a stable code, and the cause. */
+/** Import failure with a format, stable code and optional cause.
+ * Cancellation propagates the abort reason instead of wrapping it in `IoError`. */
 export class IoError extends Error {
   override readonly name: "IoError";
   readonly format: IoFormat;

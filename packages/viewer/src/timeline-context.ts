@@ -11,6 +11,7 @@ export const TimelineContext: LiveContext<number | null> = makeContext<
   number | null
 >(null, "TimelineContext");
 
+/** Provide caller-controlled time in seconds to descendant curves and fields. */
 export const TimelineProvider: ViewerComponent<
   { time: number; children?: ViewerElement }
 > = ({ time, children }) => {
@@ -20,6 +21,7 @@ export const TimelineProvider: ViewerComponent<
   return (provide(TimelineContext, time, children));
 };
 
+/** Read time in seconds; requires a TimelineProvider ancestor. */
 export function useTimelineTime(): number {
   const time = useContext(TimelineContext);
   if (time === null) {
@@ -27,5 +29,3 @@ export function useTimelineTime(): number {
   }
   return time;
 }
-
-/** Sample the same global time used by time-dependent fields. */

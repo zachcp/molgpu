@@ -416,7 +416,7 @@ const Provider: LC<
 
 /**
  * Rigidly fit the nearest coordinates onto a reference (a coordinate
- * provider, INVARIANT 6). `to` is a packed xyz array or a `StructureData` with
+ * provider). `to` is a packed xyz array or a `StructureData` with
  * the same atoms, or `"first"` for frame 0 of the nearest `<Trajectory>`.
  * Unlike `<Transform select>`, `select` chooses the **fit** atoms; every output
  * atom moves by the fitted rotation (proper, no reflection) and, unless

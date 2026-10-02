@@ -1,18 +1,10 @@
-// @molgpu/fields — typed per-row value descriptions with one pure CPU evaluator
-// and a renderer-free WGSL code generator.
-//
-// A Field<T, Domain> assigns a value of type T to every row of a domain (atom or
-// residue). Selections say WHICH rows; fields say WHAT VALUE each row gets — a
-// colour, a radius, an opacity, a category. One concept replaces MolViewSpec's
-// color / color_from_source x categorical / continuous x domain / overflow
-// matrix.
-//
-// The package is renderer-free: it never imports use.gpu and never returns a
-// ShaderSource. `evaluate` computes values on the CPU (for tests, labels, and
-// annotation joins); `compile` emits a WGSL string plus a plain-data binding
-// schema that the viewer lowers to GPU sources. Numeric/vector fields lower;
-// string fields are CPU-only. There is no arbitrary JS->WGSL and no user parser.
-
+/**
+ * Reusable molecular colour, scalar and label fields.
+ * Compose constructors, evaluate on CPU with `evaluate`, or generate WGSL and
+ * plain binding descriptions with `compile`. No renderer is required.
+ *
+ * @module
+ */
 export type {
   Color,
   Domain,

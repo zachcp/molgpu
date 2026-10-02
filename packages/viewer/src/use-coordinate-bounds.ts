@@ -51,6 +51,7 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
   parts[lane].total = vec4<f32>(total, n);
 }`;
 
+/** GPU-reduced bounds and centroid for a completed local coordinate generation. */
 export interface CoordinateBounds {
   readonly min: readonly [number, number, number];
   readonly max: readonly [number, number, number];

@@ -1,3 +1,10 @@
+/**
+ * Renderer-free curve interpolation, isosurface extraction and nearest-atom
+ * attribution over typed arrays. Scalar grids are x-fastest. Returned mesh
+ * arrays are owned by the caller; curve interpolators mutate reusable state.
+ *
+ * @module
+ */
 // Ported from the inner loop of Mol* 5.11.0's MIT-licensed
 // mol-geo/util/marching-cubes/{algorithm,tables}.js. Deliberately no Mol*
 // Task/Tensor/Mesh types: this consumes a packed scalar grid and returns owned
@@ -39,11 +46,11 @@ function unit(x: number, y: number, z: number): [number, number, number] {
 }
 
 /**
- * Extract an isosurface from an x-major scalar grid.
+ * Extract an indexed isosurface from an x-fastest scalar grid.
  *
- * `origin` and `spacing` map grid coordinates to world coordinates. Vertices
- * are intentionally not shared across cells in this first portable builder;
- * that keeps ownership simple and produces valid indexed triangle geometry.
+ * `origin` and `spacing`, or a full column-major `transform`, map grid indices
+ * to world coordinates. Output positions, normals and indices are new arrays;
+ * inputs are unchanged. Vertices are shared within each cell, not across cells.
  */
 export function marchingCubes(input: MarchingCubesInput): MarchingCubesMesh {
   const { values, dims, transform } = input;

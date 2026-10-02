@@ -1,4 +1,10 @@
-// Renderer-free query and resolved-selection API.
+/**
+ * Renderer-free molecular selection queries and resolved row selections.
+ * Build reusable recipes with `element`, `protein`, `within` and other builders,
+ * then call `resolve(query, data)`. Set operations accept resolved selections.
+ *
+ * @module
+ */
 export type {
   Domain,
   Selection,

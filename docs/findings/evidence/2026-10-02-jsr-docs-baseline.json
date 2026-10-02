@@ -1,0 +1,102 @@
+{
+  "reviewDate": "2026-10-02",
+  "baseline": "9b1c5b1",
+  "packages": [
+    {
+      "package": "@molgpu/table",
+      "version": "0.1.0",
+      "publishedAt": "2026-10-02T21:03:57.499245Z",
+      "readmeMatchesMain": false,
+      "publishedReadmeBytes": 22980,
+      "baselineReadmeBytes": 22953,
+      "publishedReadmeSha256": "5648dc7b20724c6375931adb07d60de821ed69d183d51821d7ed6b0c56611514",
+      "baselineReadmeSha256": "ad145d3e4dc5c1034ff1afe7151009d14771d79de0bb295d38cd3392b3549c22",
+      "overviewUrl": "https://jsr.io/@molgpu/table",
+      "apiUrl": "https://jsr.io/@molgpu/table/doc"
+    },
+    {
+      "package": "@molgpu/select",
+      "version": "0.1.0",
+      "publishedAt": "2026-10-02T21:05:33.777651Z",
+      "readmeMatchesMain": false,
+      "publishedReadmeBytes": 22707,
+      "baselineReadmeBytes": 22939,
+      "publishedReadmeSha256": "564f24c1cc2d0e8885caad84991892f4136a87ec64f7933eece6c4921cda3467",
+      "baselineReadmeSha256": "ae983ad62b86044abd141137b5812fdf72e396ebc33435339f739a69a53c045d",
+      "overviewUrl": "https://jsr.io/@molgpu/select",
+      "apiUrl": "https://jsr.io/@molgpu/select/doc"
+    },
+    {
+      "package": "@molgpu/fields",
+      "version": "0.1.0",
+      "publishedAt": "2026-10-02T21:05:41.123058Z",
+      "readmeMatchesMain": false,
+      "publishedReadmeBytes": 14810,
+      "baselineReadmeBytes": 15043,
+      "publishedReadmeSha256": "2c5c038f112e0c606693a975a22fa344908d3999806abd6d5da8fa503dcb0f0a",
+      "baselineReadmeSha256": "58ec203dff6ee21a3e690ba89c1f3844a117b821c7d18336fc0b69043667c4eb",
+      "overviewUrl": "https://jsr.io/@molgpu/fields",
+      "apiUrl": "https://jsr.io/@molgpu/fields/doc"
+    },
+    {
+      "package": "@molgpu/io",
+      "version": "0.1.0",
+      "publishedAt": "2026-10-02T21:05:38.273707Z",
+      "readmeMatchesMain": false,
+      "publishedReadmeBytes": 15869,
+      "baselineReadmeBytes": 16933,
+      "publishedReadmeSha256": "82658c257158a022363f4f232b56786ec81f7a17382faa1a871372316b8958bb",
+      "baselineReadmeSha256": "fb223fad83c0cb4e1e7caa17fb0ef70dac80f1957d11b497006bce6229e8322b",
+      "overviewUrl": "https://jsr.io/@molgpu/io",
+      "apiUrl": "https://jsr.io/@molgpu/io/doc"
+    },
+    {
+      "package": "@molgpu/geo",
+      "version": "0.1.0",
+      "publishedAt": "2026-10-02T21:05:23.547124Z",
+      "readmeMatchesMain": false,
+      "publishedReadmeBytes": 4471,
+      "baselineReadmeBytes": 4699,
+      "publishedReadmeSha256": "5f3cd985bb5f129addf64c0dd3953495236e13acc03b6b9fc924929c513531df",
+      "baselineReadmeSha256": "ef0e317a2b46eba411fc53b2116d6b5546c542c7e51add03c836224d97a955f0",
+      "overviewUrl": "https://jsr.io/@molgpu/geo",
+      "apiUrl": "https://jsr.io/@molgpu/geo/doc"
+    },
+    {
+      "package": "@molgpu/dynamics",
+      "version": "0.1.0",
+      "publishedAt": "2026-10-02T21:09:07.243999Z",
+      "readmeMatchesMain": true,
+      "publishedReadmeBytes": 27377,
+      "baselineReadmeBytes": 27377,
+      "publishedReadmeSha256": "4df7ae956ad433ed0440d2faeea5caacf8dbeb606945c5a7bb6dc5f276bbc88c",
+      "baselineReadmeSha256": "4df7ae956ad433ed0440d2faeea5caacf8dbeb606945c5a7bb6dc5f276bbc88c",
+      "overviewUrl": "https://jsr.io/@molgpu/dynamics",
+      "apiUrl": "https://jsr.io/@molgpu/dynamics/doc"
+    },
+    {
+      "package": "@molgpu/timeline",
+      "version": "0.1.0",
+      "publishedAt": "2026-10-02T21:05:45.545153Z",
+      "readmeMatchesMain": true,
+      "publishedReadmeBytes": 6799,
+      "baselineReadmeBytes": 6799,
+      "publishedReadmeSha256": "3267e64c7f5427c9dc7a13ca6599b5f65380d7477ad727ccf880b13ee5e32728",
+      "baselineReadmeSha256": "3267e64c7f5427c9dc7a13ca6599b5f65380d7477ad727ccf880b13ee5e32728",
+      "overviewUrl": "https://jsr.io/@molgpu/timeline",
+      "apiUrl": "https://jsr.io/@molgpu/timeline/doc"
+    },
+    {
+      "package": "@molgpu/viewer",
+      "version": "0.1.0",
+      "publishedAt": "2026-10-02T21:09:13.393300Z",
+      "readmeMatchesMain": false,
+      "publishedReadmeBytes": 54063,
+      "baselineReadmeBytes": 54424,
+      "publishedReadmeSha256": "af30766cf90422c1ab82dbe3ea66b423cb2c15e7ec63d2f9905efea171355b29",
+      "baselineReadmeSha256": "d2733ebdff80f75414bc45833cbddf39b04fa05bb20a10eecd6110c2f0811c0c",
+      "overviewUrl": "https://jsr.io/@molgpu/viewer",
+      "apiUrl": "https://jsr.io/@molgpu/viewer/doc"
+    }
+  ]
+}

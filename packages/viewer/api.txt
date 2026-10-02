@@ -39,7 +39,7 @@ FieldLines
 FocusCameraFrame
   export type FocusCameraFrame = Omit<CameraFrame, "target" | "radius"> & { readonly focus: SelectionInput; readonly target?: never; readonly radius?: never };
 FocusOptions
-  export interface FocusOptions extends SelectionDiagnostics { /** Empty query falls back to the full structure by default. */ readonly empty?: "structure" | "null" | "error"; readonly fov?: number; readonly aspect?: number; readonly padding?: number; /** Scale of displayed atom radii, e.g. Spacefill.scale. */ readonly atomRadiusScale?: number }
+  export interface FocusOptions extends SelectionDiagnostics { /** Empty query falls back to the first model's primary conformers by default. */ readonly empty?: "structure" | "null" | "error"; readonly fov?: number; readonly aspect?: number; readonly padding?: number; /** Scale of displayed atom radii, e.g. Spacefill.scale. */ readonly atomRadiusScale?: number }
 FocusResult
   export interface FocusResult { readonly target: readonly number[]; readonly radius: number; readonly bounds: StructureBounds | null }
 GpuDssp

@@ -1,5 +1,5 @@
 // Renderer-free trajectories: per-frame coordinates over a structure's fixed
-// topology. See docs/findings/2026-09-26-trajectory-plan.md.
+// topology.
 import type {
   FrameSource,
   TrajectoryData,

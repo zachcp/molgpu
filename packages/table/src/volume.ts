@@ -1,5 +1,5 @@
 // Renderer-free scalar/vector volumes: a grid of samples plus the complete
-// index-to-world affine. See docs/findings/2026-09-26-volume-data-plan.md.
+// index-to-world affine.
 import type {
   VolumeData,
   VolumeGrid,
@@ -124,7 +124,7 @@ function statsOf(values: Float32Array) {
  * Validate `input` and wrap it as a frozen `VolumeData`. `values` is adopted,
  * not copied (one CPU copy per volume); like structure columns it is immutable
  * by contract. Statistics are always computed from the values, never read from
- * a file header. Oversize input throws a `RangeError` (see `validateVolume`).
+ * a file header. Oversize input throws a `RangeError`; raise `options.maxSamples` to explicitly accept a larger grid.
  */
 export function createVolume(
   input: VolumeInput,

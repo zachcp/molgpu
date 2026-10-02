@@ -24,8 +24,13 @@ application and package dependency ranges.
 
 ## Example
 
-```js
-import { createStructure, withPositions } from "@molgpu/table";
+This example loads a BinaryCIF file with the optional `@molgpu/io` package
+(`deno add jsr:@molgpu/io`) and runs without a GPU. Save it as `select.ts` and
+run `deno run --allow-net select.ts`.
+
+```ts
+import { structureFromBcif } from "@molgpu/io";
+import { withPositions } from "@molgpu/table";
 import {
   comp,
   count,
@@ -37,88 +42,25 @@ import {
   within,
 } from "@molgpu/select";
 
-// Two residues (CYS, GLY), four atoms, one bond. Real data comes from @molgpu/io.
-const data = createStructure({
-  positions: Float32Array.from([0, 0, 0, 1.8, 0, 0, 5, 0, 0, 6, 0, 0]),
-  topology: {
-    atoms: {
-      count: 4,
-      id: ["1", "2", "3", "4"],
-      name: ["CB", "SG", "CA", "O"],
-      altloc: ["", "", "", ""],
-      residue: Uint32Array.from([0, 0, 1, 1]),
-      element: Uint8Array.from([6, 16, 6, 8]),
-      occupancy: Float32Array.from([1, 1, 1, 1]),
-      bfactor: new Float32Array(4),
-    },
-    residues: {
-      count: 2,
-      chain: Uint32Array.from([0, 0]),
-      labelSeq: Int32Array.from([1, 2]),
-      authSeq: ["1", "2"],
-      insertionCode: ["", ""],
-      comp: ["CYS", "GLY"],
-      polymer: ["protein", "protein"],
-    },
-    chains: {
-      count: 1,
-      model: Int32Array.from([1]),
-      labelId: ["A"],
-      authId: ["A"],
-    },
-    bonds: {
-      count: 1,
-      a: Uint32Array.from([0]),
-      b: Uint32Array.from([1]),
-      order: Uint8Array.from([1]),
-      source: ["explicit"],
-    },
-    instances: {
-      count: 1,
-      chain: Uint32Array.from([0]),
-      operatorId: ["identity"],
-      transform: Float64Array.from([
-        1,
-        0,
-        0,
-        0,
-        0,
-        1,
-        0,
-        0,
-        0,
-        0,
-        1,
-        0,
-        0,
-        0,
-        0,
-        1,
-      ]),
-    },
-  },
-});
-
-// Queries are pure recipes; resolve binds them to one dataset.
+const data = await structureFromBcif("https://models.rcsb.org/1crn.bcif");
 const sulfur = resolve(element(16), data);
-const cysAtoms = toAtoms(resolve(comp(["CYS"]), data), data); // residue -> atom, keeps a source map
-const near = resolve(within(2, element(16)), data); // position-dependent
+const cysAtoms = toAtoms(resolve(comp(["CYS"]), data), data);
+const near = resolve(within(2, element(16)), data); // cutoff in Å
 
-console.log([...sulfur.indices], [...cysAtoms.indices], [
-  ...cysAtoms.source.rows,
-]); // [ 1 ] [ 0, 1 ] [ 0, 0 ]
-console.log(count(union(sulfur, near))); // 2
+console.log(count(sulfur), count(cysAtoms), count(union(sulfur, near)));
+console.log(cysAtoms.source); // maps selected atoms back to residue rows
 
-const moved = withPositions(
-  data,
-  Float32Array.from([0, 0, 0, 9, 0, 0, 5, 0, 0, 6, 0, 0]),
-);
-console.log(isStale(sulfur, moved), isStale(near, moved)); // false true
+// A new coordinate revision invalidates distance queries, even with equal values.
+const next = withPositions(data, data.positions);
+console.log(isStale(sulfur, next), isStale(near, next)); // false true
 ```
+
+If you already have a `StructureData`, start with `resolve`; loading a file is
+independent of selection evaluation.
 
 ## Concepts
 
-Two concepts, kept apart on purpose:
+Queries describe what to select; resolved selections contain the matching rows:
 
 - **`SelectionQuery`**: a reusable, structure-independent recipe. Building one
   (`all`, `protein`, `attribute`, `and`, `where`, `within`, and other builders)
@@ -136,7 +78,7 @@ Two concepts, kept apart on purpose:
 ### Query authoring
 
 Compose recipes before binding them to a dataset. `and`/`or`/`not` return atom
-queries and normalize residue/bond children to atoms; the existing
+queries and normalize residue/bond children to atoms;
 `union`/`intersect`/`difference` still operate on resolved selections.
 
 ```ts
@@ -229,8 +171,9 @@ Viewer props accept reusable queries or exact resolved selections. Ordinary
 representation queries default to first-model/primary conformers; coordinate
 provider queries default to all rows. Queries resolve against the nearest scoped
 publications. Exact resolved selections remain the explicit membership override.
-See [query selections in JSX](../viewer/README.md#query-selections-in-jsx) for
-pending, diagnostic and snapshot consistency contracts.
+See
+[query selections in JSX](https://jsr.io/@molgpu/viewer#query-selections-in-jsx)
+for pending, diagnostic and snapshot consistency contracts.
 
 ### Text selection construction
 
@@ -304,8 +247,7 @@ Grouping stays inside evaluation. `atom-groups :group-by` (MolScript's
 `intersected-by`, `with-same-atom-properties`, `is-connected-to`) act on atom
 sets, but `resolve` always returns the flat union.
 
-Mol*'s quirks are kept, so results match Mol* exactly
-(`test/selection/oracle.test.ts`):
+The expression evaluator preserves these Mol* distance and grouping rules:
 
 - `within` without `:min-radius` (PyMOL `around`) widens the cutoff by each
   selected atom's VDW radius.
@@ -320,12 +262,11 @@ skips them. `type.bond-flags` accepts both Mol*'s names (`metal-coordination`,
 needs `chains.entityType` and does not treat PRD molecules (`pdbx_molecule`)
 specially.
 
-Two deliberate differences:
-
-- `not X` (`query-in-selection :in-complement`) is the whole current input when
-  `X` matches nothing. Mol* returns nothing there, so PyMOL
-  `polymer and not hydro` selected nothing on structures without hydrogens.
-- `core.mass` gives carbon 12.011. Mol*'s table lists boron's 10.81.
+One deliberate difference: `not X` (`query-in-selection :in-complement`) is the
+whole current input when `X` matches nothing. Mol* returns nothing there, so
+PyMOL `polymer and not hydro` would otherwise select nothing on structures
+without hydrogens. Atomic masses follow Mol* 5.12.0, including carbon 12.011 and
+iodine 126.9.
 
 ### Set operations and conversions
 
@@ -354,16 +295,16 @@ Empty selections are valid and explicit (`isEmpty`, `count`).
 | `or`                 | experimental | Query-valued boolean operations normalized to atoms.                                                                                                              |
 | `not`                | experimental | Query-valued boolean operations normalized to atoms.                                                                                                              |
 | `attribute`          | experimental | Numeric atom/residue column predicate with declared input names.                                                                                                  |
-| `protein`            | experimental | Protein / DNA-or-RNA atoms by table polymer classification.                                                                                                       |
-| `nucleic`            | experimental | Protein / DNA-or-RNA atoms by table polymer classification.                                                                                                       |
-| `water`              | experimental | Water atoms / nonpolymer nonwater atoms (including ions).                                                                                                         |
-| `ligand`             | experimental | Water atoms / nonpolymer nonwater atoms (including ions).                                                                                                         |
-| `chain`              | experimental | Chain ID or inclusive sequence range, author namespace by default.                                                                                                |
-| `residues`           | experimental | Chain ID or inclusive sequence range, author namespace by default.                                                                                                |
+| `protein`            | experimental | Protein atoms by the stored polymer classification.                                                                                                               |
+| `nucleic`            | experimental | DNA or RNA atoms by the stored polymer classification.                                                                                                            |
+| `water`              | experimental | Water atoms by entity metadata, with a component-name fallback.                                                                                                   |
+| `ligand`             | experimental | Non-protein, non-nucleic, non-water atoms, including ions.                                                                                                        |
+| `chain`              | experimental | Atoms in an author or label chain ID; author namespace by default.                                                                                                |
+| `residues`           | experimental | Atoms in an inclusive author or label sequence-number range.                                                                                                      |
 | `secondaryStructure` | experimental | Polymer helix H/G/I, sheet E/B, or coil through ssKind.                                                                                                           |
 | `model`              | experimental | One model, declaring its explicit view scope.                                                                                                                     |
-| `allModels`          | experimental | Independent scope-axis opt-outs.                                                                                                                                  |
-| `allConformers`      | experimental | Independent scope-axis opt-outs.                                                                                                                                  |
+| `allModels`          | experimental | All models, retaining the caller's conformer policy.                                                                                                              |
+| `allConformers`      | experimental | All conformers, retaining the caller's model policy.                                                                                                              |
 | `withView`           | experimental | Override inherited query view axes, including conflicts.                                                                                                          |
 | `all`                | stable       | Query for every row of a domain (default `atom`).                                                                                                                 |
 | `where`              | stable       | Query from a labelled row predicate `(data, row) => boolean`, run once at resolve time.                                                                           |
@@ -382,25 +323,15 @@ Empty selections are valid and explicit (`isEmpty`, `count`).
 | `isEmpty`            | experimental | True when a selection has no rows.                                                                                                                                |
 | `count`              | stable       | Number of rows in a selection.                                                                                                                                    |
 | `compile`            | experimental | Compile a `SelectionExpr` (MolQL expression tree) into an atom query; label and deps are derived from the expression. Unsupported symbols throw.                  |
-| `supportedSymbols`   | experimental | The MolQL symbol names `compile` accepts (the Phase 1 allowlist).                                                                                                 |
+| `supportedSymbols`   | experimental | The sorted MolQL symbol names accepted by compile.                                                                                                                |
 | `Selection`          | stable       | Type: a resolved, dataset-, domain- and revision-bound set of sorted indices.                                                                                     |
 | `SelectionQuery`     | stable       | Type: a pure, dataset-independent query recipe. Opaque: build with the query constructors; `type`, `domain`, `label`, `deps`, `attributes` and `view` are public. |
 | `Domain`             | stable       | Type: `'atom' \| 'residue' \| 'bond'`.                                                                                                                            |
 | `SelectionExpr`      | experimental | Type: a MolQL expression as plain JSON: a literal, `{ name }`, or `{ head, args }`.                                                                               |
 
-## Place in the dependency graph
+## Integration
 
-The public entry is an explicit export list. `selection.ts` keeps recipes,
-resolution, revision identity and set operations together; expression evaluation
-and chemical graph operations retain their existing modules and contracts.
-
-`@molgpu/select` depends only on `@molgpu/table` (runtime) and is consumed by
-`@molgpu/viewer` and the examples. It sits beside `@molgpu/fields` above
-`table`.
-
-It must not import `molstar` (only `@molgpu/io` may), any `@use-gpu/*` package
-(only `@molgpu/viewer` may import `live`/`workbench`/`shader`), or any other
-`@molgpu/*` package besides `table`. Its public types must not mention GPU,
-use.gpu or Mol* concepts.
-
-Run `deno task test` from the repository root.
+This package depends on [`@molgpu/table`](https://jsr.io/@molgpu/table).
+[`@molgpu/io`](https://jsr.io/@molgpu/io) parses text selection languages;
+[`@molgpu/viewer`](https://jsr.io/@molgpu/viewer) resolves queries in a scene or
+renders resolved selections. Selection evaluation itself uses only CPU data.

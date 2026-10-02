@@ -372,7 +372,9 @@ function apply3(m: ArrayLike<number>, v: ArrayLike<number>): number[] {
 /**
  * Advance `count` BAOAB steps in place. Step n draws its noise from Philox
  * key (seed, n), so the state after n steps depends only on (system, params,
- * n). After the OU kick, the velocities lose their net momentum and their
+ * n), when starting from `langevinInit` and keeping parameters unchanged.
+ * Continuing an arbitrary state also depends on that state. After the
+ * Ornstein–Uhlenbeck thermostat kick, the velocities lose their net momentum and their
  * angular momentum about the reference centroid (a mass-weighted projection
  * off the six linearised rigid-body vectors), so the linear rigid-body
  * components of the displacement stay at zero.

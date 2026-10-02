@@ -77,7 +77,7 @@ export function byBfactor(
 }
 
 /** Colour atoms by residue index over `domain` on a rainbow ramp. Pass
- *  `columnRange(data, 'residue')` (or [0, residueCount-1]) as `domain`. */
+ *  `columnRange(data, 'residue')` as `domain`; it also handles a single residue. */
 export function bySeq(
   options: {
     domain?: readonly [number, number];
@@ -141,7 +141,8 @@ export function byCharge(
  * (the APBS/PyMOL convention, `byCharge`'s stops) over ±`range` (default 15, in
  * the volume's unit: kT/e for `<EField>`'s default distance model; use about
  * 2 for `debye`). It samples `volume` at each
- * row's position, or the nearest viewer volume when omitted (GPU-only), so a
+ * row's position, or the nearest viewer volume when omitted. CPU evaluation
+ * of the omitted form needs `{ volume }`. A
  * `<Surface>` or `<Spacefill>` under `<EField>` follows the live potential.
  */
 export function byPotential(

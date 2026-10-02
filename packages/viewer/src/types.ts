@@ -134,8 +134,9 @@ export interface CameraPose {
   readonly bearing: number;
   readonly pitch: number;
 }
+/** Camera framing controls and selection diagnostics; distances are in angstroms. */
 export interface FocusOptions extends SelectionDiagnostics {
-  /** Empty query falls back to the full structure by default. */
+  /** Empty query falls back to the first model's primary conformers by default. */
   readonly empty?: "structure" | "null" | "error";
   readonly fov?: number;
   readonly aspect?: number;
@@ -143,21 +144,25 @@ export interface FocusOptions extends SelectionDiagnostics {
   /** Scale of displayed atom radii, e.g. Spacefill.scale. */
   readonly atomRadiusScale?: number;
 }
+/** Camera target, radius and bounds for a resolved molecular focus. */
 export interface FocusResult {
   readonly target: readonly number[];
   readonly radius: number;
   readonly bounds: StructureBounds | null;
 }
+/** Explicit orbit-camera pose at a time in seconds. */
 export interface CameraFrame extends CameraPose {
   readonly time: number;
   readonly ease?: "linear" | "cosine" | "hold" | "bezier";
   readonly bezier?: readonly [number, number, number, number];
 }
+/** Camera keyframe whose target and radius come from a molecular selection. */
 export type FocusCameraFrame = Omit<CameraFrame, "target" | "radius"> & {
   readonly focus: SelectionInput;
   readonly target?: never;
   readonly radius?: never;
 };
+/** Ordered camera keyframes, sampled by useCameraCurve at timeline seconds. */
 export type CameraCurve = readonly (CameraFrame | FocusCameraFrame)[];
 
 /** Load with a request signal; replacement/unmount aborts it and suppresses stale results. */

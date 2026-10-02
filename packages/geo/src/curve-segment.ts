@@ -21,6 +21,8 @@ import {
 } from "./vec3.ts";
 import type { CurveSegmentControls, CurveSegmentState } from "./types.ts";
 
+/** Allocate reusable curve buffers with `linearSegments + 1` samples.
+ * Use a positive integer subdivision count. Interpolators mutate these arrays. */
 export function createCurveSegmentState(
   linearSegments: number,
 ): CurveSegmentState {
@@ -37,6 +39,9 @@ export function createCurveSegmentState(
   };
 }
 
+/** Fill curve points, tangents, normals and binormals in `state`.
+ * `tension` controls spline shape; `shift` places the segment between guides.
+ * A common starting value for both is 0.5. Controls remain unchanged. */
 export function interpolateCurveSegment(
   state: CurveSegmentState,
   controls: CurveSegmentControls,
@@ -148,6 +153,8 @@ export function interpolateNormals(
   }
 }
 
+/** Fill width and height profiles in `state` from three neighbouring sizes.
+ * `shift` uses the same segment placement as `interpolateCurveSegment`. */
 export function interpolateSizes(
   state: CurveSegmentState,
   w0: number,

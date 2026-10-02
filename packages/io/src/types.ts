@@ -29,7 +29,8 @@ export interface TrajectoryReadOptions {
 export interface OpenTrajectoryOptions {
   /** Container format; default: the file name's extension. */
   readonly format?: "dcd" | "xtc" | "trr";
-  /** Largest whole-file download when a server ignores Range requests. */
+  /** Largest whole-file download when a server ignores Range requests, in bytes.
+   * Default 256 MiB; must be a finite nonnegative safe integer. */
   readonly maxDownload?: number;
   /** Decode velocities where the format stores them (TRR). Default false. */
   readonly velocities?: boolean;
@@ -52,6 +53,7 @@ export interface SurfaceFieldAtoms {
   readonly radius: Float32Array;
 }
 
+/** Surface sampling options in Ångström, with an allocation sample cap. */
 export interface SurfaceFieldOptions {
   /** Solvent probe radius in Angstrom. Default 1.4. */
   probeRadius?: number;

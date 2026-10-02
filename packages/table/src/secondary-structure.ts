@@ -1,21 +1,7 @@
-// Per-residue direction vectors and secondary-structure labels, over an
-// already-built @molgpu/table trace (0sj.4) — no second polymer walk.
-// Direction atom roles (directionFrom/directionTo) are ported from Mol*
-// 5.11.0's MIT-licensed mol-model/structure/model/types.js
-// PolymerTypeAtomRoleId table: the C=O bond for protein, C4'-C3' for RNA,
-// C3'-C1' for DNA. This is the geometry-grounded orientation input
-// curve-segment.mjs (0sj.1) consumes as its d12/d23 controls.
-//
-// Scope boundary, deliberate: this does not replicate Mol*'s further
-// helix-orientation-centers axis fit or per-residue termini extension
-// (trace-iterator.js) — a real per-helix least-squares axis fit is
-// substantially more machinery than a first correct baseline needs, and
-// this project's established pattern is to defer such refinements until a
-// correct baseline exists (see 0sj.6's WGSL-extrusion note for the same
-// kind of call). Labels are the `ssCode` residue column projected by ssKind:
-// imported annotation (@molgpu/io from mmCIF struct_conf/struct_sheet_range),
-// a computed assignment, or a user-supplied column of a
-// hand-built structure. Without any of them every residue is 'coil'.
+// Per-sample direction vectors and secondary-structure labels over an existing trace.
+// Direction atom roles come from Mol* 5.11.0's MIT-licensed PolymerTypeAtomRoleId:
+// protein C=O, RNA C4'-C3', DNA C3'-C1'. No helix-axis fitting or termini extension
+// is performed. Labels use the residue ssCode attribute; absent labels mean coil.
 import type { StructureData } from "./structure-types.ts";
 import type { SecondaryStructureTrace, Trace } from "./trace-types.ts";
 import { attributeColumn } from "./attributes.ts";
@@ -33,9 +19,7 @@ const DIRECTION_ATOMS: Partial<
   rna: { from: new Set(["C4'", "C4*"]), to: new Set(["C3'", "C3*"]) },
   dna: { from: new Set(["C3'", "C3*"]), to: new Set(["C1'", "C1*"]) },
 };
-// Any fixed, finite, nonzero vector: orthogonalize() downstream (0sj.1's
-// ported Vec3.orthogonalize) already handles a direction parallel to the
-// tangent via its own fallback chain, so this only has to be deterministic.
+// Deterministic fallback; downstream orthogonalization handles parallel directions.
 const DEFAULT_DIRECTION: [number, number, number] = [0, 0, 1];
 
 /**

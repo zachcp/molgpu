@@ -4,8 +4,8 @@ Typed per-row value descriptions with one pure CPU evaluator and a renderer-free
 WGSL code generator. A `Field` assigns a value — a colour, a scalar
 (radius/opacity), or a label string — to every row of a domain (`atom` or
 `residue`) of a `@molgpu/table` structure. Selections say _which_ rows; fields
-say _what value_ each gets. One concept replaces MolViewSpec's `color` /
-`color_from_source` × categorical / continuous × domain / overflow matrix.
+say _what value_ each gets. Compose constructors to map numeric columns or
+annotations into reusable styles.
 
 ## Install
 
@@ -22,125 +22,53 @@ application and package dependency ranges.
 
 ## Example
 
-Runs in plain Node (no GPU):
+This example loads a BinaryCIF file with the optional `@molgpu/io` package
+(`deno add jsr:@molgpu/io`) and evaluates colours without a GPU. Save it as
+`fields.ts` and run `deno run --allow-net fields.ts`.
 
-```js
-import { createStructure } from "@molgpu/table";
+```ts
+import { structureFromBcif } from "@molgpu/io";
 import {
   attribute,
   byElement,
-  categorical,
   colormap,
   columnRange,
   compile,
   constant,
   evaluate,
-  joinAnnotation,
   linear,
 } from "@molgpu/fields";
 
-// Two residues (ALA 1, CYS 2) in chain A, four atoms: C N O S.
-const data = createStructure({
-  positions: Float32Array.from([0, 0, 0, 1, 0, 0, 2, 0, 0, 3, 0, 0]),
-  topology: {
-    atoms: {
-      count: 4,
-      id: ["1", "2", "3", "4"],
-      name: ["C", "N", "O", "S"],
-      altloc: ["", "", "", ""],
-      residue: Uint32Array.of(0, 0, 1, 1),
-      element: Uint8Array.of(6, 7, 8, 16),
-      occupancy: Float32Array.of(1, 1, 1, 1),
-      bfactor: Float32Array.of(10, 20, 30, 40),
-      radius: Float32Array.of(1.7, 1.55, 1.52, 1.8),
-    },
-    residues: {
-      count: 2,
-      chain: Uint32Array.of(0, 0),
-      labelSeq: Int32Array.of(1, 2),
-      authSeq: ["1", "2"],
-      insertionCode: ["", ""],
-      comp: ["ALA", "CYS"],
-      polymer: ["protein", "protein"],
-    },
-    chains: {
-      count: 1,
-      model: Int32Array.of(1),
-      labelId: ["A"],
-      authId: ["A"],
-    },
-    bonds: {
-      count: 0,
-      a: new Uint32Array(),
-      b: new Uint32Array(),
-      order: new Uint8Array(),
-      source: [],
-    },
-    instances: {
-      count: 1,
-      chain: Uint32Array.of(0),
-      operatorId: ["1"],
-      transform: Float64Array.of(
-        1,
-        0,
-        0,
-        0,
-        0,
-        1,
-        0,
-        0,
-        0,
-        0,
-        1,
-        0,
-        0,
-        0,
-        0,
-        1,
-      ),
-    },
-  },
-});
+const data = await structureFromBcif("https://models.rcsb.org/1crn.bcif");
+const heat = colormap(
+  linear(attribute("bfactor"), {
+    domain: columnRange(data, "bfactor"),
+  }),
+  [
+    [0, [0, 0, 1, 1]],
+    [1, [1, 0, 0, 1]],
+  ],
+);
 
-// Colour atoms by B-factor: normalise [10, 40] to [0, 1], then sample a gradient.
-const heat = colormap(linear(attribute("bfactor"), { domain: [10, 40] }), [
-  [0, [0, 0, 1, 1]],
-  [1, [1, 0, 0, 1]],
-]);
-console.log(evaluate(heat, data)); // Float32Array(16): blue ... red
-console.log(evaluate(byElement(), data).length); // 16 (4 atoms x RGBA)
-console.log(evaluate(constant(1.5), data, { domain: "residue" })); // Float32Array [1.5, 1.5]
-console.log(columnRange(data, "bfactor")); // [10, 40]
-const elementField = categorical(attribute("element"), {
-  6: [0.2, 0.7, 0.4, 1],
-  7: [0.8, 0.3, 0.2, 1],
-}, [0.5, 0.5, 0.5, 1]);
-console.log(evaluate(elementField, data).length); // 16
-
-// Join per-residue scores by identity (chain + sequence), lifted onto atoms.
-const scores = joinAnnotation(data, [{
-  chainAuth: "A",
-  authSeq: "2",
-  value: 0.9,
-}], {
-  fields: ["chainAuth", "authSeq"],
-});
-console.log(evaluate(scores, data)); // Float32Array [0, 0, 0.9, 0.9]
-
-// Lower a numeric field to WGSL plus plain-data bindings (no GPU needed here).
-console.log(compile(heat).bindings.map((b) => b.id)); // ['attr:bfactor']
+console.log(evaluate(heat, data)); // packed RGBA, four floats per atom
+console.log(evaluate(byElement(), data)); // element colours
+console.log(evaluate(constant(1.5), data, { domain: "residue" }));
+console.log(compile(heat).bindings.map((binding) => binding.id)); // ["attr:bfactor"]
 ```
 
-In an app you would pass `heat` as the `color` of a `@molgpu/viewer`
-representation rather than evaluating it yourself.
+If you already have a `StructureData`, start with a field constructor. In a
+viewer scene, pass `heat` to a representation's `color` prop; see the
+[viewer API](https://jsr.io/@molgpu/viewer#api) for supported field-valued
+props.
 
 ## Constructors
 
 - `constant(value)` — one value everywhere (number→scalar, `[r,g,b,a]`→colour,
   string→label).
-- `attribute(name, { domain? })` — read a built-in, well-known or namespaced
-  custom numeric column through `@molgpu/table`. Custom names require a domain.
-  A residue column can be lifted to atoms with `{ domain: "atom" }`.
+- `attribute(name, { domain?, lift? })` — read a built-in, well-known or
+  namespaced custom numeric column through `@molgpu/table`. Custom names require
+  a domain. A built-in residue column lifts with `{ domain: "atom" }`; a custom
+  residue column also needs `lift: true`.
 - `categorical(input, cases, fallback)` — map an integer scalar input to
   per-category values, with an explicit fallback.
 - `linear(input, { domain: [lo,hi], range?, overflow? })` — affine map into
@@ -180,10 +108,10 @@ results for every arithmetic expression.
 
 ## Two evaluators, one definition
 
-- `evaluate(field, data, { t?, domain? })` runs on the CPU and returns a packed
-  `Float32Array` (numeric) or a `string[]` (labels/tooltips). Broadcast fields
-  (`constant`, `curve`) need an explicit `{ domain }`.
-- `compile(field, { target })` lowers a numeric field to
+- `evaluate(field, data, { t?, domain?, volume? })` runs on the CPU and returns
+  a packed `Float32Array` (numeric) or a `string[]` (labels/tooltips). Broadcast
+  fields (`constant`, `curve`) need an explicit `{ domain }`.
+- `compile(field, { target?, domain?, volume? })` lowers a numeric field to
   `{ valueType, domain, target, entry, bindings, wgsl }`. Two targets: `raw`
   (default) emits `@group(0)` bindings and `fn evalField(row)`, runnable in a
   plain WebGPU compute pass; `link` emits `@link fn` accessors and
@@ -196,10 +124,14 @@ results for every arithmetic expression.
   CPU-only and `compile` rejects them; `linear` `overflow: 'fail'` is CPU-only
   too.
 
-The CPU evaluator and the generated WGSL share numeric definitions and are
-proven equal within tolerance by `deno task test:fields:gpu` (a raw-WebGPU
-compute pass, no use.gpu). Type-checked contract tests run under
-`deno task test`.
+`volumeSample(volume)` samples an explicit scalar volume at atom coordinates.
+`volumeSample()` uses the nearest viewer volume. For standalone CPU evaluation,
+provide the samples with `evaluate(field, data, { volume })`; for compilation,
+provide its grid with `compile(field, { volume })`.
+
+CPU evaluation reads the coordinates and columns of the supplied structure at
+call time. A field built from `joinAnnotation` contains the joined values from
+that call; rebuild it when annotation records or the row layout change.
 
 ## Built-ins and annotation joins
 
@@ -224,6 +156,23 @@ const chains = byChain();
 const cartoonColor = bySecondaryStructure();
 ```
 
+```ts
+import { evaluate, joinAnnotation } from "@molgpu/fields";
+
+// `data` is the structure loaded above. Match a score to author chain A, residue 2.
+const scores = joinAnnotation(data, [{
+  chainAuth: "A",
+  authSeq: "2",
+  value: 0.9,
+}], {
+  fields: ["chainAuth", "authSeq"],
+});
+console.log(evaluate(scores, data)); // 0.9 on matching atoms; 0 elsewhere
+```
+
+Include `model`, `insCode` or other identity fields when chain and sequence
+alone do not distinguish the intended residues.
+
 `joinAnnotation(data, records, options)` matches external per-residue or
 per-chain records onto the table by an explicit identity policy — a chain field
 plus residue discriminators, never a raw sequence number alone — and returns an
@@ -236,8 +185,9 @@ field to a viewer representation. No annotation-fetching hook is exported.
 
 ## API
 
-_stable_: relied on by other packages and settled. _experimental_: may change
-before 0.1.0. _advanced_: for renderer integrations (the viewer), not app code.
+_stable_: relied on by other packages and settled. _experimental_: may change in
+0.x minor releases. _advanced_: for renderer integrations (the viewer), not app
+code.
 
 | Export                     | Stability    | Description                                                                                                   |
 | -------------------------- | ------------ | ------------------------------------------------------------------------------------------------------------- |
@@ -272,21 +222,9 @@ before 0.1.0. _advanced_: for renderer integrations (the viewer), not app code.
 | `ResidueIdentity`          | experimental | Full residue identity (model, chain ids, seq ids, insertion code, comp).                                      |
 | `compile`                  | advanced     | Lower a numeric field to a WGSL string plus a plain-data binding schema.                                      |
 
-## Place in the dependency graph
+## Integration
 
-The explicit public entry exports field construction from `construction.ts`, CPU
-evaluation from `evaluation.ts`, and WGSL lowering from `compile.ts`. Private
-node helpers connect these responsibilities; they add no public entries.
-
-```
-table ──► fields ──► viewer
-```
-
-`@molgpu/fields` depends only on `@molgpu/table` and is consumed by
-`@molgpu/viewer` (which lowers compiled fields to use.gpu sources in the
-advanced `useField` adapter and binds pure joined annotations).
-
-It must not import `molstar` (only `@molgpu/io` may), any `@use-gpu/*` package
-(GPU lowering and use.gpu types live in `@molgpu/viewer`), or any other
-`@molgpu/*` package besides `table`. Its public types never mention use.gpu or
-Mol*; `compile` returns WGSL as a plain string, never a `ShaderSource`.
+This package depends on [`@molgpu/table`](https://jsr.io/@molgpu/table). Its CPU
+evaluator and WGSL generator require no renderer. Advanced integrations can
+consume `compile`'s strings and binding descriptions;
+[`@molgpu/viewer`](https://jsr.io/@molgpu/viewer) adapts them to use.gpu.

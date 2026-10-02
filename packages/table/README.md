@@ -29,6 +29,12 @@ import {
 } from "@molgpu/table";
 
 // One chain, one residue, two atoms (N and CA of an alanine).
+const identity = new Float64Array(16);
+identity[0] =
+  identity[5] =
+  identity[10] =
+  identity[15] =
+    1;
 const data = createStructure({
   positions: Float32Array.from([0, 0, 0, 1.46, 0, 0]),
   topology: {
@@ -68,30 +74,13 @@ const data = createStructure({
       count: 1,
       chain: Uint32Array.of(0),
       operatorId: ["1"],
-      transform: Float64Array.of(
-        1,
-        0,
-        0,
-        0,
-        0,
-        1,
-        0,
-        0,
-        0,
-        0,
-        1,
-        0,
-        0,
-        0,
-        0,
-        1,
-      ),
+      transform: identity,
     },
   },
 });
 
 const atoms = activeAtoms(data); // Uint32Array [0, 1]
-console.log(coordinateBounds(data, atoms).center); // [0.73, 0, 0]
+console.log(coordinateBounds(data, atoms)?.center); // [0.73, 0, 0]
 console.log(residueKey(data, 0)); // [1,"A","A",1,"1","","ALA"]
 
 const moved = withPositions(data, Float32Array.from([0, 0, 0, 0, 1.46, 0]));
@@ -112,15 +101,15 @@ dataset. All returned arrays are **immutable by contract**: JavaScript cannot
 freeze a nonempty typed array. Do not mutate them. Metadata records and string
 arrays are frozen. Use `withPositions` for coordinate updates, which copies
 positions while preserving dataset and topology identity. Position revisions are
-monotonic per dataset, including branched updates. Topology/attribute
-replacement currently requires a new dataset; there is no mutable store.
-Identity is tracked in module-private state, so `withPositions` and
-`bondTopology` only accept structures made by `createStructure` from the same
-module instance. JSR publishes internal dependencies as caret ranges (for
-example, `jsr:@molgpu/table@^0.1.0`). Keep compatible versions so the
-application resolves one shared copy: identity and revision state are
-module-private. Values from divergent copies can be rejected by
-identity-dependent operations. Use `deno info` and the lockfile to find
+monotonic per dataset, including branched updates. Replacing topology requires a
+new dataset. Use `withAttributes` to replace derived attribute columns while
+retaining dataset identity. Identity is tracked in module-private state, so
+`withPositions` and `bondTopology` only accept structures made by
+`createStructure` from the same module instance. JSR publishes internal
+dependencies as caret ranges (for example, `jsr:@molgpu/table@^0.1.0`). Keep
+compatible versions so the application resolves one shared copy: identity and
+revision state are module-private. Values from divergent copies can be rejected
+by identity-dependent operations. Use `deno info` and the lockfile to find
 duplicate versions, then align the application and package dependency ranges.
 
 Ownership follows one rule with one exception. Constructors copy caller arrays:
@@ -132,8 +121,7 @@ validates each read, and consumers may cache frames, so a source must not reuse
 decode buffers. Molecular values are local to one JavaScript realm: to cross a
 worker boundary, send plain columns or bytes and call the constructor on the
 receiving side (a new identity), and never transfer a buffer owned by a molgpu
-value. See
-[the data ownership decision](../../docs/findings/2026-10-01-data-ownership-decision.md).
+value.
 
 All source models and alternate locations are retained. `activeAtoms(data)` is
 an explicit default view: first encountered model, plus blank-altloc atoms and
@@ -149,9 +137,8 @@ chain; atoms are not duplicated for assemblies. Imports must supply identity
 rows for chains displayed without assembly expansion. Empty instance tables are
 valid data, but represent no explicit assembly instances. Importers emit one
 identity row per chain unless asked for an assembly
-(`structureFromBcif(input, { assembly })`). `@molgpu/viewer` draws one copy per
-operator (see
-[the assembly instance decision](../../docs/findings/2026-10-01-assembly-instances-decision.md)).
+(`structureFromBcif(input, { assembly })`).
+[`@molgpu/viewer`](https://jsr.io/@molgpu/viewer) draws one copy per operator.
 
 `residueKey` includes model, both chain namespaces, label/author sequence,
 insertion code and component. Never join annotations using sequence number
@@ -165,34 +152,25 @@ selection; `secondaryStructureTrace` adds per-sample direction vectors and
 helix/sheet/coil labels over that trace. Both are inputs to the viewer's tube
 and ribbon geometry.
 
-## Source modules
+## Chemical data and display policies
 
-`elements.ts` owns atomic-number/symbol identity; `attributes.ts` owns derived
-and built-in columns and the shared attribute-domain registry. `structure.ts`
-owns validation, copies, identity and revisions; `structure-view.ts` owns atom
-views, residue keys and coordinate bounds; `bond-topology.ts` owns display radii
-and inferred bonds. `trace.ts`, `secondary-structure.ts`, `volume.ts` and
-`trajectory.ts` each own their matching derivation or value model. Domain types
-live alongside those responsibilities in `structure-types.ts`, `trace-types.ts`,
-`volume-types.ts` and `trajectory-types.ts`; the entry exports these types
-directly. The package entrypoint remains the curated public API. Helpers needed
-only by focused tests are marked `@internal` and are not re-exported.
+Chemical identity, query radii and display radii serve different purposes. Use
+the named API for the operation you need; a display fallback is not a physical
+measurement.
 
-### Chemical data sources and semantics
-
-| Data                     | Source and consumers                                                           | Meaning                                                                                                                               |
-| ------------------------ | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------- |
-| Atomic number and symbol | `elements.ts`; IO decoders, selection's MolQL symbol property, dynamics labels | Atomic identity, with 0/empty for unknown; D/T and modern superheavy spellings are input aliases.                                     |
-| Selection atomic mass    | `@molgpu/select/src/elements.ts`; MolQL query evaluation                       | Mol* atomic-weight query values with the package's documented corrections; no other package currently consumes these query semantics. |
-| Selection VDW radius     | `@molgpu/select/src/elements.ts`; MolQL query evaluation                       | Mol* `ElementVdwRadii` values and Mol* query default; `NaN` preserves an absent Mol* value.                                           |
-| Display fallback radius  | `bond-topology.ts`; `atomRadii` and IO's zero-PQR-radius fallback              | Common-element display radius, default 1.7 Å. A positive input `atoms.radius` overrides it.                                           |
-| PQR radius               | `@molgpu/io` PQR attributes and `pqr:radius`                                   | Value carried by the PQR file; zero remains in `pqr:radius`, while display radius falls back to the table default.                    |
-| Covalent radius          | `bond-topology.ts`                                                             | Small-element radii used only to infer covalent connectivity.                                                                         |
-| Mol* bond thresholds     | `@molgpu/select/src/bond-graph.ts` and MolQL within evaluators                 | Query-specific search and pair thresholds; not display or covalent radii.                                                             |
-| CPK colors               | `@molgpu/fields` element-color preset                                          | Visualization policy, independent of chemical identity.                                                                               |
+| Data                     | Source and consumers                                                 | Meaning                                                                                                            |
+| ------------------------ | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Atomic number and symbol | `ELEMENT_SYMBOL`; IO decoders, selection queries and dynamics labels | Atomic identity, with 0/empty for unknown; D/T and modern superheavy spellings are input aliases.                  |
+| Selection atomic mass    | `@molgpu/select` expression evaluation                               | Mol* 5.12.0 atomic-weight query values; no other package currently consumes these query semantics.                 |
+| Selection VDW radius     | `@molgpu/select` expression evaluation                               | Mol* `ElementVdwRadii` values and Mol* query default; `NaN` preserves an absent Mol* value.                        |
+| Display fallback radius  | `elementRadius`, `atomRadii` and IO's zero-PQR-radius fallback       | Common-element display radius, default 1.7 Å. A positive input `atoms.radius` overrides it.                        |
+| PQR radius               | `@molgpu/io` PQR attributes and `pqr:radius`                         | Value carried by the PQR file; zero remains in `pqr:radius`, while display radius falls back to the table default. |
+| Covalent radius          | `bondTopology`                                                       | Small-element radii used only to infer covalent connectivity.                                                      |
+| Mol* bond thresholds     | `@molgpu/select` connectivity and proximity expressions              | Query-specific search and pair thresholds; not display or covalent radii.                                          |
+| CPK colors               | `@molgpu/fields` element-color preset                                | Visualization policy, independent of chemical identity.                                                            |
 
 `ATTRIBUTE_DOMAINS` is the single domain registry for built-in and well-known
-column names. `attributes.ts` uses it when resolving table columns, and
+column names. `attributeColumn` uses it when resolving table columns, and
 `@molgpu/fields` uses the same exported map when constructing attribute fields.
 
 Element identity exports:
@@ -276,18 +254,21 @@ Element identity exports:
 
 The column schema interfaces are experimental because columns may still be
 added; `StructureData` as the nominal value passed between packages is stable.
-`api.txt` holds the exact signatures and must be updated
-(`deno task check:hardening table --update`) with any API change.
+[JSR API reference](https://jsr.io/@molgpu/table/doc) lists the exported types
+and signatures.
 
-## Place in the dependency graph
+## Integration
 
-`table` is the root of the workspace graph: it has no dependencies, and `io`,
-`select`, `fields` and `viewer` depend on it. It must stay a pure domain
-package. It must not import any other `@molgpu/*` package, `molstar` (only `io`
-may), any `@use-gpu/*` package, or browser/WebGPU/DOM APIs.
+This package has no runtime dependencies. It supplies data to
+[`@molgpu/io`](https://jsr.io/@molgpu/io),
+[`@molgpu/select`](https://jsr.io/@molgpu/select),
+[`@molgpu/fields`](https://jsr.io/@molgpu/fields) and
+[`@molgpu/viewer`](https://jsr.io/@molgpu/viewer), and can also be used without
+a renderer or parser.
 
 ## Tests
 
-Run `deno task test` from the repository root. The fixtures are adversarial
-synthetic contract tests, not the still-pending curated scientific oracle corpus
-(jy6.4).
+From the repository root, run `deno test -A packages/table/test`. Tests cover
+validation, array ownership, views, attributes, traces, volumes and
+trajectories. Synthetic contract fixtures exercise edge cases; they do not
+constitute an exhaustive scientific validation corpus.

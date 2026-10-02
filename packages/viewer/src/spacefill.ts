@@ -195,8 +195,8 @@ const SelectedSpacefill: LC<
 
 /**
  * Render atom sites as world-space shaded spheres: the first model's
- * primary-conformer atoms, or exactly `select` (a @molgpu/select atom
- * Selection, which may reach other models or conformers), drawn by reading
+ * primary-conformer atoms, or `select` (a reusable query or exact atom
+ * selection, which may reach other models or conformers), drawn by reading
  * the shared structure columns through the uploaded atom rows. `color` is either a flat colour or a @molgpu/fields Field,
  * which is composed shader-side over the atoms' columns (no per-atom colour
  * upload; an annotation uploads its own rows once) via the viewer's useField,

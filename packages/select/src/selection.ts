@@ -1,6 +1,6 @@
 // @molgpu/select — pure selection queries and dataset-bound resolved selections.
 //
-// Two concepts, kept deliberately apart (see the architecture review):
+// Two concepts, kept deliberately apart (queries and resolved values):
 //
 //   SelectionQuery  a reusable, structure-independent recipe. Building one
 //                   touches no dataset, so the same query resolves against many
@@ -35,22 +35,23 @@ import type { RevisionStream } from "./internal/revision.ts";
 // Smallest grid cell for within(); a zero cutoff still needs a positive cell.
 const MIN_CELL = 1;
 
+/** Molecular row domain: atom, residue or declared bond. */
 export type Domain = "atom" | "residue" | "bond";
 
-/**
- * A pure, dataset-independent recipe. Build once, resolve against many datasets.
- *
- * Opaque: construct queries with this package's builders and pass them to its
- * evaluators. Dependency, attribute-input and view metadata below are public. Runtime query objects carry further
- * per-kind fields (for example a `where` predicate or a `within` cutoff) that
- * are internal and may change in any release.
- */
 /** Molecular row eligibility, without removing or reordering source rows. */
 export interface SelectionView {
   readonly model?: "first" | "all" | number;
   readonly altloc?: "primary" | "all";
 }
 
+/**
+ * A pure, dataset-independent recipe. Build once, resolve against many datasets.
+ *
+ * Opaque: construct queries with this package's builders and pass them to its
+ * evaluators. Dependency, attribute-input and view metadata below are public.
+ * Runtime query objects carry further per-kind fields (for example a `where` predicate or a `within` cutoff) that
+ * are internal and may change in any release.
+ */
 export interface SelectionQuery {
   readonly type: string;
   readonly domain: Domain;
@@ -99,7 +100,7 @@ type Revisions = Readonly<Partial<Record<RevisionStream, number>>>;
 type Predicate = (data: StructureData, row: number) => boolean;
 
 // The query node kinds. SelectionQuery is deliberately opaque in the public
-// types (x24.11); only this module reads the per-kind fields.
+// types; only this module reads the per-kind fields.
 type QueryNode =
   & { readonly scopeConflicts?: readonly (keyof SelectionView)[] }
   & (
@@ -921,12 +922,15 @@ const combine = (
   });
 };
 
+/** Rows in either selection; both must share dataset, domain and compatible revisions. */
 export function union(a: Selection, b: Selection): Selection {
   return combine(a, b, `(${a.label}|${b.label})`, (x, y) => x || y);
 }
+/** Rows in both selections; both must share dataset, domain and compatible revisions. */
 export function intersect(a: Selection, b: Selection): Selection {
   return combine(a, b, `(${a.label}&${b.label})`, (x, y) => x && y);
 }
+/** Rows in the first selection but absent from the second; checks dataset, domain and revisions. */
 export function difference(a: Selection, b: Selection): Selection {
   return combine(a, b, `(${a.label}\\${b.label})`, (x, y) => x && !y);
 }
@@ -1085,10 +1089,12 @@ export function isStale(sel: Selection, data: StructureData): boolean {
   );
 }
 
+/** True when the resolved selection contains no rows. */
 export function isEmpty(sel: Selection): boolean {
   assertSelection(sel, "selection");
   return sel.indices.length === 0;
 }
+/** Number of rows in the resolved selection. */
 export function count(sel: Selection): number {
   assertSelection(sel, "selection");
   return sel.indices.length;

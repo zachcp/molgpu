@@ -1,7 +1,11 @@
-// @molgpu/viewer/advanced: escape hatches for custom representations and
-// providers. Some exports name use.gpu types (shader sources, Live contexts),
-// which "." never does; the rest are CPU snapshot and resource-level hooks that
-// an application composing components does not need (see README "API").
+/**
+ * Extension APIs for custom molecular representations and GPU providers.
+ * Read the nearest structure, coordinates and volumes; use CPU snapshots when
+ * a consumer cannot read GPU data. Snapshots can lag live rendering and return
+ * null while pending. Shader and context types require use.gpu 0.20.0.
+ *
+ * @module
+ */
 export { WorldSpacePointLayer } from "./world-space-points.ts";
 export { AttributeProducer } from "./attribute-producer.ts";
 export { useAttributeSnapshot } from "./attribute-snapshot.ts";

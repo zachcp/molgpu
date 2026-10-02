@@ -1,5 +1,10 @@
-// Pure molecular values. Arrays are packed CPU columns and immutable by contract.
-// No renderer, parser, or global platform API is required by this module.
+/**
+ * Renderer-free molecular structures, attributes, volumes and trajectories.
+ * Constructors validate inputs; returned typed arrays are read-only by contract.
+ * Use `withPositions` and `withAttributes` to create revised structure values.
+ *
+ * @module
+ */
 export type {
   Atoms,
   AttributeColumn,
