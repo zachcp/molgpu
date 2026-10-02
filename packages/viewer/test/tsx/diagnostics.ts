@@ -20,6 +20,7 @@ export type Mode =
   | "missing"
   | "controlled"
   | "lifecycle"
+  | "assembly"
   | "offset"
   | "bonds"
   | "attributes"

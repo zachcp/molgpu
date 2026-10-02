@@ -31,6 +31,7 @@ import {
 } from "./internal/use-field-plan.ts";
 import { useAttributeSources } from "./internal/attribute-sources.ts";
 import { useCoordinates } from "./coordinates-context.ts";
+import { withInstances } from "./internal/instance-copies.ts";
 import { useBondPositions } from "./internal/bond-positions.ts";
 
 /** LineLayer props Bonds forwards (draw mode and any upstream flags). */
@@ -362,7 +363,7 @@ export const Bonds: ViewerComponent<
   }
   & Translucency
   & SelectionDiagnostics
-> = (props) =>
+> = withInstances((props) =>
   use(SelectionConsumer, {
     input: props.select,
     who: "Bonds",
@@ -376,4 +377,5 @@ export const Bonds: ViewerComponent<
         select: props.select == null ? null : select,
       });
     },
-  });
+  })
+);
