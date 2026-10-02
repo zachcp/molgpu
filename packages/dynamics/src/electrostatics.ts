@@ -24,6 +24,15 @@ export interface ElectrostaticsOptions {
   readonly minDistance?: number;
   /** Defaults to `"kT/e"`. */
   readonly unit?: PotentialUnit;
+  /**
+   * Optional cutoff in Å. Omitted (the default) sums every pair exactly.
+   * With a cutoff, each pair term is multiplied by a switching function that
+   * is 1 up to `cutoff − switchWidth`, 0 from `cutoff`, and smooth (C¹) in
+   * between, so isosurfaces show no truncation step.
+   */
+  readonly cutoff?: number;
+  /** Width in Å of the switching region below `cutoff`; defaults to 2. */
+  readonly switchWidth?: number;
 }
 
 /** Normalised parameters shared by the CPU reference and the WGSL uniform. */
@@ -40,6 +49,10 @@ export interface Electrostatics {
   readonly kT: number;
   /** C / (ε or D) / (kT or 1): potential = scale · Σ q g(r). */
   readonly scale: number;
+  /** Cutoff in Å, or 0 for the exact sum. */
+  readonly cutoff: number;
+  /** Where switching starts, in Å (`cutoff − switchWidth`); 0 without cutoff. */
+  readonly switchOn: number;
 }
 
 // CODATA 2018 exact SI values.
@@ -113,6 +126,19 @@ export function electrostatics(
     ? debyeKappa(ionicStrength, epsilon, temperature)
     : 0;
   const scale = COULOMB_CONSTANT / epsilon / (unit === "kT/e" ? kT : 1);
+  let cutoff = 0, switchOn = 0;
+  if (options.cutoff !== undefined) {
+    cutoff = positive(options.cutoff, "cutoff");
+    const width = positive(options.switchWidth ?? 2, "switchWidth");
+    switchOn = cutoff - width;
+    if (switchOn < minDistance) {
+      throw new RangeError(
+        "electrostatics: cutoff − switchWidth must be at least minDistance",
+      );
+    }
+  } else if (options.switchWidth !== undefined) {
+    throw new TypeError("electrostatics: switchWidth needs a cutoff");
+  }
   return Object.freeze({
     model,
     epsilon,
@@ -123,7 +149,27 @@ export function electrostatics(
     kappa,
     kT,
     scale,
+    cutoff,
+    switchOn,
   });
+}
+
+/**
+ * The cutoff switching function S(r) and dS/dr (CHARMM form, C¹ at both
+ * ends): 1 below `switchOn`, 0 from `cutoff`. Without a cutoff, S = 1.
+ */
+export function coulombSwitch(
+  p: Pick<Electrostatics, "cutoff" | "switchOn">,
+  r: number,
+): [number, number] {
+  if (!p.cutoff || r <= p.switchOn) return [1, 0];
+  if (r >= p.cutoff) return [0, 0];
+  const c2 = p.cutoff * p.cutoff, on2 = p.switchOn * p.switchOn, u = r * r;
+  const d3 = (c2 - on2) ** 3;
+  return [
+    (c2 - u) ** 2 * (c2 + 2 * u - 3 * on2) / d3,
+    12 * r * (c2 - u) * (on2 - u) / d3,
+  ];
 }
 
 /**
@@ -184,6 +230,14 @@ function checkPoints(points: ArrayLike<number>): number {
  * clamp, where g is constant).
  */
 function kernel(p: Electrostatics, r: number): [number, number] {
+  const [s, ds] = coulombSwitch(p, r);
+  if (s === 0) return [0, 0];
+  const [g, h] = unswitched(p, r);
+  // φ ∝ g·S, so E ∝ −d(g·S)/dr = h·S − g·S′.
+  return [g * s, h * s - g * ds];
+}
+
+function unswitched(p: Electrostatics, r: number): [number, number] {
   const re = Math.max(r, p.minDistance);
   const inside = r < p.minDistance;
   switch (p.model) {

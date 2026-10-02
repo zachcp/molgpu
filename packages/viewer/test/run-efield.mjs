@@ -177,6 +177,31 @@ Deno.test("electric fields", async () => {
     report.states.grid = { dims: grid.dims, unit: grid.unit };
     assertStrictEquals(grid.unit, "kcal/mol/e");
 
+    // 1b. A cutoff (molgpu-sept-egp.15) matches the switched f64 reference,
+    //     and its deviation from the exact sum is recorded as its error.
+    report.states.cutoff = {};
+    for (
+      const physics of [
+        { model: "vacuum", cutoff: 6 },
+        { model: "vacuum", cutoff: 10 },
+        { model: "distance", cutoff: 8, switchWidth: 3 },
+        { model: "debye", ionicStrength: 0.1, cutoff: 8 },
+      ]
+    ) {
+      await update({ mode: "none" });
+      await update({ mode: "random", physics });
+      await ready();
+      const switched = await parity("random", {});
+      const gpu = await settledPotential();
+      const exact = await page.evaluate(
+        () => globalThis.__efield.cpuPotential("random", { exact: 1 }),
+      );
+      report.states.cutoff[JSON.stringify(physics)] = {
+        ...switched,
+        errorVsExact: relativeError(gpu, exact),
+      };
+    }
+
     // A ready root buffer needs no timed settling recomputations.
     let before = await counters();
     await page.waitForTimeout(1150);
@@ -482,6 +507,7 @@ Deno.test("electric fields", async () => {
       [5000, {}],
       [50000, {}],
       [50000, { model: "debye" }],
+      [50000, { cutoff: 12 }],
     ];
     for (const [atoms, physics] of timingCases) {
       await update({ mode: "none", target: [0, 0, 0], radius: 40 });
@@ -505,6 +531,7 @@ Deno.test("electric fields", async () => {
       report.states.timing.push({
         atoms,
         model: physics.model ?? "distance",
+        ...(physics.cutoff ? { cutoff: physics.cutoff } : {}),
         samples: 128 ** 3,
         ms: best,
         pairsPerSecond: pairs / (best / 1000),

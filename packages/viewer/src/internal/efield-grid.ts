@@ -160,3 +160,43 @@ export function efieldChargeColumn(
   }
   return column;
 }
+
+/**
+ * `rows` reordered along a Morton curve over `cell`-sized cells of their
+ * positions, so consecutive rows (and so each 64-atom tile) sit close
+ * together. Pure ordering: the same rows, the same multiset of terms.
+ */
+export function spatialOrder(
+  positions: ArrayLike<number>,
+  rows: Uint32Array,
+  cell: number,
+): Uint32Array {
+  if (rows.length < 2) return rows;
+  let lx = Infinity, ly = Infinity, lz = Infinity;
+  for (const row of rows) {
+    lx = Math.min(lx, positions[row * 3]);
+    ly = Math.min(ly, positions[row * 3 + 1]);
+    lz = Math.min(lz, positions[row * 3 + 2]);
+  }
+  // Interleave the low 10 bits of each cell coordinate (wider spreads wrap,
+  // which only weakens locality).
+  const spread = (v: number) => {
+    let x = v & 0x3ff;
+    x = (x | (x << 16)) & 0x030000ff;
+    x = (x | (x << 8)) & 0x0300f00f;
+    x = (x | (x << 4)) & 0x030c30c3;
+    x = (x | (x << 2)) & 0x09249249;
+    return x;
+  };
+  const keys = new Float64Array(rows.length);
+  rows.forEach((row, i) => {
+    const cx = Math.floor((positions[row * 3] - lx) / cell);
+    const cy = Math.floor((positions[row * 3 + 1] - ly) / cell);
+    const cz = Math.floor((positions[row * 3 + 2] - lz) / cell);
+    keys[i] = spread(cx) | (spread(cy) << 1) | (spread(cz) << 2);
+  });
+  const order = Array.from(rows.keys()).sort((a, b) =>
+    keys[a] - keys[b] || rows[a] - rows[b]
+  );
+  return Uint32Array.from(order, (i) => rows[i]);
+}

@@ -466,7 +466,11 @@ probe.cpuPotential = (which, extra = {}) => {
       Math.fround(charges[i]),
     );
   }
-  return Array.from(coulombGrid(grid, atoms, current.physics));
+  // `exact` drops any cutoff: the reference a cutoff approximates.
+  const { cutoff: _cutoff, switchWidth: _width, ...exact } = current.physics;
+  return Array.from(
+    coulombGrid(grid, atoms, extra.exact ? exact : current.physics),
+  );
 };
 
 /**

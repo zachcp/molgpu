@@ -17,9 +17,9 @@ ElasticNetwork
 ElasticSolveOptions
   export interface ElasticSolveOptions { /** * `"dense"` is exact Jacobi and limited to `MAX_ELASTIC_DIM`; `"lanczos"` is * sparse and matrix-free. `"auto"` (the default) picks dense up to the * limit and Lanczos above it. */ readonly method?: "auto" | "dense" | "lanczos"; /** Lanczos basis vectors kept (default: about 320 MB of f64 basis). */ readonly maxIterations?: number }
 Electrostatics
-  export interface Electrostatics { readonly model: DielectricModel; readonly epsilon: number; readonly ionicStrength: number; readonly temperature: number; readonly minDistance: number; readonly unit: PotentialUnit; /** Inverse Debye length in 1/Å (0 unless `debye`). */ readonly kappa: number; /** kT in kcal/mol at `temperature`. */ readonly kT: number; /** C / (ε or D) / (kT or 1): potential = scale · Σ q g(r). */ readonly scale: number }
+  export interface Electrostatics { readonly model: DielectricModel; readonly epsilon: number; readonly ionicStrength: number; readonly temperature: number; readonly minDistance: number; readonly unit: PotentialUnit; /** Inverse Debye length in 1/Å (0 unless `debye`). */ readonly kappa: number; /** kT in kcal/mol at `temperature`. */ readonly kT: number; /** C / (ε or D) / (kT or 1): potential = scale · Σ q g(r). */ readonly scale: number; /** Cutoff in Å, or 0 for the exact sum. */ readonly cutoff: number; /** Where switching starts, in Å (`cutoff − switchWidth`); 0 without cutoff. */ readonly switchOn: number }
 ElectrostaticsOptions
-  export interface ElectrostaticsOptions { /** Defaults to `"distance"` (ε = 4r, as ChimeraX's coulombic default). */ readonly model?: DielectricModel; /** * Relative permittivity: ε for `vacuum` (default 1) and `debye` (default * 78.54), or D in ε = D·r for `distance` (default 4). */ readonly epsilon?: number; /** Ionic strength in mol/L for `debye`; defaults to 0.15. */ readonly ionicStrength?: number; /** Kelvin; sets kT and the Debye length. Defaults to 298.15. */ readonly temperature?: number; /** Distances below this (Å) are clamped to it; defaults to 1. */ readonly minDistance?: number; /** Defaults to `"kT/e"`. */ readonly unit?: PotentialUnit }
+  export interface ElectrostaticsOptions { /** Defaults to `"distance"` (ε = 4r, as ChimeraX's coulombic default). */ readonly model?: DielectricModel; /** * Relative permittivity: ε for `vacuum` (default 1) and `debye` (default * 78.54), or D in ε = D·r for `distance` (default 4). */ readonly epsilon?: number; /** Ionic strength in mol/L for `debye`; defaults to 0.15. */ readonly ionicStrength?: number; /** Kelvin; sets kT and the Debye length. Defaults to 298.15. */ readonly temperature?: number; /** Distances below this (Å) are clamped to it; defaults to 1. */ readonly minDistance?: number; /** Defaults to `"kT/e"`. */ readonly unit?: PotentialUnit; /** * Optional cutoff in Å. Omitted (the default) sums every pair exactly. * With a cutoff, each pair term is multiplied by a switching function that * is 1 up to `cutoff − switchWidth`, 0 from `cutoff`, and smooth (C¹) in * between, so isosurfaces show no truncation step. */ readonly cutoff?: number; /** Width in Å of the switching region below `cutoff`; defaults to 2. */ readonly switchWidth?: number }
 GasteigerOptions
   export interface GasteigerOptions { /** Exclude already assigned atoms; defaults to the AMBER template mask. */ readonly exclude?: Uint8Array; /** RDKit's default is 12 iterations. */ readonly iterations?: number }
 GasteigerRefusal
@@ -69,6 +69,8 @@ templateCharges
 
 AffineMatrix
   export type AffineMatrix = ArrayLike<number>;
+COULOMB_CUTOFF_BRICK
+  export const COULOMB_CUTOFF_BRICK: readonly [number, number, number];
 COULOMB_GRID_BLOCK
   export const COULOMB_GRID_BLOCK = 4;
 COULOMB_MODEL_CODE
@@ -102,7 +104,7 @@ affineWgsl
 cellListWgsl
   export const cellListWgsl: Readonly<{ bounds: string; mergeBounds: string; count: string; scanCounts: string; scanValues: string; addOffsets: string; scatter: string; pairs: string; scanBlockSize: number; boundsBlockSize: number }>;
 coulombParams
-  export function coulombParams(physics: { readonly model: string; readonly scale: number; readonly kappa: number; readonly minDistance: number }, dispatch: CoulombDispatch): ArrayBuffer;
+  export function coulombParams(physics: { readonly model: string; readonly scale: number; readonly kappa: number; readonly minDistance: number; readonly cutoff?: number; readonly switchOn?: number }, dispatch: CoulombDispatch): ArrayBuffer;
 coulombWgsl
   export const coulombWgsl: string;
 createUnwrapForest
