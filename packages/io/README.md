@@ -189,3 +189,9 @@ validation cannot detect same-size changes. Servers ignoring Range are
 downloaded once under the configured size cap. Bytes, Blobs and custom
 ByteSources share the scan contract; custom implementations should honor the
 read signal, and scans also check it around reads and cached blocks.
+
+`maxDownload` must be a finite nonnegative safe integer in bytes; invalid values
+fail before transport. Zero permits only an empty whole-file response (Range
+reads remain available). Infinity is rejected; raise the finite cap explicitly
+when a larger whole-file fallback is needed. The cap includes chunked responses
+and accepts a body whose size equals the cap.
