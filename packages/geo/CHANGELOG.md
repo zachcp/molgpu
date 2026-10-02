@@ -6,6 +6,9 @@ All notable changes to `@molgpu/geo` are recorded here. The format follows
 
 ## [Unreleased]
 
+- Marching-cubes origin/spacing now use the full affine normal and reflection
+  rules; transforms are validated before scalar-cell construction.
+
 - `marchingCubesTables()` (experimental) returns the tables `marchingCubes`
   reads as flat typed arrays, so a GPU port can upload exactly the same
   configuration data.

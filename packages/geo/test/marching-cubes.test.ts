@@ -216,3 +216,65 @@ Deno.test("marchingCubesTables: each configuration's triangles use exactly its c
   marchingCubesTables().edges[1] = 0;
   assertEquals(marchingCubesTables().edges[1], edges[1]);
 });
+
+Deno.test("spacing and origin match diagonal affine positions, normals and winding", () => {
+  const values = Float32Array.of(0, 1, 1, 2, 0, 1, 1, 2);
+  const dims: [number, number, number] = [2, 2, 2];
+  const origin: [number, number, number] = [3, -4, 5];
+  for (
+    const spacing of [[2, 2, 2], [2, 1, 3], [-2, 1, 3], [-2, -1, 3]] as [
+      number,
+      number,
+      number,
+    ][]
+  ) {
+    const transform = [
+      spacing[0],
+      0,
+      0,
+      0,
+      0,
+      spacing[1],
+      0,
+      0,
+      0,
+      0,
+      spacing[2],
+      0,
+      ...origin,
+      1,
+    ];
+    assertEquals(
+      marchingCubes({ values, dims, origin, spacing, level: 0.5 }),
+      marchingCubes({ values, dims, transform, level: 0.5 }),
+    );
+  }
+  const mesh = marchingCubes({ values, dims, spacing: [2, 1, 1], level: 0.5 });
+  assert(Math.abs(mesh.normals[0] + 1 / Math.sqrt(5)) < 1e-6);
+  assert(Math.abs(mesh.normals[1] + 2 / Math.sqrt(5)) < 1e-6);
+});
+
+Deno.test("invalid affine fails before scalar cells are visited", () => {
+  const values = new Proxy(new Float32Array(8), {
+    get(target, key) {
+      if (key === "0") {
+        throw new Error("scalar cells visited before affine validation");
+      }
+      return Reflect.get(target, key, target);
+    },
+  });
+  assertThrows(
+    () =>
+      marchingCubes({
+        values,
+        dims: [2, 2, 2],
+        transform: new Array(16).fill(0),
+      }),
+    TypeError,
+    "affine",
+  );
+  assertThrows(
+    () => marchingCubes({ values, dims: [2, 2, 2], spacing: [0, 1, 1] }),
+    TypeError,
+  );
+});
