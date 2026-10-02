@@ -33,7 +33,7 @@ Deno.test("coordinate snapshots keep the source chemical graph on the corpus", a
     assertStrictEquals(bondGraph(snapshot), graph, `${id}: graph identity`);
     if (id === "1ejg") {
       assertEquals(root.topology.bonds.count, 0);
-      assertEquals(graph.count, 860);
+      assertEquals(graph.count, 864); // incl. N-H1/H3 of both altlocs (Mol* 5.12)
       assertEquals(bondTopology(root).count, 868);
     }
     for (const row of [0, Math.floor(root.topology.atoms.count / 2)]) {

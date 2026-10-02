@@ -10,7 +10,7 @@ const check = (source: string, name = "@molgpu/io") =>
 Deno.test("published imports accept unfurled dependencies and lazy Mol*", () => {
   assertEquals(
     check(
-      'export { x } from "jsr:@molgpu/table@^0.1.0"; import("npm:/molstar@5.11.0/lib/parser.js");',
+      'export { x } from "jsr:@molgpu/table@^0.1.0"; import("npm:/molstar@5.12.0/lib/parser.js");',
     ),
     [],
   );
@@ -22,12 +22,12 @@ Deno.test("published import guard detects injected dependency regressions", () =
       'import { x } from "@molgpu/table";',
       'export { x } from "jsr:@molgpu/table@0.1.0";',
       'import { x } from "npm:@use-gpu/live@^0.20.0";',
-      'import { x } from "npm:/molstar@5.11.0/lib/parser.js";',
-      'import("npm:/molstar@^5.11.0/lib/parser.js");',
+      'import { x } from "npm:/molstar@5.12.0/lib/parser.js";',
+      'import("npm:/molstar@^5.12.0/lib/parser.js");',
     ]
   ) assertEquals(check(source).length > 0, true, source);
   assertEquals(
-    check('import("npm:molstar@5.11.0");', "@molgpu/viewer").length > 0,
+    check('import("npm:molstar@5.12.0");', "@molgpu/viewer").length > 0,
     true,
   );
 });
@@ -66,7 +66,7 @@ Deno.test("io may statically import Mol* only from a lazily loaded module", () =
       [
         "/src/molstar-model.ts",
         new TextEncoder().encode(
-          'export { Task } from "npm:/molstar@5.11.0/lib/mol-task/index.js";',
+          'export { Task } from "npm:/molstar@5.12.0/lib/mol-task/index.js";',
         ),
       ],
     ]);

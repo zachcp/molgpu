@@ -8,7 +8,9 @@
 // - struct_conn links are bonds in their own right, and a residue pair joined
 //   by any struct_conn record gets no distance bonds;
 // - inside a residue whose component has chem_comp_bond templates (and that is
-//   not microheterogeneous), only template bonds count;
+//   not microheterogeneous), only template bonds count, except that a pair
+//   with a hydrogen the template does not bond falls back to distance (Mol*
+//   5.12, e.g. N-terminal H1/H3);
 // - otherwise atoms bond when closer than Mol*'s element pair threshold,
 //   skipping H-H pairs, incompatible altlocs and, between chains, two
 //   partially occupied atoms of the same author residue number;
@@ -181,12 +183,14 @@ function computedGraph(data: StructureData): BondGraph {
     connResidues.has(pairKeyOf(residue[i], residue[j], residues.count));
 
   // Template bonds for templated residues (metal atoms make them metallic).
+  const templatePairs = new Set<number>();
   for (const r of component) {
     const x = links!.a[r], y = links!.b[r];
     if (!templated[residue[x]] || residue[x] !== residue[y]) continue;
     if (!compatible(x, y) || residuePairLinked(x, y)) continue;
     if (element[x] === 0 && element[y] === 0) continue;
     if (d2(x, y) > MAX_RADIUS * MAX_RADIUS) continue;
+    templatePairs.add(pairKeyOf(x, y, n));
     let flags = links!.flags[r];
     if (metallic(x, y)) {
       flags = (flags & ~BOND_FLAGS.covalent) | BOND_FLAGS.metallic;
@@ -209,7 +213,11 @@ function computedGraph(data: StructureData): BondGraph {
       if (element[i] === 0 && element[j] === 0) return; // H-H
       const cj = chainOf(j), rj = residue[j];
       if (ci === cj) {
-        if (ri === rj && templated[ri]) return;
+        if (
+          ri === rj && templated[ri] &&
+          ((element[i] !== 0 && element[j] !== 0) ||
+            templatePairs.has(pairKeyOf(i, j, n)))
+        ) return;
         if (connPartners.get(i)?.includes(j)) return;
       } else {
         if (partnerChain(i, cj) || partnerChain(j, ci)) return;

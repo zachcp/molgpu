@@ -6,6 +6,11 @@ All notable changes to `@molgpu/select` are recorded here. The format follows
 
 ## [Unreleased]
 
+- Follow Mol* 5.12.0 (molgpu-sept-lsq). Computed bond graphs give hydrogens that
+  a residue's chem_comp_bond template does not bond (e.g. N-terminal H1/H3)
+  distance-based bonds. `mass` uses Mol* 5.12's corrected atomic weights; the
+  carbon (12.011) divergence is gone, and iodine is now 126.9.
+
 - Add query-valued `and`/`or`/`not`, named structural/secondary-structure
   builders, declared numeric `attribute` queries and explicit model/conformer
   view scopes. Scoped evaluation restricts candidates, proximity seeds and

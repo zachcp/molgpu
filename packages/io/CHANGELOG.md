@@ -6,6 +6,11 @@ All notable changes to `@molgpu/io` are recorded here. The format follows
 
 ## [Unreleased]
 
+- Update Mol* to 5.12.0 (exact pin). Inherited behavior changes: BinaryCIF field
+  lookup is case-insensitive; `volumeFromCcp4` treats cell angles outside
+  (0, 180) degrees as 90 and computes sigma when the header RMS is negative
+  (e.g. IMOD-written MRC maps).
+
 - `structureFromBcif(input, { assembly })` expands a `pdbx_struct_assembly` into
   `topology.instances` rows (chain × operator, Mol*'s operator-expression
   expansion; `operatorId` lists the `pdbx_struct_oper_list` ids). New error code
