@@ -20,6 +20,7 @@
 import { cellListWgsl } from "@molgpu/dynamics/wgsl";
 import { assertGridBudget } from "./geometry-job.ts";
 import { COPY_POSITIONS } from "./copy-positions-wgsl.ts";
+import { dispatchFolded, encodeExclusiveScan } from "./gpu-scan.ts";
 
 const MAP_READ = 0x0001;
 const COPY_SRC = 0x0004;
@@ -337,9 +338,6 @@ const STAGES = {
   bounds: cellListWgsl.bounds,
   mergeBounds: cellListWgsl.mergeBounds,
   count: cellListWgsl.count,
-  scanCounts: cellListWgsl.scanCounts,
-  scanValues: cellListWgsl.scanValues,
-  addOffsets: cellListWgsl.addOffsets,
   scatter: cellListWgsl.scatter,
 } as const;
 type Stage = keyof typeof STAGES;
@@ -543,9 +541,7 @@ export async function gpuSesField(
         })),
       }),
     );
-    const max = device.limits.maxComputeWorkgroupsPerDimension;
-    const x = Math.min(groups, max);
-    pass.dispatchWorkgroups(x, Math.ceil(groups / x));
+    dispatchFolded(device, pass, groups);
   };
   const read = async (source: GPUBuffer, bytes: number) => {
     readbackBytes += bytes;
@@ -675,54 +671,15 @@ export async function gpuSesField(
       [4, cellUniform],
     ], Math.ceil(n / GROUP));
     pass.end();
-    // Hierarchical exclusive scan; the extra zero count gives offsets[cells].
-    const levels: { offsets: GPUBuffer; count: number }[] = [];
-    let input = counts;
-    let scanCount = cells + 1;
-    for (let atomic = true;; atomic = false) {
-      const groups = Math.ceil(scanCount / 256);
-      const offsets = make(scanCount * 4, STORAGE | COPY_SRC, "offsets");
-      const sums = make(groups * 4, STORAGE, "scan-sums");
-      pass = encoder.beginComputePass();
-      dispatch(pass, atomic ? "scanCounts" : "scanValues", [
-        [0, input],
-        [1, offsets],
-        [2, sums],
-        [
-          3,
-          make(
-            16,
-            UNIFORM | COPY_DST,
-            "scan-params",
-            Uint32Array.of(scanCount, 0, 0, 0),
-          ),
-        ],
-      ], groups);
-      pass.end();
-      levels.push({ offsets, count: scanCount });
-      if (groups === 1) break;
-      input = sums;
-      scanCount = groups;
-    }
-    for (let level = levels.length - 2; level >= 0; level--) {
-      const child = levels[level], parent = levels[level + 1];
-      pass = encoder.beginComputePass();
-      dispatch(pass, "addOffsets", [
-        [0, child.offsets],
-        [1, parent.offsets],
-        [
-          2,
-          make(
-            16,
-            UNIFORM | COPY_DST,
-            "add-params",
-            Uint32Array.of(child.count, 0, 0, 0),
-          ),
-        ],
-      ], Math.ceil(child.count / GROUP));
-      pass.end();
-    }
-    const offsets = levels[0].offsets;
+    // The extra zero count gives offsets[cells].
+    const offsets = encodeExclusiveScan(
+      device,
+      encoder,
+      counts,
+      cells + 1,
+      true,
+      make,
+    );
     const cursor = make(cells * 4, STORAGE | COPY_DST, "cursor");
     encoder.copyBufferToBuffer(offsets, 0, cursor, 0, cells * 4);
     pass = encoder.beginComputePass();

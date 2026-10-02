@@ -3,13 +3,18 @@
 // Task/Tensor/Mesh types: this consumes a packed scalar grid and returns owned
 // typed arrays suitable for any renderer.
 import { CubeEdges, EdgeTable, TriTable } from "./marching-cubes-tables.ts";
-import type { MarchingCubesInput, MarchingCubesMesh } from "./types.ts";
+import type {
+  MarchingCubesInput,
+  MarchingCubesMesh,
+  MarchingCubesTables,
+} from "./types.ts";
 
 export type {
   CurveSegmentControls,
   CurveSegmentState,
   MarchingCubesInput,
   MarchingCubesMesh,
+  MarchingCubesTables,
 } from "./types.ts";
 
 export {
@@ -143,6 +148,32 @@ export function marchingCubes(input: MarchingCubesInput): MarchingCubesMesh {
     indices: Uint32Array.from(indices),
     vertexCount: positions.length / 3,
     triangleCount: indices.length / 3,
+  };
+}
+
+/**
+ * The tables `marchingCubes` reads, packed flat. Corner `i` of a cube is
+ * set when its value is below the level, in the corner order (0,0,0),
+ * (1,0,0), (1,1,0), (0,1,0), then the same at k = 1; a cut cube emits one
+ * vertex per set edge in edge order and its `triangles` slots index those
+ * edges.
+ */
+export function marchingCubesTables(): MarchingCubesTables {
+  const triangles = new Uint8Array(256 * 16).fill(255);
+  const triangleLengths = new Uint8Array(256);
+  TriTable.forEach((list, mask) => {
+    triangles.set(list, mask * 16);
+    triangleLengths[mask] = list.length;
+  });
+  const cubeEdges = new Uint8Array(12 * 6);
+  CubeEdges.forEach(({ a, b }, e) =>
+    cubeEdges.set([a.i, a.j, a.k, b.i, b.j, b.k], e * 6)
+  );
+  return {
+    edges: Uint16Array.from(EdgeTable),
+    triangles,
+    triangleLengths,
+    cubeEdges,
   };
 }
 

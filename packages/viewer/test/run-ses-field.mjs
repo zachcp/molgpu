@@ -3,14 +3,16 @@
  * protein corpus it samples the same grid as Mol*'s calcMolecularSurface, marks
  * the same samples visited, agrees on field values except where f32 flips a
  * boundary "is this point hidden" test, and its marching-cubes mesh matches
- * the CPU mesh's vertex count and area.
+ * the CPU mesh's vertex count and area. GPU marching cubes of that field
+ * reproduces geo's marchingCubes of the same samples: identical triangles,
+ * positions and normals to f32 rounding.
  */
 import { assert, assertEquals } from "@std/assert";
 import { extname, fromFileUrl, normalize } from "@std/path";
 import { build } from "vite";
 import { launchWebGpuBrowser } from "./harness.mjs";
 
-Deno.test("GPU SES field matches Mol*'s field on the protein corpus", async () => {
+Deno.test("GPU SES field and mesh match Mol*'s field and geo's mesh", async () => {
   const fixture = fromFileUrl(new URL("./ses-field/", import.meta.url));
   await build({ configFile: `${fixture}vite.config.mjs`, logLevel: "warn" });
   const server = Deno.serve(
@@ -70,6 +72,18 @@ Deno.test("GPU SES field matches Mol*'s field on the protein corpus", async () =
         Math.abs(r.gpuArea - r.cpuArea) <= r.cpuArea * 1e-3,
         `${id} mesh area`,
       );
+    }
+    for (const id of corpus) {
+      const r = await page.evaluate(
+        (entry) => globalThis.runMarchingCubes(entry),
+        id,
+      );
+      console.log(JSON.stringify(r));
+      assertEquals(r.errors, [], `${id} WebGPU errors`);
+      assertEquals(r.vertices, r.cpuVertices, `${id} vertex count`);
+      assertEquals(r.indexMismatch, 0, `${id} triangle indices`);
+      assert(r.positionDiff < 1e-4, `${id} positions`);
+      assert(r.normalDot > 0.9999, `${id} normals`);
     }
     assertEquals(errors, [], "browser errors");
   } finally {
