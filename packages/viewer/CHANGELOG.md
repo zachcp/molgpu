@@ -6,6 +6,11 @@ All notable changes to `@molgpu/viewer` are recorded here. The format follows
 
 ## [Unreleased]
 
+- Spacefill, Bonds and BallAndStick draw biological assembly copies: one per
+  operator in `topology.instances`, transforming the nearest live coordinates
+  after every provider and drawing only that copy's chains. Identity-only
+  instance tables (the asymmetric unit) draw exactly as before.
+
 - `<EField>` accepts optional `cutoff` and `switchWidth`. The exact sum stays
   the default; with a cutoff, far atom tiles are skipped and pair terms are
   switched off smoothly (128³ × 50k atoms: 1.25 s → 0.42 s with a 12 Å cutoff).

@@ -15,6 +15,7 @@ import type { AttributeDomain, StructureData } from "@molgpu/table";
 import { WorldSpacePointLayer } from "./world-space-points.ts";
 import { type StructureSources, useStructure } from "./structure-context.ts";
 import { useCoordinates } from "./coordinates-context.ts";
+import { withInstances } from "./internal/instance-copies.ts";
 import { useField } from "./use-field.ts";
 import { indexed } from "./internal/indexed.ts";
 import { useAttributeSources } from "./internal/attribute-sources.ts";
@@ -224,7 +225,7 @@ export const Spacefill: ViewerComponent<
   & Translucency
   & PointLayerOptions
   & SelectionDiagnostics
-> = (
+> = withInstances((
   {
     scale = 1,
     select: input,
@@ -313,4 +314,4 @@ export const Spacefill: ViewerComponent<
   return pickable
     ? use(Pickable, { resource, indices, render: draw })
     : draw(undefined);
-};
+});

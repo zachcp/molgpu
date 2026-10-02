@@ -700,6 +700,33 @@ Deno.test("viewer components", async () => {
     );
     report.states.empty = { blobs: [] };
 
+    // 3c. Assembly copies (molgpu-sept-fch.2): two instance rows draw two
+    //     copies 20 Å apart, and a coordinate provider moves both, so the
+    //     operator applies after providers. No topology row is duplicated.
+    const twoCopies = async (offsetX, name) => {
+      await update({ mode: "assembly", offsetX });
+      let found = await blobs(name, `components-${name}`);
+      for (let attempt = 0; attempt < 12 && found.length !== 2; attempt++) {
+        await settle();
+        found = await blobs(name, `components-${name}`);
+      }
+      return found.sort((a, b) => a.x - b.x);
+    };
+    const copies = await twoCopies(0, "assembly");
+    assertStrictEquals(copies.length, 2, "two assembly copies draw");
+    const moved = await twoCopies(5, "assembly-moved");
+    assertStrictEquals(moved.length, 2, "both copies draw under a provider");
+    const shiftA = moved[0].x - copies[0].x, shiftB = moved[1].x - copies[1].x;
+    assert(
+      shiftA > 5 && Math.abs(shiftA - shiftB) < 3,
+      `the provider moves both copies alike: ${shiftA} vs ${shiftB}`,
+    );
+    assert(
+      Math.abs((copies[1].x - copies[0].x) - (moved[1].x - moved[0].x)) < 3,
+      "the operator keeps the copies' spacing under the provider",
+    );
+    report.states.assembly = { copies, moved };
+
     // 4. Sibling structures keep separate contexts: each Spacefill must read its
     //    own nearest Structure, which here means its own radii.
     await update({ mode: "siblings" });

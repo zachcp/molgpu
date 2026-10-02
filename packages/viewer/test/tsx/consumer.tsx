@@ -171,6 +171,22 @@ const emptyStructure = (): StructureData =>
   });
 
 const left = cluster(-13, 1.8),
+  // The left cluster with a second assembly copy 20 Å along +x (fch.2).
+  assembled = createStructure({
+    positions: cluster(-13, 1.8).positions,
+    topology: {
+      ...cluster(-13, 1.8).topology,
+      instances: {
+        count: 2,
+        chain: Uint32Array.of(0, 0),
+        operatorId: ["1", "2"],
+        transform: Float64Array.from([
+          ...[1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
+          ...[1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 20, 0, 0, 1],
+        ]),
+      },
+    },
+  }),
   bonded = cluster(-13, 1.8, 3, true),
   right = cluster(7, 3.2),
   blank = emptyStructure();
@@ -336,6 +352,15 @@ const Scene = (
     return (
       <Structure data={blank}>
         <Spacefill />
+      </Structure>
+    );
+  }
+  if (mode === "assembly") {
+    return (
+      <Structure data={assembled}>
+        <OffsetCoordinates offset={[offsetX, 0, 0]}>
+          <Spacefill />
+        </OffsetCoordinates>
       </Structure>
     );
   }

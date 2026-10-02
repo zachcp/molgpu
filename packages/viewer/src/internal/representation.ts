@@ -1,4 +1,10 @@
-import { type LiveElement, use, useMemo, useRef } from "@use-gpu/live";
+import {
+  type LiveElement,
+  use,
+  useContext,
+  useMemo,
+  useRef,
+} from "@use-gpu/live";
 import type { StorageSource } from "@use-gpu/core";
 import type { Field } from "@molgpu/fields";
 import type { Selection } from "@molgpu/select";
@@ -7,6 +13,7 @@ import type { ColumnFormat } from "./columns.ts";
 import type { StructureResource, ViewerElement } from "../types.ts";
 import { ColumnSource } from "./column-source.ts";
 import { count } from "./instrumentation.ts";
+import { copyRows, InstanceContext } from "./instance-context.ts";
 
 /** Reject a selection resolved against another structure or in another domain. */
 export function checkAtomSelection(
@@ -60,7 +67,10 @@ export function useActiveRows(
       topology: resource.topologyRevision,
     };
   }
-  return previous.current.rows;
+  // Inside an assembly copy, only the rows of that copy's chains draw.
+  const copy = useContext(InstanceContext);
+  const stable = previous.current.rows;
+  return useMemo(() => copyRows(stable, copy), [stable, copy]);
 }
 
 /** A @molgpu/fields Field (vs a flat VectorLike colour). */
