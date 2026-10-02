@@ -5,7 +5,7 @@ Internal dependencies publish as caret JSR ranges (currently `^0.1.0`), which
 resolve one copy when compatible. Keep the application on compatible table and
 timeline versions: their module-private identity/curve state rejects values from
 divergent copies. Match use.gpu's reviewed exact `0.20.0` npm dependencies in
-the application. IO publishes the tested Mol* version exactly (`5.11.0`).
+the application. IO publishes the tested Mol* version exactly (`5.12.0`).
 
 Changelogs are kept by hand (no changesets). Each package has its own
 `CHANGELOG.md` in [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) form.

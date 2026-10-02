@@ -22,7 +22,7 @@ deno add jsr:@molgpu/io jsr:@molgpu/table
 | Package         | Range    | Kind       | Notes                                                                                                                                                                                                                                                                                                                          |
 | --------------- | -------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `@molgpu/table` | `^0.1.0` | dependency | Provides `StructureData`; compatible JSR caret ranges resolve one shared table copy.                                                                                                                                                                                                                                           |
-| `molstar`       | `5.11.0` | dependency | Installed with `io`, but loaded only inside `structureFromBcif`, `molecularSurfaceField` and `volumeFromCcp4`, through dynamic `import()`. Bundlers put it in separate lazy chunks, so code that never calls them never downloads it. If it fails to load, those calls reject with `PARSER_UNAVAILABLE` / `FIELD_UNAVAILABLE`. |
+| `molstar`       | `5.12.0` | dependency | Installed with `io`, but loaded only inside `structureFromBcif`, `molecularSurfaceField` and `volumeFromCcp4`, through dynamic `import()`. Bundlers put it in separate lazy chunks, so code that never calls them never downloads it. If it fails to load, those calls reject with `PARSER_UNAVAILABLE` / `FIELD_UNAVAILABLE`. |
 
 JSR publishes internal dependencies as caret ranges (for example,
 `jsr:@molgpu/table@^0.1.0`). Keep compatible versions so the application
@@ -32,7 +32,7 @@ from divergent copies can be rejected by identity-dependent operations. Use
 application and package dependency ranges.
 
 Mol* is a regular npm dependency, loaded lazily. IO pins the tested version
-`5.11.0` exactly; upgrades require parser and scientific-oracle validation
+`5.12.0` exactly; upgrades require parser and scientific-oracle validation
 before changing the published pin.
 
 ## Example
