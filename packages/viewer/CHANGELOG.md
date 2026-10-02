@@ -6,6 +6,10 @@ All notable changes to `@molgpu/viewer` are recorded here. The format follows
 
 ## [Unreleased]
 
+- `<Label>` and `<Distance>` draw once per biological assembly copy holding
+  their atoms, anchored with that copy's coordinates (an explicit `at` draws
+  once).
+
 - Picking and framing follow assembly copies: `PickHit.operatorId` names the
   copy hit, and camera framing covers every drawn copy under its operator.
 

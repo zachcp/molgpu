@@ -126,6 +126,54 @@ probe.distance = Math.hypot(
   ),
 );
 
+// ?assembly: a second copy 6 Å along +x (molgpu-sept-fch.5), so the label
+// on selection A (x = -3) also draws at x = +3.
+const params = new URLSearchParams(location.search);
+// ?assembly-split: chain A = rows 0-1, chain B = rows 2-3; operator 2 copies
+// chain B only, 12 Å along -x, so a label on A draws once and one on B twice.
+const split = params.has("assembly-split")
+  ? createStructure({
+    positions: data.positions,
+    topology: {
+      ...data.topology,
+      residues: { ...data.topology.residues, chain: Uint32Array.of(0, 1) },
+      chains: {
+        count: 2,
+        model: Int32Array.of(1, 1),
+        labelId: ["A", "B"],
+        authId: ["A", "B"],
+      },
+      instances: {
+        count: 3,
+        chain: Uint32Array.of(0, 1, 1),
+        operatorId: ["1", "1", "2"],
+        transform: Float64Array.from([
+          ...[1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
+          ...[1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
+          ...[1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, -12, 0, 0, 1],
+        ]),
+      },
+    },
+  })
+  : null;
+const shown = split ?? (params.has("assembly")
+  ? createStructure({
+    positions: data.positions,
+    topology: {
+      ...data.topology,
+      instances: {
+        count: 2,
+        chain: Uint32Array.of(0, 0),
+        operatorId: ["1", "2"],
+        transform: Float64Array.from([
+          ...[1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
+          ...[1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 6, 0, 0, 1],
+        ]),
+      },
+    },
+  })
+  : data);
+
 const Scene = ({ labelSel }) =>
   use(OrbitCamera, {
     radius: 20,
@@ -136,7 +184,7 @@ const Scene = ({ labelSel }) =>
         use(AmbientLight, { intensity: 0.3 }),
         use(DirectionalLight, { direction: [-1, -2, -1.5], intensity: 1 }),
         use(Structure, {
-          data,
+          data: shown,
           children: [
             use(Spacefill, { scale: 0.5 }),
             use(Label, {

@@ -57,14 +57,21 @@ Deno.test("viewer annotations", async () => {
         ctx.drawImage(image, 0, 0);
         image.close();
         const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-        let count = 0, sumX = 0;
+        let count = 0, sumX = 0, left = 0;
         for (let i = 0; i < pixels.length; i += 4) {
           if (pixels[i] > 150 && pixels[i + 1] > 150 && pixels[i + 2] < 80) {
             count++;
-            sumX += (i / 4) % canvas.width;
+            const x = (i / 4) % canvas.width;
+            sumX += x;
+            if (x < canvas.width / 2) left++;
           }
         }
-        return { count, meanX: count ? sumX / count / canvas.width : null };
+        return {
+          count,
+          left,
+          right: count - left,
+          meanX: count ? sumX / count / canvas.width : null,
+        };
       }, (await page.locator("canvas").screenshot()).toString("base64"));
     const snap = () =>
       page.evaluate(() => ({
@@ -129,6 +136,53 @@ Deno.test("viewer annotations", async () => {
         JSON.stringify(textB)
       }`,
     );
+
+    // Assembly copies (molgpu-sept-fch.5): the label on selection A draws
+    // once per copy, at x = -3 and, under the +6 Å operator, x = +3.
+    await page.goto(
+      "http://127.0.0.1:5214/packages/viewer/test/annotations.html?assembly",
+    );
+    await page.waitForFunction(
+      () => globalThis.__probe?.mounted && document.querySelector("canvas"),
+      null,
+      { timeout: 30000 },
+    );
+    await settle();
+    await settle();
+    await settle();
+    const copies = await yellow();
+    assertEquals((await snap()).errors, [], "assembly labels: WebGPU errors");
+    assert(
+      copies.left > 40 && copies.right > 40,
+      `one label per copy, either side of centre: ${JSON.stringify(copies)}`,
+    );
+
+    // A selection in one copy only labels once; one in both copies twice.
+    await page.goto(
+      "http://127.0.0.1:5214/packages/viewer/test/annotations.html?assembly-split",
+    );
+    await page.waitForFunction(
+      () => globalThis.__probe?.mounted && document.querySelector("canvas"),
+      null,
+      { timeout: 30000 },
+    );
+    await settle();
+    await settle();
+    await settle();
+    const onlyA = await yellow();
+    assert(
+      onlyA.left > 40 && onlyA.right < 10,
+      `chain A is in one copy: one label, left: ${JSON.stringify(onlyA)}`,
+    );
+    await page.evaluate(() => globalThis.__probe.setLabel("b"));
+    await settle();
+    await settle();
+    const bothB = await yellow();
+    assert(
+      bothB.left > 40 && bothB.right > 40,
+      `chain B is in two copies: two labels: ${JSON.stringify(bothB)}`,
+    );
+    assertEquals((await snap()).errors, [], "split assembly: WebGPU errors");
 
     assertEquals(errors, [], "page errors");
     console.log(

@@ -4,10 +4,13 @@ import { SelectionConsumer } from "./internal/selection-consumer.ts";
 import type { Selection } from "@molgpu/select";
 import type { StructureData } from "@molgpu/table";
 import type { VectorLike, ViewerComponent } from "./types.ts";
-import { use, useMemo } from "@use-gpu/live";
+import { use, useContext, useMemo } from "@use-gpu/live";
 import { LabelLayer, LineLayer } from "@use-gpu/workbench";
 import { useStructure } from "./structure-context.ts";
 import { useCoordinateSnapshot } from "./coordinate-snapshot.ts";
+import { copyRows, InstanceContext } from "./internal/instance-context.ts";
+import { withInstances } from "./internal/instance-copies.ts";
+import { viewer } from "./internal/elements.ts";
 import {
   checkAtomSelection,
   type ColumnSpec,
@@ -83,8 +86,9 @@ const LabelResolved: ViewerComponent<{
   const snapshot = useCoordinateSnapshot();
   const data = snapshot?.data;
   const rows = useActiveRows(resource, select, "Label");
+  // Inside an assembly copy holding none of the rows, there is no label.
   const computed = useMemo(
-    () => data ? anchorOf(data, rows, "label:anchor") : null,
+    () => data && rows.length ? anchorOf(data, rows, "label:anchor") : null,
     [
       data,
       rows,
@@ -159,19 +163,25 @@ const DistanceResolved: ViewerComponent<{
   }
 
   const rev = snapshot?.generation;
+  // Inside an assembly copy, each end measures only that copy's atoms.
+  const copy = useContext(InstanceContext);
+  const aRows = useMemo(() => copyRows(a.indices, copy), [a?.id, copy]);
+  const bRows = useMemo(() => copyRows(b.indices, copy), [b?.id, copy]);
   const ca = useMemo(
-    () => data ? anchorOf(data, a.indices, "distance:anchor") : null,
+    () =>
+      data && aRows.length ? anchorOf(data, aRows, "distance:anchor") : null,
     [
       data,
-      a?.id,
+      aRows,
       rev,
     ],
   );
   const cb = useMemo(
-    () => data ? anchorOf(data, b.indices, "distance:anchor") : null,
+    () =>
+      data && bRows.length ? anchorOf(data, bRows, "distance:anchor") : null,
     [
       data,
-      b?.id,
+      bRows,
       rev,
     ],
   );
@@ -242,7 +252,10 @@ export const Label: ViewerComponent<
     /** 0–1, multiplied into the text colour's alpha (text always blends). */
     opacity?: number;
   } & SelectionDiagnostics
-> = (props) =>
+> = (props) => viewer(use(props.at ? LabelOnce : LabelCopies, props));
+
+/** One label per call: the selection centroid or an explicit `at`. */
+const LabelOnce: typeof Label = (props) =>
   use(SelectionConsumer, {
     input: props.select,
     who: "Label",
@@ -258,6 +271,12 @@ export const Label: ViewerComponent<
     },
   });
 
+/**
+ * One label per drawn biological assembly copy of the nearest structure, each
+ * anchored with that copy's coordinates (an explicit `at` draws once).
+ */
+const LabelCopies = withInstances(LabelOnce);
+
 export const Distance: ViewerComponent<
   {
     a: SelectionInput;
@@ -271,7 +290,7 @@ export const Distance: ViewerComponent<
     /** Customise the label text; receives the distance in Ångström. */
     format?: (distance: number) => string;
   } & SelectionDiagnostics
-> = (props) => {
+> = withInstances((props) => {
   const a = useSelectionInput(props.a, "Distance", "a", props);
   const b = useSelectionInput(props.b, "Distance", "b", props);
   if (
@@ -281,4 +300,4 @@ export const Distance: ViewerComponent<
   const { onSelectionStatus: _status, warnEmptySelection: _warn, ...draw } =
     props;
   return use(DistanceResolved, { ...draw, a: a.selection, b: b.selection });
-};
+});
