@@ -328,6 +328,126 @@ Deno.test("elastic network", async (t) => {
       });
     }
 
+    await t.step(
+      "checkpoint seeks are bitwise and integrate < every",
+      async () => {
+        await update({
+          mode: "spacefill",
+          id: "1crn",
+          version: 10,
+          step: 0,
+          maxStepsPerFrame: 200,
+          record: { every: 10 },
+          tug: undefined,
+        });
+        await reach(0);
+        const continuous = {};
+        for (const step of [755, 905, 1000]) {
+          await update({ step });
+          await reach(step);
+          continuous[step] = await call("readNodes");
+        }
+        for (const step of [755, 905, 755]) {
+          const before = await counters();
+          await update({ step });
+          await reach(step);
+          const after = await counters();
+          assertEquals(after.restores - before.restores, 1, `${step} restored`);
+          assert(
+            after.steps - before.steps < 10,
+            `${step} integrated too much`,
+          );
+          assertEquals(
+            await call("readNodes"),
+            continuous[step],
+            `seek ${step}`,
+          );
+        }
+        const status = await page.evaluate(() => globalThis.__elastic.status);
+        assertEquals([status.firstStep, status.lastStep], [10, 1000]);
+        await healthy();
+      },
+    );
+
+    await t.step(
+      "a recorded tug replays as recorded; a new tug branches",
+      async () => {
+        const node = 0;
+        const pull = (dx) => ({
+          node,
+          target: [
+            crambin.reference[0] + dx,
+            crambin.reference[1],
+            crambin.reference[2],
+          ],
+          k: 1,
+        });
+        await update({ tug: pull(3), step: 1100 });
+        await reach(1100);
+        const tugged = await call("readNodes");
+        await update({ step: 1200 });
+        await reach(1200);
+        await update({ tug: undefined, step: 1400 });
+        await reach(1400);
+        let status = await page.evaluate(() => globalThis.__elastic.status);
+        assert(status.perturbed);
+        assertEquals(status.lastStep, 1400);
+        await update({ step: 1100 });
+        await reach(1100);
+        assertEquals(await call("readNodes"), tugged, "recorded tug replay");
+        status = await page.evaluate(() => globalThis.__elastic.status);
+        assert(status.perturbed, "the restored history was tugged");
+        // A different pull from here branches: later checkpoints are dropped.
+        await update({ tug: pull(-3), step: 1150 });
+        await reach(1150);
+        status = await page.evaluate(() => globalThis.__elastic.status);
+        assertEquals(status.lastStep, 1150);
+        await healthy();
+      },
+    );
+
+    await t.step(
+      "before a perturbed run's retained range: clamp and report",
+      async () => {
+        const node = 0;
+        await update({
+          version: 11,
+          step: 0,
+          record: { every: 10, checkpoints: 5 },
+          tug: {
+            node,
+            target: [
+              crambin.reference[0] + 2,
+              crambin.reference[1],
+              crambin.reference[2],
+            ],
+            k: 1,
+          },
+        });
+        await reach(0);
+        await update({ step: 200 });
+        await reach(200);
+        await update({ step: 50 });
+        await frames(4);
+        const status = await page.evaluate(() => globalThis.__elastic.status);
+        assertEquals(
+          [status.evicted, status.step, status.firstStep, status.lagging],
+          [true, 160, 160, false],
+        );
+        // Unperturbed: the same seek replays from step 0 instead.
+        await update({ version: 12, step: 0, tug: undefined });
+        await reach(0);
+        await update({ step: 200 });
+        await reach(200);
+        await update({ step: 50 });
+        await reach(50);
+        const replayed = await page.evaluate(() => globalThis.__elastic.status);
+        assertEquals([replayed.evicted, replayed.step], [false, 50]);
+        await update({ record: undefined });
+        await healthy();
+      },
+    );
+
     await t.step("replacement and unmount release every buffer", async () => {
       await update({
         mode: "spacefill",

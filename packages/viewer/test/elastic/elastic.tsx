@@ -42,6 +42,12 @@ interface State {
   gamma: number;
   maxStepsPerFrame: number;
   color: [number, number, number, number];
+  record?: { every: number; checkpoints?: number };
+  tug?: {
+    node: number;
+    target: readonly [number, number, number];
+    k: number;
+  };
 }
 
 interface Probe {
@@ -177,6 +183,8 @@ const Scene = ({ state }: { state: State }): LiveElement => {
         temperature={state.temperature}
         gamma={state.gamma}
         maxStepsPerFrame={state.maxStepsPerFrame}
+        record={state.record}
+        tug={state.tug}
         onStatus={onStatus}
       >
         <CoordinateProbe />

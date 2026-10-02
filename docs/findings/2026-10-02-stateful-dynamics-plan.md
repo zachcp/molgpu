@@ -220,9 +220,12 @@ const network = elasticNetworkData(snapshotPositions, topology, {
 through `<Trajectory>`, and it records integrator state rather than display
 frames:
 
-- `record={{ every: 10, checkpoints?: number }}` copies node positions and
-  velocities (24 B/node) into a GPU ring after every `every`-th step. The copy
-  is a `copyBufferToBuffer` in the same encoder, with no readback.
+- `record={{ every: 10, checkpoints?: number }}` copies node positions,
+  velocities and cached forces (36 B/node) into a GPU ring after every
+  `every`-th step. _Implementation note (ahc.5):_ the plan said 24 B (x, v).
+  Restoring the cached forces avoids recomputing them in a different entry
+  point, whose compiled arithmetic could differ, so a seek stays bitwise. The
+  copy is a `copyBufferToBuffer` in the same encoder, with no readback.
 - `step` stays the only time input. There is no `mode="replay"` and no
   interpolation. For any target inside the retained range, the provider copies
   the newest checkpoint at or below it into the state buffers, then integrates
@@ -243,8 +246,8 @@ answers scrubbing only inside its own mode. With `step` on the global timeline,
 a backward scrub in live mode still replayed from step 0, and after a tug it
 replayed a different history from the one the user watched. Checkpoints serve
 both the backward `step` and recording with one mechanism, one kernel path and
-no `framePair` coupling. They cost 2× the bytes per slot: 223 checkpoints at
-100k atoms in 64 MiB reach 2230 exact steps at `every: 10`, against 447
+no `framePair` coupling. They cost 3× the bytes per slot: 149 checkpoints at
+100k atoms in 64 MiB reach 1490 exact steps at `every: 10`, against 447
 interpolated frames.
 
 **Why change ahc.5 ("exposed as TrajectoryData")?** A `TrajectoryData` needs a
@@ -297,8 +300,8 @@ output is packed f32×3, as `ComputeBuffer` in `CoordinateKernel` is.
 
 | Atoms | Nodes | Node state | CSR    | atom→node | Output | Checkpoints at 64 MiB |
 | ----- | ----- | ---------- | ------ | --------- | ------ | --------------------- |
-| 100k  | 12.5k | 0.6 MB     | 8 MB   | 0.4 MB    | 1.2 MB | 223                   |
-| 1M    | 125k  | 6 MB       | 100 MB | 4 MB      | 12 MB  | 22                    |
+| 100k  | 12.5k | 0.6 MB     | 8 MB   | 0.4 MB    | 1.2 MB | 149                   |
+| 1M    | 125k  | 6 MB       | 100 MB | 4 MB      | 12 MB  | 14                    |
 
 - **Bandwidth.** Per step, the force gather reads up to about 20 B per neighbour
   before cache reuse: 8 B of CSR plus 12 B of neighbour position. At 1M atoms

@@ -355,6 +355,17 @@ export interface ElasticNetworkProps {
   maxStepsPerFrame?: number;
   /** Harmonic pull of one node toward a target in the upstream frame. */
   tug?: LangevinTug;
+  /**
+   * Keep a GPU ring of integrator checkpoints every `every` steps, so a seek
+   * inside the retained range restores the nearest checkpoint and integrates
+   * fewer than `every` steps. `checkpoints` defaults to as many as fit
+   * `maxBytes` (64 MiB); asking for more throws a RangeError.
+   */
+  record?: {
+    readonly every: number;
+    readonly checkpoints?: number;
+    readonly maxBytes?: number;
+  };
   onStatus?: (status: ElasticNetworkStatus) => void;
 }
 
@@ -371,6 +382,14 @@ export interface ElasticNetworkStatus {
    * state no longer follows from (network, parameters, seed, step) alone.
    */
   readonly perturbed: boolean;
+  /**
+   * True when the target lies before the retained checkpoints of a perturbed
+   * run, which cannot be replayed: the provider shows the oldest checkpoint.
+   */
+  readonly evicted: boolean;
+  /** Steps of the oldest and newest retained checkpoints, or null. */
+  readonly firstStep: number | null;
+  readonly lastStep: number | null;
 }
 
 /** What the nearest `<Trajectory>` shows, from `useTrajectoryFrame()`. */

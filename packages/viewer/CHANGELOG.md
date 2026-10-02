@@ -6,6 +6,13 @@ All notable changes to `@molgpu/viewer` are recorded here. The format follows
 
 ## [Unreleased]
 
+- `<ElasticNetwork record={{ every }}>` keeps a GPU ring of integrator
+  checkpoints (x, v, f; 64 MiB by default). Seeks inside the retained range
+  restore the nearest checkpoint and integrate fewer than `every` steps, bitwise
+  equal to the continuous run; tugged history replays as recorded and a new
+  perturbation branches. `ElasticNetworkStatus` gains `evicted`, `firstStep` and
+  `lastStep`.
+
 - `<ElasticNetwork network step>` runs BAOAB Langevin dynamics of an elastic
   network (`elasticNetworkData` from `@molgpu/dynamics`) as a coordinate
   provider. The application owns progress: `step` is a target count or a

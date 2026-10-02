@@ -35,7 +35,10 @@ import {
 import type { ElasticNetworkData } from "@molgpu/dynamics";
 import { sample } from "@molgpu/timeline";
 import { useCoordinates } from "./coordinates-context.ts";
-import { checkElasticBindings } from "./internal/elastic-bindings.ts";
+import {
+  checkElasticBindings,
+  checkpointLayout,
+} from "./internal/elastic-bindings.ts";
 import { CoordinateKernel } from "./internal/coordinate-kernel.ts";
 import {
   count,
@@ -58,9 +61,10 @@ const UNIFORM = 0x0040;
 export const elasticTesting: {
   batches: number;
   steps: number;
+  restores: number;
   repaints: number;
   last: { state: GPUBuffer; nodeCount: number } | null;
-} = { batches: 0, steps: 0, repaints: 0, last: null };
+} = { batches: 0, steps: 0, restores: 0, repaints: 0, last: null };
 
 interface Pipelines {
   layout: GPUBindGroupLayout;
@@ -206,14 +210,61 @@ function createGpu(device: GPUDevice, network: ElasticNetworkData): Gpu {
   };
 }
 
+/** One recorded integrator state (x, v, f) in a ring slot. */
+interface Checkpoint {
+  step: number;
+  slot: number;
+  perturbed: boolean;
+}
+
+interface Ring {
+  buffer: GPUBuffer;
+  every: number;
+  slotBytes: number;
+  slots: number;
+  /** Retained checkpoints, oldest to newest. */
+  list: Checkpoint[];
+  free: number[];
+}
+
+function createRing(
+  device: GPUDevice,
+  nodeCount: number,
+  record: NonNullable<ElasticNetworkProps["record"]>,
+): Ring {
+  const { slotBytes, slots } = checkpointLayout(nodeCount, record);
+  checkElasticBindings({ checkpoints: slots * slotBytes }, {
+    maxStorageBufferBindingSize: Infinity,
+    maxBufferSize: device.limits.maxBufferSize,
+  });
+  const buffer = device.createBuffer({
+    size: slots * slotBytes,
+    usage: COPY_SRC | COPY_DST,
+    label: "molgpu:elastic:checkpoints",
+  });
+  trackOwnedBuffer(buffer, "elastic:checkpoints");
+  return {
+    buffer,
+    every: record.every,
+    slotBytes,
+    slots,
+    list: [],
+    free: Array.from({ length: slots }, (_, i) => slots - 1 - i),
+  };
+}
+
 interface Run {
   gpu: Gpu | null;
+  ring: Ring | null;
   seed: number;
   completed: number;
   epoch: number;
   forcesValid: boolean;
   paramsKey: string | null;
   perturbed: boolean;
+  /** Integration since the last reset or restore departs from the
+   * recorded history (a tug, or a parameter change). */
+  dirty: boolean;
 }
 
 const Integrator: LC<
@@ -230,6 +281,7 @@ const Integrator: LC<
   dt = 0.02,
   maxStepsPerFrame = 20,
   tug,
+  record,
   onStatus,
   children,
 }) => {
@@ -245,6 +297,7 @@ const Integrator: LC<
     );
   }
   const tugKey = tug ? `${tug.node}:${tug.k}:${tug.target.join(",")}` : "none";
+  const tugging = !!tug && tug.k > 0;
   const params = useMemo<LangevinParams>(
     () => langevinParams(network.system, { temperature, gamma, dt, seed, tug }),
     [network, temperature, gamma, dt, seed, tugKey],
@@ -254,6 +307,16 @@ const Integrator: LC<
   useResource((dispose) => {
     dispose(() => gpu.made.forEach(releaseOwnedBuffer));
   }, [gpu]);
+  const ring = useMemo(
+    () =>
+      record
+        ? createRing(device, network.system.springs.nodeCount, record)
+        : null,
+    [device, network, record?.every, record?.checkpoints, record?.maxBytes],
+  );
+  useResource((dispose) => {
+    if (ring) dispose(() => releaseOwnedBuffer(ring.buffer));
+  }, [ring]);
 
   const alive = useRef(true);
   useResource((dispose) => {
@@ -265,17 +328,19 @@ const Integrator: LC<
   const [wake, setWake] = useState(0);
   const run = useRef<Run>({
     gpu: null,
+    ring: null,
     seed,
     completed: 0,
     epoch: 0,
     forcesValid: false,
     paramsKey: null,
     perturbed: false,
+    dirty: false,
   });
 
   const progress = useMemo(() => {
     const r = run.current;
-    if (r.gpu !== gpu || r.seed !== seed || target < r.completed) {
+    const reset = () => {
       if (r.gpu === gpu) device.queue.writeBuffer(gpu.state, 0, gpu.initial);
       device.queue.writeBuffer(gpu.clock, 0, new Uint32Array(1));
       Object.assign(r, {
@@ -285,7 +350,16 @@ const Integrator: LC<
         epoch: r.epoch + 1,
         forcesValid: false,
         perturbed: false,
+        dirty: false,
       });
+    };
+    if (r.gpu !== gpu || r.seed !== seed) {
+      reset();
+      r.ring = null;
+    }
+    if (r.ring !== ring) {
+      // A new ring (or none) starts empty; the run itself continues.
+      r.ring = ring;
     }
     if (r.paramsKey !== paramsKey || !r.forcesValid) {
       device.queue.writeBuffer(
@@ -297,15 +371,63 @@ const Integrator: LC<
         r.paramsKey !== null && r.paramsKey !== paramsKey && r.completed > 0
       ) {
         r.perturbed = true;
+        r.dirty = true;
       }
       r.paramsKey = paramsKey;
       r.forcesValid = false;
     }
-    const steps = Math.min(maxStepsPerFrame, target - r.completed);
-    if (steps > 0 || !r.forcesValid) {
+
+    // Seek: restore a checkpoint, replay from step 0, or clamp.
+    let goal = target, evicted = false;
+    let restore: Checkpoint | null = null;
+    const newestAtOrBelow = (step: number) => {
+      const list = ring?.list ?? [];
+      for (let i = list.length - 1; i >= 0; i--) {
+        if (list[i].step <= step) return list[i];
+      }
+      return null;
+    };
+    if (goal < r.completed || (ring && goal > r.completed)) {
+      const c = newestAtOrBelow(goal);
+      const oldest = ring?.list[0];
+      if (goal < r.completed) {
+        if (c) restore = c;
+        else if (oldest?.perturbed) {
+          // Before the retained range of a perturbed run: nothing replays it.
+          goal = oldest.step;
+          evicted = true;
+          if (r.completed !== oldest.step || r.dirty) restore = oldest;
+        } else reset();
+      } else if (c && c.step > r.completed && !r.dirty && !tugging) {
+        restore = c;
+      }
+    }
+
+    const steps = Math.min(
+      maxStepsPerFrame,
+      goal - (restore?.step ?? r.completed),
+    );
+    if (restore || steps > 0 || !r.forcesValid) {
       const p = pipelines(device);
       const encoder = device.createCommandEncoder({ label: "molgpu:elastic" });
-      const pass = encoder.beginComputePass({ label: "molgpu:elastic" });
+      if (restore) {
+        encoder.copyBufferToBuffer(
+          ring!.buffer,
+          restore.slot * ring!.slotBytes,
+          gpu.state,
+          0,
+          ring!.slotBytes,
+        );
+        device.queue.writeBuffer(gpu.clock, 0, Uint32Array.of(restore.step));
+        Object.assign(r, {
+          completed: restore.step,
+          perturbed: restore.perturbed,
+          dirty: false,
+          forcesValid: true,
+        });
+        elasticTesting.restores++;
+      }
+      let pass = encoder.beginComputePass({ label: "molgpu:elastic" });
       pass.setBindGroup(0, gpu.group);
       const nodes = (pipeline: GPUComputePipeline) => {
         pass.setPipeline(pipeline);
@@ -318,13 +440,41 @@ const Integrator: LC<
         pass.dispatchWorkgroups(1);
         nodes(p.drift);
         nodes(p.forcesKick);
+        r.completed++;
+        if (tugging) {
+          r.perturbed = true;
+          r.dirty = true;
+        }
+        if (ring && r.completed % ring.every === 0) {
+          const step = r.completed, list = ring.list;
+          const at = list.findIndex((c) => c.step >= step);
+          const existing = at >= 0 && list[at].step === step;
+          // A departing run branches: later checkpoints belong to the old
+          // history. An identical run keeps them.
+          if (at >= 0 && (r.dirty || !existing)) {
+            if (r.dirty) {
+              for (const c of list.splice(at)) ring.free.push(c.slot);
+            } else continue; // inside an evicted gap: keep order
+          } else if (existing) continue;
+          if (!ring.free.length) ring.free.push(list.shift()!.slot);
+          const slot = ring.free.pop()!;
+          pass.end();
+          encoder.copyBufferToBuffer(
+            gpu.state,
+            0,
+            ring.buffer,
+            slot * ring.slotBytes,
+            ring.slotBytes,
+          );
+          pass = encoder.beginComputePass({ label: "molgpu:elastic" });
+          pass.setBindGroup(0, gpu.group);
+          list.push({ step, slot, perturbed: r.perturbed });
+        }
       }
       pass.end();
       device.queue.submit([encoder.finish()]);
       r.forcesValid = true;
       if (steps > 0) {
-        r.completed += steps;
-        if (tug && tug.k > 0) r.perturbed = true;
         elasticTesting.batches++;
         elasticTesting.steps += steps;
       }
@@ -333,10 +483,18 @@ const Integrator: LC<
       state: gpu.state,
       nodeCount: network.system.springs.nodeCount,
     };
-    return { completed: r.completed, epoch: r.epoch, perturbed: r.perturbed };
-  }, [gpu, target, seed, paramsKey, params, maxStepsPerFrame, wake]);
+    return {
+      completed: r.completed,
+      epoch: r.epoch,
+      goal,
+      perturbed: r.perturbed,
+      evicted,
+      firstStep: ring?.list[0]?.step ?? null,
+      lastStep: ring?.list.at(-1)?.step ?? null,
+    };
+  }, [gpu, ring, target, seed, paramsKey, params, maxStepsPerFrame, wake]);
 
-  const lagging = progress.completed < target;
+  const lagging = progress.completed < progress.goal;
   // Catch up one batch per animation frame while behind; idle otherwise.
   useResource((dispose) => {
     if (!lagging) return;
@@ -359,6 +517,9 @@ const Integrator: LC<
       target,
       lagging,
       perturbed: progress.perturbed,
+      evicted: progress.evicted,
+      firstStep: progress.firstStep,
+      lastStep: progress.lastStep,
     });
     report.current?.(status);
   }, [progress, target]);

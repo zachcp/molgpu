@@ -1,5 +1,9 @@
-import { assertThrows } from "@std/assert";
-import { checkElasticBindings } from "../src/internal/elastic-bindings.ts";
+import { assertEquals, assertThrows } from "@std/assert";
+import {
+  checkElasticBindings,
+  checkpointLayout,
+  RECORD_BUDGET,
+} from "../src/internal/elastic-bindings.ts";
 
 Deno.test("elastic bindings above the device limit throw a RangeError naming bytes", () => {
   const limits = {
@@ -22,4 +26,24 @@ Deno.test("elastic bindings above the device limit throw a RangeError naming byt
     RangeError,
     "state",
   );
+});
+
+Deno.test("checkpoint ring layout: 36 B per node, clamped to a byte budget", () => {
+  // 12.5k nodes (100k atoms): 450 kB per checkpoint, 149 in 64 MiB.
+  assertEquals(checkpointLayout(12_500, { every: 10 }), {
+    slotBytes: 450_000,
+    slots: Math.floor(RECORD_BUDGET / 450_000),
+  });
+  assertEquals(checkpointLayout(100, { every: 5, checkpoints: 3 }).slots, 3);
+  assertThrows(
+    () => checkpointLayout(12_500, { every: 10, checkpoints: 1000 }),
+    RangeError,
+    "450000000 bytes",
+  );
+  assertThrows(
+    () => checkpointLayout(1_000_000, { every: 10, maxBytes: 2 ** 20 }),
+    RangeError,
+    "36000000 bytes",
+  );
+  assertThrows(() => checkpointLayout(10, { every: 0 }), TypeError);
 });
