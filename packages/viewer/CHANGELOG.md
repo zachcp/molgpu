@@ -6,6 +6,13 @@ All notable changes to `@molgpu/viewer` are recorded here. The format follows
 
 ## [Unreleased]
 
+- `<Superpose to="first">` passes upstream coordinates through during trajectory
+  opening/replacement and first-reference read failures. `SuperposeStatus` now
+  reports `pending` and `error` with source/reference phases. An opening or
+  failed inner Trajectory shadows outer metadata; cancelled reads cannot publish
+  a late reference. Missing ancestors and invalid scientific references still
+  throw.
+
 - `<Ribbon>` geometry is now a port of Mol*'s default cartoon trace: per-residue
   half-shifted segments with terminal extension and overhang, flat box sheets
   with a 1.5× arrowhead on the last residue, elliptical helix and round coil

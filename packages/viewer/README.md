@@ -278,7 +278,7 @@ may change before 0.1.0; _advanced_ — only from `@molgpu/viewer/advanced`.
 | `TransformProps`          | experimental | Matrix, optional atom selection, and children for `<Transform>`.                                                                                                                                                        |
 | `Superpose`               | experimental | Coordinate provider fitting the nearest coordinates onto a reference (`to`: array, structure, or `"first"` trajectory frame) by a GPU Kabsch fit; `select` picks fit atoms and every atom moves.                        |
 | `SuperposeProps`          | experimental | Reference, optional fit selection, `translate`, asynchronous `onStatus`, and children for `<Superpose>`.                                                                                                                |
-| `SuperposeStatus`         | experimental | Solved or collinear passthrough, fitted RMSD when solved, and coordinate generation.                                                                                                                                    |
+| `SuperposeStatus`         | experimental | Reference pending/error or solved/collinear passthrough, fitted RMSD when solved, and coordinate generation.                                                                                                            |
 | `Unwrap`                  | experimental | Coordinate provider making covalent components whole on the displayed periodic frame (GPU pointer jumping over a covalent forest); `box` defaults to the trajectory's, `center` moves components into the primary cell. |
 | `UnwrapProps`             | experimental | Box, optional center selection, `onStatus`, and children for `<Unwrap>`.                                                                                                                                                |
 | `UnwrapStatus`            | experimental | `ok`, `ambiguous` (ring edges that do not close), `search-limit`, `missing-box` or `invalid-box`, with a generation.                                                                                                    |
@@ -582,8 +582,11 @@ stale publication suppressed, but their work is not necessarily aborted.
 During replacement, Structure/Volume show their loading value and Trajectory
 renders children against upstream coordinates until the new source opens. Old
 trajectory metadata and old source errors are withdrawn immediately. A Superpose
-first-frame request follows the same replacement/cancellation rule. Frame
-failures belong to their player and do not carry into a replacement.
+first-frame request follows the same replacement/cancellation rule. An opening
+or failed inner Trajectory shadows outer trajectory metadata; its coordinates
+still pass through from upstream. `useTrajectoryFrame()` returns null until the
+nearest source opens. Frame failures belong to their player and do not carry
+into a replacement.
 
 ### Presentation and retry
 
@@ -595,6 +598,15 @@ failed source open or frame read is not thrown (use.gpu Live has no error
 boundary): upstream coordinates keep passing through and `onStatus` receives a
 `TrajectoryStatus` (`opening`, `ready`, or `error` with phase `source` or
 `frame`). Without `onStatus`, each failure is logged once with `console.error`.
+`<Superpose to="first">` also passes upstream coordinates through while the
+nearest trajectory or its first-reference read is pending or failed. Its
+`onStatus` reports `pending` or `error` (with `phase: "source"` for trajectory
+opening/playback, or `"reference"` for the separate frame-0 read); `rmsd` is
+null and `generation` identifies the upstream generation at that state
+transition. A reference failure without a callback is logged once. Retry by
+replacing or remounting the source. A missing Trajectory ancestor, missing
+reference fit rows and a collinear reference remain errors.
+
 To own opening and its presentation, call `openTrajectory` from `@molgpu/io` and
 pass the result as `<Trajectory data>`, which is playback only.
 

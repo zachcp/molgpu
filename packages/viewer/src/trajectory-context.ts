@@ -1,11 +1,13 @@
 import { type LiveContext, makeContext } from "@use-gpu/live";
 import type { StructureResource } from "./types.ts";
-import type { TrajectoryFrameState } from "./types.ts";
+import type { TrajectoryFrameState, TrajectoryStatus } from "./types.ts";
 
-/** A displayed frame belongs to one structure resource, even when row counts match. */
+/** A nearest trajectory scope belongs to one structure, including while opening. */
 export interface OwnedTrajectoryFrame {
   readonly owner: StructureResource;
-  readonly state: TrajectoryFrameState;
+  readonly state: TrajectoryFrameState | null;
+  /** Nearest source state, including opening/failure before a frame exists. */
+  readonly status: TrajectoryStatus | null;
 }
 
 /** Structure boundaries shadow this context; Volume and Timeline do not. */

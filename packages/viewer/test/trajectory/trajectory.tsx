@@ -476,7 +476,10 @@ type Mode =
   | "static-unwrap"
   | "gate"
   | "scope"
-  | "scope-superpose";
+  | "scope-superpose"
+  | "superpose-reload"
+  | "superpose-nested"
+  | "superpose-read";
 interface State {
   mode: Mode;
   frame: number;
@@ -541,6 +544,12 @@ interface Probe {
   counters: typeof snapshotCounters;
   /** Frame 0 bounds of the gate scene, as the cell-list bounds pass reports. */
   gateBounds(n: number): number[];
+  referenceTrajectory: TrajectoryData;
+  references: {
+    signal?: AbortSignal;
+    resolve(invalid?: boolean): void;
+    reject(error: Error): void;
+  }[];
   loads: {
     src: string;
     resolve: (value?: TrajectoryData | null) => void;
@@ -551,6 +560,8 @@ interface Probe {
 }
 const probe: Probe = {
   loads: [],
+  references: [],
+  referenceTrajectory: SUP_TRAJECTORY,
   mounted: false,
   device: null,
   source: null,
@@ -630,6 +641,15 @@ const Probe = (): null => {
   return null;
 };
 
+const TrajectoryScopeProbe = ({ name }: { name: string }): null => {
+  const frame = useTrajectoryFrame();
+  probe.scope[name] = {
+    trajectory: frame !== null,
+    box: frame?.box ? Array.from(frame.box) : null,
+  };
+  return null;
+};
+
 const ScopeProbe = ({ name }: {
   name: string;
 }): null => {
@@ -689,6 +709,31 @@ const reloadLoader = (
       reject,
     });
   });
+
+// Frame 1 plays normally; only Superpose reads the controlled frame 0.
+const controlledReference = () =>
+  createTrajectory({
+    atomCount: SUP_ATOMS,
+    frameCount: SUP_FRAMES.length,
+    time: Float64Array.from(SUP_FRAMES, (_, i) => i),
+    source: {
+      read: (index, signal) =>
+        index !== 0
+          ? Promise.resolve({ positions: SUP_FRAMES[index] })
+          : new Promise((resolve, reject) => {
+            probe.references.push({
+              signal,
+              resolve: (invalid) =>
+                resolve({ positions: invalid ? SUP_FRAMES[4] : SUP_FRAMES[0] }),
+              reject,
+            });
+          }),
+    },
+  });
+const CONTROLLED_REFERENCES = [controlledReference(), controlledReference()];
+const recordSuperpose = (status: SuperposeStatus): void => {
+  probe.superpose.statuses.push(status);
+};
 
 const Scene = ({ state }: { state: State }): LiveElement => {
   switch (state.mode) {
@@ -838,6 +883,57 @@ const Scene = ({ state }: { state: State }): LiveElement => {
             </Trajectory>
           </Structure>
         </TimelineProvider>
+      );
+    case "superpose-reload":
+    case "superpose-nested": {
+      const inner = (
+        <Trajectory
+          src={state.src}
+          loader={reloadLoader}
+          frame={state.frame}
+          onStatus={recordStatus}
+        >
+          <TrajectoryScopeProbe name="inner" />
+          <Superpose
+            to="first"
+            onStatus={state.reportStatus ? recordSuperpose : undefined}
+          >
+            <Spacefill />
+            <Probe />
+          </Superpose>
+        </Trajectory>
+      );
+      return (
+        <Structure data={SUP_STRUCTURE}>
+          {state.mode === "superpose-nested"
+            ? (
+              <Trajectory data={SUP_TRAJECTORY} frame={1}>
+                <TrajectoryScopeProbe name="outer" />
+                {inner}
+                <TrajectoryScopeProbe name="afterInner" />
+              </Trajectory>
+            )
+            : inner}
+          <TrajectoryScopeProbe name="sibling" />
+        </Structure>
+      );
+    }
+    case "superpose-read":
+      return (
+        <Structure data={SUP_STRUCTURE}>
+          <Trajectory
+            data={CONTROLLED_REFERENCES[state.badFrames ? 1 : 0]}
+            frame={1}
+          >
+            <Superpose
+              to="first"
+              onStatus={state.reportStatus ? recordSuperpose : undefined}
+            >
+              <Spacefill />
+              <Probe />
+            </Superpose>
+          </Trajectory>
+        </Structure>
       );
     case "superpose":
       return (

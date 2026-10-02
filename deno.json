@@ -70,7 +70,7 @@
     "test:viewer:invalidation": "deno test -A packages/viewer/test/run-invalidation.mjs",
     "gate:consumer": "deno test -A packages/viewer/test/run-jsr-consumer.mjs",
     "gate:dynamics": "MOLGPU_DYNAMICS_GATE=1 deno test -A packages/viewer/test/run-trajectory.mjs",
-    "test:components": "deno test -A packages/viewer/test/run-components.mjs packages/viewer/test/run-volume.mjs packages/viewer/test/run-trajectory.mjs packages/viewer/test/run-gpu-dssp.mjs packages/viewer/test/run-efield.mjs packages/viewer/test/run-elastic.mjs",
+    "test:components": "deno test -A packages/viewer/test/run-components.mjs packages/viewer/test/run-superpose-source.mjs packages/viewer/test/run-volume.mjs packages/viewer/test/run-trajectory.mjs packages/viewer/test/run-gpu-dssp.mjs packages/viewer/test/run-efield.mjs packages/viewer/test/run-elastic.mjs",
     "test:site": "deno test -A site/test/run-browser.mjs"
   }
 }
