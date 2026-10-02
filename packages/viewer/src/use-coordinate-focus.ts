@@ -62,40 +62,10 @@ export function useCoordinateFocus(
     for (const row of framingSelection.indices) {
       maxRadius = Math.max(maxRadius, radii[row] * atomRadiusScale);
     }
-    const { instances } = resource.data.topology;
-    const lo = [Infinity, Infinity, Infinity];
-    const hi = [-Infinity, -Infinity, -Infinity];
-    for (let instance = 0; instance < instances.count; instance++) {
-      const matrix = instances.transform.subarray(
-        instance * 16,
-        instance * 16 + 16,
-      );
-      for (let corner = 0; corner < 8; corner++) {
-        const x = bounds.min[0] +
-          ((corner & 1) ? bounds.max[0] - bounds.min[0] : 0);
-        const y = bounds.min[1] +
-          ((corner & 2) ? bounds.max[1] - bounds.min[1] : 0);
-        const z = bounds.min[2] +
-          ((corner & 4) ? bounds.max[2] - bounds.min[2] : 0);
-        for (let axis = 0; axis < 3; axis++) {
-          const center = matrix[axis] * x + matrix[axis + 4] * y +
-            matrix[axis + 8] * z + matrix[axis + 12];
-          const extent = maxRadius * Math.hypot(
-            matrix[axis],
-            matrix[axis + 4],
-            matrix[axis + 8],
-          );
-          lo[axis] = Math.min(lo[axis], center - extent);
-          hi[axis] = Math.max(hi[axis], center + extent);
-        }
-      }
-    }
-    if (!instances.count) {
-      for (let axis = 0; axis < 3; axis++) {
-        lo[axis] = bounds.min[axis] - maxRadius;
-        hi[axis] = bounds.max[axis] + maxRadius;
-      }
-    }
+    // Representations draw the asymmetric unit, so assembly instance
+    // transforms do not widen the framing (molgpu-sept-crj.8).
+    const lo = bounds.min.map((value) => value - maxRadius);
+    const hi = bounds.max.map((value) => value + maxRadius);
     const center = lo.map((value, axis) => (value + hi[axis]) / 2);
     const half = lo.map((value, axis) => (hi[axis] - value) / 2);
     const halfFovX = Math.atan(Math.tan(fov / 2) * aspect);

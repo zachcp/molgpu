@@ -459,11 +459,11 @@ queries against that snapshot. Topology-only queries resolve directly against
 the root data. Picking keeps atom-row IDs, so its result follows live geometry.
 `useCoordinateBounds()` reduces min/max/centroid on the GPU and reads back only
 the partials; `useCoordinateFocus()` applies radius padding for camera targets.
-Representations draw the asymmetric unit only; framing currently still expands
-through `topology.instances` transforms, which `molgpu-sept-crj.26` removes so
-the camera covers only drawn atoms. `useCameraCurve()` remains a CPU resource
-operation; pass a snapshot resource when using it under a coordinate provider.
-The snapshot, selection and bounds hooks are on `@molgpu/viewer/advanced`.
+Representations draw the asymmetric unit only, so framing covers the drawn atoms
+and ignores `topology.instances` transforms. `useCameraCurve()` remains a CPU
+resource operation; pass a snapshot resource when using it under a coordinate
+provider. The snapshot, selection and bounds hooks are on
+`@molgpu/viewer/advanced`.
 
 The [coordinate-stream gallery page](../../site/README.md) scrubs a wobble
 transform with live atoms and bonds, snapshot ribbon, and GPU focus.

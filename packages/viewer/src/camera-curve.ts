@@ -64,56 +64,26 @@ const remember = <V extends FocusResult | null>(
   return value;
 };
 
-/** Framing bounds include displayed atom radii and every assembly instance. */
+/**
+ * Framing bounds cover the drawn atoms and their display radii. Representations
+ * draw the asymmetric unit, so `topology.instances` transforms do not apply
+ * (docs/findings/2026-10-01-assembly-instances-decision.md).
+ */
 const displayBounds = (
   data: StructureData,
   indices: Uint32Array,
   atomRadiusScale: number,
 ): StructureBounds | null => {
-  const { atoms, residues, instances } = data.topology;
   const radii = atomRadii(data);
   if (!indices.length) return null;
-  const byChain = new Map<number, Float64Array[]>();
-  for (let i = 0; i < instances.count; i++) {
-    const chain = instances.chain[i];
-    if (!byChain.has(chain)) byChain.set(chain, []);
-    byChain.get(chain)!.push(instances.transform.subarray(i * 16, i * 16 + 16));
-  }
-  const identity = Float64Array.of(
-    1,
-    0,
-    0,
-    0,
-    0,
-    1,
-    0,
-    0,
-    0,
-    0,
-    1,
-    0,
-    0,
-    0,
-    0,
-    1,
-  );
   const min = [Infinity, Infinity, Infinity],
     max = [-Infinity, -Infinity, -Infinity];
   for (const i of indices) {
-    const chain = residues.chain[atoms.residue[i]];
-    const transforms = byChain.get(chain) ?? [identity];
-    const x = data.positions[i * 3],
-      y = data.positions[i * 3 + 1],
-      z = data.positions[i * 3 + 2];
     const r = radii[i] * atomRadiusScale;
-    for (const m of transforms) {
-      for (let axis = 0; axis < 3; axis++) {
-        const center = m[axis] * x + m[axis + 4] * y + m[axis + 8] * z +
-          m[axis + 12];
-        const extent = r * Math.hypot(m[axis], m[axis + 4], m[axis + 8]);
-        min[axis] = Math.min(min[axis], center - extent);
-        max[axis] = Math.max(max[axis], center + extent);
-      }
+    for (let axis = 0; axis < 3; axis++) {
+      const center = data.positions[i * 3 + axis];
+      min[axis] = Math.min(min[axis], center - r);
+      max[axis] = Math.max(max[axis], center + r);
     }
   }
   return { min, max, center: min.map((v, i) => (v + max[i]) / 2) };

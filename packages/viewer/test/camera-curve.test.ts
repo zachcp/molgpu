@@ -61,17 +61,18 @@ const data = createStructure({
   },
 });
 
-Deno.test("focus includes displayed radii and assembly transforms", () => {
+Deno.test("focus includes displayed radii but not undrawn assembly copies", () => {
   const resource = createStructureResource(data);
   const view = focusSelection(resource, all("atom"));
   assert(view);
+  // The +10 Å instance is not drawn (asymmetric unit only), so it is not framed.
   assertEquals(view.bounds, {
     min: [-1, -1, -1],
-    max: [13, 1, 1],
-    center: [6, 0, 0],
+    max: [3, 1, 1],
+    center: [1, 0, 0],
   });
-  assertEquals(view.target, [6, 0, 0]);
-  assert(view.radius > 14);
+  assertEquals(view.target, [1, 0, 0]);
+  assert(view.radius > 2 && view.radius < 14);
   assertEquals(
     focusSelection(resource, all("atom"), { atomRadiusScale: 0 })?.bounds?.min,
     [0, 0, 0],
@@ -83,7 +84,7 @@ Deno.test("focus includes displayed radii and assembly transforms", () => {
 Deno.test("empty focus has a defined full-structure fallback or no-op", () => {
   const resource = createStructureResource(data);
   const none = where("atom", "none", () => false);
-  assertEquals(focusSelection(resource, none)?.target, [6, 0, 0]);
+  assertEquals(focusSelection(resource, none)?.target, [1, 0, 0]);
   assertStrictEquals(focusSelection(resource, none, { empty: "null" }), null);
   assertThrows(
     () => focusSelection(resource, none, { empty: "error" }),
@@ -110,8 +111,8 @@ Deno.test("camera focus resolves current positions on every sample and rewinds",
   const start = sampleCamera(curve, 0, first);
   const end = sampleCamera(curve, 2, first);
   assertEquals(start.target, [0, 0, 0]);
-  assertEquals(end.target, [7, 0, 0]);
-  assertEquals(sampleCamera(curve, 1, first).target, [3.5, 0, 0]);
+  assertEquals(end.target, [2, 0, 0]);
+  assertEquals(sampleCamera(curve, 1, first).target, [1, 0, 0]);
   assertEquals(sampleCamera(curve, 0, first), start);
   assertStrictEquals(
     evaluations,
@@ -122,7 +123,7 @@ Deno.test("camera focus resolves current positions on every sample and rewinds",
   const moved = createStructureResource(
     withPositions(data, Float32Array.from([0, 0, 0, 4, 0, 0])),
   );
-  assertEquals(sampleCamera(curve, 2, moved).target, [9, 0, 0]);
+  assertEquals(sampleCamera(curve, 2, moved).target, [4, 0, 0]);
   assertEquals(sampleCamera(curve, 0, moved), start);
   assertStrictEquals(
     evaluations,
@@ -134,7 +135,7 @@ Deno.test("camera focus resolves current positions on every sample and rewinds",
     topology: data.topology,
     positions: Float32Array.from([0, 0, 0, 8, 0, 0]),
   }));
-  assertEquals(sampleCamera(curve, 2, swapped).target, [13, 0, 0]);
+  assertEquals(sampleCamera(curve, 2, swapped).target, [8, 0, 0]);
   assertStrictEquals(
     evaluations,
     6,
