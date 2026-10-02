@@ -43,3 +43,13 @@ This is scoped acceptance, not a clean full GPU-gate claim. The known gate2
 failure remains tracked separately by `molgpu-sept-19s`. The reference decisions
 and other architecture epics remain independently tracked; no publication or
 deployment was performed.
+
+PR #83's first full CI run (`37070874403`) passed every browser suite except
+elastic, including gate2. Elastic's 4C7R stability case advanced to step 55,000
+before its two-minute deadline; the suite later hit the shared 15-minute process
+limit after both RMSF oracles passed. `molgpu-sept-ahc.13` gives the
+100,000-step cases a ten-minute deadline and elastic a 30-minute suite budget on
+software GPUs. Scientific steps, samples, tolerances and retirement assertions
+are unchanged. The complete local elastic suite passed all 15 steps, including
+re-thermalisation and replacement/unmount, in 96 seconds. Scoped formatting,
+lint, component type checking, shell syntax and suite partition checks passed.

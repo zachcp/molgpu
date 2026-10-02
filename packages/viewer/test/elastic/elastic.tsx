@@ -70,7 +70,7 @@ interface Probe {
     guideRows: number[];
   }>;
   /** Resolve once the provider reports `step` reached and not lagging. */
-  reach(step: number): Promise<ElasticNetworkStatus>;
+  reach(step: number, timeoutMs?: number): Promise<ElasticNetworkStatus>;
   readNodes(): Promise<number[]>;
   readVelocities(): Promise<number[]>;
   readCoordinates(): Promise<number[]>;
@@ -257,7 +257,7 @@ probe.load = async (id) => {
   };
 };
 
-probe.reach = (step) =>
+probe.reach = (step, timeoutMs = 120_000) =>
   new Promise((resolve, reject) => {
     const started = performance.now();
     const check = () => {
@@ -265,7 +265,7 @@ probe.reach = (step) =>
       if (s && s.step === step && s.target === step && !s.lagging) {
         // One more animation frame so the displacement kernel dispatches.
         requestAnimationFrame(() => requestAnimationFrame(() => resolve(s)));
-      } else if (performance.now() - started > 120_000) {
+      } else if (performance.now() - started > timeoutMs) {
         reject(new Error(`step ${step} not reached: ${JSON.stringify(s)}`));
       } else waiters.push(check);
     };
