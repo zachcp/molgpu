@@ -469,9 +469,11 @@ draws only its chains' rows. Atoms are never duplicated. Other representations
 still draw the asymmetric unit. Camera framing covers every copy
 (`focusSelection` exactly per copy; `useCoordinateFocus` by transforming the
 selection's GPU bounds with each operator), and a pick on a copy reports its
-`operatorId`. `useCameraCurve()` remains a CPU resource operation; pass a
-snapshot resource when using it under a coordinate provider. The snapshot,
-selection and bounds hooks are on `@molgpu/viewer/advanced`.
+`operatorId`. `<Label>` and `<Distance>` draw once per copy that holds their
+atoms, anchored with that copy's coordinates; a label with an explicit `at`
+draws once. `useCameraCurve()` remains a CPU resource operation; pass a snapshot
+resource when using it under a coordinate provider. The snapshot, selection and
+bounds hooks are on `@molgpu/viewer/advanced`.
 
 The [coordinate-stream gallery page](../../site/README.md) scrubs a wobble
 transform with live atoms and bonds, snapshot ribbon, and GPU focus.
