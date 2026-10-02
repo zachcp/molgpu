@@ -6,6 +6,11 @@ All notable changes to `@molgpu/viewer` are recorded here. The format follows
 
 ## [Unreleased]
 
+- `<Ribbon>` and `<Tube>` accept a numeric colour Field such as `byChain()`,
+  `bySecondaryStructure()` or `byBfactor()`. Each vertex reads its residue's
+  guide atom; switching or restyling fields rebuilds no geometry and uploads no
+  coordinates (the first field that needs atom rows uploads one index column).
+
 - Before first publish, rename `PickHit.instance` to `drawIndex`: it is the
   drawn primitive's index within its layer, not an assembly instance.
   `StructureSources.positions` is no longer deprecated; it is documented as the

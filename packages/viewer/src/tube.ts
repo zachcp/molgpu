@@ -1,6 +1,7 @@
 import type { SelectionDiagnostics, SelectionInput } from "./types.ts";
 import { SelectionConsumer } from "./internal/selection-consumer.ts";
 import type { Selection } from "@molgpu/select";
+import type { Field } from "@molgpu/fields";
 import type {
   MaterialSpec,
   Translucency,
@@ -8,15 +9,24 @@ import type {
   ViewerComponent,
 } from "./types.ts";
 import { use, useMemo } from "@use-gpu/live";
+import type { StorageSource } from "@use-gpu/core";
+import type { ShaderSource } from "@use-gpu/shader";
 import { LineLayer } from "@use-gpu/workbench";
 import { traceTable } from "@molgpu/table";
 import { useStructure } from "./structure-context.ts";
 import { useCoordinateSnapshot } from "./coordinate-snapshot.ts";
 import {
   type ColumnSpec,
+  isField,
   useActiveRows,
   withColumns,
 } from "./internal/representation.ts";
+import { live } from "./internal/elements.ts";
+import { useFieldPlan } from "./internal/use-field-plan.ts";
+import {
+  vertexAtoms,
+  VertexFieldColors,
+} from "./internal/vertex-field-colors.ts";
 import {
   applyOpacity,
   checkOpacity,
@@ -51,7 +61,13 @@ const TubeResolved: ViewerComponent<
     radius?: number;
     /** Samples per guide segment; defaults to 6. */
     smooth?: number;
-    color?: VectorLike;
+    /**
+     * A flat colour or a numeric colour Field such as `byChain()`,
+     * `bySecondaryStructure()` or a B-factor ramp. Each sample reads its
+     * residue's guide atom (CA or nucleic trace atom); recolouring rebuilds
+     * no geometry.
+     */
+    color?: VectorLike | Field;
     sides?: number;
     join?: "tangent" | "bevel" | "miter" | "round";
     /** Wraps the shaded tube layer; without one, the ambient scene material. */
@@ -74,12 +90,15 @@ const TubeResolved: ViewerComponent<
   useRepaint();
   useBindingProbe("tube", color, opacity, radius);
   checkOpacity(opacity, "Tube");
-  const drawColor = useMemo(() => applyOpacity(color, opacity), [
-    color,
-    opacity,
-  ]);
-  const drawMode = modeProps(mode, flatAlpha(color, false) * opacity);
+  const field = isField(color) ? color : null;
+  const drawColor = useMemo(
+    () => field ? [1, 1, 1, 1] : applyOpacity(color as VectorLike, opacity),
+    [field, color, opacity],
+  );
+  const drawMode = modeProps(mode, flatAlpha(color, !!field) * opacity);
   const { resource } = useStructure();
+  const plan = useFieldPlan(field, resource, "Tube");
+  const needsAtoms = plan.attrNames.length > 0 || plan.annotation !== null;
   const data = useCoordinateSnapshot()?.data;
 
   const indices = useActiveRows(resource, select, "Tube");
@@ -101,6 +120,14 @@ const TubeResolved: ViewerComponent<
     trace,
     smooth,
   ]);
+  // Built once per geometry; a style change keeps the same column object.
+  const sourceAtom = useMemo(
+    () =>
+      needsAtoms && trace && built?.count
+        ? vertexAtoms(trace, built.residue)
+        : null,
+    [needsAtoms, trace, built],
+  );
   if (!built?.count) return null;
 
   const width = lineWidthForRadius(radius, -1);
@@ -108,14 +135,22 @@ const TubeResolved: ViewerComponent<
     { key: "positions", data: built.positions, format: "vec3<f32>" },
     { key: "segments", data: built.segments, format: "i32" },
   ];
-  return withColumns(specs, (map) =>
+  if (sourceAtom) {
+    specs.push({ key: "sourceAtom", data: sourceAtom, format: "u32" });
+  }
+  if (plan.annotation) specs.push(plan.annotation);
+  const tube = (
+    map: Record<string, StorageSource | null>,
+    colors?: ShaderSource,
+  ) =>
     withMaterial(
       material,
       use(LineLayer, {
-        positions: map.positions,
-        segments: map.segments,
+        positions: map.positions!,
+        segments: map.segments!,
         width,
         color: drawColor,
+        ...(colors ? { colors } : {}),
         shaded: true,
         sides,
         join,
@@ -123,7 +158,20 @@ const TubeResolved: ViewerComponent<
         ...drawMode,
         ...props,
       }),
-    ));
+    );
+  return withColumns(specs, (map) =>
+    field
+      ? use(VertexFieldColors, {
+        field,
+        positions: map.positions!,
+        sourceAtom: map.sourceAtom ?? null,
+        annotation: map.annotation ?? null,
+        data: resource.data,
+        plan,
+        opacity,
+        render: (colors: ShaderSource) => live(tube(map, colors)),
+      })
+      : tube(map));
 };
 
 export const Tube: ViewerComponent<
@@ -134,7 +182,13 @@ export const Tube: ViewerComponent<
     radius?: number;
     /** Samples per guide segment; defaults to 6. */
     smooth?: number;
-    color?: VectorLike;
+    /**
+     * A flat colour or a numeric colour Field such as `byChain()`,
+     * `bySecondaryStructure()` or a B-factor ramp. Each sample reads its
+     * residue's guide atom (CA or nucleic trace atom); recolouring rebuilds
+     * no geometry.
+     */
+    color?: VectorLike | Field;
     sides?: number;
     join?: "tangent" | "bevel" | "miter" | "round";
     /** Wraps the shaded tube layer; without one, the ambient scene material. */

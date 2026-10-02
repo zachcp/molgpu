@@ -11,6 +11,7 @@ import {
   useDeviceContext,
 } from "@use-gpu/workbench";
 import { resolve, where } from "@molgpu/select";
+import { byBfactor, byChain, bySecondaryStructure } from "@molgpu/fields";
 import {
   activeAtoms,
   coordinateBounds,
@@ -120,6 +121,15 @@ const RibbonProbe = () => {
   const [phase, setPhase] = useState(0.7);
   probe.setMode = setMode;
   probe.setColor = setColor;
+  // Numeric colour Fields: residue (chain, ssCode) and atom (B-factor) columns.
+  probe.setField = (name) =>
+    setColor(
+      {
+        chain: byChain(),
+        ss: bySecondaryStructure(),
+        bfactor: byBfactor(),
+      }[name],
+    );
   probe.setShift = setShift;
   probe.setPhase = setPhase;
   probe.mounted = true;

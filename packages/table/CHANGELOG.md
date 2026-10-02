@@ -6,6 +6,9 @@ All notable changes to `@molgpu/table` are recorded here. The format follows
 
 ## [Unreleased]
 
+- `Trace` gains `atom`: the guide atom row of each sample (CA, or the nucleic
+  trace atom), so trace consumers can read atom-domain columns.
+
 - Before first publish, remove the deprecated `atoms.formalCharge` and
   `residues.secondaryStructure` topology columns (and `legacySsCodes`); set the
   `formalCharge` and `ssCode` attributes with `withAttributes`. Built-in views

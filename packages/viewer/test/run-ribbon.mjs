@@ -98,6 +98,44 @@ Deno.test("viewer ribbon", async () => {
       "a color edit must change the rendered image",
     );
 
+    // Colour Fields (molgpu-sept-o4r): each is a style edit too. The first field
+    // that reads an atom/residue column uploads its source-atom index and the
+    // column once; switching fields rebuilds no ribbon geometry.
+    const geometry = (labels) =>
+      labels.filter((label) =>
+        label === "molgpu:positions" || label === "molgpu:normals" ||
+        label === "molgpu:indices"
+      ).length;
+    let previousShot = styledShot;
+    for (const name of ["chain", "ss", "bfactor", "chain"]) {
+      const before = await snap();
+      await page.evaluate((n) => globalThis.__probe.setField(n), name);
+      await settle();
+      await settle();
+      const after = await snap();
+      const fieldShot = await shot();
+      assertEquals(after.errors, [], `${name} field produced WebGPU errors`);
+      assertStrictEquals(
+        geometry(after.storageLabels.slice(before.storage)),
+        0,
+        `a ${name} colour field must not rebuild ribbon geometry`,
+      );
+      assert(
+        !fieldShot.equals(previousShot),
+        `the ${name} colour field must change the rendered image`,
+      );
+      previousShot = fieldShot;
+    }
+    const fieldsDone = await snap();
+    await page.evaluate(() => globalThis.__probe.setColor([0.2, 0.6, 0.9, 1]));
+    await settle();
+    await settle();
+    assertStrictEquals(
+      geometry((await snap()).storageLabels.slice(fieldsDone.storage)),
+      0,
+      "returning to a flat colour must not rebuild ribbon geometry",
+    );
+
     // Empty input (a selection that matches no atoms): renders nothing, no crash.
     await page.evaluate(() => globalThis.__probe.setMode("empty"));
     await settle();

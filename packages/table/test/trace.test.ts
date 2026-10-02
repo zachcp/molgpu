@@ -299,3 +299,23 @@ Deno.test("rejects a non-Uint32Array selection", () => {
   // @ts-expect-error: a plain array, not a Uint32Array
   assertThrows(() => traceTable(data, [0, 1, 2]), Error, "Uint32Array");
 });
+
+Deno.test("each sample records its residue's guide atom row", () => {
+  const data = createStructure(traceFixture());
+  const trace = traceTable(data, all(data));
+  const { atoms } = data.topology;
+  assertStrictEquals(trace.atom.length, trace.count);
+  for (let k = 0; k < trace.count; k++) {
+    const row = trace.atom[k];
+    assertStrictEquals(atoms.residue[row], trace.residue[k], `sample ${k}`);
+    const guide = Array.from(
+      { length: 3 },
+      (_, c) => data.positions[row * 3 + c],
+    );
+    assertEquals(
+      Array.from(trace.guide.subarray(k * 3, k * 3 + 3)),
+      guide,
+      `sample ${k} guide position`,
+    );
+  }
+});

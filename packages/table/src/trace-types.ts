@@ -8,6 +8,8 @@ export interface Trace {
   readonly binormal: Float32Array;
   /** Source residue row per sample (sample-to-residue mapping / retained residue IDs). */
   readonly residue: Uint32Array;
+  /** Guide atom row per sample (CA, or the nucleic trace atom), for atom-domain lookups. */
+  readonly atom: Uint32Array;
   /** Run r spans [runs[r], runs[r + 1]); length is runCount + 1. */
   readonly runs: Uint32Array;
   readonly runKind: readonly ("protein" | "rna" | "dna")[];

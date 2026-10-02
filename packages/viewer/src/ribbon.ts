@@ -1,6 +1,7 @@
 import type { SelectionDiagnostics, SelectionInput } from "./types.ts";
 import { SelectionConsumer } from "./internal/selection-consumer.ts";
 import type { Selection } from "@molgpu/select";
+import type { Field } from "@molgpu/fields";
 import type {
   MaterialSpec,
   Translucency,
@@ -8,6 +9,8 @@ import type {
   ViewerComponent,
 } from "./types.ts";
 import { use, useMemo, useRef } from "@use-gpu/live";
+import type { StorageSource } from "@use-gpu/core";
+import type { ShaderSource } from "@use-gpu/shader";
 import { FaceLayer } from "@use-gpu/workbench";
 import {
   attributeColumn,
@@ -23,9 +26,16 @@ import { useCoordinateSnapshot } from "./coordinate-snapshot.ts";
 import { useAttributeSnapshot } from "./attribute-snapshot.ts";
 import {
   type ColumnSpec,
+  isField,
   useActiveRows,
   withColumns,
 } from "./internal/representation.ts";
+import { live } from "./internal/elements.ts";
+import { useFieldPlan } from "./internal/use-field-plan.ts";
+import {
+  vertexAtoms,
+  VertexFieldColors,
+} from "./internal/vertex-field-colors.ts";
 import {
   applyOpacity,
   checkOpacity,
@@ -82,7 +92,13 @@ const RibbonResolved: ViewerComponent<
     select?: Selection | null;
     /** Samples per guide segment; defaults to 8. */
     smooth?: number;
-    color?: VectorLike;
+    /**
+     * A flat colour or a numeric colour Field such as `byChain()`,
+     * `bySecondaryStructure()` or a B-factor ramp. Each vertex reads its
+     * residue's guide atom (CA or nucleic trace atom); recolouring rebuilds
+     * no geometry.
+     */
+    color?: VectorLike | Field;
     /** Wraps the shaded ribbon layer; without one, the ambient scene material. */
     material?: MaterialSpec;
     /**
@@ -108,12 +124,15 @@ const RibbonResolved: ViewerComponent<
   useRepaint();
   useBindingProbe("ribbon", color, opacity);
   checkOpacity(opacity, "Ribbon");
-  const drawColor = useMemo(() => applyOpacity(color, opacity), [
-    color,
-    opacity,
-  ]);
-  const drawMode = modeProps(mode, flatAlpha(color, false) * opacity);
+  const field = isField(color) ? color : null;
+  const drawColor = useMemo(
+    () => field ? [1, 1, 1, 1] : applyOpacity(color as VectorLike, opacity),
+    [field, color, opacity],
+  );
+  const drawMode = modeProps(mode, flatAlpha(color, !!field) * opacity);
   const { resource } = useStructure();
+  const plan = useFieldPlan(field, resource, "Ribbon");
+  const needsAtoms = plan.attrNames.length > 0 || plan.annotation !== null;
   const coordinateSnapshot = useCoordinateSnapshot();
   const snapshot = coordinateSnapshot?.data;
   const attributeSnapshot = useAttributeSnapshot("ssCode", {
@@ -195,6 +214,14 @@ const RibbonResolved: ViewerComponent<
       smooth,
     ],
   );
+  // Built once per geometry; a style change keeps the same column object.
+  const sourceAtom = useMemo(
+    () =>
+      needsAtoms && trace && built?.vertexCount
+        ? vertexAtoms(trace, built.residue)
+        : null,
+    [needsAtoms, trace, built],
+  );
   if (!built?.vertexCount) return null;
 
   const specs: ColumnSpec[] = [
@@ -202,20 +229,41 @@ const RibbonResolved: ViewerComponent<
     { key: "normals", data: built.normals, format: "vec3<f32>" },
     { key: "indices", data: built.indices, format: "u32" },
   ];
-  return withColumns(specs, (map) =>
+  if (sourceAtom) {
+    specs.push({ key: "sourceAtom", data: sourceAtom, format: "u32" });
+  }
+  if (plan.annotation) specs.push(plan.annotation);
+  const faces = (
+    map: Record<string, StorageSource | null>,
+    colors?: ShaderSource,
+  ) =>
     withMaterial(
       material,
       use(FaceLayer, {
-        positions: map.positions,
-        normals: map.normals,
-        indices: map.indices,
+        positions: map.positions!,
+        normals: map.normals!,
+        indices: map.indices!,
         color: drawColor,
+        ...(colors ? { colors } : {}),
         shaded: true,
         side: "both",
         ...drawMode,
         ...props,
       }),
-    ));
+    );
+  return withColumns(specs, (map) =>
+    field
+      ? use(VertexFieldColors, {
+        field,
+        positions: map.positions!,
+        sourceAtom: map.sourceAtom ?? null,
+        annotation: map.annotation ?? null,
+        data: resource.data,
+        plan,
+        opacity,
+        render: (colors: ShaderSource) => live(faces(map, colors)),
+      })
+      : faces(map));
 };
 
 export const Ribbon: ViewerComponent<
@@ -224,7 +272,13 @@ export const Ribbon: ViewerComponent<
     select?: SelectionInput;
     /** Samples per guide segment; defaults to 8. */
     smooth?: number;
-    color?: VectorLike;
+    /**
+     * A flat colour or a numeric colour Field such as `byChain()`,
+     * `bySecondaryStructure()` or a B-factor ramp. Each vertex reads its
+     * residue's guide atom (CA or nucleic trace atom); recolouring rebuilds
+     * no geometry.
+     */
+    color?: VectorLike | Field;
     /** Wraps the shaded ribbon layer; without one, the ambient scene material. */
     material?: MaterialSpec;
     /**
