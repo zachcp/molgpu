@@ -1,3 +1,9 @@
+// Bounds and centroid of the nearest coordinates, one reduction and readback
+// per generation. Raw WebGPU, not use.gpu Readback: native Readback queues its
+// copy in the renderer and carries no source or generation, which this hook
+// publishes with each result (see
+// docs/findings/2026-09-28-gpu-publication-contract.md and
+// docs/findings/2026-10-02-native-compute-audit.md).
 import { useMemo, useRef, useResource, useState } from "@use-gpu/live";
 import { useDeviceContext } from "@use-gpu/workbench";
 import type { Selection } from "@molgpu/select";

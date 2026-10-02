@@ -3,6 +3,11 @@ import type { Selection } from "@molgpu/select";
 // <EField>: the electrostatic potential of the nearest coordinates and a charge
 // column, summed directly on the GPU onto a locked grid and provided as a
 // Volume (CONCEPT 9). See docs/findings/2026-09-27-efield-plan.md.
+// Raw WebGPU, not use.gpu Kernel: one computation is split into dispatches
+// bounded for the GPU watchdog, kept to one in flight with bursts coalesced,
+// and published only after the queue reports it complete. Kernel dispatches
+// once per frame in the frame's compute pass and reports neither (see
+// docs/findings/2026-10-02-native-compute-audit.md).
 import {
   type LC,
   type LiveElement,

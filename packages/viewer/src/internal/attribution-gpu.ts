@@ -4,7 +4,9 @@
 // within two cell widths is certified (every unsearched cell is at least that
 // far away, also for vertices outside the atom bounds, whose cell is clamped),
 // otherwise the vertex scans every selected atom. Equal distances resolve to
-// the lower row, which is the lower gather index.
+// the lower row, which is the lower gather index. Encoded into the surface
+// build's own submissions (raw WebGPU, like the field it reuses; see
+// docs/findings/2026-10-02-native-compute-audit.md).
 import type { SesCells } from "./ses-field.ts";
 import { dispatchFolded } from "./gpu-scan.ts";
 

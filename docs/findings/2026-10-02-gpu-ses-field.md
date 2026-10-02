@@ -38,9 +38,13 @@ steps. Its update depends on order, so the port does not reproduce it:
 neighbour list that overflows also throws a `RangeError`, so callers can fall
 back to the CPU in the same way.
 
-Raw WebGPU compute, like `<EField>` and GPU DSSP: the stages need workgroup
-memory, workgroup barriers and storage atomics. The pinned use.gpu compute
-helpers expose none of these.
+Raw WebGPU compute, like `<EField>` and GPU DSSP. Workgroup memory and atomics
+are not the reason: use.gpu's linker passes them through. The reason is the job
+shape. One build is a single cancellable job: its grid and outputs are sized
+from readbacks between submissions, and a newer coordinate generation aborts it.
+A use.gpu `Kernel` instead dispatches inside the frame loop's compute pass and
+has no readback-sized stages or abort. See
+`docs/findings/2026-10-02-native-compute-audit.md`.
 
 ## Agreement with Mol*
 

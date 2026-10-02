@@ -14,6 +14,11 @@
 // 2. torii: for every overlapping atom pair, `probePositions` points on the
 //    circle where their spheres meet; each point no third sphere hides lowers
 //    the visited samples in Mol*'s index box around it to their distance.
+// Raw WebGPU, not use.gpu Kernel: one build is a cancellable job across
+// several submissions, with the grid sized from a bounds readback and the
+// probe list from a count readback; Kernel dispatches once per frame in the
+// frame's compute pass and has neither (see docs/findings/2026-10-02-native-compute-audit.md).
+//
 // Samples, grid origin and dimensions follow Mol*'s arithmetic exactly; f32
 // evaluation can flip an "is this point hidden" test that sits on a sphere
 // boundary, which the browser suite bounds against the CPU field.

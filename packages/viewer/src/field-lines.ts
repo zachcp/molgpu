@@ -1,9 +1,22 @@
 // <FieldLines>: RK4 streamlines of E = −∇φ through the nearest volume,
-// integrated in one compute pass per volume generation and drawn with
+// integrated by a use.gpu Kernel once per volume generation and drawn with
 // LineLayer. See docs/findings/2026-09-27-efield-plan.md §5.
-import { use, useContext, useMemo, useResource } from "@use-gpu/live";
-import type { StorageSource } from "@use-gpu/core";
 import {
+  gather,
+  type LC,
+  use,
+  useContext,
+  useMemo,
+  useRef,
+  useResource,
+  useState,
+  yeet,
+} from "@use-gpu/live";
+import type { StorageSource, StorageTarget } from "@use-gpu/core";
+import {
+  Compute,
+  ComputeBuffer,
+  Kernel,
   LineLayer,
   LoopContext,
   useDeviceContext,
@@ -28,14 +41,14 @@ import {
 } from "./internal/instrumentation.ts";
 import { useRepaint } from "./internal/use-repaint.ts";
 import { useBindingProbe } from "./internal/use-binding-probe.ts";
-import { viewer } from "./internal/elements.ts";
+import { live, viewer } from "./internal/elements.ts";
 import type { SliceStops } from "./volume-slice.ts";
 import { colorRampWgsl } from "./internal/color-ramp.ts";
 
 const STORAGE = 0x0080;
-const UNIFORM = 0x0040;
-const COPY_SRC = 0x0004;
 const COPY_DST = 0x0008;
+/** One 1D dispatch: 65 535 workgroups of the integrator's width. */
+const MAX_INVOCATIONS = 65535 * WORKGROUP;
 
 /** Test hook, not public API: the last integrated vertex buffer. */
 export const fieldLinesTesting: {
@@ -182,87 +195,183 @@ export const FieldLines: ViewerComponent<
   const lines = points.length / 3;
   const vertices = lines * (2 * steps + 1);
 
-  const pipeline = useMemo(() => {
-    count("shaderBuilds", "fieldLines:integrator");
-    return device.createComputePipeline({
-      layout: "auto",
-      compute: {
-        module: device.createShaderModule({
-          code: fieldLinesWgsl(grid),
-          label: "molgpu:field-lines",
-        }),
-        entryPoint: "main",
-      },
-      label: "molgpu:field-lines",
-    });
-  }, [device, grid]);
-  const buffers = useMemo(() => {
-    const make = (size: number, usage: number, label: string) => {
-      const buffer = device.createBuffer({
-        size: Math.max(16, Math.ceil(size / 16) * 16),
-        usage,
-        label: `molgpu:${label}`,
-      });
-      trackOwnedBuffer(buffer, label);
-      return buffer;
-    };
-    const seedBuffer = make(
-      points.byteLength,
-      STORAGE | COPY_DST,
-      "lines:seeds",
+  if (lines * 2 > MAX_INVOCATIONS) {
+    throw new RangeError(
+      `FieldLines: ${lines} lines exceed one dispatch; lower maxLines`,
     );
+  }
+
+  // The integrator runs as a use.gpu Kernel on the vertex target: linked
+  // inputs, an immediate compute pass, and one dispatch per version.
+  const integrator = useMemo(() => {
+    count("shaderBuilds", "fieldLines:integrator");
+    return loadModuleWithCache(
+      fieldLinesWgsl(grid),
+      "molgpu-field-lines",
+      "auto",
+    );
+  }, [grid]);
+  const seedSource = useMemo<StorageSource>(() => {
+    const buffer = device.createBuffer({
+      size: Math.max(16, Math.ceil(points.byteLength / 16) * 16),
+      usage: STORAGE | COPY_DST,
+      label: "molgpu:lines:seeds",
+    });
     if (points.byteLength) {
-      device.queue.writeBuffer(seedBuffer, 0, points);
+      device.queue.writeBuffer(buffer, 0, points);
       count("uploadBytes", "lines:seeds", points.byteLength);
     }
-    const out = make(vertices * 16, STORAGE | COPY_SRC, "lines:vertices");
-    const params = make(32, UNIFORM | COPY_DST, "lines:params");
-    const bytes = new ArrayBuffer(32);
-    new Uint32Array(bytes, 0, 2).set([lines, steps]);
-    new Float32Array(bytes, 16, 3).set([step, minField, potentialCap]);
-    device.queue.writeBuffer(params, 0, bytes);
-    count("uploadBytes", "lines:params", 32);
-    return { seedBuffer, out, params };
-  }, [device, points, steps, step, minField, potentialCap]);
+    return {
+      buffer,
+      format: "f32",
+      length: points.length,
+      size: [points.length],
+      version: 1,
+    };
+  }, [device, points]);
   useResource((dispose) => {
-    // A retained LineLayer can keep submitting these vertices while its
-    // replacement shader compiles. Release our ownership and let WebGPU
-    // reclaim each allocation after the last binding becomes unreachable.
-    dispose(() => Object.values(buffers).forEach(releaseOwnedBuffer));
-  }, [buffers]);
-  const group = useMemo(() =>
-    device.createBindGroup({
-      layout: pipeline.getBindGroupLayout(0),
-      entries: [
-        { binding: 0, resource: { buffer: source.buffer } },
-        { binding: 1, resource: { buffer: buffers.seedBuffer } },
-        { binding: 2, resource: { buffer: buffers.out } },
-        { binding: 3, resource: { buffer: buffers.params } },
-      ],
-    }), [pipeline, buffers, source.buffer]);
-  // Integrate once per volume generation (and pass rebuild), during render,
-  // after the volume's own compute was submitted.
-  useMemo(() => {
-    if (!lines) return;
-    const encoder = device.createCommandEncoder({ label: "molgpu:lines" });
-    const pass = encoder.beginComputePass();
-    pass.setPipeline(pipeline);
-    pass.setBindGroup(0, group);
-    pass.dispatchWorkgroups(Math.ceil((lines * 2) / WORKGROUP));
-    pass.end();
-    device.queue.submit([encoder.finish()]);
-    count("gathers", "fieldLines:dispatch");
-    fieldLinesTesting.last = { buffer: buffers.out, vertices, generation };
-  }, [group, generation]);
-  useResource(() => requestRepaint(), [group, generation]);
+    // A retained LineLayer can keep submitting while its replacement shader
+    // compiles. Release ownership and let WebGPU reclaim each allocation
+    // once its last binding is unreachable.
+    trackOwnedBuffer(seedSource.buffer, "lines:seeds");
+    dispose(() => releaseOwnedBuffer(seedSource.buffer));
+  }, [seedSource]);
+  const params = useMemo(() => [lines, steps, step, minField], [
+    lines,
+    steps,
+    step,
+    minField,
+  ]);
+  const inputs = useMemo(() => [source, seedSource], [source, seedSource]);
+  const next = useRef(0);
+  // Integrate once per volume generation and per geometry change.
+  const version = useMemo(() => ++next.current, [
+    source,
+    generation,
+    integrator,
+    seedSource,
+    params,
+    potentialCap,
+  ]);
+  const [dispatched, setDispatched] = useState(-1);
+  const mounted = useRef(true);
+  useResource((dispose) => {
+    mounted.current = true;
+    dispose(() => {
+      mounted.current = false;
+    });
+  }, []);
+  const notified = useRef(-1);
+  useResource(() => {
+    if (dispatched >= 0) requestRepaint();
+  }, [dispatched]);
+  const integrate = (target: StorageTarget) =>
+    use(Compute, {
+      immediate: true,
+      children: gather(
+        use(Kernel, {
+          shader: integrator,
+          sources: inputs,
+          args: [params, potentialCap],
+          initial: true,
+          version,
+          size: [lines * 2, 1],
+        }),
+        // Kernel yields its call once the pipeline has compiled, and its
+        // initial guard can suppress a call; only the dispatch count proves
+        // this version was encoded (Compute submits right after).
+        (calls: { compute?: (...args: unknown[]) => unknown }[]) => {
+          const call = calls.find((item) => item?.compute);
+          return call?.compute
+            ? yeet({
+              compute: (
+                pass: unknown,
+                countDispatch: (...args: number[]) => void,
+              ) => {
+                let encoded = false;
+                const result = call.compute!(pass, (...counts: number[]) => {
+                  encoded = true;
+                  countDispatch(...counts);
+                });
+                if (encoded && notified.current !== version) {
+                  notified.current = version;
+                  count("gathers", "fieldLines:dispatch");
+                  fieldLinesTesting.last = {
+                    buffer: target.buffer,
+                    vertices,
+                    generation,
+                  };
+                  queueMicrotask(() => {
+                    if (mounted.current) setDispatched(version);
+                  });
+                }
+                return result;
+              },
+            })
+            : null;
+        },
+      ),
+    });
 
+  if (!lines) return null;
+  return viewer(use(ComputeBuffer, {
+    width: vertices,
+    height: 1,
+    format: "vec4<f32>",
+    label: "molgpu:lines:vertices",
+    children: integrate,
+    then: (target: StorageTarget) =>
+      dispatched < 0 ? null : use(LinesDraw, {
+        target,
+        vertices,
+        version: dispatched,
+        lines,
+        steps,
+        width,
+        colorRange,
+        stops,
+        tint: [color[0], color[1], color[2], (color[3] ?? 1) * opacity],
+        mode,
+      }),
+  }));
+};
+
+const LinesDraw: LC<{
+  target: StorageTarget;
+  vertices: number;
+  version: number;
+  lines: number;
+  steps: number;
+  width: number;
+  colorRange?: readonly [number, number];
+  stops: SliceStops;
+  tint: number[];
+  mode: Translucency["mode"];
+}> = (
+  {
+    target,
+    vertices,
+    version,
+    lines,
+    steps,
+    width,
+    colorRange,
+    stops,
+    tint: tintValue,
+    mode,
+  },
+) => {
+  useResource((dispose) => {
+    trackOwnedBuffer(target.buffer, "lines:vertices");
+    dispose(() => releaseOwnedBuffer(target.buffer));
+  }, [target.buffer]);
   const vertexSource = useMemo<StorageSource>(() => ({
-    buffer: buffers.out,
+    buffer: target.buffer,
     format: "vec4<f32>",
     length: vertices,
     size: [vertices],
-    version: generation,
-  }), [buffers.out, vertices, generation]);
+    version,
+  }), [target.buffer, vertices, version]);
   const positions = useShader(VERTEX_POSITIONS, [vertexSource]);
   const widthRef = useShaderRef(width);
   const widths = useShader(VERTEX_WIDTHS, [vertexSource, widthRef]);
@@ -276,15 +385,11 @@ export const FieldLines: ViewerComponent<
     [colorRange ? stops : null, !!colorRange],
   );
   const rangeRef = useShaderRef(colorRange ?? [0, 1]);
-  const tint = useMemo(
-    () => [color[0], color[1], color[2], (color[3] ?? 1) * opacity],
-    [color, opacity],
-  );
+  const tint = useMemo(() => tintValue, tintValue);
   const tintRef = useShaderRef(tint);
   const colors = useShader(rampModule, [vertexSource, rangeRef, tintRef]);
   const segments = useMemo(() => lineSegments(lines, steps), [lines, steps]);
-  if (!lines) return null;
-  return viewer(withColumns(
+  return live(withColumns(
     [{ key: "segments", data: segments, format: "i32" }],
     (map) =>
       use(LineLayer, {
