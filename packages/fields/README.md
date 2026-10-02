@@ -144,7 +144,11 @@ representation rather than evaluating it yourself.
 - `categorical(input, cases, fallback)` — map an integer scalar input to
   per-category values, with an explicit fallback.
 - `linear(input, { domain: [lo,hi], range?, overflow? })` — affine map into
-  `range`; `overflow` is `clamp` (default), `wrap`, or `fail`.
+  `range`; `overflow` is `clamp` (default), `wrap`, or `fail`. Both domain
+  endpoints map to their corresponding range endpoints, including reversed
+  domains. `wrap` repeats only outside the closed domain: for `[0,1]`, inputs
+  `0` and `1` remain `0` and `1`, while `-0.25` and `1.25` become `0.75` and
+  `0.25`.
 - `colormap(input, stops)` — piecewise-linear colour gradient over a scalar
   input.
 - `annotation(domain, type, values, { missing?, policy?, fallback? })` —
@@ -152,7 +156,8 @@ representation rather than evaluating it yourself.
   or `fail`). Use the package-root `SCALAR` or `COLOR` descriptor as `type`.
   Evaluating or baking it for a structure whose row count differs fails.
 - `curve(stops, { overflow? })` — a scalar along the global parameter `t`
-  (uniform, same for every row).
+  (uniform, same for every row). Curve `wrap` is periodic over the half-open
+  stop interval: the last stop time wraps to the first stop value.
 
 ## Two evaluators, one definition
 

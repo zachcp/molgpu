@@ -6,6 +6,10 @@ All notable changes to `@molgpu/fields` are recorded here. The format follows
 
 ## [Unreleased]
 
+- Generated WGSL for `linear(..., { overflow: "wrap" })` preserves both domain
+  endpoints like the CPU evaluator, including reversed domains, and wraps only
+  outside the closed domain. Curve wrap retains its periodic endpoint behavior.
+
 - `evaluate` and a compiled annotation binding's `fill` reject an annotation
   whose row count differs from the structure's, instead of reading past it.
 - Trim evaluator constants, identity accessors and `columnRange` from the

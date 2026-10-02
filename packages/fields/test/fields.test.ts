@@ -31,6 +31,7 @@ import {
   withAttributes,
 } from "@molgpu/table";
 import { structure } from "./fixture.ts";
+import { WRAP_CASES } from "./wrap-cases.ts";
 
 const RED: Color = [1, 0, 0, 1],
   BLUE: Color = [0, 0, 1, 1],
@@ -154,6 +155,44 @@ Deno.test("linear normalizes over a domain with clamp and wrap overflow", () => 
     Error,
     "outside domain",
   );
+});
+
+Deno.test("linear wrap preserves both domain endpoints and wraps only overflow", () => {
+  const data = structure();
+  for (const { domain, values, expected } of WRAP_CASES) {
+    const input = annotation("atom", SCALAR, Float32Array.from(values));
+    const field = linear(input, {
+      domain: [...domain],
+      range: [10, 20],
+      overflow: "wrap",
+    });
+    assertEquals(
+      [...evaluate(field, data)],
+      [...expected],
+      `domain ${domain}, inputs ${values}`,
+    );
+  }
+});
+
+Deno.test("curve wrap remains periodic at its upper endpoint", () => {
+  const data = structure();
+  const field = curve([[-2, 10], [2, 20]], { overflow: "wrap" });
+  for (
+    const [t, expected] of [
+      [-6, 10],
+      [-2, 10],
+      [-1, 12.5],
+      [1, 17.5],
+      [2, 10],
+      [4, 15],
+      [6, 10],
+    ]
+  ) {
+    assertEquals(
+      [...evaluate(field, data, { domain: "atom", t })],
+      new Array(4).fill(expected),
+    );
+  }
 });
 
 Deno.test("colormap interpolates a gradient over a scalar input", () => {

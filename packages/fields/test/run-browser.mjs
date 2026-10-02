@@ -17,6 +17,7 @@ import {
   curve,
   evaluate,
   linear,
+  SCALAR,
   volumeSample,
 } from "../src/index.ts";
 import {
@@ -26,6 +27,7 @@ import {
   withAttributes,
 } from "@molgpu/table";
 import { structure } from "./fixture.ts";
+import { WRAP_CASES } from "./wrap-cases.ts";
 
 Deno.test("fields GPU parity", async () => {
   const RED = [1, 0, 0, 1], BLUE = [0, 0, 1, 1], GREY = [0.5, 0.5, 0.5, 1];
@@ -120,6 +122,26 @@ Deno.test("fields GPU parity", async () => {
       t: 0.25,
     },
   };
+
+  WRAP_CASES.forEach(({ domain, values, expected }, index) => {
+    const field = linear(
+      annotation("atom", SCALAR, Float32Array.from(values)),
+      {
+        domain: [...domain],
+        range: [10, 20],
+        overflow: "wrap",
+      },
+    );
+    assertEquals([...evaluate(field, data)], [...expected]);
+    cases[`linearWrap${index}`] = { field, domain: "atom" };
+  });
+  for (const t of [-6, -2, -1, 1, 2, 4, 6]) {
+    cases[`curveWrap${t}`] = {
+      field: curve([[-2, 10], [2, 20]], { overflow: "wrap" }),
+      domain: "atom",
+      t,
+    };
+  }
 
   function atomColors() {
     const out = [];
@@ -280,6 +302,11 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
           if (!navigator.gpu) return { error: "no webgpu" };
           const adapter = await navigator.gpu.requestAdapter();
           const device = await adapter.requestDevice();
+          const gpuErrors = [];
+          device.addEventListener(
+            "uncapturederror",
+            (event) => gpuErrors.push(event.error.message),
+          );
           const module = device.createShaderModule({ code: wgsl });
           const info = await module.getCompilationInfo();
           const errs = info.messages.filter((m) => m.type === "error").map((
@@ -352,7 +379,12 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
           await read.mapAsync(GPUMapMode.READ);
           const result = [...new Float32Array(read.getMappedRange().slice(0))];
           read.unmap();
-          return { result };
+          await device.queue.onSubmittedWorkDone();
+          device.destroy();
+          return {
+            result,
+            ...(gpuErrors.length ? { error: gpuErrors.join(" | ") } : {}),
+          };
         },
         job,
       );

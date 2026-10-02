@@ -288,7 +288,9 @@ export function categorical(
 /**
  * Affine map of a scalar input into `range` (default [0,1]) over `domain`
  * [lo,hi]. `overflow` handles inputs outside [lo,hi]: 'clamp' (default) or
- * 'wrap'. 'fail' rejects out-of-range on the CPU and does not lower to GPU.
+ * 'wrap'. Both domain endpoints map to their corresponding range endpoints;
+ * wrap applies only outside the domain, including when its direction reverses.
+ * 'fail' rejects out-of-range on the CPU and does not lower to GPU.
  */
 export function linear(
   input: Field,
@@ -882,9 +884,16 @@ function emit(
       const u = `((${inner.expr}) - ${f32(node.lo)}) / ${
         f32(node.hi - node.lo)
       }`;
-      const clamped = node.overflow === "wrap"
-        ? `fract(${u})`
-        : `clamp(${u}, 0.0, 1.0)`;
+      let clamped: string;
+      if (node.overflow === "wrap") {
+        const name = `h_wrap${ctx.nextHelper++}`;
+        ctx.helpers.push(
+          `fn ${name}(u: f32) -> f32 {
+  return select(u, fract(u), u < 0.0 || u > 1.0);
+}`,
+        );
+        clamped = `${name}(${u})`;
+      } else clamped = `clamp(${u}, 0.0, 1.0)`;
       return {
         expr: `(${clamped}) * ${f32(node.b - node.a)} + ${f32(node.a)}`,
         type: SCALAR,
