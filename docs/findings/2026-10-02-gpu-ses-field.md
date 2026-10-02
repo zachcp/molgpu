@@ -142,6 +142,53 @@ The CPU path rebuilds 1tqn in 1.15 s. The GPU path does the whole rebuild,
 including the three small readbacks, in 42 ms. That meets the bead's 100 ms
 target before any drawing work.
 
+## Live-coordinate `<Surface>` (`molgpu-sept-mqo.4`)
+
+`<Surface>` decides per render which build to use:
+
+- **Root coordinates** (static) build the mesh once on the CPU, as before.
+- **Live coordinates** — a coordinate provider or a trajectory below the
+  structure — call `gpuSurfaceGeometry` (`internal/surface-gpu.ts`) from
+  `internal/use-gpu-surface.ts`.
+
+How the live build behaves:
+
+- **Scheduling:** one build is in flight at a time. The newest generation is
+  queued behind it, and intermediate generations are skipped. A changed source
+  buffer or geometry parameter aborts the running build.
+- **Display:** the last finished mesh stays drawn meanwhile.
+- **Buffers:** the mesh is drawn straight from GPU buffers. No coordinate
+  snapshot is subscribed and no CPU geometry is uploaded. Each published mesh is
+  owned by the hook and destroyed when a newer one replaces it or the surface
+  unmounts. A discarded result is destroyed at once.
+- **CPU fallback:** a probe radius below two resolution steps, or an atom whose
+  neighbour list overflows, falls back to the CPU build from 4 Hz snapshots.
+- **Grid budget:** the budget error still surfaces through `error`.
+
+`run-surface.mjs` drives `<Transform>` coordinates and checks that:
+
+- a shift moves the GPU surface;
+- a burst of 12 generations builds at most once per generation, without WebGPU
+  errors;
+- no CPU geometry is uploaded under live coordinates;
+- a colour edit rebuilds nothing;
+- unmounting is clean.
+
+The invalidation, retirement, components, efield, trajectory and tube suites
+also pass.
+
+`surface-bench.ts` now reports both paths. In Chrome the GPU build of 1tqn takes
+42 ms (table above). Deno's own WebGPU (wgpu) has a much higher fixed cost per
+readback and submit:
+
+| Protein | CPU total | GPU total (Deno wgpu) |
+| ------- | --------: | --------------------: |
+| 1crn    |     99 ms |                101 ms |
+| 1ejg    |    148 ms |                111 ms |
+| 1tqn    |  1,150 ms |                144 ms |
+| 1a4y    |  2,572 ms |                193 ms |
+| 4c7r    |  3,630 ms |                241 ms |
+
 ## Next
 
 `molgpu-sept-mqo.3` ports attribution. `molgpu-sept-mqo.4` wires the

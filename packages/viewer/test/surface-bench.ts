@@ -1,12 +1,18 @@
-// Moving-surface cost of the CPU <Surface> pipeline (molgpu-sept-t1s).
+// Moving-surface cost of <Surface> (molgpu-sept-t1s, molgpu-sept-mqo).
 // Run: deno run -A packages/viewer/test/surface-bench.ts
-// Times each stage <Surface> runs per coordinate generation (gather, Mol* SES
-// field, marching cubes, nearest-atom attribution) and the whole
-// buildSurfaceGeometry call, on warm jittered frames of corpus proteins.
+// Times each stage the CPU path runs per coordinate generation (gather, Mol*
+// SES field, marching cubes, nearest-atom attribution), the whole
+// buildSurfaceGeometry call, and the GPU path (gpuSurfaceGeometry from packed
+// GPU coordinates, when Deno has a WebGPU adapter), on warm jittered frames of
+// corpus proteins.
 import { activeAtoms, atomRadii, withPositions } from "@molgpu/table";
 import { molecularSurfaceField, structureFromBcif } from "@molgpu/io";
 import { marchingCubes, nearestAtomAttribution } from "@molgpu/geo";
 import { buildSurfaceGeometry } from "../src/internal/surface-geometry.ts";
+import {
+  destroyGpuSurfaceMesh,
+  gpuSurfaceGeometry,
+} from "../src/internal/surface-gpu.ts";
 import type { StructureResource } from "../src/types.ts";
 
 const FRAMES = 6;
@@ -18,6 +24,9 @@ const jitter = () => {
   seed = (seed * 1103515245 + 12345) % 2147483648;
   return (seed / 2147483648 - 0.5) * 0.2;
 };
+
+const adapter = await navigator.gpu?.requestAdapter();
+const device = adapter ? await adapter.requestDevice() : null;
 
 const rows = [];
 for (const id of ["1crn", "1ejg", "1tqn", "1a4y", "4c7r"]) {
@@ -32,6 +41,7 @@ for (const id of ["1crn", "1ejg", "1tqn", "1a4y", "4c7r"]) {
     mesh: [],
     attribute: [],
     total: [],
+    gpu: [],
   };
   let gridBytes = 0, meshBytes = 0, vertices = 0;
   for (let frame = 0; frame <= FRAMES; frame++) {
@@ -84,12 +94,31 @@ for (const id of ["1crn", "1ejg", "1tqn", "1a4y", "4c7r"]) {
     t = performance.now();
     await buildSurfaceGeometry({ data } as StructureResource, { indices });
     const total = performance.now() - t;
+    let gpu = NaN;
+    if (device) {
+      const buffer = device.createBuffer({
+        size: data.positions.byteLength,
+        usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+      });
+      device.queue.writeBuffer(buffer, 0, data.positions);
+      await device.queue.onSubmittedWorkDone();
+      t = performance.now();
+      const mesh = await gpuSurfaceGeometry(device, buffer, {
+        atomCount: data.topology.atoms.count,
+        rows: indices,
+        radii,
+      });
+      gpu = performance.now() - t;
+      if (mesh) destroyGpuSurfaceMesh(mesh);
+      buffer.destroy();
+    }
     if (frame === 0) continue; // first frame loads Mol* and warms the JIT
     stage.gather.push(gather);
     stage.field.push(fieldMs);
     stage.mesh.push(meshMs);
     stage.attribute.push(attribute);
     stage.total.push(total);
+    stage.gpu.push(gpu);
     gridBytes = field.values.byteLength;
     vertices = mesh.vertexCount;
     meshBytes = mesh.positions.byteLength + mesh.normals.byteLength +
@@ -104,6 +133,7 @@ for (const id of ["1crn", "1ejg", "1tqn", "1a4y", "4c7r"]) {
     meshMs: +median(stage.mesh).toFixed(1),
     attributeMs: +median(stage.attribute).toFixed(1),
     totalMs: +median(stage.total).toFixed(1),
+    gpuTotalMs: +median(stage.gpu).toFixed(1),
     gridMiB: +(gridBytes / 2 ** 20).toFixed(1),
     meshMiB: +(meshBytes / 2 ** 20).toFixed(1),
   });

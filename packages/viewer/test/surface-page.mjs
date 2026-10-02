@@ -14,7 +14,7 @@ import { resolve, where } from "@molgpu/select";
 import { byElement } from "@molgpu/fields";
 import { coordinateBounds } from "@molgpu/table";
 import { structureFromBcif } from "@molgpu/io";
-import { Structure, Surface } from "../src/index.ts";
+import { Structure, Surface, Transform } from "../src/index.ts";
 
 const probe = globalThis.__probe = {
   storage: [],
@@ -82,6 +82,8 @@ const SurfaceProbe = () => {
   const [probeRadius, setProbeRadius] = useState(1.4);
   const [resolution, setResolution] = useState(1.0);
   const [color, setColor] = useState([0.75, 0.75, 0.8, 1]);
+  const [shift, setShift] = useState(0);
+  probe.setShift = setShift;
   probe.setMode = setMode;
   probe.setProbeRadius = setProbeRadius;
   probe.setResolution = setResolution;
@@ -91,6 +93,14 @@ const SurfaceProbe = () => {
   const props = mode === "empty"
     ? { select: nothing, probeRadius, resolution, color }
     : { probeRadius, resolution, color };
+  // Live coordinates: a coordinate provider moves the atoms on the GPU.
+  if (mode === "moving") {
+    const matrix = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, shift, 0, 0, 1];
+    return use(Structure, {
+      data,
+      children: use(Transform, { matrix, children: use(Surface, props) }),
+    });
+  }
   return use(Structure, { data, children: use(Surface, props) });
 };
 

@@ -6,6 +6,12 @@ All notable changes to `@molgpu/viewer` are recorded here. The format follows
 
 ## [Unreleased]
 
+- `<Surface>` under live coordinates (a coordinate provider or trajectory)
+  rebuilds its mesh on the GPU from each coordinate generation: a WGSL port of
+  Mol*'s SES field, GPU marching cubes and nearest-atom attribution, matching
+  the CPU build to f32 rounding. A 4k-atom protein rebuilds in about 40 ms
+  instead of 1.15 s, with no coordinate readback. Root coordinates, and
+  parameters the port does not cover, keep the CPU build.
 - Ribbon, Tube and Surface draw biological assembly copies: geometry is built
   once per group of copies sharing the same chains, in model space, and drawn
   under each copy's operator through transformed position/normal getters.

@@ -10,12 +10,15 @@ import type {
   ViewerComponent,
   ViewerElement,
 } from "./types.ts";
-import { type LC, use, useMemo } from "@use-gpu/live";
+import { type LC, use, useContext, useMemo } from "@use-gpu/live";
 import type { StorageSource } from "@use-gpu/core";
 import type { ShaderSource } from "@use-gpu/shader";
 import { FaceLayer, useShader, useShaderRef } from "@use-gpu/workbench";
 import { wgsl } from "@use-gpu/shader/wgsl";
-import { useStructure } from "./structure-context.ts";
+import { StructureContext, useStructure } from "./structure-context.ts";
+import { useCoordinates } from "./coordinates-context.ts";
+import { atomRadii } from "@molgpu/table";
+import { useGpuSurface } from "./internal/use-gpu-surface.ts";
 import { useCoordinateSnapshot } from "./coordinate-snapshot.ts";
 import {
   type ColumnSpec,
@@ -25,7 +28,7 @@ import {
 } from "./internal/representation.ts";
 import { useField } from "./use-field.ts";
 import { useOpacityColors } from "./internal/use-opacity-colors.ts";
-import { live } from "./internal/elements.ts";
+import { live as liveElement } from "./internal/elements.ts";
 import {
   applyOpacity,
   checkOpacity,
@@ -69,7 +72,7 @@ const FieldFaces: LC<{
   plan: FieldPlan;
   sampleOffset: number;
   opacity: number;
-  render: (colors: ShaderSource) => ReturnType<typeof live>;
+  render: (colors: ShaderSource) => ReturnType<typeof liveElement>;
 }> = (
   {
     field,
@@ -133,9 +136,16 @@ const FieldFaces: LC<{
  * atom inputs come from each vertex's nearest source atom, and position-based
  * inputs are sampled `sampleOffset` Å out along its
  * normal (default 1.4, one water radius, as ChimeraX's coulombic colouring),
- * live as the volume changes. Moving the offset is a uniform write. The mesh
- * itself follows coordinate snapshots (4 Hz and on pause), so under playback
- * the colour can sample a newer frame than the mesh shows.
+ * live as the volume changes. Moving the offset is a uniform write.
+ *
+ * Root coordinates build the mesh once on the CPU (Mol*'s field). Live
+ * coordinates — a coordinate provider or trajectory below the structure —
+ * rebuild it on the GPU from each coordinate generation, without a CPU
+ * readback: one build runs at a time, the newest generation is queued behind
+ * it, and the last finished mesh stays drawn meanwhile, so under playback the
+ * mesh can lag the colour by a build. A probe radius below two resolution
+ * steps, or an atom with an unusually dense neighbourhood, keeps the CPU build
+ * from coordinate snapshots (4 Hz and on pause) instead.
  */
 const SurfaceResolved: ViewerComponent<
   {
@@ -186,31 +196,87 @@ const SurfaceResolved: ViewerComponent<
   const drawMode = modeProps(mode, flatAlpha(color, !!field) * opacity);
   const { resource } = useStructure();
   const plan = useFieldPlan(field, resource, "Surface");
-  const snapshot = useCoordinateSnapshot();
   const indices = useActiveRows(resource, select, "Surface");
+  // Live coordinates (a provider or trajectory below the root) rebuild on the
+  // GPU from every generation; root coordinates build once on the CPU, which
+  // is also the fallback where the GPU port does not apply.
+  const coordinates = useCoordinates();
+  const root = useContext(StructureContext);
+  const live = !!coordinates &&
+    (coordinates.source !== root?.sources?.positions ||
+      coordinates.generation !== resource.positionsRevision);
+  const radii = useMemo(() => atomRadii(resource.data), [
+    resource.data.topology,
+  ]);
+  const request = useMemo(
+    () => ({ rows: indices, radii, probeRadius, resolution, maxBytes }),
+    [indices, radii, probeRadius, resolution, maxBytes],
+  );
+  const gpu = useGpuSurface(
+    coordinates,
+    request,
+    live && indices.length > 0 && probeRadius >= 2 * resolution,
+  );
+  const onGpu = live && indices.length > 0 &&
+    probeRadius >= 2 * resolution && !gpu.unsupported;
+  const snapshot = useCoordinateSnapshot({ enabled: !onGpu });
   const params = useMemo(
     () => ({ indices, probeRadius, resolution, maxBytes }),
     [indices, probeRadius, resolution, maxBytes],
   );
-  const [mesh, failure, pending] = useGeometryJob(
-    snapshot?.resource ?? null,
+  const [cpuMesh, cpuFailure, cpuPending] = useGeometryJob(
+    onGpu ? null : snapshot?.resource ?? null,
     params,
     buildSurfaceGeometry,
   );
-
-  if (!snapshot || pending) {
+  const gpuMesh = onGpu ? gpu.published : null;
+  const failure = onGpu ? gpu.failure : cpuFailure;
+  if (failure) return typeof error === "function" ? error(failure) : error;
+  if (onGpu ? !gpuMesh : !snapshot || cpuPending) {
     return typeof loading === "function" ? loading() : loading;
   }
-  if (failure) return typeof error === "function" ? error(failure) : error;
-  if (!mesh?.vertexCount) return null;
+  const count = onGpu
+    ? gpuMesh?.mesh?.vertexCount ?? 0
+    : cpuMesh?.vertexCount ?? 0;
+  if (!count) return null;
 
-  const specs: ColumnSpec[] = [
-    { key: "positions", data: mesh.positions, format: "vec3<f32>" },
-    { key: "normals", data: mesh.normals, format: "vec3<f32>" },
-    { key: "indices", data: mesh.indices, format: "u32" },
-  ];
-  if (plan.attrNames.length || plan.annotation) {
-    specs.push({ key: "sourceAtom", data: mesh.sourceAtom, format: "u32" });
+  const sourceAtom = plan.attrNames.length > 0 || !!plan.annotation;
+  const specs: ColumnSpec[] = [];
+  let gpuColumns: Record<string, StorageSource> = {};
+  if (gpuMesh?.mesh) {
+    const { mesh } = gpuMesh;
+    const source = (
+      buffer: GPUBuffer,
+      format: "vec3<f32>" | "u32",
+      length: number,
+    ): StorageSource => ({
+      buffer,
+      format,
+      length,
+      size: [length],
+      version: gpuMesh.generation,
+    });
+    gpuColumns = {
+      positions: source(mesh.positions, "vec3<f32>", mesh.vertexCount),
+      normals: source(mesh.normals, "vec3<f32>", mesh.vertexCount),
+      indices: source(mesh.indices, "u32", mesh.triangleCount * 3),
+      ...(sourceAtom
+        ? { sourceAtom: source(mesh.sourceAtom, "u32", mesh.vertexCount) }
+        : {}),
+    };
+  } else if (cpuMesh) {
+    specs.push(
+      { key: "positions", data: cpuMesh.positions, format: "vec3<f32>" },
+      { key: "normals", data: cpuMesh.normals, format: "vec3<f32>" },
+      { key: "indices", data: cpuMesh.indices, format: "u32" },
+    );
+    if (sourceAtom) {
+      specs.push({
+        key: "sourceAtom",
+        data: cpuMesh.sourceAtom,
+        format: "u32",
+      });
+    }
   }
   if (plan.annotation) specs.push(plan.annotation);
   const faces = (
@@ -236,8 +302,9 @@ const SurfaceResolved: ViewerComponent<
           }),
         ),
     });
-  return withColumns(specs, (map) =>
-    field
+  return withColumns(specs, (columns) => {
+    const map = { ...columns, ...gpuColumns };
+    return field
       ? use(FieldFaces, {
         field,
         positions: map.positions!,
@@ -248,9 +315,10 @@ const SurfaceResolved: ViewerComponent<
         plan,
         sampleOffset,
         opacity,
-        render: (colors: ShaderSource) => live(faces(map, colors)),
+        render: (colors: ShaderSource) => liveElement(faces(map, colors)),
       })
-      : faces(map));
+      : faces(map);
+  });
 };
 
 export const Surface: ViewerComponent<
