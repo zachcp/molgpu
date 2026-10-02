@@ -12,6 +12,80 @@ import {
   structureFromBcif,
 } from "../src/index.ts";
 
+Deno.test("surface preflight rejects invalid scalars and coordinates with stable errors", async () => {
+  const atoms = {
+    count: 1,
+    x: Float32Array.of(0),
+    y: Float32Array.of(0),
+    z: Float32Array.of(0),
+    radius: Float32Array.of(1),
+  };
+  for (
+    const options of [
+      { probeRadius: NaN },
+      { probeRadius: -1 },
+      { probeRadius: 11 },
+      { resolution: Infinity },
+      { resolution: 0 },
+      { resolution: 0.001 },
+      { probePositions: 12.5 },
+      { probePositions: 0 },
+      { probePositions: 91 },
+      { maxSamples: NaN },
+      { maxSamples: Infinity },
+      { maxSamples: 0 },
+      { maxSamples: 1.5 },
+    ]
+  ) {
+    const error = await assertRejects(
+      () => molecularSurfaceField(atoms, options),
+      IoError,
+    );
+    assertEquals(error.format, "surface");
+    assertEquals(error.code, "INVALID_INPUT");
+  }
+  for (const column of ["x", "y", "z", "radius"] as const) {
+    for (
+      const value of [NaN, Infinity, ...(column === "radius" ? [0, -1] : [])]
+    ) {
+      const error = await assertRejects(() =>
+        molecularSurfaceField({
+          ...atoms,
+          [column]: Float32Array.of(value),
+        }), IoError);
+      assertEquals(error.code, "INVALID_INPUT");
+    }
+  }
+  const error = await assertRejects(() =>
+    molecularSurfaceField({
+      ...atoms,
+      count: 2,
+      x: Float32Array.of(0, 1e8),
+      y: Float32Array.of(0, 0),
+      z: Float32Array.of(0, 0),
+      radius: Float32Array.of(1, 1),
+    }), IoError);
+  assertEquals(error.code, "VOLUME_TOO_LARGE");
+});
+
+Deno.test("surface sample budget matches pinned dimensions and permits explicit override", async () => {
+  const atoms = await loadAtoms("1crn");
+  const field = await molecularSurfaceField(atoms, { resolution: 0.9 });
+  const samples = field.values.length;
+  const error = await assertRejects(() =>
+    molecularSurfaceField(atoms, {
+      resolution: 0.9,
+      maxSamples: samples - 1,
+    }), IoError);
+  assertEquals(error.code, "VOLUME_TOO_LARGE");
+  const accepted = await molecularSurfaceField(atoms, {
+    resolution: 0.9,
+    maxSamples: samples,
+  });
+  assertEquals(accepted.values, field.values);
+  assertEquals(accepted.dims, field.dims);
+});
+
 async function loadAtoms(id: string) {
   const bytes = new Uint8Array(
     await Deno.readFile(new URL(`./fixtures/${id}.bcif`, import.meta.url)),

@@ -72,6 +72,16 @@ try {
 } // bcif INVALID_BCIF
 ```
 
+Surface inputs require finite coordinates and positive finite radii. Options
+follow the pinned Mol* numeric ranges: `probeRadius` 0–10 Å, `resolution`
+0.01–20 Å, and integer `probePositions` 12–90. Invalid inputs/options raise
+`IoError` with `format: "surface"` and `code: "INVALID_INPUT"` before Mol*
+loads. `maxSamples` defaults to 256³ (16,777,216), bounding the predicted scalar
+grid before Mol* allocation. Oversized grids raise `VOLUME_TOO_LARGE`; a larger
+positive safe-integer `maxSamples` explicitly raises the cap. Infinity is
+rejected. This caps samples, not total memory: Mol* also allocates an ID grid,
+lookup data and temporary arrays, and lowering allocates the output grid.
+
 `field.values` is **x-fastest**: sample `(i, j, k)` is
 `values[i + dims[0] * (j + dims[1] * k)]`, the layout `@molgpu/geo`'s
 `marchingCubes` reads, so the field can be passed to it directly. Grid index
@@ -96,7 +106,7 @@ asymmetric unit); an unknown id fails with `UNKNOWN_ASSEMBLY`.
 | `IoFormat`              | stable       | `"bcif" \| "ccp4" \| "pqr" \| "trajectory" \| "surface" \| "selection"`.                                                                                                                              |
 | `molecularSurfaceField` | experimental | Solvent-excluded-surface scalar grid over plain atom columns, via Mol*.                                                                                                                               |
 | `SurfaceFieldAtoms`     | experimental | Input atom columns: `count` and `Float32Array` `x`/`y`/`z`/`radius`.                                                                                                                                  |
-| `SurfaceFieldOptions`   | experimental | `probeRadius`, `resolution` and `probePositions`.                                                                                                                                                     |
+| `SurfaceFieldOptions`   | experimental | `probeRadius`, `resolution`, `probePositions` and preflight `maxSamples`.                                                                                                                             |
 | `SurfaceField`          | experimental | `VolumeData` plus surface metadata: `resolution`, `maxRadius`, `level`.                                                                                                                               |
 | `volumeFromCcp4`        | experimental | CCP4/MRC map (modes 0–2, either endianness; bytes, a `Blob`/`File`, or a URL) to a scalar `VolumeData` with Mol*'s full grid-to-Cartesian affine.                                                     |
 | `parseSelection`        | experimental | Parse MolScript, PyMOL, VMD or Jmol selection text into a plain MolQL tree for `@molgpu/select`'s `compile`; `symbols` rejects anything else at parse time.                                           |
