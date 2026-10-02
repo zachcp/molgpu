@@ -2,6 +2,8 @@
 export const COULOMB_PARAMS_BYTES = 112;
 /** Invocations per workgroup, and atoms per shared-memory tile, in every entry. */
 export const COULOMB_WORKGROUP = 64;
+/** Consecutive grid samples each `sumGrid` invocation computes. */
+export const COULOMB_GRID_BLOCK = 4;
 
 /**
  * WGSL for tiled direct Coulomb summation (see `coulombPotential` for the
@@ -10,11 +12,12 @@ export const COULOMB_WORKGROUP = 64;
  * 1. `packAtoms` (one invocation per summed atom): gathers `(x, y, z, q)` from the
  *    live packed-xyz positions and the per-row charge column through a row
  *    list into a vec4 buffer.
- * 2. `sumGrid` (one invocation per grid sample, x-fastest, starting at sample
- *    `offset`): the potential of packed atoms `[atomStart, atomEnd)` at the
- *    sample's world position, `transform · (i, j, k, 1)`. Atoms stream through
- *    workgroup memory 64 at a time; each tile's partial sum joins the running
- *    total. A caller bounds each dispatch's cost by splitting the grid into
+ * 2. `sumGrid` (one invocation per `COULOMB_GRID_BLOCK` consecutive grid
+ *    samples, x-fastest, starting at sample `offset`): the potential of packed
+ *    atoms `[atomStart, atomEnd)` at each sample's world position,
+ *    `transform · (i, j, k, 1)`. Atoms stream through workgroup memory 64 at a
+ *    time and each one read serves every sample of the block (register
+ *    blocking); the potential model is chosen once per tile, not per pair. A caller bounds each dispatch's cost by splitting the grid into
  *    sample ranges (every range sums every atom, so no dispatch reads or
  *    rewrites another's output). With `accumulate` 1 the sum is added to the
  *    output instead of overwriting it.
@@ -22,6 +25,8 @@ export const COULOMB_WORKGROUP = 64;
  *    writing `vec4(φ, E)` with the closed-form field, over the same range and
  *    accumulate rule.
  *
+ * `counts.x` is the number of samples or points a dispatch writes; `sumGrid`
+ * needs `ceil(counts.x / COULOMB_GRID_BLOCK)` invocations.
  * Invocation index is `id.x + id.y * params.config.y`, so a dispatch wider
  * than 65 535 workgroups folds into a 2D grid (`config.y` = groups in x × 64);
  * `sumGrid` and `sumPoints` add `config.w` to it.
@@ -132,22 +137,82 @@ fn sumAt(p: vec3<f32>, lane: u32, wantField: bool) -> vec4<f32> {
   return total * params.axis0.w;
 }
 
+fn samplePosition(i: u32) -> vec3<f32> {
+  let nx = params.dims.x;
+  let ny = params.dims.y;
+  let ijk = vec3<f32>(f32(i % nx), f32((i / nx) % ny), f32(i / (nx * ny)));
+  return params.axis0.xyz * ijk.x + params.axis1.xyz * ijk.y +
+    params.axis2.xyz * ijk.z + params.origin.xyz;
+}
+
 @compute @workgroup_size(64)
 fn sumGrid(
   @builtin(global_invocation_id) id: vec3<u32>,
   @builtin(local_invocation_index) lane: u32,
 ) {
-  let local = invocation(id);
-  let valid = local < params.counts.x;
-  let i = local + params.config.w;
-  let nx = params.dims.x;
-  let ny = params.dims.y;
-  let ijk = vec3<f32>(f32(i % nx), f32((i / nx) % ny), f32(i / (nx * ny)));
-  let p = params.axis0.xyz * ijk.x + params.axis1.xyz * ijk.y +
-    params.axis2.xyz * ijk.z + params.origin.xyz;
-  let phi = sumAt(p, lane, false).x;
-  if (!valid) { return; }
-  if (params.counts.w != 0u) { potential[i] += phi; } else { potential[i] = phi; }
+  let first = invocation(id) * 4u;
+  let count = params.counts.x;
+  let s0 = first + params.config.w;
+  let p0 = samplePosition(s0);
+  let p1 = samplePosition(s0 + 1u);
+  let p2 = samplePosition(s0 + 2u);
+  let p3 = samplePosition(s0 + 3u);
+  let rmin = params.axis2.w;
+  let floor2 = vec4<f32>(rmin * rmin);
+  let kappa = params.axis1.w;
+  let model = params.config.x;
+  let start = params.counts.y;
+  let end = params.counts.z;
+  var total = vec4<f32>(0.0);
+  for (var base = start; base < end; base += TILE) {
+    let j = base + lane;
+    var a = vec4<f32>(0.0);
+    if (j < end) { a = packed[j]; }
+    tile[lane] = a;
+    workgroupBarrier();
+    let n = min(TILE, end - base);
+    // One uniform branch per tile; the pair loop carries no model switch.
+    if (model == 0u) {
+      for (var k = 0u; k < n; k++) {
+        let atom = tile[k];
+        total += atom.w * inverseSqrt(max(vec4<f32>(
+          dot(p0 - atom.xyz, p0 - atom.xyz),
+          dot(p1 - atom.xyz, p1 - atom.xyz),
+          dot(p2 - atom.xyz, p2 - atom.xyz),
+          dot(p3 - atom.xyz, p3 - atom.xyz),
+        ), floor2));
+      }
+    } else if (model == 1u) {
+      for (var k = 0u; k < n; k++) {
+        let atom = tile[k];
+        total += atom.w / max(vec4<f32>(
+          dot(p0 - atom.xyz, p0 - atom.xyz),
+          dot(p1 - atom.xyz, p1 - atom.xyz),
+          dot(p2 - atom.xyz, p2 - atom.xyz),
+          dot(p3 - atom.xyz, p3 - atom.xyz),
+        ), floor2);
+      }
+    } else {
+      for (var k = 0u; k < n; k++) {
+        let atom = tile[k];
+        let r = sqrt(max(vec4<f32>(
+          dot(p0 - atom.xyz, p0 - atom.xyz),
+          dot(p1 - atom.xyz, p1 - atom.xyz),
+          dot(p2 - atom.xyz, p2 - atom.xyz),
+          dot(p3 - atom.xyz, p3 - atom.xyz),
+        ), floor2));
+        total += atom.w * exp(-kappa * r) / r;
+      }
+    }
+    workgroupBarrier();
+  }
+  let phi = total * params.axis0.w;
+  for (var s = 0u; s < 4u; s++) {
+    let local = first + s;
+    if (local >= count) { return; }
+    let i = local + params.config.w;
+    if (params.counts.w != 0u) { potential[i] += phi[s]; } else { potential[i] = phi[s]; }
+  }
 }
 
 @compute @workgroup_size(64)

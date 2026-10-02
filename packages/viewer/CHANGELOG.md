@@ -6,6 +6,10 @@ All notable changes to `@molgpu/viewer` are recorded here. The format follows
 
 ## [Unreleased]
 
+- `<EField>` sums the potential about 4× faster on large grids (128³ × 50k
+  atoms: 5.4 s → 1.25 s with the default distance model; Debye 5.5 s → 2.2 s).
+  Each dispatch is bounded at 2³⁰ pairs, the same wall time as before.
+
 - `<Ribbon>` and `<Tube>` accept a numeric colour Field such as `byChain()`,
   `bySecondaryStructure()` or `byBfactor()`. Each vertex reads its residue's
   guide atom; switching or restyling fields rebuilds no geometry and uploads no

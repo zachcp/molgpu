@@ -259,7 +259,7 @@ Deno.test("electric fields", async () => {
     await update({ mode: "random", physics: { model: "vacuum" } });
     await ready();
     report.states.chunked = await parity("random", {});
-    await page.evaluate(() => globalThis.__efield.dispatchPairs(2 ** 28));
+    await page.evaluate(() => globalThis.__efield.dispatchPairs());
     await update({ physics: {} });
 
     // 5. Scrubbing a trajectory recomputes for the displayed frame.

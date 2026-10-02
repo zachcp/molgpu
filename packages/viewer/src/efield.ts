@@ -18,6 +18,7 @@ import { LoopContext, useDeviceContext } from "@use-gpu/workbench";
 import type { StorageSource } from "@use-gpu/core";
 import { createVolume, type VolumeData, type VolumeGrid } from "@molgpu/table";
 import {
+  COULOMB_GRID_BLOCK,
   COULOMB_PARAMS_BYTES,
   COULOMB_WORKGROUP,
   coulombParams,
@@ -73,7 +74,7 @@ export const EFIELD_DEFAULT_PAIRS = 2 ** 34;
 export const efieldTesting: {
   pairsPerDispatch: number;
   gate: Promise<void> | null;
-} = { pairsPerDispatch: 2 ** 28, gate: null };
+} = { pairsPerDispatch: 2 ** 30, gate: null };
 
 type Pipelines = { pack: GPUComputePipeline; grid: GPUComputePipeline };
 const pipelineCache = new WeakMap<GPUDevice, Pipelines>();
@@ -177,7 +178,10 @@ const EFieldCompute: LC<{
     for (let c = 0; c < chunks; c++) {
       const offset = c * chunk;
       const invocations = Math.min(chunk, samples - offset);
-      const shape = dispatchShape(invocations);
+      // Each sumGrid invocation writes COULOMB_GRID_BLOCK consecutive samples.
+      const shape = dispatchShape(
+        Math.ceil(invocations / COULOMB_GRID_BLOCK),
+      );
       shapes.push(shape);
       bytes.set(
         new Uint8Array(coulombParams(physics, {
