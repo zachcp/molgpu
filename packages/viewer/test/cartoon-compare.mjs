@@ -13,10 +13,13 @@ import {
   traceTable,
 } from "@molgpu/table";
 import { structureFromBcif } from "@molgpu/io";
-import { Ribbon, Structure } from "../src/index.ts";
+import { Cartoon, Structure } from "../src/index.ts";
 import { Viewer } from "molstar/lib/apps/viewer/app.js";
 
-const id = new URLSearchParams(location.search).get("id") ?? "1crn";
+const params = new URLSearchParams(location.search);
+const id = params.get("id") ?? "1crn";
+// "side" orbits both cameras a quarter turn about the vertical axis.
+const bearing = params.get("view") === "side" ? Math.PI / 2 : 0;
 const bytes = new Uint8Array(
   await (await fetch(`/packages/io/test/fixtures/${id}.bcif`)).arrayBuffer(),
 );
@@ -52,6 +55,7 @@ const cartoon = globalThis.__cartoonCompare = {
 const App = () => {
   useDeviceContext();
   return use(OrbitCamera, {
+    bearing,
     radius: extent * 1.6,
     target: bounds.center,
     children: use(Pass, {
@@ -65,7 +69,7 @@ const App = () => {
         }),
         use(Structure, {
           data,
-          children: use(Ribbon, { color: [0.86, 0.55, 0.35, 1] }),
+          children: use(Cartoon, { color: [0.86, 0.55, 0.35, 1] }),
         }),
       ],
     }),
@@ -110,13 +114,13 @@ try {
     fov: Math.PI / 3,
     target: [...bounds.center],
     position: [
-      bounds.center[0],
+      bounds.center[0] - Math.sin(bearing) * extent * 1.6,
       bounds.center[1],
-      bounds.center[2] + extent * 1.6,
+      bounds.center[2] + Math.cos(bearing) * extent * 1.6,
     ],
     up: [0, 1, 0],
   }, 0);
-  cartoon.camera = { target: bounds.center, radius: extent * 1.6 };
+  cartoon.camera = { target: bounds.center, radius: extent * 1.6, bearing };
   cartoon.ready = true;
 } catch (error) {
   cartoon.errors.push(String(error));

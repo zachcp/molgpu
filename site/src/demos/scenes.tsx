@@ -6,6 +6,7 @@ import {
   byCharge,
   byElement,
   byPotential,
+  bySecondaryStructure,
   colormap,
   curve,
   volumeSample,
@@ -15,6 +16,7 @@ import { frameCurve } from "@molgpu/timeline";
 import {
   BallAndStick,
   Bonds,
+  Cartoon,
   EField,
   FieldLines,
   Isosurface,
@@ -158,9 +160,9 @@ export const renderDemoScene = (
     case "tube":
       return <Tube radius={0.5} color={[0.55, 0.85, 0.6, 1]} />;
     case "ribbon":
-      return (
-        <Ribbon color={[0.97, 0.66, 0.38, 1]} material={{ type: "basic" }} />
-      );
+      // Shaded, so helix and sheet faces read in depth; coloured by the
+      // imported annotation with Mol*'s secondary-structure palette.
+      return <Cartoon color={bySecondaryStructure()} />;
     case "surface":
       if (options.surfaceMode === "opaque") {
         return (

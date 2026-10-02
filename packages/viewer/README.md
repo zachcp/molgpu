@@ -2,13 +2,13 @@
 
 use.gpu Live components for molecular scenes. A `<Structure>` owns one
 structure's CPU resource and its shared GPU columns; representations beneath it
-(`<Spacefill>`, `<Bonds>`, `<BallAndStick>`, `<Tube>`, `<Ribbon>`, `<Surface>`)
-draw it, coloured by flat colours or `@molgpu/fields` fields and restricted by
-`@molgpu/select` selections. The package also provides picking, anchored labels
-and timeline-driven cameras. It never owns a canvas, GPU device, camera, pass or
-lights: those come from `@use-gpu/webgpu` and `@use-gpu/workbench`, and
-everything here composes inside that caller-owned scene. It runs in a browser
-with WebGPU only.
+(`<Spacefill>`, `<Bonds>`, `<BallAndStick>`, `<Tube>`, `<Ribbon>`, `<Cartoon>`,
+`<Surface>`) draw it, coloured by flat colours or `@molgpu/fields` fields and
+restricted by `@molgpu/select` selections. The package also provides picking,
+anchored labels and timeline-driven cameras. It never owns a canvas, GPU device,
+camera, pass or lights: those come from `@use-gpu/webgpu` and
+`@use-gpu/workbench`, and everything here composes inside that caller-owned
+scene. It runs in a browser with WebGPU only.
 
 ## Install
 
@@ -259,7 +259,9 @@ may change before 0.1.0; _advanced_ — only from `@molgpu/viewer/advanced`.
 | `Bonds`                   | stable       | Bonds as world-space sticks; vertex positions follow the nearest coordinate provider.                                                                                                                                   |
 | `BallAndStick`            | stable       | Spacefill balls plus Bonds sticks over one selection.                                                                                                                                                                   |
 | `Tube`                    | stable       | Backbone as a GPU-extruded tube.                                                                                                                                                                                        |
-| `Ribbon`                  | stable       | Oriented polymer trace with helix ribbons, coil tubes and beta-sheet arrows.                                                                                                                                            |
+| `Ribbon`                  | stable       | Polymer trace as Mol*'s cartoon trace: helix ribbons, coil tubes, sheet arrows, flat nucleic strands.                                                                                                                   |
+| `Cartoon`                 | experimental | Mol*'s default Cartoon: the `Ribbon` trace plus nucleotide rings and dashed polymer gaps, in one mesh.                                                                                                                  |
+| `RibbonProps`             | stable       | Props shared by `<Ribbon>` and `<Cartoon>`.                                                                                                                                                                             |
 | `GpuDssp`                 | experimental | Computes DSSP from the nearest GPU coordinate stream for one model and publishes generation-tagged `ssCode` to descendant fields and ribbons.                                                                           |
 | `Surface`                 | stable       | Molecular (solvent-excluded) surface.                                                                                                                                                                                   |
 | `Volume`                  | experimental | Own one scalar volume (`data` or CCP4/MRC `src`); one shared GPU copy per volume identity.                                                                                                                              |
@@ -479,12 +481,24 @@ and reruns CPU DSSP; an overflow on a static `<Structure>` raises
 `onStatus` reports the bridge count, direct near-threshold acceptor and bend
 centres (excluding dependent residues), and the fallback reason if any.
 
-`<Ribbon>` corresponds to the polymer-trace visual within Mol*'s Cartoon
-representation for protein structures. Mol*'s complete Cartoon can also draw
-polymer-gap cylinders and nucleotide rings. Those extra visuals are not part of
-`<Ribbon>`; nucleic polymers currently draw only their backbone trace. Ribbon
-geometry uses the latest coordinate snapshot while color and opacity stay as
-bound styling inputs.
+`<Ribbon>` is a port of the polymer-trace visual of Mol*'s default Cartoon: one
+segment per residue, helices as flat elliptical ribbons, coil as a round tube,
+sheets as flat boxes whose last residue forms an arrowhead, and nucleic strands
+as flat boxes, with Mol*'s sizes (0.2 Å, aspect ratio 5, arrow factor 1.5).
+`<Cartoon>` is the complete composition: the same trace plus, for each
+nucleotide, a stick from the trace atom to the base and the base ring(s) as a
+slab, and dashed cylinders across polymer gaps. A gap is a run of residues
+missing from the model within one chain; a break made only by `select` is not
+drawn as a gap. Both are one snapshot-based mesh coloured per residue, so color
+and opacity stay bound styling inputs; coordinates, selection, `smooth` and
+cartoon secondary-structure codes rebuild geometry. Not ported: tubular helices,
+rounded profiles and cyclic polymers.
+
+```tsx
+<Structure data={dna}>
+  <Cartoon color={byChain()} />
+</Structure>;
+```
 
 ## Coordinate consumers
 

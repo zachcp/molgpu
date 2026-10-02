@@ -55,6 +55,51 @@ const waitForVisibleCanvas = async (page) => {
   await rendered.dispose();
 };
 
+// Classify the canvas's lit pixels by Mol*'s secondary-structure palette:
+// magenta helix, yellow strand and white coil. Brightness spread within the
+// helix pixels shows the cartoon is shaded rather than a flat silhouette.
+const cartoonPixels = (page) =>
+  page.evaluate(async () => {
+    const canvas = document.querySelector("#molecule-canvas canvas");
+    const png = canvas.toDataURL("image/png");
+    const bytes = Uint8Array.from(
+      atob(png.slice("data:image/png;base64,".length)),
+      (c) => c.charCodeAt(0),
+    );
+    const bitmap = await createImageBitmap(
+      new Blob([bytes], { type: "image/png" }),
+    );
+    const snapshot = new OffscreenCanvas(bitmap.width, bitmap.height);
+    const context = snapshot.getContext("2d");
+    context.drawImage(bitmap, 0, 0);
+    const { data } = context.getImageData(0, 0, bitmap.width, bitmap.height);
+    bitmap.close();
+    const counts = {
+      area: data.length / 4,
+      lit: 0,
+      helix: 0,
+      sheet: 0,
+      coil: 0,
+    };
+    const helixRed = [];
+    for (let i = 0; i < data.length; i += 4) {
+      const r = data[i], g = data[i + 1], b = data[i + 2];
+      if (r + g + b <= 120) continue;
+      counts.lit++;
+      if (r > 80 && r > 1.6 * g && b > 1.3 * g) {
+        counts.helix++;
+        helixRed.push(r);
+      } else if (r > 80 && r > 1.6 * b && g > 1.4 * b) counts.sheet++;
+      else if (r > 80 && Math.abs(r - g) < 20 && Math.abs(g - b) < 25) {
+        counts.coil++;
+      }
+    }
+    // An unlit helix is one flat colour apart from its antialiased edges.
+    const brightest = Math.max(0, ...helixRed);
+    const shaded = helixRed.filter((r) => r < brightest * 0.8).length;
+    return { ...counts, helixShaded: shaded / Math.max(1, counts.helix) };
+  });
+
 // The site viewer publishes `data-webgpu` (pending | ready | error) on the
 // host. Ready is set inside AutoCanvas, so the canvas element then exists.
 const waitForWebGpu = async (page) => {
@@ -223,6 +268,26 @@ Deno.test("site landing page and maintained gallery routes", async () => {
         "successful mounting clears the loading status",
       );
       await waitForVisibleCanvas(page);
+      if (id === "ribbon") {
+        const pixels = await cartoonPixels(page);
+        console.log("cartoon pixels", JSON.stringify(pixels));
+        assert(
+          pixels.lit > pixels.area * 0.01,
+          `the cartoon covers the frame: ${JSON.stringify(pixels)}`,
+        );
+        for (const kind of ["helix", "sheet", "coil"]) {
+          assert(
+            pixels[kind] > pixels.lit * 0.05,
+            `${kind} is visible in its secondary-structure colour: ${
+              JSON.stringify(pixels)
+            }`,
+          );
+        }
+        assert(
+          pixels.helixShaded > 0.15,
+          `helix faces are shaded, not flat: ${JSON.stringify(pixels)}`,
+        );
+      }
       await page.locator("#molecule-canvas").hover();
       await page.mouse.down();
       await page.mouse.move(600, 420, { steps: 4 });

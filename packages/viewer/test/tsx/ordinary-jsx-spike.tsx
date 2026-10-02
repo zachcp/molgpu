@@ -15,6 +15,7 @@ import { comp, protein, secondaryStructure, within } from "@molgpu/select";
 import { byElement, byPotential } from "@molgpu/fields";
 import {
   BallAndStick,
+  Cartoon,
   EField,
   GpuDssp,
   Isosurface,
@@ -121,6 +122,12 @@ export function AcceptanceScene(props: SceneProps): ViewerElement {
       >
         <Transform matrix={shift} select={polymer}>
           {ribbon}
+          <Cartoon
+            select={polymer}
+            smooth={6}
+            opacity={0.5}
+            mode="transparent"
+          />
           {atoms}
           {nearby}
           {potential}

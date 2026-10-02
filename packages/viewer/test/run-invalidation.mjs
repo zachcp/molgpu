@@ -721,6 +721,43 @@ const MATRIX = {
       expect: attributesOnly(["ribbon:mesh", "ribbon:ss"]),
     },
   },
+  // Cartoon shares Ribbon's pipeline; its rings and gaps rebuild only with
+  // the trace, so style, smooth and secondary-structure edits leave them.
+  cartoon: {
+    color: {
+      from: { props: { color: GREY } },
+      to: { props: { color: RED } },
+      expect: styleOnly,
+    },
+    opacity: {
+      from: { props: { color: GREY } },
+      to: { props: { color: GREY, opacity: 0.5 } },
+      expect: styleOnly,
+    },
+    selection: {
+      from: { props: { color: GREY, select: "A" } },
+      to: { props: { color: GREY, select: "B" } },
+      expect: selectionOnly,
+    },
+    coordinates: {
+      from: { props: { color: GREY } },
+      to: { props: { color: GREY }, dataKey: "moved" },
+      expect: coordinatesOnly(["geometryBuilds:ribbon:mesh"]),
+    },
+    "CPU profile/width (smooth)": {
+      from: { props: { color: GREY, smooth: 4 } },
+      to: { props: { color: GREY, smooth: 6 } },
+      expect: geometryParam("geometryBuilds:ribbon:mesh", [
+        "geometryBuilds:ribbon:trace",
+        "geometryBuilds:ribbon:ss",
+      ]),
+    },
+    "ssCode, new projection": {
+      from: { props: { color: GREY } },
+      to: { props: { color: GREY }, dataKey: "ssCoil" },
+      expect: attributesOnly(["ribbon:mesh", "ribbon:ss"]),
+    },
+  },
   surface: {
     color: {
       from: { props: { color: GREY, resolution: 0.8 } },
@@ -895,6 +932,7 @@ const EVERY = [
   { kind: "ballAndStick", props: { select: "A" } },
   { kind: "tube", props: {} },
   { kind: "ribbon", props: {} },
+  { kind: "cartoon", props: {} },
   { kind: "surface", props: { resolution: 0.8 } },
   { kind: "label", props: { select: "A", text: "site" } },
   { kind: "distance", props: { a: "A", b: "B" } },
