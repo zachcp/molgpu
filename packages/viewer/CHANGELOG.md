@@ -6,6 +6,12 @@ All notable changes to `@molgpu/viewer` are recorded here. The format follows
 
 ## [Unreleased]
 
+- `pointerToPlane` and `projectToPointer` map a pointer to the view-normal plane
+  through an anchor and back, from a projection-view matrix, for dragging an
+  `<ElasticNetwork tug>` target. The site gains an elastic network demo: the
+  timeline drives the step, checkpoints make it scrubbable, and a right-drag
+  tugs an atom.
+
 - `<ElasticNetwork record={{ every }}>` keeps a GPU ring of integrator
   checkpoints (x, v, f; 64 MiB by default). Seeks inside the retained range
   restore the nearest checkpoint and integrate fewer than `every` steps, bitwise

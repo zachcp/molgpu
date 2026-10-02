@@ -72,9 +72,11 @@ interface Probe {
   /** Resolve once the provider reports `step` reached and not lagging. */
   reach(step: number): Promise<ElasticNetworkStatus>;
   readNodes(): Promise<number[]>;
+  readVelocities(): Promise<number[]>;
   readCoordinates(): Promise<number[]>;
-  /** Advance `every` steps `samples` times; per-node xyz sums and squares. */
-  sample(every: number, samples: number): Promise<{
+  /** Advance `every` steps `samples` times; per-node xyz sums and squares
+   * (of velocities when `velocities`). */
+  sample(every: number, samples: number, velocities?: boolean): Promise<{
     sum: number[];
     sum2: number[];
   }>;
@@ -95,6 +97,7 @@ const probe: Probe = {
   load: () => Promise.reject(new Error("not mounted")),
   reach: () => Promise.reject(new Error("not mounted")),
   readNodes: () => Promise.resolve([]),
+  readVelocities: () => Promise.resolve([]),
   readCoordinates: () => Promise.resolve([]),
   sample: () => Promise.reject(new Error("not mounted")),
 };
@@ -273,10 +276,16 @@ probe.readNodes = () => {
   const last = elasticTesting.last!;
   return readBuffer(last.state, last.nodeCount * 12);
 };
+probe.readVelocities = async () => {
+  const last = elasticTesting.last!;
+  return (await readBuffer(last.state, last.nodeCount * 24)).slice(
+    3 * last.nodeCount,
+  );
+};
 probe.readCoordinates = () =>
   readBuffer(probe.coordinates!.buffer, probe.coordinates!.count * 12);
 
-probe.sample = async (every, samples) => {
+probe.sample = async (every, samples, velocities = false) => {
   const n = elasticTesting.last!.nodeCount;
   const sum = new Array(3 * n).fill(0), sum2 = new Array(3 * n).fill(0);
   let step = current.step;
@@ -284,7 +293,9 @@ probe.sample = async (every, samples) => {
     step += every;
     probe.update({ step });
     await probe.reach(step);
-    const x = await probe.readNodes();
+    const x = velocities
+      ? await probe.readVelocities()
+      : await probe.readNodes();
     for (let i = 0; i < 3 * n; i++) {
       sum[i] += x[i];
       sum2[i] += x[i] * x[i];

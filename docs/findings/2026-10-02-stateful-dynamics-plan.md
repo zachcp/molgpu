@@ -281,6 +281,19 @@ normal to the view, from the application's camera matrices. The anchor is the
 picked atom's latest snapshot position. The site demo owns the wiring, and this
 is the risky part of ahc.6.
 
+_Implementation note (ahc.6):_ the helper is `pointerToPlane` /
+`projectToPointer` over use.gpu's `projectionViewMatrix` view uniform. The
+linear-response acceptance needed two corrections, with evidence. First, the
+distance springs leave the linear regime quickly. At T = 0 on 1crn (k = 10), the
+relaxed state departs from linear response by 1.4 % at a 0.1 Å pull, 6.6 % at
+0.5 Å and 23 % at 2 Å, after a rigid fit. Without the fit, the errors are 5.8 %,
+29 % and 114 %, because the linearised (Eckart-style) constraint lets a
+second-order rotation through. The oracle therefore runs at 0.2 Å and T = 0 (1.8
+% fitted), and the 2 Å pull at 300 K checks that the node moves most of the way
+(1.68 Å). Second, one 5e3-step window of 1crn's kinetic temperature scatters by
+1.4 % (CPU reference), too wide for a 3 % bound. The post-release average runs
+over 4e4 steps (0.3 % from the BAOAB prediction).
+
 ## 6. Next rungs stay placeholders
 
 ahc.7 (OpenMM XML bonded terms) and ahc.8 (cutoff LJ plus reaction field) are

@@ -17,7 +17,8 @@ export type DemoId =
   | "trajectory"
   | "volume"
   | "charge"
-  | "efield";
+  | "efield"
+  | "dynamics";
 export interface DemoDefinition {
   readonly id: DemoId;
   readonly title: string;
@@ -31,6 +32,7 @@ export interface DemoDefinition {
     postprocess?: boolean;
     coordinates?: boolean;
     lightFigure?: boolean;
+    picking?: boolean;
   };
 }
 
@@ -159,6 +161,16 @@ export const demos: readonly DemoDefinition[] = [
     assertion:
       "a computed Volume colours the surface and seeds field lines without a CPU round trip",
     options: { oit: true },
+  },
+  {
+    id: "dynamics",
+    title: "Elastic network dynamics",
+    summary:
+      "Langevin dynamics of 1CRN's CA elastic network, recorded every 10 steps: scrub back and forth through the run, and press Play then right-drag an atom to tug it.",
+    fixture: "1crn",
+    assertion:
+      "the timeline drives the integrator step and checkpoints make the run scrubbable",
+    options: { picking: true },
   },
   {
     id: "figure",

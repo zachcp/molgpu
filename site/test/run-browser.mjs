@@ -295,6 +295,41 @@ Deno.test("site landing page and maintained gallery routes", async () => {
           );
         }
       }
+      if (id === "dynamics") {
+        const stepIs = (step) =>
+          page.waitForFunction(
+            (want) =>
+              document.querySelector("#molecule-canvas")?.dataset
+                .elasticStep === String(want),
+            step,
+            { timeout: 20000 },
+          );
+        // The timeline curve sets the integrator's target step.
+        await page.getByLabel("Timeline time in seconds").fill("1");
+        await stepIs(500);
+        // Right-drag from the canvas centre (over the protein) while the
+        // timeline advances: the tug perturbs the run.
+        const box = await host.boundingBox();
+        await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+        await page.mouse.down({ button: "right" });
+        await page.mouse.move(
+          box.x + box.width / 2 + 60,
+          box.y + box.height / 2 - 30,
+          { steps: 4 },
+        );
+        await page.getByLabel("Timeline time in seconds").fill("2");
+        await stepIs(1000);
+        await page.mouse.up({ button: "right" });
+        assertStrictEquals(await host.getAttribute("data-tug"), "released");
+        assertStrictEquals(
+          await host.getAttribute("data-perturbed"),
+          "true",
+          "the tug perturbed the run",
+        );
+        // Scrubbing back restores a checkpoint.
+        await page.getByLabel("Timeline time in seconds").fill("0.5");
+        await stepIs(250);
+      }
       if (id === "surface") {
         assertStrictEquals(
           await page.getByLabel("Surface material").inputValue(),

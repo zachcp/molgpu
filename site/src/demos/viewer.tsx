@@ -40,6 +40,7 @@ type ViewerOptions = {
   postprocess?: boolean;
   coordinates?: boolean;
   lightFigure?: boolean;
+  picking?: boolean;
 };
 
 type ViewerState = {
@@ -236,6 +237,7 @@ const ViewerRoot = (initial: ViewerState) => {
             use(Pass, {
               lights: true,
               oit: options.oit,
+              picking: options.picking,
               ...(options.postprocess
                 ? {
                   ssao: options.lightFigure ? 0.12 : 0.35,

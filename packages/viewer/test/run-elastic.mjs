@@ -51,6 +51,66 @@ async function anmRmsf(root, id, count, method) {
   return Array.from(variance, Math.sqrt);
 }
 
+/** Dense CA ANM modes of a corpus structure (k = 1). */
+async function anmModes(root, id) {
+  const data = await structureFromBcif(
+    await Deno.readFile(`${root}packages/io/test/fixtures/${id}.bcif`),
+  );
+  const rows = caGuideRows(data.topology);
+  const network = buildElasticNetwork(data.positions, rows, 15);
+  return solveElasticModes(network, "anm", 3 * rows.length - 6, {
+    method: "dense",
+  });
+}
+
+/** Solve A x = b by Gaussian elimination with partial pivoting. */
+function solve(A, b) {
+  const n = b.length, M = A.map((row, i) => [...row, b[i]]);
+  for (let c = 0; c < n; c++) {
+    let p = c;
+    for (let r = c + 1; r < n; r++) {
+      if (Math.abs(M[r][c]) > Math.abs(M[p][c])) p = r;
+    }
+    [M[c], M[p]] = [M[p], M[c]];
+    for (let r = 0; r < n; r++) {
+      if (r === c) continue;
+      const f = M[r][c] / M[c][c];
+      for (let k = c; k <= n; k++) M[r][k] -= f * M[c][k];
+    }
+  }
+  return M.map((row, i) => row[n] / row[i]);
+}
+
+/**
+ * Mean displacement of the projected harmonic network under a tug of
+ * stiffness k on node p toward reference + d: minimise
+ * u'Hu/2 + k|u_p - d|^2/2 over the internal (non-rigid) subspace, spanned by
+ * the nonzero ANM modes V: (Λ + k V_p'V_p) a = k V_p' d, u = V a.
+ */
+function linearResponse(modes, p, k, d) {
+  const m = modes.length;
+  const A = modes.map((mi, i) =>
+    modes.map((mj, j) => {
+      let s = 0;
+      for (let c = 0; c < 3; c++) {
+        s += mi.vector[3 * p + c] * mj.vector[3 * p + c];
+      }
+      return (i === j ? mi.eigenvalue : 0) + k * s;
+    })
+  );
+  const b = modes.map((mi) => {
+    let s = 0;
+    for (let c = 0; c < 3; c++) s += mi.vector[3 * p + c] * d[c];
+    return k * s;
+  });
+  const a = solve(A, b);
+  const u = new Float64Array(modes[0].vector.length);
+  for (let i = 0; i < m; i++) {
+    for (let j = 0; j < u.length; j++) u[j] += a[i] * modes[i].vector[j];
+  }
+  return u;
+}
+
 function rmsd(a, b) {
   let sum = 0;
   for (let i = 0; i < a.length; i++) sum += (a[i] - b[i]) ** 2;
@@ -444,6 +504,105 @@ Deno.test("elastic network", async (t) => {
         const replayed = await page.evaluate(() => globalThis.__elastic.status);
         assertEquals([replayed.evicted, replayed.step], [false, 50]);
         await update({ record: undefined });
+        await healthy();
+      },
+    );
+
+    await t.step(
+      "a constant tug matches linear response; release re-thermalises",
+      async () => {
+        const modes = await anmModes(root, "1crn");
+        const p = 20, k = 10, ref = crambin.reference;
+        const pull = (dx, temperature, version) => ({
+          mode: "spacefill",
+          id: "1crn",
+          version,
+          step: 0,
+          temperature,
+          maxStepsPerFrame: 5000,
+          record: undefined,
+          tug: {
+            node: p,
+            target: [ref[3 * p] + dx, ref[3 * p + 1], ref[3 * p + 2]],
+            k,
+          },
+        });
+        // Linear response holds for small deformations: at T = 0 the run relaxes
+        // to its (nonlinear-spring) equilibrium, compared after a rigid fit
+        // because the Eckart-style constraint fixes only linearised rotations.
+        // Measured on the CPU reference: 1.4 % at 0.1 Å, 6.6 % at 0.5 Å and
+        // 23 % at 2 Å, where the springs are well outside the linear regime.
+        const d = [0.2, 0, 0];
+        await update(pull(d[0], 0, 20));
+        await reach(0);
+        await update({ step: 40_000 });
+        await reach(40_000);
+        const relaxed = await call("readNodes");
+        const expected = linearResponse(modes, p, k, d);
+        const want = Float32Array.from(ref, (r, i) => r + expected[i]);
+        const fit = fitKabsch(Float32Array.from(relaxed), want);
+        const m = fit.matrix;
+        let diff = 0, norm = 0;
+        for (let i = 0; i < relaxed.length / 3; i++) {
+          const [x, y, z] = relaxed.slice(3 * i, 3 * i + 3);
+          for (let c = 0; c < 3; c++) {
+            const fitted = m[c] * x + m[4 + c] * y + m[8 + c] * z + m[12 + c];
+            diff += (fitted - want[3 * i + c]) ** 2;
+            norm += expected[3 * i + c] ** 2;
+          }
+        }
+        const relative = Math.sqrt(diff / norm);
+        console.log(
+          `tug k=${k}, 0.2 Å at T=0: node moved ${
+            (relaxed[3 * p] - ref[3 * p]).toFixed(4)
+          } Å (linear ${expected[3 * p].toFixed(4)}); fitted error ${
+            (100 * relative).toFixed(1)
+          } %`,
+        );
+        assert(relative <= 0.1, `linear response error ${relative}`);
+
+        // At 300 K a 2 Å pull drags the node most of the way, spring-limited.
+        await update({ ...pull(2, 300, 21), tug: pull(2, 300, 21).tug });
+        await reach(0);
+        await update({ step: 10_000 });
+        await reach(10_000);
+        const { sum } = await call("sample", 50, 200);
+        const moved = sum[3 * p] / 200 - ref[3 * p];
+        console.log(
+          `tug k=${k}, 2 Å at 300 K: node mean moved ${moved.toFixed(3)} Å`,
+        );
+        assert(moved > 1 && moved < 2, `pulled node moved ${moved} Å`);
+        let status = await page.evaluate(() => globalThis.__elastic.status);
+        assert(status.perturbed, "a tugged run reports perturbed");
+
+        // Release, wait 5e3 steps, then average the kinetic temperature over
+        // 4e4 steps. One 5e3-step window of 1crn's 46 nodes scatters by 1.4 %
+        // (CPU reference, 20 windows), too wide for a 3 % bound; 4e4 steps
+        // bring it to about 0.5 %.
+        await update({ tug: undefined, step: 25_000 });
+        await reach(25_000);
+        const n = crambin.nodes, vs = 800;
+        const { sum2 } = await call("sample", 50, vs, true);
+        let twiceKinetic = 0;
+        for (const value of sum2) twiceKinetic += 110 * value / vs;
+        const measured = twiceKinetic / 418.4 / (0.0019872041 * (3 * n - 6));
+        let predicted = 0;
+        for (const mode of modes) {
+          const omega = Math.sqrt(418.4 * mode.eigenvalue / 110);
+          predicted += 1 - (omega * 0.02) ** 2 / 4;
+        }
+        predicted *= 300 / modes.length;
+        console.log(
+          `after release: kinetic ${measured.toFixed(1)} K, BAOAB prediction ${
+            predicted.toFixed(1)
+          } K`,
+        );
+        assert(
+          Math.abs(measured / predicted - 1) <= 0.03,
+          `kinetic ${measured} K vs ${predicted} K`,
+        );
+        status = await page.evaluate(() => globalThis.__elastic.status);
+        assert(status.perturbed);
         await healthy();
       },
     );

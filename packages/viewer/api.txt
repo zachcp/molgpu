@@ -138,6 +138,10 @@ VolumeProps
   export type VolumeProps = { children?: ViewerElement; data: VolumeData; src?: undefined; loader?: undefined; loading?: undefined; error?: undefined } | { children?: ViewerElement; src: string; data?: undefined; /** Its identity is a reload dependency alongside `src`. */ loader?: VolumeLoader; loading?: ViewerElement | (() => ViewerElement); error?: ViewerElement | ((failure: unknown) => ViewerElement) };
 VolumeSlice
   export const VolumeSlice: ViewerComponent<{ /** Defaults to the middle k (third-axis) grid plane. */ plane?: SlicePlane; /** Value interval mapped to 0–1. Defaults to the volume's min and max. */ range?: readonly [number, number]; /** Colour stops over 0–1. Defaults to black → white. */ stops?: SliceStops; /** Multiplied into every fragment's colour. Defaults to white. */ color?: VectorLike } & Translucency>;
+pointerToPlane
+  export function pointerToPlane(u: number, v: number, projectionView: ArrayLike<number>, anchor: ArrayLike<number>): [number, number, number];
+projectToPointer
+  export function projectToPointer(point: ArrayLike<number>, projectionView: ArrayLike<number>): [number, number, number];
 useCameraCurve
   export function useCameraCurve(curve: CameraCurve, resource: StructureResource, options?: FocusOptions): CameraPose;
 useCoordinateFocus

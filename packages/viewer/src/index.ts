@@ -63,6 +63,7 @@ export { Superpose } from "./superpose.ts";
 export { Unwrap } from "./unwrap.ts";
 export { NormalMode } from "./normal-mode.ts";
 export { ElasticNetwork } from "./elastic-network.ts";
+export { pointerToPlane, projectToPointer } from "./pointer-plane.ts";
 export { GpuDssp } from "./gpu-dssp-provider.ts";
 export type { GpuDsspProps, GpuDsspStatus } from "./gpu-dssp-provider.ts";
 export { GpuDsspOverflowError } from "./gpu-dssp.ts";
