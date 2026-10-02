@@ -6,6 +6,11 @@ All notable changes to `@molgpu/geo` are recorded here. The format follows
 
 ## [Unreleased]
 
+- `nearestAtomAttribution` is 11–14× faster: a dense CSR cell grid replaces
+  per-vertex string-keyed map lookups. Results are unchanged (same search order
+  and certificate); widely scattered atoms widen the grid's cells to bound its
+  memory.
+
 - Keep the composed `interpolateCurveSegment` API and remove its low-level
   interpolation helpers from the package entry.
 - `marchingCubes` accepts a full index-to-world affine `transform` in place of
