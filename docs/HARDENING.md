@@ -12,11 +12,12 @@ already exist; hardening only requires that they keep passing.
 
 **H1 — Manifest and published dependencies.** `deno.json` declares `name`, a
 semver `version`, `license`, public TypeScript exports, and `publish.include`
-containing `src`. Package licenses are MIT, except dynamics' combined
-`MIT AND BSD-3-Clause` attribution. Check the files uploaded to a local JSR
-registry: internal dependencies are caret `jsr:` ranges, use.gpu dependencies
-match the reviewed exact npm pin, and no bare imports remain. Only IO may import
-Mol*, through dynamic `import()`, at the tested exact version.
+containing `src`. Package licenses are MIT. JSR accepts only a single SPDX
+identifier, so dynamics also ships the BSD-3-Clause PDB2PQR notice as
+`LICENSE-PDB2PQR`. Check the files uploaded to a local JSR registry: internal
+dependencies are caret `jsr:` ranges, use.gpu dependencies match the reviewed
+exact npm pin, and no bare imports remain. Only IO may import Mol*, through
+dynamic `import()`, at the tested exact version.
 
 Compatible internal ranges must resolve a single table/timeline copy. Divergent
 copies can reject values because identity and curve state are module-private;

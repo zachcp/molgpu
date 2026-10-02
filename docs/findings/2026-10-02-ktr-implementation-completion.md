@@ -4,22 +4,22 @@ Tracking: `molgpu-sept-ktr`. All four review tasks and the 14 implementation
 follow-ups (`ktr.5`–`ktr.18`) are complete. Each implementation issue has its
 own commit; unrelated working-tree edits were excluded.
 
-| Issue    | Result                                                              | Commit      |
-| -------- | ------------------------------------------------------------------- | ----------- |
-| `ktr.5`  | Owned pending/failed trajectory references and Superpose recovery   | `001bef2`   |
-| `ktr.6`  | Owner-checked metadata reader moved out of playback                 | `1e5f40b`   |
-| `ktr.7`  | Export rules reconciled with useful shared types and inline props   | `b8fd253`   |
-| `ktr.8`  | Shared private native dispatch observation                          | `f341a3b`   |
-| `ktr.9`  | Identity wrappers removed; independent gather oracle moved to tests | `2959677`   |
-| `ktr.10` | Original guide rows validated before integer packing                | `7a5289f`   |
-| `ktr.11` | Public surface input and sample-budget preflight                    | `dbe23c1`   |
-| `ktr.12` | Download ceilings validated before transport                        | `73ded24`   |
-| `ktr.13` | Unused timeline sample copy removed                                 | `a4faaea`   |
-| `ktr.14` | Normal-mode constructor owns vectors and mapping                    | `e73ff4b`   |
-| `ktr.15` | CPU/WGSL linear wrap endpoint parity                                | `d6a7286`   |
-| `ktr.16` | Finite field inputs and valid f32 literals                          | `3db69ac`   |
-| `ktr.17` | Spacing and affine marching-cubes normal/winding parity             | `fa1e3bd`   |
-| `ktr.18` | Bounded pure-package layout cleanup                                 | This commit |
+| Issue    | Result                                                              | Commit    |
+| -------- | ------------------------------------------------------------------- | --------- |
+| `ktr.5`  | Owned pending/failed trajectory references and Superpose recovery   | `0790d30` |
+| `ktr.6`  | Owner-checked metadata reader moved out of playback                 | `eab8e25` |
+| `ktr.7`  | Export rules reconciled with useful shared types and inline props   | `6ce9571` |
+| `ktr.8`  | Shared private native dispatch observation                          | `e5ca497` |
+| `ktr.9`  | Identity wrappers removed; independent gather oracle moved to tests | `6e59ee4` |
+| `ktr.10` | Original guide rows validated before integer packing                | `c60d6cc` |
+| `ktr.11` | Public surface input and sample-budget preflight                    | `0277617` |
+| `ktr.12` | Download ceilings validated before transport                        | `299b6be` |
+| `ktr.13` | Unused timeline sample copy removed                                 | `22408dc` |
+| `ktr.14` | Normal-mode constructor owns vectors and mapping                    | `512438b` |
+| `ktr.15` | CPU/WGSL linear wrap endpoint parity                                | `0f65df1` |
+| `ktr.16` | Finite field inputs and valid f32 literals                          | `c19248c` |
+| `ktr.17` | Spacing and affine marching-cubes normal/winding parity             | `9725130` |
+| `ktr.18` | Bounded pure-package layout cleanup                                 | `587d077` |
 
 The final layout change removes table's unused compatibility type barrel, leaves
 select's public entry as explicit exports with selection implementation and

@@ -329,9 +329,9 @@ The bundled charge data were generated from PDB2PQR commit
 `9babf94e6f9f1792b4efadb9e997955cee720d61` (`AMBER.DAT`, `AMBER.names`,
 `AA.xml`, `NA.xml`). Regenerate with
 `deno run -A packages/dynamics/scripts/gen-templates.ts`. The exact upstream
-license is in [LICENSE-PDB2PQR](LICENSE-PDB2PQR). Package code is MIT; bundled
-data are BSD-3-Clause. Force-field citations: Cornell et al. (1995), Wang,
-Cieplak and Kollman (2000), and Dolinsky et al. (2004).
+license is in [LICENSE-PDB2PQR](LICENSE-PDB2PQR). Package code is MIT (the
+manifest license); bundled data are BSD-3-Clause. Force-field citations: Cornell
+et al. (1995), Wang, Cieplak and Kollman (2000), and Dolinsky et al. (2004).
 
 `buildElasticNetwork(positions, guideRows, cutoff)` uses `table.spatialGrid` to
 find exact guide-node contacts.
