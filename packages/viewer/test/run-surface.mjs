@@ -177,9 +177,92 @@ Deno.test("viewer surface", async () => {
       "empty selection must allocate no new surface geometry buffers",
     );
 
+    // Live coordinates rebuild the mesh on the GPU from every generation,
+    // with no CPU geometry upload; a style edit rebuilds nothing.
+    const gpuMeshes = () =>
+      page.evaluate(() =>
+        globalThis.__probe.storageBuffers.filter((b) =>
+          b.label === "molgpu:marching-cubes:positions"
+        ).length
+      );
+    const cpuMeshes = () =>
+      page.evaluate(() =>
+        globalThis.__probe.storageBuffers.filter((b) =>
+          b.label === "molgpu:positions"
+        ).length
+      );
+    // An identity transform passes root coordinates through; shift first.
+    await page.evaluate(() => globalThis.__probe.setShift(1));
+    await page.evaluate(() => globalThis.__probe.setMode("moving"));
+    await page.waitForFunction(
+      () =>
+        globalThis.__probe.storageBuffers.some((b) =>
+          b.label === "molgpu:marching-cubes:positions"
+        ),
+      null,
+      { timeout: 30000 },
+    );
+    await settle();
+    await settle();
+    const movingShot = await shot();
+    const cpuBefore = await cpuMeshes();
+    const gpuBefore = await gpuMeshes();
+    assertEquals(
+      (await snap()).errors,
+      [],
+      "GPU surface produced WebGPU errors",
+    );
+    await page.evaluate(() => globalThis.__probe.setShift(3));
+    await page.waitForFunction(
+      (n) =>
+        globalThis.__probe.storageBuffers.filter((b) =>
+          b.label === "molgpu:marching-cubes:positions"
+        ).length > n,
+      gpuBefore,
+      { timeout: 30000 },
+    );
+    await settle();
+    await settle();
+    assert(
+      !(await shot()).equals(movingShot),
+      "moved coordinates must move the GPU surface",
+    );
+    // A burst of generations: builds coalesce and replaced meshes retire
+    // without a draw touching a destroyed buffer.
+    for (let i = 0; i < 12; i++) {
+      await page.evaluate((x) => globalThis.__probe.setShift(x), 3 + i * 0.25);
+      await page.evaluate(() => new Promise(requestAnimationFrame));
+    }
+    await settle();
+    await settle();
+    const burst = await gpuMeshes();
+    assert(burst - gpuBefore <= 13, "each generation builds at most once");
+    assertEquals(
+      await cpuMeshes(),
+      cpuBefore,
+      "live coordinates must not upload CPU surface geometry",
+    );
+    await page.evaluate(() => globalThis.__probe.setColor([0.2, 0.6, 0.9, 1]));
+    await settle();
+    await settle();
+    assertEquals(
+      await gpuMeshes(),
+      burst,
+      "a color edit must not rebuild the GPU surface",
+    );
+    await page.evaluate(() => globalThis.__probe.setMode("surface"));
+    await settle();
+    await settle();
+    assertEquals(
+      (await snap()).errors,
+      [],
+      "moving, recoloring and unmounting the GPU surface produced WebGPU errors",
+    );
+
     console.log(
       JSON.stringify({
         status: "passed",
+        gpuBuilds: burst,
         initialStorage: initial.storage,
         rebuiltStorage: rebuilt.storage,
         styledStorageDelta: styled.storage - rebuilt.storage,

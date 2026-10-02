@@ -1,12 +1,14 @@
 import { activeAtoms, atomRadii } from "@molgpu/table";
 import { molecularSurfaceField, structureFromBcif } from "@molgpu/io";
-import { marchingCubes } from "@molgpu/geo";
+import { marchingCubes, nearestAtomAttribution } from "@molgpu/geo";
 import { gpuSesField } from "../../src/internal/ses-field.ts";
 import { gpuMarchingCubes } from "../../src/internal/marching-cubes-gpu.ts";
+import { encodeAttribution } from "../../src/internal/attribution-gpu.ts";
 
 declare global {
   var runSesField: (id: string) => Promise<Record<string, unknown>>;
   var runMarchingCubes: (id: string) => Promise<Record<string, unknown>>;
+  var runAttribution: (id: string) => Promise<Record<string, unknown>>;
 }
 
 /** Total triangle area of an indexed mesh. */
@@ -256,6 +258,116 @@ globalThis.runMarchingCubes = async (id: string) => {
     cpuMeshMs: cpuMs,
     meshBytes: mesh.vertexCount * 24 + mesh.triangleCount * 12,
     workingBytes: mesh.workingBytes,
+    errors,
+  };
+};
+
+/**
+ * GPU attribution of the GPU mesh against geo's nearestAtomAttribution of the
+ * same vertices: the same row except at f32 distance ties.
+ */
+globalThis.runAttribution = async (id: string) => {
+  if (!device) {
+    const adapter = await navigator.gpu.requestAdapter();
+    if (!adapter) throw new Error("no WebGPU adapter");
+    device = await adapter.requestDevice();
+  }
+  const bytes = new Uint8Array(
+    await (await fetch(`/${id}.bcif`)).arrayBuffer(),
+  );
+  const data = await structureFromBcif(bytes);
+  const atomCount = data.topology.atoms.count;
+  const positions = device.createBuffer({
+    size: atomCount * 12,
+    usage: 0x0080 | 0x0008,
+  });
+  device.queue.writeBuffer(positions, 0, data.positions as BufferSource);
+  const rows = activeAtoms(data);
+  const options = {
+    atomCount,
+    rows,
+    radii: atomRadii(data),
+    retainCells: true,
+  };
+  const errors: string[] = [];
+  device.pushErrorScope("validation");
+  const run = async () => {
+    const field = (await gpuSesField(device, positions, options))!;
+    const mesh = (await gpuMarchingCubes(device, field.field, {
+      dims: field.dims,
+      level: field.level,
+      transform: field.transform,
+    }))!;
+    const encoder = device.createCommandEncoder();
+    const { sourceAtom, params } = encodeAttribution(
+      device,
+      encoder,
+      mesh.positions,
+      mesh.vertexCount,
+      field.cells!,
+    );
+    device.queue.submit([encoder.finish()]);
+    await device.queue.onSubmittedWorkDone();
+    params.destroy();
+    field.field.destroy();
+    for (const b of field.cells!.buffers) b.destroy();
+    return { mesh, sourceAtom, field };
+  };
+  const warm = await run();
+  for (
+    const b of [
+      warm.mesh.positions,
+      warm.mesh.normals,
+      warm.mesh.indices,
+      warm.sourceAtom,
+    ]
+  ) b.destroy();
+  const t0 = performance.now();
+  const { mesh, sourceAtom, field } = await run();
+  const totalMs = performance.now() - t0;
+  const scoped = await device.popErrorScope();
+  if (scoped) errors.push(scoped.message);
+  const vertices = new Float32Array(
+    await readBuffer(mesh.positions, mesh.vertexCount * 12),
+  );
+  const gpu = new Uint32Array(
+    await readBuffer(sourceAtom, mesh.vertexCount * 4),
+  );
+  for (const b of [mesh.positions, mesh.normals, mesh.indices, sourceAtom]) {
+    b.destroy();
+  }
+  positions.destroy();
+  const atoms = new Float32Array(rows.length * 3);
+  rows.forEach((row, k) =>
+    atoms.set(data.positions.subarray(row * 3, row * 3 + 3), k * 3)
+  );
+  const t1 = performance.now();
+  const local = nearestAtomAttribution(
+    vertices,
+    atoms,
+    field.maxRadius + field.level + field.resolution,
+  );
+  const cpuMs = performance.now() - t1;
+  let ties = 0, mismatches = 0;
+  const dist = (v: number, row: number) =>
+    Math.hypot(
+      vertices[v * 3] - data.positions[row * 3],
+      vertices[v * 3 + 1] - data.positions[row * 3 + 1],
+      vertices[v * 3 + 2] - data.positions[row * 3 + 2],
+    );
+  for (let v = 0; v < mesh.vertexCount; v++) {
+    const cpuRow = rows[local[v]];
+    if (gpu[v] === cpuRow) continue;
+    if (Math.abs(dist(v, gpu[v]) - dist(v, cpuRow)) < 1e-5) ties++;
+    else mismatches++;
+  }
+  return {
+    id,
+    vertices: mesh.vertexCount,
+    ties,
+    mismatches,
+    totalMs,
+    cpuAttributionMs: cpuMs,
     errors,
   };
 };

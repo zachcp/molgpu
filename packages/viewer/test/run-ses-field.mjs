@@ -85,6 +85,17 @@ Deno.test("GPU SES field and mesh match Mol*'s field and geo's mesh", async () =
       assert(r.positionDiff < 1e-4, `${id} positions`);
       assert(r.normalDot > 0.9999, `${id} normals`);
     }
+    for (const id of corpus) {
+      const r = await page.evaluate(
+        (entry) => globalThis.runAttribution(entry),
+        id,
+      );
+      console.log(JSON.stringify(r));
+      assertEquals(r.errors, [], `${id} WebGPU errors`);
+      assertEquals(r.mismatches, 0, `${id} nearest atoms`);
+      // Equal-distance ties may resolve to either atom.
+      assert(r.ties <= r.vertices * 1e-4, `${id} ties`);
+    }
     assertEquals(errors, [], "browser errors");
   } finally {
     await browser?.close();
