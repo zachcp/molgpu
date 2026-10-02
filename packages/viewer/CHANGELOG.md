@@ -6,6 +6,10 @@ All notable changes to `@molgpu/viewer` are recorded here. The format follows
 
 ## [Unreleased]
 
+- Remove the internal `tooltip.ts` helper and its test, left behind when
+  `tooltipFields` was removed from the API; use `evaluate` from
+  `@molgpu/fields`.
+
 - Camera framing (`focusSelection`, `useCameraCurve`, `useCoordinateFocus`)
   covers only drawn atoms. It no longer expands through `topology.instances`
   transforms, which no representation draws; the two framing paths previously

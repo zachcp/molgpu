@@ -23,9 +23,9 @@ import {
   dssp,
   SS_CODES,
   withAttributes,
+  withPositions,
   withSecondaryStructure,
 } from "@molgpu/table";
-import { frameSecondaryStructure } from "../../table/src/frame-ss.ts";
 import { trajectoryFromModels } from "../../table/src/trajectory.ts";
 import { structureFromBcif } from "../src/index.ts";
 import { corpus } from "./corpus.ts";
@@ -171,7 +171,18 @@ Deno.test("withSecondaryStructure follows Mol*'s auto, dssp and model modes", as
 Deno.test("per-frame DSSP of an NMR ensemble equals DSSP of each model", async () => {
   const data = await load("2k39");
   const trajectory = trajectoryFromModels(data);
-  const perFrame = frameSecondaryStructure(data, trajectory);
+  const map = trajectory.atomMap!;
+  const rows = activeAtoms(data);
+  // Scatter frame k (model k) into the first model's rows, then run DSSP over
+  // the default view: the per-frame path a trajectory consumer would take.
+  const frameCodes = async (index: number) => {
+    const frame = await trajectory.source.read(index);
+    const positions = data.positions.slice();
+    for (let i = 0; i < map.length; i++) {
+      positions.set(frame.positions.subarray(i * 3, i * 3 + 3), map[i] * 3);
+    }
+    return dssp(withPositions(data, positions), { rows });
+  };
   const whole = dssp(data); // every model at once
   const { residues, chains } = data.topology;
   const modelOf = (r: number) => chains.model[residues.chain[r]];
@@ -183,20 +194,13 @@ Deno.test("per-frame DSSP of an NMR ensemble equals DSSP of each model", async (
       modelOf(r) === model
     );
   const first = residuesOf(models[0]);
-  const frames = [0, 1, 57, trajectory.frameCount - 1];
-  const timeline = await perFrame.timeline(frames);
-  frames.forEach((f, k) => {
+  for (const f of [0, 1, 57, trajectory.frameCount - 1]) {
+    const codes = await frameCodes(f);
     const expected = residuesOf(models[f]).map((r) => whole[r]);
-    assertEquals(first.map((r) => timeline[k][r]), expected, `frame ${f}`);
-  });
-  // Cached: the same frame resolves to the same array.
-  assertStrictEquals(await perFrame.frame(57), timeline[2]);
-  // A one-frame cache recomputes an evicted frame.
-  const tiny = frameSecondaryStructure(data, trajectory, { maxBytes: 1 });
-  const a = await tiny.frame(3);
-  await tiny.frame(4);
-  const b = await tiny.frame(3);
-  assert(a !== b);
-  assertEquals([...a], [...b]);
-  await assertRejects(() => perFrame.frame(trajectory.frameCount), RangeError);
+    assertEquals(first.map((r) => codes[r]), expected, `frame ${f}`);
+  }
+  await assertRejects(
+    () => trajectory.source.read(trajectory.frameCount),
+    RangeError,
+  );
 });

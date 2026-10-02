@@ -6,6 +6,10 @@ All notable changes to `@molgpu/table` are recorded here. The format follows
 
 ## [Unreleased]
 
+- Remove the unexported `frame-ss.ts` per-frame DSSP cache from the published
+  source; the io DSSP oracle now runs per-frame DSSP with public `dssp` and
+  `withPositions`.
+
 - `createTrajectory` copies the arrays of in-memory `frames`, so later writes to
   caller inputs no longer change the trajectory. With a `source`, every frame
   read is validated (index range, abort, `Float32Array` type, length, finite
