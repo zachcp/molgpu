@@ -27,7 +27,7 @@ import {
   releaseOwnedBuffer,
   trackOwnedBuffer,
 } from "./internal/instrumentation.ts";
-import { live, viewer } from "./internal/elements.ts";
+
 import { useStatusReadback } from "./internal/status-readback.ts";
 import { useTrajectoryFrame } from "./trajectory-context.ts";
 import type { UnwrapProps, UnwrapStatus, ViewerComponent } from "./types.ts";
@@ -469,13 +469,10 @@ const Provider: LC<
  */
 export const Unwrap: ViewerComponent<UnwrapProps> = (
   { box, center, onStatus, children, ...diagnostics },
-) =>
-  viewer(
-    use(Provider, {
-      ...diagnostics,
-      box,
-      center,
-      onStatus,
-      children: live(children),
-    }),
-  );
+) => (use(Provider, {
+  ...diagnostics,
+  box,
+  center,
+  onStatus,
+  children: children,
+}));

@@ -41,7 +41,7 @@ import {
 } from "./internal/instrumentation.ts";
 import { useRepaint } from "./internal/use-repaint.ts";
 import { useBindingProbe } from "./internal/use-binding-probe.ts";
-import { live, viewer } from "./internal/elements.ts";
+
 import type { SliceStops } from "./volume-slice.ts";
 import { colorRampWgsl } from "./internal/color-ramp.ts";
 
@@ -314,7 +314,7 @@ export const FieldLines: ViewerComponent<
     });
 
   if (!lines) return null;
-  return viewer(use(ComputeBuffer, {
+  return (use(ComputeBuffer, {
     width: vertices,
     height: 1,
     format: "vec4<f32>",
@@ -389,7 +389,7 @@ const LinesDraw: LC<{
   const tintRef = useShaderRef(tint);
   const colors = useShader(rampModule, [vertexSource, rangeRef, tintRef]);
   const segments = useMemo(() => lineSegments(lines, steps), [lines, steps]);
-  return live(withColumns(
+  return (withColumns(
     [{ key: "segments", data: segments, format: "i32" }],
     (map) =>
       use(LineLayer, {

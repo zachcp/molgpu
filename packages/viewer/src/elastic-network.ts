@@ -45,7 +45,7 @@ import {
   releaseOwnedBuffer,
   trackOwnedBuffer,
 } from "./internal/instrumentation.ts";
-import { live, viewer } from "./internal/elements.ts";
+
 import { TimelineContext } from "./timeline-context.ts";
 import type {
   ElasticNetworkProps,
@@ -556,11 +556,9 @@ export const ElasticNetwork: ViewerComponent<ElasticNetworkProps> = (
   if (!Number.isFinite(requested) || requested < 0) {
     throw new TypeError("<ElasticNetwork> step must be finite and nonnegative");
   }
-  return viewer(
-    use(Integrator, {
-      ...props,
-      target: Math.floor(requested),
-      children: live(children),
-    }),
-  );
+  return (use(Integrator, {
+    ...props,
+    target: Math.floor(requested),
+    children: children,
+  }));
 };

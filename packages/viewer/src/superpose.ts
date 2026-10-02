@@ -23,7 +23,7 @@ import {
   releaseOwnedBuffer,
   trackOwnedBuffer,
 } from "./internal/instrumentation.ts";
-import { live, viewer } from "./internal/elements.ts";
+
 import { useStatusReadback } from "./internal/status-readback.ts";
 import { TrajectoryContext } from "./trajectory-context.ts";
 import type {
@@ -435,14 +435,12 @@ export const Superpose: ViewerComponent<SuperposeProps> = (
       '<Superpose> to must be "first", a Float32Array or StructureData',
     );
   }
-  return viewer(
-    use(Provider, {
-      ...diagnostics,
-      to,
-      select,
-      translate,
-      onStatus,
-      children: live(children),
-    }),
-  );
+  return (use(Provider, {
+    ...diagnostics,
+    to,
+    select,
+    translate,
+    onStatus,
+    children: children,
+  }));
 };

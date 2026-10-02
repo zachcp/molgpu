@@ -6,7 +6,6 @@ import { LineLayer } from "@use-gpu/workbench";
 import { useTrajectoryFrame } from "./trajectory-context.ts";
 import { type ColumnSpec, withColumns } from "./internal/representation.ts";
 import { applyOpacity, checkOpacity, modeProps } from "./internal/opacity.ts";
-import { viewer } from "./internal/elements.ts";
 
 // Each edge is its own open line: 1 = start, 2 = end.
 const SEGMENTS = Int32Array.from({ length: 24 }, (_, i) => i % 2 ? 2 : 1);
@@ -62,7 +61,7 @@ export const UnitCell: ViewerComponent<{
     undefined,
     (color.length > 3 ? color[3] : 1) * opacity,
   );
-  return viewer(withColumns(specs, (map) =>
+  return (withColumns(specs, (map) =>
     use(LineLayer, {
       positions: map.positions,
       segments: map.segments,

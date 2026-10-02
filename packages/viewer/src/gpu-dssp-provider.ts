@@ -17,7 +17,7 @@ import { AttributesContext } from "./attributes-context.ts";
 import { useCoordinates } from "./coordinates-context.ts";
 import { StructureContext } from "./structure-context.ts";
 import { gpuDssp, type GpuDsspResult } from "./gpu-dssp.ts";
-import { live, viewer } from "./internal/elements.ts";
+
 import {
   count,
   gauge,
@@ -344,5 +344,6 @@ const Provider: LC<GpuDsspProps & { children: LiveElement }> = ({
 };
 
 /** Publish GPU DSSP codes from the nearest live coordinate stream. */
-export const GpuDssp: ViewerComponent<GpuDsspProps> = (props) =>
-  viewer(use(Provider, { ...props, children: live(props.children) }));
+export const GpuDssp: ViewerComponent<GpuDsspProps> = (
+  props,
+) => (use(Provider, { ...props, children: props.children }));

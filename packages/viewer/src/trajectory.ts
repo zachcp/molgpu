@@ -46,7 +46,7 @@ import {
   releaseOwnedBuffer,
   trackOwnedBuffer,
 } from "./internal/instrumentation.ts";
-import { live, viewer } from "./internal/elements.ts";
+
 import { TrajectoryContext } from "./trajectory-context.ts";
 
 const STORAGE = 0x0080;
@@ -550,15 +550,13 @@ export const Trajectory: ViewerComponent<TrajectoryProps> = (
   // Pending, failed or cancelled sources pass upstream coordinates through,
   // in the same subtree that playback later attaches to.
   const playable = pending || sourceFailure !== undefined ? null : trajectory;
-  return viewer(
-    use(TrajectoryProvider, {
-      trajectory: playable,
-      sourceStatus: status,
-      frame,
-      interpolate,
-      pbc,
-      onStatus,
-      children: live(children),
-    }),
-  );
+  return (use(TrajectoryProvider, {
+    trajectory: playable,
+    sourceStatus: status,
+    frame,
+    interpolate,
+    pbc,
+    onStatus,
+    children: children,
+  }));
 };

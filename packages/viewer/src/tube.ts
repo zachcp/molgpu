@@ -21,7 +21,7 @@ import {
   useActiveRows,
   withColumns,
 } from "./internal/representation.ts";
-import { live } from "./internal/elements.ts";
+
 import { useFieldPlan } from "./internal/use-field-plan.ts";
 import {
   vertexAtoms,
@@ -176,7 +176,7 @@ const TubeResolved: ViewerComponent<
         data: resource.data,
         plan,
         opacity,
-        render: (colors: ShaderSource) => live(tube(map, colors)),
+        render: (colors: ShaderSource) => (tube(map, colors)),
       })
       : tube(map));
 };

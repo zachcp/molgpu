@@ -24,7 +24,7 @@ import {
   releaseOwnedBuffer,
   trackOwnedBuffer,
 } from "./internal/instrumentation.ts";
-import { live, viewer } from "./internal/elements.ts";
+
 import { TimelineContext } from "./timeline-context.ts";
 import type { TransformProps, ViewerComponent } from "./types.ts";
 import { useSelectionInput } from "./internal/use-selection-input.ts";
@@ -133,9 +133,9 @@ export const Transform: ViewerComponent<TransformProps> = (
   const entries = Array.from(value);
   validateAffine(entries);
   if (resolved.status !== "ready") return children;
-  return viewer(use(select ? Selected : All, {
+  return (use(select ? Selected : All, {
     matrix: entries,
     ...(select ? { select: resolved.selection } : {}),
-    children: live(children),
+    children: children,
   }));
 };

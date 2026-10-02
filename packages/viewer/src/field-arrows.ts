@@ -19,7 +19,7 @@ import { type SlicePlane, slicePlaneFrame } from "./internal/slice-plane.ts";
 import { count } from "./internal/instrumentation.ts";
 import { useRepaint } from "./internal/use-repaint.ts";
 import { useBindingProbe } from "./internal/use-binding-probe.ts";
-import { viewer } from "./internal/elements.ts";
+
 import type { SliceStops } from "./volume-slice.ts";
 import { colorRampWgsl, wgslF32 as f32 } from "./internal/color-ramp.ts";
 
@@ -198,7 +198,7 @@ export const FieldArrows: ViewerComponent<
   const colors = useShader(modules.colors, [...links, rangeRef, tintRef]);
   const chunks = useMemo(() => new Array(arrows).fill(2), [arrows]);
   const segments = useArrowSegmentsSource(chunks, null, false, false, true);
-  return viewer(use(ArrowLayer, {
+  return (use(ArrowLayer, {
     positions,
     colors,
     widths,

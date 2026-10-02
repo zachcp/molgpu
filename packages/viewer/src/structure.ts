@@ -6,7 +6,6 @@ import type {
 } from "./types.ts";
 import { use } from "@use-gpu/live";
 import { StructureProvider } from "./structure-context.ts";
-import { live, viewer } from "./internal/elements.ts";
 
 const defaultLoader: StructureLoader = async (src, cancelled, signal) => {
   const { structureFromBcif } = await import("@molgpu/io");
@@ -49,9 +48,7 @@ export const Structure: ViewerComponent<StructureProps> = (
     [data, src, loader],
   );
   if (data !== undefined) {
-    return viewer(
-      use(StructureProvider, { data, children: live(children) }),
-    );
+    return (use(StructureProvider, { data, children: children }));
   }
   // Replacing src marks the request pending again, so the previously loaded
   // structure cannot flash back while its successor is still in flight.
@@ -59,11 +56,9 @@ export const Structure: ViewerComponent<StructureProps> = (
   if (failure) return typeof error === "function" ? error(failure) : error;
   // A cancelled request resolves to null and must not mount stale content.
   return loaded
-    ? viewer(
-      use(StructureProvider, {
-        data: loaded,
-        children: live(children),
-      }),
-    )
+    ? (use(StructureProvider, {
+      data: loaded,
+      children: children,
+    }))
     : null;
 };
