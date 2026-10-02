@@ -47,7 +47,6 @@ import {
   trackOwnedBuffer,
 } from "./internal/instrumentation.ts";
 import { live, viewer } from "./internal/elements.ts";
-import { StructureContext } from "./structure-context.ts";
 import { TrajectoryContext } from "./trajectory-context.ts";
 
 const STORAGE = 0x0080;
@@ -266,13 +265,6 @@ class Player {
       source.buffer.destroy();
     }
   }
-}
-
-/** What the nearest `<Trajectory>` shows; null outside one. */
-export function useTrajectoryFrame(): TrajectoryFrameState | null {
-  const frame = useContext(TrajectoryContext);
-  const structure = useContext(StructureContext);
-  return frame && structure?.resource === frame.owner ? frame.state : null;
 }
 
 const ZERO3 = [0, 0, 0];

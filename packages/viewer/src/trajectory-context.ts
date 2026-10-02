@@ -1,4 +1,5 @@
-import { type LiveContext, makeContext } from "@use-gpu/live";
+import { type LiveContext, makeContext, useContext } from "@use-gpu/live";
+import { StructureContext } from "./structure-context.ts";
 import type { StructureResource } from "./types.ts";
 import type { TrajectoryFrameState, TrajectoryStatus } from "./types.ts";
 
@@ -13,3 +14,10 @@ export interface OwnedTrajectoryFrame {
 /** Structure boundaries shadow this context; Volume and Timeline do not. */
 export const TrajectoryContext: LiveContext<OwnedTrajectoryFrame | null> =
   makeContext<OwnedTrajectoryFrame | null>(null, "TrajectoryContext");
+
+/** What the nearest `<Trajectory>` shows; null outside one. */
+export function useTrajectoryFrame(): TrajectoryFrameState | null {
+  const frame = useContext(TrajectoryContext);
+  const structure = useContext(StructureContext);
+  return frame && structure?.resource === frame.owner ? frame.state : null;
+}

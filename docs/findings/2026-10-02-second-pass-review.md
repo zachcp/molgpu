@@ -99,8 +99,9 @@ playback/cache internals, pure geometry builders apart from GPU jobs. Do not add
 a generic source provider merely to unify Structure/Volume's loading
 presentation with Trajectory's coordinate pass-through. The completed
 source/playback decision deliberately keeps those behaviors different. Nested
-pending trajectory metadata inheritance needs deliberate acceptance in `ktr.5`,
-not incidental change during the move.
+pending trajectories now shadow inherited metadata under the accepted `ktr.5`
+recovery contract. The `ktr.6` move preserves that owner-checked behavior; it
+does not establish a bundle-size reduction.
 
 Minimal exports means supported entry discipline. A local export for a module
 consumer is not an extra JSR API. Conversely, unused workspace scientific APIs
