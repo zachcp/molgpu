@@ -5,6 +5,8 @@ import type { StructureData, TrajectoryData, VolumeData } from "@molgpu/table";
 import type { Curve } from "@molgpu/timeline";
 import type {
   DielectricModel,
+  ElasticNetworkData,
+  LangevinTug,
   NormalModeData,
   PotentialUnit,
 } from "@molgpu/dynamics";
@@ -328,6 +330,66 @@ export interface NormalModeProps {
   frequency?: number;
   /** Radians at time zero. */
   phase?: number;
+}
+
+/** `<ElasticNetwork>` props: Langevin dynamics of an elastic network. */
+export interface ElasticNetworkProps {
+  children?: ViewerElement;
+  /** From `elasticNetworkData`; replace it (new `version`) to rebuild. */
+  network: ElasticNetworkData;
+  /**
+   * Target step count, or a curve sampled at timeline time (for example
+   * `frameCurve({ frames, fps: stepsPerSecond })`). The provider advances
+   * toward `floor(step)`; holding it pauses, and lowering it replays.
+   */
+  step: number | Curve<number>;
+  /** u32 RNG seed, default 0. A change resets to step 0. */
+  seed?: number;
+  /** K, default 300. */
+  temperature?: number;
+  /** Friction, 1/ps, default 1. */
+  gamma?: number;
+  /** Time step, ps, default 0.02. */
+  dt?: number;
+  /** Most steps integrated per rendered frame, default 20. */
+  maxStepsPerFrame?: number;
+  /** Harmonic pull of one node toward a target in the upstream frame. */
+  tug?: LangevinTug;
+  /**
+   * Keep a GPU ring of integrator checkpoints every `every` steps, so a seek
+   * inside the retained range restores the nearest checkpoint and integrates
+   * fewer than `every` steps. `checkpoints` defaults to as many as fit
+   * `maxBytes` (64 MiB); asking for more throws a RangeError.
+   */
+  record?: {
+    readonly every: number;
+    readonly checkpoints?: number;
+    readonly maxBytes?: number;
+  };
+  onStatus?: (status: ElasticNetworkStatus) => void;
+}
+
+/** Progress of an `<ElasticNetwork>` run. */
+export interface ElasticNetworkStatus {
+  /** Steps completed (encoded) on the GPU. */
+  readonly step: number;
+  /** `floor(step)` requested. */
+  readonly target: number;
+  /** True while the per-frame budget trails the target. */
+  readonly lagging: boolean;
+  /**
+   * True once a tug or a temperature, γ or dt change touched this run, so the
+   * state no longer follows from (network, parameters, seed, step) alone.
+   */
+  readonly perturbed: boolean;
+  /**
+   * True when the target lies before the retained checkpoints of a perturbed
+   * run, which cannot be replayed: the provider shows the oldest checkpoint.
+   */
+  readonly evicted: boolean;
+  /** Steps of the oldest and newest retained checkpoints, or null. */
+  readonly firstStep: number | null;
+  readonly lastStep: number | null;
 }
 
 /** What the nearest `<Trajectory>` shows, from `useTrajectoryFrame()`. */

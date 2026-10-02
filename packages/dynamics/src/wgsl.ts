@@ -39,3 +39,11 @@ export {
   coulombParams,
   coulombWgsl,
 } from "./electrostatics-wgsl.ts";
+export {
+  elasticDisplacementWgsl,
+  LANGEVIN_PARAMS_BYTES,
+  type LangevinBuffers,
+  langevinBuffers,
+  langevinUniform,
+  langevinWgsl,
+} from "./langevin-wgsl.ts";

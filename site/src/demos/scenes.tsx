@@ -30,6 +30,7 @@ import {
 import motionUrl from "../../assets/1crn-motion.xtc?url";
 import { densityMapFor } from "./data.ts";
 import type { DemoId } from "./registry.ts";
+import { DynamicsScene } from "./dynamics.tsx";
 
 // 60 frames at 15 fps: the 0–4 s scrub range plays the loop once.
 const motion = frameCurve({ frames: 60, fps: 15, loop: true });
@@ -261,6 +262,8 @@ export const renderDemoScene = (
           />
         </EField>
       );
+    case "dynamics":
+      return <DynamicsScene data={data} />;
     case "figure":
       return [
         <Ribbon color={[0.98, 0.73, 0.39, 1]} material={{ type: "basic" }} />,

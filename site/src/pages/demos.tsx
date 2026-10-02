@@ -28,7 +28,8 @@ import { disposeViewer, mountViewer } from "../demos/viewer.tsx";
 
 /** Demos whose scene is driven by the scrub slider's seconds. */
 const scrubbed = (id: DemoId): boolean =>
-  id === "timeline" || id === "coordinates" || id === "trajectory";
+  id === "timeline" || id === "coordinates" || id === "trajectory" ||
+  id === "dynamics";
 const SCRUB_DURATION = 4;
 
 const demoFromHash = (): DemoId =>

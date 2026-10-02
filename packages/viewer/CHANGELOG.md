@@ -6,6 +6,30 @@ All notable changes to `@molgpu/viewer` are recorded here. The format follows
 
 ## [Unreleased]
 
+- `pointerToPlane` and `projectToPointer` map a pointer to the view-normal plane
+  through an anchor and back, from a projection-view matrix, for dragging an
+  `<ElasticNetwork tug>` target. The site gains an elastic network demo: the
+  timeline drives the step, checkpoints make it scrubbable, and a right-drag
+  tugs an atom.
+
+- `<ElasticNetwork record={{ every }}>` keeps a GPU ring of integrator
+  checkpoints (x, v, f; 64 MiB by default). Seeks inside the retained range
+  restore the nearest checkpoint and integrate fewer than `every` steps, bitwise
+  equal to the continuous run; tugged history replays as recorded and a new
+  perturbation branches. `ElasticNetworkStatus` gains `evicted`, `firstStep` and
+  `lastStep`.
+
+- `<ElasticNetwork network step>` runs BAOAB Langevin dynamics of an elastic
+  network (`elasticNetworkData` from `@molgpu/dynamics`) as a coordinate
+  provider. The application owns progress: `step` is a target count or a
+  timeline curve; holding it pauses with no dispatch or repaint, and lowering it
+  replays from step 0 bitwise. Up to `maxStepsPerFrame` (20) steps run per frame
+  in the provider's own submission; mapped atoms move with their guide node, and
+  live representations follow every generation while snapshot consumers
+  (`<Ribbon>`, `<Tube>`, `<Surface>`) follow at the snapshot rate. Per-node RMSF
+  matches the analytic ANM fluctuations (Pearson 0.99 on 1crn, 0.96 on 1tqn);
+  `run-elastic.mjs` is part of `deno task test:components`.
+
 - `<Surface>` under live coordinates (a coordinate provider or trajectory)
   rebuilds its mesh on the GPU from each coordinate generation: a WGSL port of
   Mol*'s SES field, GPU marching cubes and nearest-atom attribution, matching

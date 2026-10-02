@@ -48,12 +48,13 @@
     "check:hardening": "deno run -A scripts/check-hardening.mjs",
     "jsr:check": "deno publish --dry-run --allow-dirty",
     "typecheck": "deno check packages/*/src/index.ts packages/*/test/*.test.ts test/selection/*.test.ts",
-    "typecheck:components": "deno check packages/viewer/test/tsx/consumer.tsx packages/viewer/test/tsx/diagnostics.ts packages/viewer/test/tsx/coordinates-sketch.tsx packages/viewer/test/tsx/ordinary-jsx-spike.tsx packages/viewer/test/tsx/ordinary-jsx-types-spike.ts packages/viewer/test/tsx/trajectory-source-spike.tsx packages/viewer/test/selection/selection.tsx packages/viewer/test/volume/volume.tsx packages/viewer/test/trajectory/trajectory.tsx packages/viewer/test/efield/efield.tsx",
+    "typecheck:components": "deno check packages/viewer/test/tsx/consumer.tsx packages/viewer/test/tsx/diagnostics.ts packages/viewer/test/tsx/coordinates-sketch.tsx packages/viewer/test/tsx/ordinary-jsx-spike.tsx packages/viewer/test/tsx/ordinary-jsx-types-spike.ts packages/viewer/test/tsx/trajectory-source-spike.tsx packages/viewer/test/selection/selection.tsx packages/viewer/test/volume/volume.tsx packages/viewer/test/trajectory/trajectory.tsx packages/viewer/test/efield/efield.tsx packages/viewer/test/elastic/elastic.tsx",
     "typecheck:site": "deno check site/src/main.tsx",
     "build:site": "deno run -A npm:vite@8.3.0 build --config site/vite.config.mjs",
     "dev:site": "deno run -A npm:vite@8.3.0 --config site/vite.config.mjs",
     "test:corpus": "deno test -A packages/io/test/corpus.test.ts",
     "test:fields:gpu": "deno test -A packages/fields/test/run-browser.mjs",
+    "test:dynamics:gpu": "deno test -A packages/dynamics/test/run-browser.mjs",
     "test:gpu": "deno test -A packages/viewer/test/run-browser.mjs",
     "test:viewer:sizefield": "deno test -A packages/viewer/test/run-size-field.mjs",
     "test:viewer:gate2": "deno test -A packages/viewer/test/run-gate2.mjs",
@@ -69,7 +70,7 @@
     "test:viewer:invalidation": "deno test -A packages/viewer/test/run-invalidation.mjs",
     "gate:consumer": "deno test -A packages/viewer/test/run-jsr-consumer.mjs",
     "gate:dynamics": "MOLGPU_DYNAMICS_GATE=1 deno test -A packages/viewer/test/run-trajectory.mjs",
-    "test:components": "deno test -A packages/viewer/test/run-components.mjs packages/viewer/test/run-volume.mjs packages/viewer/test/run-trajectory.mjs packages/viewer/test/run-gpu-dssp.mjs packages/viewer/test/run-efield.mjs",
+    "test:components": "deno test -A packages/viewer/test/run-components.mjs packages/viewer/test/run-volume.mjs packages/viewer/test/run-trajectory.mjs packages/viewer/test/run-gpu-dssp.mjs packages/viewer/test/run-efield.mjs packages/viewer/test/run-elastic.mjs",
     "test:site": "deno test -A site/test/run-browser.mjs"
   }
 }
