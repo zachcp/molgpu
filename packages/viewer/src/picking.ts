@@ -21,7 +21,7 @@ import {
   usePickingId,
 } from "@use-gpu/workbench";
 import { type PickEntry, resolvePick } from "./internal/pick-resolve.ts";
-import { live, viewer } from "./internal/elements.ts";
+
 import { InstanceContext } from "./internal/instance-context.ts";
 
 /** id -> what a pickable representation drew under that picking id. */
@@ -66,7 +66,7 @@ export const PickingProvider: ViewerComponent<{ children?: ViewerElement }> = (
       get: (id) => map.get(id) ?? null,
     };
   }, []);
-  return viewer(provide(PickingRegistryContext, registry, live(children)));
+  return (provide(PickingRegistryContext, registry, children));
 };
 
 const useRegistry = (): PickingRegistry => {

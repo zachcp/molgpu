@@ -1,11 +1,10 @@
 # molgpu — roadmap
 
-> Architecture refinement (2026-09-17): read
-> [the JSX/domain review](findings/2026-09-17-architecture-review.md) alongside
-> this roadmap. It updates domain identity, cache invalidation, package
-> boundaries, renderer fallbacks and acceptance gates. Those contracts are
-> implemented. Phases 9–16 have shipped; this roadmap records the original gates
-> alongside their outcomes and deferred follow-ons.
+> Start with the [current architecture](ARCHITECTURE.md) and package READMEs for
+> supported composition. This roadmap retains original phase gates and outcomes;
+> historical examples may name superseded APIs. Phases 9–17 have shipped.
+> Current acceptance is recorded in the October 2 architecture and Phase 17
+> gates.
 
 Phases are gated. Each gate is a question with a yes/no answer, written down
 before moving on. The ordering puts the two ideas that make this project

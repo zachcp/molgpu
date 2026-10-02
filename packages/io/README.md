@@ -19,10 +19,10 @@ deno add jsr:@molgpu/io jsr:@molgpu/table
 
 ## Dependencies
 
-| Package         | Range    | Kind       | Notes                                                                                                                                                                                                                                                                                                                          |
-| --------------- | -------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `@molgpu/table` | `^0.1.0` | dependency | Provides `StructureData`; compatible JSR caret ranges resolve one shared table copy.                                                                                                                                                                                                                                           |
-| `molstar`       | `5.12.0` | dependency | Installed with `io`, but loaded only inside `structureFromBcif`, `molecularSurfaceField` and `volumeFromCcp4`, through dynamic `import()`. Bundlers put it in separate lazy chunks, so code that never calls them never downloads it. If it fails to load, those calls reject with `PARSER_UNAVAILABLE` / `FIELD_UNAVAILABLE`. |
+| Package         | Range    | Kind       | Notes                                                                                                                                                                                                                                               |
+| --------------- | -------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@molgpu/table` | `^0.1.0` | dependency | Provides `StructureData`; compatible JSR caret ranges resolve one shared table copy.                                                                                                                                                                |
+| `molstar`       | `5.12.0` | dependency | Loaded dynamically for BCIF, molecular surfaces, CCP4/MRC, text selections and XTC frame decoding. Bundlers can place these imports in lazy chunks; callers using other formats need not load them. Loader failures are reported through `IoError`. |
 
 JSR publishes internal dependencies as caret ranges (for example,
 `jsr:@molgpu/table@^0.1.0`). Keep compatible versions so the application
@@ -72,6 +72,16 @@ try {
 } // bcif INVALID_BCIF
 ```
 
+Surface inputs require finite coordinates and positive finite radii. Options
+follow the pinned Mol* numeric ranges: `probeRadius` 0–10 Å, `resolution`
+0.01–20 Å, and integer `probePositions` 12–90. Invalid inputs/options raise
+`IoError` with `format: "surface"` and `code: "INVALID_INPUT"` before Mol*
+loads. `maxSamples` defaults to 256³ (16,777,216), bounding the predicted scalar
+grid before Mol* allocation. Oversized grids raise `VOLUME_TOO_LARGE`; a larger
+positive safe-integer `maxSamples` explicitly raises the cap. Infinity is
+rejected. This caps samples, not total memory: Mol* also allocates an ID grid,
+lookup data and temporary arrays, and lowering allocates the output grid.
+
 `field.values` is **x-fastest**: sample `(i, j, k)` is
 `values[i + dims[0] * (j + dims[1] * k)]`, the layout `@molgpu/geo`'s
 `marchingCubes` reads, so the field can be passed to it directly. Grid index
@@ -96,14 +106,14 @@ asymmetric unit); an unknown id fails with `UNKNOWN_ASSEMBLY`.
 | `IoFormat`              | stable       | `"bcif" \| "ccp4" \| "pqr" \| "trajectory" \| "surface" \| "selection"`.                                                                                                                              |
 | `molecularSurfaceField` | experimental | Solvent-excluded-surface scalar grid over plain atom columns, via Mol*.                                                                                                                               |
 | `SurfaceFieldAtoms`     | experimental | Input atom columns: `count` and `Float32Array` `x`/`y`/`z`/`radius`.                                                                                                                                  |
-| `SurfaceFieldOptions`   | experimental | `probeRadius`, `resolution` and `probePositions`.                                                                                                                                                     |
+| `SurfaceFieldOptions`   | experimental | `probeRadius`, `resolution`, `probePositions` and preflight `maxSamples`.                                                                                                                             |
 | `SurfaceField`          | experimental | `VolumeData` plus surface metadata: `resolution`, `maxRadius`, `level`.                                                                                                                               |
 | `volumeFromCcp4`        | experimental | CCP4/MRC map (modes 0–2, either endianness; bytes, a `Blob`/`File`, or a URL) to a scalar `VolumeData` with Mol*'s full grid-to-Cartesian affine.                                                     |
 | `parseSelection`        | experimental | Parse MolScript, PyMOL, VMD or Jmol selection text into a plain MolQL tree for `@molgpu/select`'s `compile`; `symbols` rejects anything else at parse time.                                           |
 | `SelectionExpr`         | experimental | Type: a MolQL expression as plain JSON; the same shape as `@molgpu/select`'s.                                                                                                                         |
 | `SelectionLanguage`     | experimental | Type: `"mol-script" \| "pymol" \| "vmd" \| "jmol"`.                                                                                                                                                   |
 | `openTrajectory`        | experimental | Open a DCD/XTC/TRR trajectory for streaming from bytes, a `Blob`/`File`, a `ByteSource` or a URL (HTTP Range reads); format from an option or the name.                                               |
-| `OpenTrajectoryOptions` | experimental | `format`, `maxDownload` (default 256 MiB when a server ignores Range), `velocities` (TRR) and an open-time `signal`.                                                                                  |
+| `OpenTrajectoryOptions` | experimental | `format`, `maxDownload` (default 256 MiB when a server ignores Range), `velocities` (TRR), injectable `fetch` and an open-time `signal`.                                                              |
 | `ByteSource`            | experimental | Random access to a file's bytes: `size` and `read(offset, length, signal?)`, for custom range readers.                                                                                                |
 | `structureFromPqr`      | experimental | Read PQR text or bytes (tokenised, so PDB2PQR's widened fields parse) into a structure with `partialCharge` and raw `pqr:radius` (`imported:pqr`); zero radii display at the element radius.          |
 | `applyPqr`              | experimental | Set `partialCharge` on an existing structure from PQR records matched by chain, sequence, insertion code and atom name; folds missing hydrogens onto their heavy atom and reports what did not match. |
@@ -189,3 +199,9 @@ validation cannot detect same-size changes. Servers ignoring Range are
 downloaded once under the configured size cap. Bytes, Blobs and custom
 ByteSources share the scan contract; custom implementations should honor the
 read signal, and scans also check it around reads and cached blocks.
+
+`maxDownload` must be a finite nonnegative safe integer in bytes; invalid values
+fail before transport. Zero permits only an empty whole-file response (Range
+reads remain available). Infinity is rejected; raise the finite cap explicitly
+when a larger whole-file fallback is needed. The cap includes chunked responses
+and accepts a body whose size equals the cap.

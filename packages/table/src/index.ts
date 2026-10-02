@@ -9,24 +9,27 @@ export type {
   AttributeValues,
   Bonds,
   Chains,
-  FrameSource,
   Instances,
   Links,
   Residues,
-  SecondaryStructureTrace,
   StructureData,
   StructureInput,
   Topology,
-  Trace,
-  TrajectoryData,
-  TrajectoryFrame,
-  TrajectoryInput,
-  TrajectoryTimeUnit,
+} from "./structure-types.ts";
+export type { SecondaryStructureTrace, Trace } from "./trace-types.ts";
+export type {
   VolumeData,
   VolumeGrid,
   VolumeInput,
   VolumeLevel,
-} from "./types.ts";
+} from "./volume-types.ts";
+export type {
+  FrameSource,
+  TrajectoryData,
+  TrajectoryFrame,
+  TrajectoryInput,
+  TrajectoryTimeUnit,
+} from "./trajectory-types.ts";
 export {
   atomicNumberForSymbol,
   ELEMENT_SYMBOL,

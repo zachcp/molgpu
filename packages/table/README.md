@@ -174,10 +174,9 @@ views, residue keys and coordinate bounds; `bond-topology.ts` owns display radii
 and inferred bonds. `trace.ts`, `secondary-structure.ts`, `volume.ts` and
 `trajectory.ts` each own their matching derivation or value model. Domain types
 live alongside those responsibilities in `structure-types.ts`, `trace-types.ts`,
-`volume-types.ts` and `trajectory-types.ts`; `types.ts` only re-exports them for
-internal import compatibility. The package entrypoint remains the curated public
-API. Helpers needed only by focused tests are marked `@internal` and are not
-re-exported.
+`volume-types.ts` and `trajectory-types.ts`; the entry exports these types
+directly. The package entrypoint remains the curated public API. Helpers needed
+only by focused tests are marked `@internal` and are not re-exported.
 
 ### Chemical data sources and semantics
 

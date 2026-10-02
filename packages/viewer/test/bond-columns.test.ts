@@ -5,7 +5,7 @@ import {
   buildBondColumns,
   buildBondRows,
 } from "../src/internal/bond-columns.ts";
-import { gatherAtomColumns } from "../src/internal/gather.ts";
+import { gatherAtomColumns } from "./gather-oracle.ts";
 
 const data = createStructure({
   positions: Float32Array.from([-4, 0, 0, -2, 0, 0, 1, -1, 0, 3, 3, 2]),

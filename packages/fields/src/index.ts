@@ -27,15 +27,13 @@ export {
   categorical,
   colormap,
   columnRange,
-  compile,
   constant,
   curve,
-  evaluate,
   linear,
   readsNearestVolume,
   volumeSample,
-} from "./primitives.ts";
-export { COLOR, SCALAR } from "./primitives.ts";
+} from "./construction.ts";
+export { COLOR, SCALAR } from "./construction.ts";
 export { sampleVolumeGradientWgsl, sampleVolumeWgsl } from "./volume.ts";
 
 // Built-in colour presets composed from the primitives above.
@@ -51,3 +49,6 @@ export {
 
 // Identity-keyed annotation joins that produce annotation fields.
 export { joinAnnotation } from "./annotation-join.ts";
+
+export { compile } from "./compile.ts";
+export { evaluate } from "./evaluation.ts";

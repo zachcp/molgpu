@@ -54,7 +54,7 @@ import {
   releaseOwnedBuffer,
   trackOwnedBuffer,
 } from "./internal/instrumentation.ts";
-import { live, viewer } from "./internal/elements.ts";
+
 import {
   type NearestVolume,
   useStableGrid,
@@ -533,7 +533,7 @@ const EFieldResolved: LC<Omit<EFieldProps, "select"> & { select: Selection }> =
   (props) => {
     const coordinates = useCoordinates();
     if (!coordinates) return null;
-    return viewer(use(EFieldInner, { ...props, coordinates }));
+    return (use(EFieldInner, { ...props, coordinates }));
   };
 
 const EFieldInner: LC<
@@ -671,6 +671,6 @@ const EFieldInner: LC<
     charges,
     range: display,
     maxHz,
-    children: live(children),
+    children: children,
   });
 };

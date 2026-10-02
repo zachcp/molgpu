@@ -96,6 +96,12 @@ export async function urlByteSource(
   } = {},
 ): Promise<ByteSource> {
   const { maxDownload = MAX_FULL_DOWNLOAD, signal } = options;
+  if (!Number.isSafeInteger(maxDownload) || maxDownload < 0) {
+    throw trajectoryError(
+      "maxDownload must be a finite nonnegative safe integer (bytes)",
+      "INVALID_INPUT",
+    );
+  }
   const get = options.fetch ?? fetch;
   const request = async (headers: HeadersInit, sig?: AbortSignal) => {
     aborted(sig);

@@ -1,5 +1,5 @@
+import { useDispatchObservation } from "./dispatch-observation.ts";
 import {
-  gather,
   type LC,
   type LiveElement,
   provide,
@@ -9,7 +9,6 @@ import {
   useRef,
   useResource,
   useState,
-  yeet,
 } from "@use-gpu/live";
 import type { StorageSource, StorageTarget } from "@use-gpu/core";
 import type { ShaderModule } from "@use-gpu/shader";
@@ -121,19 +120,12 @@ export const CoordinateKernel: LC<CoordinateKernelProps> = (
     ...sources,
   ]);
   const [dispatchedGeneration, setDispatchedGeneration] = useState(-1);
-  const notified = useRef(-1);
-  const mounted = useRef(true);
-  useResource((dispose) => {
-    mounted.current = true;
-    dispose(() => {
-      mounted.current = false;
-    });
-  }, []);
+  const observe = useDispatchObservation(generation, setDispatchedGeneration);
   const ready = dispatchedGeneration === generation;
   const output = () => {
     return use(Compute, {
       immediate: true,
-      children: upstream.ready === false ? null : gather(
+      children: upstream.ready === false ? null : observe(
         use(Kernel, {
           shader,
           source: upstream.source,
@@ -143,36 +135,6 @@ export const CoordinateKernel: LC<CoordinateKernelProps> = (
           version: generation,
           size: [upstream.count, 1],
         }),
-        // Kernel yields one compute call, and only once its pipeline has
-        // compiled. Wrap it to learn when this generation's dispatch lands;
-        // Compute's multiGather needs a single object, not an array.
-        (calls: { compute?: (...args: unknown[]) => unknown }[]) => {
-          const call = calls.find((item) => item?.compute);
-          return call?.compute
-            ? yeet({
-              compute: (
-                pass: unknown,
-                countDispatch: (...args: number[]) => void,
-              ) => {
-                let dispatched = false;
-                const result = call.compute!(pass, (...counts: number[]) => {
-                  dispatched = true;
-                  countDispatch(...counts);
-                });
-                // ComputePass submits synchronously after this call returns.
-                // Kernel's initial guard can suppress a call, so only the
-                // count callback establishes that encoding reached dispatch.
-                if (dispatched && notified.current !== generation) {
-                  notified.current = generation;
-                  queueMicrotask(() => {
-                    if (mounted.current) setDispatchedGeneration(generation);
-                  });
-                }
-                return result;
-              },
-            })
-            : null;
-        },
       ),
     });
   };

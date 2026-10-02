@@ -175,4 +175,11 @@ Deno.test("an ANM mode becomes NormalMode input; GNM is rejected", () => {
     TypeError,
     "out of range",
   );
+  const vectors = data.vectors.slice();
+  anm.vector.fill(0);
+  map.fill(0xffffffff);
+  assertEquals(data.vectors, vectors);
+  assertEquals(data.atomToNode, Uint32Array.of(0, 1, 2));
+  assertEquals(data.version, 7);
+  assertEquals(applyNormalMode(positions, data, 1, 0, 0, Math.PI / 2), moved);
 });

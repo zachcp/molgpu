@@ -2,7 +2,7 @@ import type { LC } from "@use-gpu/live";
 import { use } from "@use-gpu/live";
 import { BasicMaterial, NormalMaterial, PBRMaterial } from "@use-gpu/workbench";
 import type { MaterialSpec, MaterialType, ViewerElement } from "../types.ts";
-import { live, viewer } from "./elements.ts";
+
 import { resolveMaterial } from "./material-spec.ts";
 
 /** Molecules read best matte and non-metallic; upstream defaults to roughness 0.5. */
@@ -31,10 +31,8 @@ export function withMaterial(
   const resolved = resolveMaterial(material);
   if (resolved.kind === "none") return element;
   if (resolved.kind === "wrap") return resolved.wrap(element);
-  return viewer(
-    use(MATERIALS[resolved.type], {
-      ...resolved.props,
-      children: live(element),
-    }),
-  );
+  return (use(MATERIALS[resolved.type], {
+    ...resolved.props,
+    children: element,
+  }));
 }

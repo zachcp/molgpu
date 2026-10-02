@@ -59,6 +59,8 @@ export interface SurfaceFieldOptions {
   resolution?: number;
   /** Probe positions sampled per atom. Default 36. */
   probePositions?: number;
+  /** Maximum predicted grid samples before allocation. Default 256³; positive safe integer. */
+  maxSamples?: number;
 }
 
 /**

@@ -567,9 +567,10 @@ function checkPackage(
   if (m.version && !/^\d+\.\d+\.\d+(-[\w.]+)?$/.test(m.version)) {
     fail("H1", `version "${m.version}" is not semver`);
   }
-  const expectedLicense = isDynamics ? "MIT AND BSD-3-Clause" : "MIT";
-  if (m.license && m.license !== expectedLicense) {
-    fail("H1", `license must be "${expectedLicense}", got "${m.license}"`);
+  // JSR accepts only a single SPDX identifier, so dynamics declares MIT and
+  // ships the PDB2PQR BSD-3-Clause notice as LICENSE-PDB2PQR.
+  if (m.license && m.license !== "MIT") {
+    fail("H1", `license must be "MIT", got "${m.license}"`);
   }
   if (!exists(join(dir, "LICENSE"))) fail("H1", "missing LICENSE file");
   if (isDynamics && !exists(join(dir, "LICENSE-PDB2PQR"))) {

@@ -28,7 +28,7 @@ import {
 } from "./internal/representation.ts";
 import { useField } from "./use-field.ts";
 import { useOpacityColors } from "./internal/use-opacity-colors.ts";
-import { live as liveElement } from "./internal/elements.ts";
+
 import {
   applyOpacity,
   checkOpacity,
@@ -72,7 +72,7 @@ const FieldFaces: LC<{
   plan: FieldPlan;
   sampleOffset: number;
   opacity: number;
-  render: (colors: ShaderSource) => ReturnType<typeof liveElement>;
+  render: (colors: ShaderSource) => ViewerElement;
 }> = (
   {
     field,
@@ -315,7 +315,7 @@ const SurfaceResolved: ViewerComponent<
         plan,
         sampleOffset,
         opacity,
-        render: (colors: ShaderSource) => liveElement(faces(map, colors)),
+        render: (colors: ShaderSource) => (faces(map, colors)),
       })
       : faces(map);
   });

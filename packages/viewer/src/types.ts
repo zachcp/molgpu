@@ -274,16 +274,24 @@ export interface SuperposeProps extends SelectionDiagnostics {
   select?: SelectionInput;
   /** Align centroids (default). False rotates about the source centroid. */
   translate?: boolean;
-  /** Reports the GPU fit result asynchronously; busy readbacks may skip frames. */
+  /**
+   * Reports reference pending/errors and asynchronous GPU fit results. Source
+   * failures pass coordinates through; without a callback a reference read
+   * failure is logged once. Busy GPU readbacks may skip frames.
+   */
   onStatus?: (status: SuperposeStatus) => void;
 }
 
-/** Fit outcome for one published coordinate generation. */
+/** Reference loading state or fit outcome for one coordinate generation. */
 export interface SuperposeStatus {
-  readonly status: "solved" | "passthrough";
-  /** Fitted RMSD in Å, or null when a collinear frame passed through. */
+  readonly status: "solved" | "passthrough" | "pending" | "error";
+  /** Fitted RMSD in Å, or null while pending, on error or collinear passthrough. */
   readonly rmsd: number | null;
+  /** Fit generation, or upstream generation when reference state changed. */
   readonly generation: number;
+  /** Present on error: trajectory source/playback or first-reference read. */
+  readonly phase?: "source" | "reference";
+  readonly error?: unknown;
 }
 
 /** What `<Unwrap>` found on one displayed frame. */

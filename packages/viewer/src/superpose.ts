@@ -7,7 +7,9 @@ import {
   type LC,
   type LiveElement,
   use,
+  useContext,
   useMemo,
+  useRef,
   useResource,
 } from "@use-gpu/live";
 import { useDeviceContext } from "@use-gpu/workbench";
@@ -21,9 +23,9 @@ import {
   releaseOwnedBuffer,
   trackOwnedBuffer,
 } from "./internal/instrumentation.ts";
-import { live, viewer } from "./internal/elements.ts";
+
 import { useStatusReadback } from "./internal/status-readback.ts";
-import { useTrajectoryFrame } from "./trajectory.ts";
+import { TrajectoryContext } from "./trajectory-context.ts";
 import type {
   SuperposeProps,
   SuperposeStatus,
@@ -268,22 +270,61 @@ const Resolve: LC<{
   children: LiveElement;
 }> = ({ to, rows, rowsKey, translate, onStatus, children }) => {
   const upstream = useCoordinates()!;
-  const frame = useTrajectoryFrame();
-  if (to === "first" && !frame) {
+  const context = useContext(TrajectoryContext);
+  const scope = context?.owner === upstream.resource ? context : null;
+  if (to === "first" && !scope) {
     throw new Error('<Superpose to="first"> needs a <Trajectory> ancestor');
   }
-  const trajectory = to === "first" ? frame!.trajectory : null;
+  const sourceError = to === "first" && scope?.status?.status === "error"
+    ? scope.status.error
+    : undefined;
+  const sourceFailed = to === "first" && scope?.status?.status === "error";
+  const trajectory = to === "first" && !sourceFailed
+    ? scope!.state?.trajectory ?? null
+    : null;
   const [first, failure, pending] = useSourceRequest(
     trajectory
       ? (signal) => firstFrame(trajectory, upstream.count, signal)
       : null,
-    [trajectory, upstream.count],
+    [trajectory, upstream.resource, upstream.count],
   );
-  if (!pending && failure) {
-    throw new Error("<Superpose>: the trajectory's first frame failed", {
-      cause: failure,
+  const status = useMemo<SuperposeStatus | null>(() => {
+    if (to !== "first" || (!sourceFailed && !pending && first)) return null;
+    return Object.freeze({
+      status: sourceFailed || (!pending && failure !== undefined)
+        ? "error"
+        : "pending",
+      rmsd: null,
+      generation: upstream.generation,
+      ...(sourceFailed
+        ? { phase: "source" as const, error: sourceError }
+        : !pending && failure !== undefined
+        ? { phase: "reference" as const, error: failure }
+        : {}),
     });
-  }
+  }, [
+    to,
+    scope?.owner,
+    scope?.status,
+    sourceFailed,
+    sourceError,
+    pending,
+    failure,
+    first,
+  ]);
+  const callback = useRef<typeof onStatus>(onStatus);
+  callback.current = onStatus;
+  useResource(() => {
+    if (!status) return;
+    if (callback.current) callback.current(status);
+    // Trajectory already reports source errors. Only log our own read failure.
+    else if (status.status === "error" && status.phase === "reference") {
+      console.error(
+        "<Superpose>: the trajectory's first frame failed",
+        status.error,
+      );
+    }
+  }, [status]);
   let reference: Reference | null;
   if (to === "first") {
     reference = !pending && first ? referenceOf(first, first) : null;
@@ -394,14 +435,12 @@ export const Superpose: ViewerComponent<SuperposeProps> = (
       '<Superpose> to must be "first", a Float32Array or StructureData',
     );
   }
-  return viewer(
-    use(Provider, {
-      ...diagnostics,
-      to,
-      select,
-      translate,
-      onStatus,
-      children: live(children),
-    }),
-  );
+  return (use(Provider, {
+    ...diagnostics,
+    to,
+    select,
+    translate,
+    onStatus,
+    children: children,
+  }));
 };

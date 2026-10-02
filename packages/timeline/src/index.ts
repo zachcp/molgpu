@@ -316,6 +316,6 @@ export function sample<T extends CurveValue>(curve: Curve<T>, time: number): T {
     : ease === "bezier"
     ? bezier(u, frame.bezier!)
     : u;
-  const target = clone(frame.value);
-  return splines[i](target, eased) as T;
+  // The private adapter owns its fresh output; its upstream-shaped target is unused.
+  return splines[i](null, eased) as T;
 }

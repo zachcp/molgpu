@@ -77,7 +77,12 @@ export function residueGuideMap(
   return map;
 }
 
-/** Wrap an ANM mode from `solveElasticModes` as `<NormalMode>` input. */
+/**
+ * Wrap an ANM mode from `solveElasticModes` as `<NormalMode>` input.
+ * Copies both vectors and mapping; the returned arrays are read-only by
+ * contract. Replace data and increment version to change a mode. Direct
+ * `NormalModeData` inputs must follow the same immutability/version contract.
+ */
 export function normalModeFromElastic(
   mode: ElasticMode,
   atomToNode: Uint32Array,
@@ -88,7 +93,7 @@ export function normalModeFromElastic(
   }
   const data = Object.freeze({
     vectors: mode.vector.slice(),
-    atomToNode,
+    atomToNode: atomToNode.slice(),
     version,
   });
   validateNormalMode(data, atomToNode.length);

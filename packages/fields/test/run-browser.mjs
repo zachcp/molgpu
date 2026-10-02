@@ -14,9 +14,11 @@ import {
   COLOR,
   colormap,
   compile,
+  constant,
   curve,
   evaluate,
   linear,
+  SCALAR,
   volumeSample,
 } from "../src/index.ts";
 import {
@@ -26,6 +28,8 @@ import {
   withAttributes,
 } from "@molgpu/table";
 import { structure } from "./fixture.ts";
+import { NUMERIC_CASES } from "./numeric-cases.ts";
+import { WRAP_CASES } from "./wrap-cases.ts";
 
 Deno.test("fields GPU parity", async () => {
   const RED = [1, 0, 0, 1], BLUE = [0, 0, 1, 1], GREY = [0.5, 0.5, 0.5, 1];
@@ -121,6 +125,33 @@ Deno.test("fields GPU parity", async () => {
     },
   };
 
+  NUMERIC_CASES.forEach((value, index) => {
+    cases[`numericLiteral${index}`] = {
+      field: constant(value),
+      domain: "atom",
+      exact: true,
+    };
+  });
+  WRAP_CASES.forEach(({ domain, values, expected }, index) => {
+    const field = linear(
+      annotation("atom", SCALAR, Float32Array.from(values)),
+      {
+        domain: [...domain],
+        range: [10, 20],
+        overflow: "wrap",
+      },
+    );
+    assertEquals([...evaluate(field, data)], [...expected]);
+    cases[`linearWrap${index}`] = { field, domain: "atom" };
+  });
+  for (const t of [-6, -2, -1, 1, 2, 4, 6]) {
+    cases[`curveWrap${t}`] = {
+      field: curve([[-2, 10], [2, 20]], { overflow: "wrap" }),
+      domain: "atom",
+      t,
+    };
+  }
+
   function atomColors() {
     const out = [];
     for (let i = 0; i < atoms; i++) out.push(i / 10, 0.2, 0.3, 1);
@@ -134,15 +165,16 @@ Deno.test("fields GPU parity", async () => {
     : data.topology.residues.count);
 
   // Build the compute module and payload for each case on the Node side.
-  const jobs = Object.entries(cases).map(([name, { field, domain, t }]) => {
-    const compiled = compile(field, { domain });
-    const components = compiled.valueType.components;
-    const rows = n(domain);
-    const K = compiled.bindings.length;
-    const write = components === 4
-      ? "outp[row*4u+0u]=v.x; outp[row*4u+1u]=v.y; outp[row*4u+2u]=v.z; outp[row*4u+3u]=v.w;"
-      : "outp[row]=v;";
-    const wgsl = `${compiled.wgsl}
+  const jobs = Object.entries(cases).map(
+    ([name, { field, domain, t, exact }]) => {
+      const compiled = compile(field, { domain });
+      const components = compiled.valueType.components;
+      const rows = n(domain);
+      const K = compiled.bindings.length;
+      const write = components === 4
+        ? "outp[row*4u+0u]=v.x; outp[row*4u+1u]=v.y; outp[row*4u+2u]=v.z; outp[row*4u+3u]=v.w;"
+        : "outp[row]=v;";
+      const wgsl = `${compiled.wgsl}
 @group(0) @binding(${K}) var<storage, read_write> outp: array<f32>;
 @compute @workgroup_size(64)
 fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
@@ -151,14 +183,24 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
   let v = evalField(row);
   ${write}
 }`;
-    const inputs = compiled.bindings.map((b) => ({
-      binding: b.binding,
-      kind: b.kind,
-      data: [...b.fill(b.kind === "uniform" ? { t } : data)],
-    }));
-    const cpu = [...evaluate(field, data, { domain, t })];
-    return { name, wgsl, inputs, outBinding: K, rows, components, cpu };
-  });
+      const inputs = compiled.bindings.map((b) => ({
+        binding: b.binding,
+        kind: b.kind,
+        data: [...b.fill(b.kind === "uniform" ? { t } : data)],
+      }));
+      const cpu = [...evaluate(field, data, { domain, t })];
+      return {
+        name,
+        wgsl,
+        inputs,
+        outBinding: K,
+        rows,
+        components,
+        cpu,
+        exact,
+      };
+    },
+  );
 
   // volumeSample: a sheared, rotated grid; positions are fed directly so the
   // case covers interior, face, corner and outside points, not just 4 atoms.
@@ -280,6 +322,11 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
           if (!navigator.gpu) return { error: "no webgpu" };
           const adapter = await navigator.gpu.requestAdapter();
           const device = await adapter.requestDevice();
+          const gpuErrors = [];
+          device.addEventListener(
+            "uncapturederror",
+            (event) => gpuErrors.push(event.error.message),
+          );
           const module = device.createShaderModule({ code: wgsl });
           const info = await module.getCompilationInfo();
           const errs = info.messages.filter((m) => m.type === "error").map((
@@ -352,7 +399,12 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
           await read.mapAsync(GPUMapMode.READ);
           const result = [...new Float32Array(read.getMappedRange().slice(0))];
           read.unmap();
-          return { result };
+          await device.queue.onSubmittedWorkDone();
+          device.destroy();
+          return {
+            result,
+            ...(gpuErrors.length ? { error: gpuErrors.join(" | ") } : {}),
+          };
         },
         job,
       );
@@ -367,6 +419,16 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
         job.cpu.length,
         `${job.name} length`,
       );
+      if (job.exact) {
+        job.cpu.forEach((expected, i) =>
+          assert(
+            expected === 0
+              ? out.result[i] === 0
+              : Object.is(out.result[i], expected),
+            `${job.name} row ${i}: exact finite f32 literal (either zero sign is valid in WGSL)`,
+          )
+        );
+      }
       const tolerance = job.tolerance ?? 1e-5;
       let maxErr = 0;
       for (let i = 0; i < job.cpu.length; i++) {

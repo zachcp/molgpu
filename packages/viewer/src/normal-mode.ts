@@ -18,7 +18,7 @@ import {
   releaseOwnedBuffer,
   trackOwnedBuffer,
 } from "./internal/instrumentation.ts";
-import { live, viewer } from "./internal/elements.ts";
+
 import { TimelineContext } from "./timeline-context.ts";
 import type { NormalModeProps, ViewerComponent } from "./types.ts";
 
@@ -109,12 +109,10 @@ export const NormalMode: ViewerComponent<NormalModeProps> = (
   if (!Number.isFinite(scale)) {
     throw new RangeError("normal mode scale overflows");
   }
-  return viewer(
-    use(Mode, {
-      mode,
-      scale,
-      active: amplitude !== 0,
-      children: live(children),
-    }),
-  );
+  return (use(Mode, {
+    mode,
+    scale,
+    active: amplitude !== 0,
+    children: children,
+  }));
 };

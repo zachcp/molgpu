@@ -10,6 +10,80 @@ import {
 
 const fail = errorFor("bcif");
 const bytes = Uint8Array.of(1, 2, 3, 4);
+
+Deno.test("download ceiling rejects invalid budgets before fetch", async () => {
+  let calls = 0;
+  for (const maxDownload of [NaN, Infinity, -Infinity, -1, 0.5, 2 ** 53]) {
+    await assertRejects(
+      () =>
+        urlByteSource("https://test/run.xtc", {
+          maxDownload,
+          fetch: (() => {
+            calls++;
+            return Promise.resolve(new Response(bytes));
+          }) as typeof fetch,
+        }),
+      Error,
+      "finite nonnegative safe integer",
+    );
+  }
+  assertEquals(calls, 0);
+});
+
+Deno.test("whole-file ceiling accepts exact boundaries and cancels overflow", async () => {
+  for (const declared of [false, true]) {
+    for (const maxDownload of [0, 3, 4]) {
+      let cancelled = false;
+      const get = (() =>
+        Promise.resolve(
+          new Response(
+            new ReadableStream({
+              start(controller) {
+                controller.enqueue(bytes.slice(0, 2));
+                controller.enqueue(bytes.slice(2));
+                // Leave open so overflow cancellation can be observed.
+              },
+              pull(controller) {
+                controller.close();
+              },
+              cancel() {
+                cancelled = true;
+              },
+            }, { highWaterMark: 0 }),
+            { headers: declared ? { "content-length": "4" } : {} },
+          ),
+        )) as typeof fetch;
+      if (maxDownload < 4) {
+        await assertRejects(
+          () =>
+            urlByteSource("https://test/run.xtc", {
+              maxDownload,
+              fetch: get,
+            }),
+          Error,
+          declared ? "server ignores Range" : "exceeds maxDownload",
+        );
+        assert(cancelled);
+      } else {
+        const source = await urlByteSource("https://test/run.xtc", {
+          maxDownload,
+          fetch: get,
+        });
+        assertEquals(await source.read(0, 4), bytes);
+      }
+    }
+  }
+  const empty = await urlByteSource("https://test/empty.xtc", {
+    maxDownload: 0,
+    fetch: (() => Promise.resolve(new Response(null))) as typeof fetch,
+  });
+  assertEquals(empty.size, 0);
+  const ranged = await urlByteSource("https://test/run.xtc", {
+    maxDownload: 0,
+    fetch: rangeFetch(() => response()),
+  });
+  assertEquals(ranged.size, 4);
+});
 const rangeFetch = (
   change: (call: number, headers: Headers) => Response,
 ): typeof fetch => {

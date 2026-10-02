@@ -9,7 +9,7 @@ import {
   colormap,
   linear,
   volumeSample,
-} from "./primitives.ts";
+} from "./construction.ts";
 import type { Color, Field } from "./types.ts";
 
 type Stops = ReadonlyArray<readonly [number, Color]>;

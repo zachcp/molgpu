@@ -1,0 +1,85 @@
+{
+  "baseline": "e2b4df7",
+  "note": "Specifier occurrences by source file; includes type imports and dynamic imports, not a runtime cost measure.",
+  "packages": {
+    "dynamics": {
+      "source_files": 24,
+      "exports": {
+        ".": "./src/index.ts",
+        "./wgsl": "./src/wgsl.ts"
+      },
+      "workspace_imports": {
+        "@molgpu/table": 7
+      },
+      "upstream_imports": {}
+    },
+    "fields": {
+      "source_files": 6,
+      "exports": "./src/index.ts",
+      "workspace_imports": {
+        "@molgpu/table": 5
+      },
+      "upstream_imports": {}
+    },
+    "geo": {
+      "source_files": 6,
+      "exports": "./src/index.ts",
+      "workspace_imports": {},
+      "upstream_imports": {}
+    },
+    "io": {
+      "source_files": 17,
+      "exports": "./src/index.ts",
+      "workspace_imports": {
+        "@molgpu/table": 10
+      },
+      "upstream_imports": {}
+    },
+    "select": {
+      "source_files": 8,
+      "exports": "./src/index.ts",
+      "workspace_imports": {
+        "@molgpu/table": 5
+      },
+      "upstream_imports": {}
+    },
+    "table": {
+      "source_files": 18,
+      "exports": "./src/index.ts",
+      "workspace_imports": {},
+      "upstream_imports": {}
+    },
+    "timeline": {
+      "source_files": 2,
+      "exports": "./src/index.ts",
+      "workspace_imports": {},
+      "upstream_imports": {
+        "@use-gpu/core/mjs/ease.mjs": 1
+      }
+    },
+    "viewer": {
+      "source_files": 109,
+      "exports": {
+        ".": "./src/index.ts",
+        "./advanced": "./src/advanced.ts"
+      },
+      "workspace_imports": {
+        "@molgpu/dynamics": 9,
+        "@molgpu/dynamics/wgsl": 10,
+        "@molgpu/fields": 14,
+        "@molgpu/geo": 4,
+        "@molgpu/io": 4,
+        "@molgpu/select": 21,
+        "@molgpu/table": 52,
+        "@molgpu/timeline": 5
+      },
+      "upstream_imports": {
+        "@use-gpu/core": 25,
+        "@use-gpu/live": 60,
+        "@use-gpu/shader": 16,
+        "@use-gpu/shader/wgsl": 14,
+        "@use-gpu/workbench": 37
+      }
+    }
+  }
+}

@@ -46,8 +46,7 @@ import {
   releaseOwnedBuffer,
   trackOwnedBuffer,
 } from "./internal/instrumentation.ts";
-import { live, viewer } from "./internal/elements.ts";
-import { StructureContext } from "./structure-context.ts";
+
 import { TrajectoryContext } from "./trajectory-context.ts";
 
 const STORAGE = 0x0080;
@@ -268,13 +267,6 @@ class Player {
   }
 }
 
-/** What the nearest `<Trajectory>` shows; null outside one. */
-export function useTrajectoryFrame(): TrajectoryFrameState | null {
-  const frame = useContext(TrajectoryContext);
-  const structure = useContext(StructureContext);
-  return frame && structure?.resource === frame.owner ? frame.state : null;
-}
-
 const ZERO3 = [0, 0, 0];
 
 type StatusCallback = ((status: TrajectoryStatus) => void) | undefined;
@@ -310,6 +302,7 @@ type PlayerProps = {
   interpolate: "linear" | "nearest";
   pbc: "none" | "minimum-image";
   onStatus: StatusCallback;
+  sourceStatus: TrajectoryStatus | null;
   children: LiveElement;
 };
 
@@ -318,13 +311,12 @@ const TrajectoryProvider: LC<PlayerProps> = (props) =>
   useCoordinates() ? use(TrajectoryPlayer, props) : props.children;
 
 const TrajectoryPlayer: LC<PlayerProps> = (
-  { trajectory, frame, interpolate, pbc, onStatus, children },
+  { trajectory, frame, interpolate, pbc, onStatus, sourceStatus, children },
 ) => {
   const upstream = useCoordinates()!;
   const time = useContext(TimelineContext);
   const device = useDeviceContext();
   const requestRepaint = useContext(LoopContext);
-  const inherited = useContext(TrajectoryContext);
   const [, setLanded] = useState(0);
   const [failure, setFailure] = useState<
     { player: Player; index: number; error: unknown } | null
@@ -405,12 +397,18 @@ const TrajectoryPlayer: LC<PlayerProps> = (
         : null,
     [trajectory, clamped, key],
   );
+  const scope = useMemo(() =>
+    Object.freeze({
+      owner: upstream.resource,
+      state,
+      status: failedStatus ?? sourceStatus,
+    }), [upstream.resource, state, failedStatus, sourceStatus]);
   if (idle) {
-    // Same element types as playback below, so children are not remounted
-    // when the trajectory arrives; the inherited scope stays visible.
+    // Same element types as playback below keep children mounted. An opening
+    // or failed inner source shadows outer metadata while copying coordinates.
     return provide(
       TrajectoryContext,
-      inherited,
+      scope,
       use(CoordinateKernel, {
         upstream,
         shader: COPY,
@@ -465,7 +463,7 @@ const TrajectoryPlayer: LC<PlayerProps> = (
   const sources = player.rows ? [player.window, player.rows] : [player.window];
   return provide(
     TrajectoryContext,
-    Object.freeze({ owner: upstream.resource, state }),
+    scope,
     use(CoordinateKernel, {
       upstream,
       shader: player.rows ? SUBSET : WHOLE,
@@ -552,14 +550,13 @@ export const Trajectory: ViewerComponent<TrajectoryProps> = (
   // Pending, failed or cancelled sources pass upstream coordinates through,
   // in the same subtree that playback later attaches to.
   const playable = pending || sourceFailure !== undefined ? null : trajectory;
-  return viewer(
-    use(TrajectoryProvider, {
-      trajectory: playable,
-      frame,
-      interpolate,
-      pbc,
-      onStatus,
-      children: live(children),
-    }),
-  );
+  return (use(TrajectoryProvider, {
+    trajectory: playable,
+    sourceStatus: status,
+    frame,
+    interpolate,
+    pbc,
+    onStatus,
+    children: children,
+  }));
 };

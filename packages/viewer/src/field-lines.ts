@@ -1,8 +1,8 @@
+import { useDispatchObservation } from "./internal/dispatch-observation.ts";
 // <FieldLines>: RK4 streamlines of E = −∇φ through the nearest volume,
 // integrated by a use.gpu Kernel once per volume generation and drawn with
 // LineLayer. See docs/findings/2026-09-27-efield-plan.md §5.
 import {
-  gather,
   type LC,
   use,
   useContext,
@@ -10,7 +10,6 @@ import {
   useRef,
   useResource,
   useState,
-  yeet,
 } from "@use-gpu/live";
 import type { StorageSource, StorageTarget } from "@use-gpu/core";
 import {
@@ -41,7 +40,7 @@ import {
 } from "./internal/instrumentation.ts";
 import { useRepaint } from "./internal/use-repaint.ts";
 import { useBindingProbe } from "./internal/use-binding-probe.ts";
-import { live, viewer } from "./internal/elements.ts";
+
 import type { SliceStops } from "./volume-slice.ts";
 import { colorRampWgsl } from "./internal/color-ramp.ts";
 
@@ -254,21 +253,14 @@ export const FieldLines: ViewerComponent<
     potentialCap,
   ]);
   const [dispatched, setDispatched] = useState(-1);
-  const mounted = useRef(true);
-  useResource((dispose) => {
-    mounted.current = true;
-    dispose(() => {
-      mounted.current = false;
-    });
-  }, []);
-  const notified = useRef(-1);
+  const observe = useDispatchObservation(version, setDispatched);
   useResource(() => {
     if (dispatched >= 0) requestRepaint();
   }, [dispatched]);
   const integrate = (target: StorageTarget) =>
     use(Compute, {
       immediate: true,
-      children: gather(
+      children: observe(
         use(Kernel, {
           shader: integrator,
           sources: inputs,
@@ -277,44 +269,19 @@ export const FieldLines: ViewerComponent<
           version,
           size: [lines * 2, 1],
         }),
-        // Kernel yields its call once the pipeline has compiled, and its
-        // initial guard can suppress a call; only the dispatch count proves
-        // this version was encoded (Compute submits right after).
-        (calls: { compute?: (...args: unknown[]) => unknown }[]) => {
-          const call = calls.find((item) => item?.compute);
-          return call?.compute
-            ? yeet({
-              compute: (
-                pass: unknown,
-                countDispatch: (...args: number[]) => void,
-              ) => {
-                let encoded = false;
-                const result = call.compute!(pass, (...counts: number[]) => {
-                  encoded = true;
-                  countDispatch(...counts);
-                });
-                if (encoded && notified.current !== version) {
-                  notified.current = version;
-                  count("gathers", "fieldLines:dispatch");
-                  fieldLinesTesting.last = {
-                    buffer: target.buffer,
-                    vertices,
-                    generation,
-                  };
-                  queueMicrotask(() => {
-                    if (mounted.current) setDispatched(version);
-                  });
-                }
-                return result;
-              },
-            })
-            : null;
+        () => {
+          count("gathers", "fieldLines:dispatch");
+          fieldLinesTesting.last = {
+            buffer: target.buffer,
+            vertices,
+            generation,
+          };
         },
       ),
     });
 
   if (!lines) return null;
-  return viewer(use(ComputeBuffer, {
+  return (use(ComputeBuffer, {
     width: vertices,
     height: 1,
     format: "vec4<f32>",
@@ -389,7 +356,7 @@ const LinesDraw: LC<{
   const tintRef = useShaderRef(tint);
   const colors = useShader(rampModule, [vertexSource, rangeRef, tintRef]);
   const segments = useMemo(() => lineSegments(lines, steps), [lines, steps]);
-  return live(withColumns(
+  return (withColumns(
     [{ key: "segments", data: segments, format: "i32" }],
     (map) =>
       use(LineLayer, {

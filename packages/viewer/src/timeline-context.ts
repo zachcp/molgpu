@@ -5,7 +5,6 @@ import {
   provide,
   useContext,
 } from "@use-gpu/live";
-import { live, viewer } from "./internal/elements.ts";
 
 /** The caller owns time; rendering never advances it from a wall clock. */
 export const TimelineContext: LiveContext<number | null> = makeContext<
@@ -18,7 +17,7 @@ export const TimelineProvider: ViewerComponent<
   if (typeof time !== "number" || !Number.isFinite(time)) {
     throw new TypeError("TimelineProvider time must be finite seconds");
   }
-  return viewer(provide(TimelineContext, time, live(children)));
+  return (provide(TimelineContext, time, children));
 };
 
 export function useTimelineTime(): number {

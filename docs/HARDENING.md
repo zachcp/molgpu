@@ -12,11 +12,12 @@ already exist; hardening only requires that they keep passing.
 
 **H1 — Manifest and published dependencies.** `deno.json` declares `name`, a
 semver `version`, `license`, public TypeScript exports, and `publish.include`
-containing `src`. Package licenses are MIT, except dynamics' combined
-`MIT AND BSD-3-Clause` attribution. Check the files uploaded to a local JSR
-registry: internal dependencies are caret `jsr:` ranges, use.gpu dependencies
-match the reviewed exact npm pin, and no bare imports remain. Only IO may import
-Mol*, through dynamic `import()`, at the tested exact version.
+containing `src`. Package licenses are MIT. JSR accepts only a single SPDX
+identifier, so dynamics also ships the BSD-3-Clause PDB2PQR notice as
+`LICENSE-PDB2PQR`. Check the files uploaded to a local JSR registry: internal
+dependencies are caret `jsr:` ranges, use.gpu dependencies match the reviewed
+exact npm pin, and no bare imports remain. Only IO may import Mol*, through
+dynamic `import()`, at the tested exact version.
 
 Compatible internal ranges must resolve a single table/timeline copy. Divergent
 copies can reject values because identity and curve state are module-private;
@@ -66,16 +67,23 @@ remain excluded.
   no workspace consumer needs a meaningful caller-facing description in the
   README API table, which is its explicit justification for the public surface.
 
-  **Export discipline (R1–R6).** Apply these rules to every entry, including
-  subpaths:
+  **Export discipline (R1–R6).** Apply this review guidance to every entry,
+  including subpaths. Automated H5 checks enforce README classification,
+  snapshots, named-type closure and explicit re-export lists; the usefulness of
+  a named contract remains a review decision.
 
-  1. Export one `XProps` type per public component. For union props, export the
-     union; keep its variants internal.
+  1. Export a named component props type when callers need to name it
+     independently. Inline concrete prop shapes and intersections of exported
+     domain contracts are valid. Components with the same contract may share a
+     props type (for example Ribbon and Cartoon share `RibbonProps`). For named
+     union props, export the union; keep its variants internal.
   2. Export callback status/result types and public hook return types that
      callers need to name.
-  3. Remove generic utility aliases such as `TypedArray`, `VectorLike`, and
-     `Vec3Like`; inline a concrete type or `ArrayLike<number>`. Keep shared
-     domain aliases such as `ColorLike`, `Selection`, and `Field`.
+  3. Keep shared caller-facing domain aliases such as `ColorLike`, `Selection`,
+     `Field`, and viewer `VectorLike` (plain/typed vectors accepted for colours
+     and spatial values). Do not export an implementation utility solely because
+     it is shared internally; use a concrete type or `ArrayLike<number>` when an
+     alias has no useful caller-facing contract.
   4. Remove option bags with their removed owner function or component.
   5. List every public export explicitly; never use `export *` or
      `export type *` in an entry module.
@@ -138,8 +146,14 @@ described:
 - A dry-run publish of the whole workspace succeeds in dependency order.
   Actually publishing to JSR is a separate human decision.
 
-Status (2026-09-25): all packages are at `0.1.0` with a `CHANGELOG.md` (manual
+Status (2026-10-02): all packages are at `0.1.0` with a `CHANGELOG.md` (manual
 procedure in [RELEASING.md](RELEASING.md)). `geo`, `io` and `table` carry the
 Mol* MIT notice in `LICENSE`. The root [README](../README.md) and the examples
 gallery link every package README. `.github/workflows/ci.yml` runs the Deno
-gates. Still open until a remote exists: a first green CI run.
+gates; the [architecture gate](findings/2026-10-02-crj13-architecture-gate.md)
+records passing hosted and local acceptance. Actual Deno manifests define the
+publish contract; npm-era `types`/`import`, tarball and `repository` wording
+above is historical where it does not match those manifests. Export discipline
+R1/R3 was reconciled in `molgpu-sept-ktr.7`: useful shared aliases and concrete
+inline props are accepted, with no public removals. A passing hardening script
+does not prove every review judgement or browser composition.

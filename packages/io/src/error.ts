@@ -21,7 +21,7 @@ export type IoErrorCode =
   | "INVALID_MAP"
   /** The map's value mode is not one the reader supports (`ccp4`). */
   | "UNSUPPORTED_MODE"
-  /** The map has more samples than `maxSamples` (`ccp4`). */
+  /** The map or predicted surface grid exceeds `maxSamples` (`ccp4`, `surface`). */
   | "VOLUME_TOO_LARGE"
   /** A record is malformed, or the records do not form a valid structure (`pqr`). */
   | "INVALID_PQR"

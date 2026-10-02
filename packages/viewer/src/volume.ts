@@ -17,7 +17,6 @@ import {
 const noop = () => {};
 const noSubscription = () => noop;
 import { useVolumeSource } from "./internal/volume-buffers.ts";
-import { live, viewer } from "./internal/elements.ts";
 
 const defaultLoader: VolumeLoader = async (src, cancelled, signal) => {
   const { volumeFromCcp4 } = await import("@molgpu/io");
@@ -79,9 +78,7 @@ export const Volume: ViewerComponent<VolumeProps> = (
     [data, src, loader],
   );
   if (data !== undefined) {
-    return viewer(
-      use(VolumeProvider, { volume: data, children: live(children) }),
-    );
+    return (use(VolumeProvider, { volume: data, children: children }));
   }
   // Replacing src marks the request pending again, so the previous volume
   // cannot flash back while its successor is in flight.
@@ -89,6 +86,6 @@ export const Volume: ViewerComponent<VolumeProps> = (
   if (failure) return typeof error === "function" ? error(failure) : error;
   // A cancelled request resolves to null and must not mount stale content.
   return loaded
-    ? viewer(use(VolumeProvider, { volume: loaded, children: live(children) }))
+    ? (use(VolumeProvider, { volume: loaded, children: children }))
     : null;
 };

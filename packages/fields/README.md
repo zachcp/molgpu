@@ -144,7 +144,11 @@ representation rather than evaluating it yourself.
 - `categorical(input, cases, fallback)` — map an integer scalar input to
   per-category values, with an explicit fallback.
 - `linear(input, { domain: [lo,hi], range?, overflow? })` — affine map into
-  `range`; `overflow` is `clamp` (default), `wrap`, or `fail`.
+  `range`; `overflow` is `clamp` (default), `wrap`, or `fail`. Both domain
+  endpoints map to their corresponding range endpoints, including reversed
+  domains. `wrap` repeats only outside the closed domain: for `[0,1]`, inputs
+  `0` and `1` remain `0` and `1`, while `-0.25` and `1.25` become `0.75` and
+  `0.25`.
 - `colormap(input, stops)` — piecewise-linear colour gradient over a scalar
   input.
 - `annotation(domain, type, values, { missing?, policy?, fallback? })` —
@@ -152,7 +156,27 @@ representation rather than evaluating it yourself.
   or `fail`). Use the package-root `SCALAR` or `COLOR` descriptor as `type`.
   Evaluating or baking it for a structure whose row count differs fails.
 - `curve(stops, { overflow? })` — a scalar along the global parameter `t`
-  (uniform, same for every row).
+  (uniform, same for every row). Curve `wrap` is periodic over the half-open
+  stop interval: the last stop time wraps to the first stop value.
+
+## Numeric input policy
+
+Constructor parameters must be finite JavaScript numbers: scalar/color
+constants, linear domain/range endpoints, category keys/values/fallbacks, and
+curve/colormap stops. CPU calculations retain JavaScript precision; numeric
+outputs are packed as `Float32Array`. Finite values outside f32 range can
+therefore overflow CPU outputs.
+
+WGSL compilation rounds literal parameters to f32, emits valid
+decimal/scientific notation and preserves signed zero in literals. It rejects
+parameters or derived spans that overflow f32, and interpolation intervals whose
+endpoints or width collapse in f32. Very small values may round to signed zero;
+representable subnormal literals are accepted. GPU arithmetic may flush
+subnormal values to zero, as allowed by
+[WGSL floating-point rules](https://www.w3.org/TR/WGSL/#floating-point-evaluation).
+This policy also applies to baked coefficients in the volume WGSL generators. It
+does not validate runtime attribute/annotation columns or guarantee finite
+results for every arithmetic expression.
 
 ## Two evaluators, one definition
 
@@ -207,7 +231,8 @@ ordinary `annotation` field (lifted onto atoms by default; a `chain` join must
 be lifted). Missing rows follow `policy` (`fallback`/`fail`); colliding keys
 follow `duplicate` (`error`/`first`/`last`). The result composes like any other
 field, e.g. `colormap(linear(joined, { domain }), stops)`. The join is pure CPU
-work; the viewer's `useAnnotation` adds fetching and loading state.
+work. The application owns fetching and loading state, then passes the joined
+field to a viewer representation. No annotation-fetching hook is exported.
 
 ## API
 
@@ -249,13 +274,17 @@ before 0.1.0. _advanced_: for renderer integrations (the viewer), not app code.
 
 ## Place in the dependency graph
 
+The explicit public entry exports field construction from `construction.ts`, CPU
+evaluation from `evaluation.ts`, and WGSL lowering from `compile.ts`. Private
+node helpers connect these responsibilities; they add no public entries.
+
 ```
 table ──► fields ──► viewer
 ```
 
 `@molgpu/fields` depends only on `@molgpu/table` and is consumed by
-`@molgpu/viewer` (which lowers compiled fields to use.gpu sources in `useField`,
-and wraps `joinAnnotation` in `useAnnotation`).
+`@molgpu/viewer` (which lowers compiled fields to use.gpu sources in the
+advanced `useField` adapter and binds pure joined annotations).
 
 It must not import `molstar` (only `@molgpu/io` may), any `@use-gpu/*` package
 (GPU lowering and use.gpu types live in `@molgpu/viewer`), or any other

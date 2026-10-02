@@ -10,7 +10,7 @@ import { useStructure } from "./structure-context.ts";
 import { useCoordinateSnapshot } from "./coordinate-snapshot.ts";
 import { copyRows, InstanceContext } from "./internal/instance-context.ts";
 import { withInstances } from "./internal/instance-copies.ts";
-import { viewer } from "./internal/elements.ts";
+
 import {
   checkAtomSelection,
   type ColumnSpec,
@@ -252,7 +252,7 @@ export const Label: ViewerComponent<
     /** 0–1, multiplied into the text colour's alpha (text always blends). */
     opacity?: number;
   } & SelectionDiagnostics
-> = (props) => viewer(use(props.at ? LabelOnce : LabelCopies, props));
+> = (props) => (use(props.at ? LabelOnce : LabelCopies, props));
 
 /** One label per call: the selection centroid or an explicit `at`. */
 const LabelOnce: typeof Label = (props) =>

@@ -225,10 +225,12 @@ including the seed atoms; PyMOL `around` has different VDW-radius semantics. A
 query scoped to all models can compare atoms across models, as full-table
 `within` already does.
 
-Viewer query-prop adaptation is tracked separately in `crj.20`: current
-representation props still take resolved selections. Ordinary viewer queries
-will use first-model/primary-conformer defaults; coordinate providers will keep
-all-row defaults. Exact resolved selections remain the explicit override.
+Viewer props accept reusable queries or exact resolved selections. Ordinary
+representation queries default to first-model/primary conformers; coordinate
+provider queries default to all rows. Queries resolve against the nearest scoped
+publications. Exact resolved selections remain the explicit membership override.
+See [query selections in JSX](../viewer/README.md#query-selections-in-jsx) for
+pending, diagnostic and snapshot consistency contracts.
 
 ### Text selection construction
 
@@ -293,8 +295,9 @@ compile time. Evaluation ports Mol*'s semantics and resolves to an ordinary atom
 `Selection`. This package has no text parser: MolScript, PyMOL, VMD and Jmol
 strings are parsed by `@molgpu/io`. Accepted differences from Mol*: queries see
 the asymmetric unit only; `label_*` and `auth_*` atom and component names read
-the same column; bonds are the table's (`bondTopology`), so `include-connected`
-depends on positions when bonds are inferred.
+the same column. Connectivity uses the typed chemical graph described below,
+distinct from the table's display `bondTopology`. Inferred chemical graphs read
+positions; coordinate snapshots preserve the root graph's chemical semantics.
 
 Grouping stays inside evaluation. `atom-groups :group-by` (MolScript's
 `sel.atom.res`) and the per-set filters (`pick`, `first`, `within`,
@@ -386,6 +389,10 @@ Empty selections are valid and explicit (`isEmpty`, `count`).
 | `SelectionExpr`      | experimental | Type: a MolQL expression as plain JSON: a literal, `{ name }`, or `{ head, args }`.                                                                               |
 
 ## Place in the dependency graph
+
+The public entry is an explicit export list. `selection.ts` keeps recipes,
+resolution, revision identity and set operations together; expression evaluation
+and chemical graph operations retain their existing modules and contracts.
 
 `@molgpu/select` depends only on `@molgpu/table` (runtime) and is consumed by
 `@molgpu/viewer` and the examples. It sits beside `@molgpu/fields` above

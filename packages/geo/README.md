@@ -48,6 +48,10 @@ interpolateCurveSegment(state, controls, 0.5, 0.5); // points, tangents, normals
 interpolateSizes(state, w0, w1, w2, h0, h1, h2, 0.5); // widths and heights
 ```
 
+`origin`/`spacing` are shorthand for a diagonal index-to-world affine. Normals
+use its inverse transpose, and negative determinant transforms reverse triangle
+winding. Both forms validate the affine before extracting geometry.
+
 ## API
 
 | Export                    | Stability    | Description                                                                        |

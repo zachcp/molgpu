@@ -5,6 +5,8 @@ All notable changes to `@molgpu/dynamics` are recorded here. See
 
 ## [Unreleased]
 
+- The manifest `license` is now `MIT` (JSR rejects compound SPDX expressions);
+  the BSD-3-Clause PDB2PQR notice still ships as `LICENSE-PDB2PQR`.
 - `elasticNetworkData(positions, topology, { guide, cutoff, k, masses,
   maxContacts, version })`
   builds `<ElasticNetwork>` input from reference positions the application

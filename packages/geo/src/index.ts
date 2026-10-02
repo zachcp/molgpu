@@ -53,10 +53,6 @@ export function marchingCubes(input: MarchingCubesInput): MarchingCubesMesh {
   ) {
     throw new TypeError("pass either transform or origin/spacing, not both");
   }
-  if (transform !== undefined) {
-    const mesh = marchingCubes({ values, dims, level: input.level });
-    return transformMesh(mesh, transform);
-  }
   const { level = 0, origin = [0, 0, 0], spacing = [1, 1, 1] } = input;
   if (!(values instanceof Float32Array)) {
     throw new TypeError("values must be a Float32Array");
@@ -72,12 +68,38 @@ export function marchingCubes(input: MarchingCubesInput): MarchingCubesMesh {
     throw new RangeError("values length does not match dims");
   }
   if (
-    !Number.isFinite(level) || !origin.every(Number.isFinite) ||
-    !spacing.every((v) => Number.isFinite(v) && v !== 0)
+    !Number.isFinite(level) || origin.length !== 3 || spacing.length !== 3 ||
+    !Array.from(origin).every(Number.isFinite) ||
+    !Array.from(spacing).every((v) => Number.isFinite(v) && v !== 0)
   ) {
     throw new TypeError("level, origin, and spacing must be finite");
   }
 
+  // Validate before visiting cells or allocating geometry. Both forms use the
+  // same inverse-transpose normals and reflection winding rules.
+  const plan = transform !== undefined || input.origin !== undefined ||
+      input.spacing !== undefined
+    ? prepareTransform(
+      transform ?? [
+        spacing[0],
+        0,
+        0,
+        0,
+        0,
+        spacing[1],
+        0,
+        0,
+        0,
+        0,
+        spacing[2],
+        0,
+        origin[0],
+        origin[1],
+        origin[2],
+        1,
+      ],
+    )
+    : null;
   const positions: number[] = [],
     normals: number[] = [],
     indices: number[] = [];
@@ -127,9 +149,9 @@ export function marchingCubes(input: MarchingCubesInput): MarchingCubesMesh {
           );
           const id = positions.length / 3;
           positions.push(
-            origin[0] + (ax + t * (bx - ax)) * spacing[0],
-            origin[1] + (ay + t * (by - ay)) * spacing[1],
-            origin[2] + (az + t * (bz - az)) * spacing[2],
+            ax + t * (bx - ax),
+            ay + t * (by - ay),
+            az + t * (bz - az),
           );
           normals.push(gx, gy, gz);
           return vertices[edge] = id;
@@ -142,13 +164,14 @@ export function marchingCubes(input: MarchingCubesInput): MarchingCubesMesh {
       }
     }
   }
-  return {
+  const mesh = {
     positions: Float32Array.from(positions),
     normals: Float32Array.from(normals),
     indices: Uint32Array.from(indices),
     vertexCount: positions.length / 3,
     triangleCount: indices.length / 3,
   };
+  return plan ? transformMesh(mesh, plan) : mesh;
 }
 
 /**
@@ -178,12 +201,9 @@ export function marchingCubesTables(): MarchingCubesTables {
 }
 
 /** Map an index-space mesh through a column-major 4×4 affine. */
-function transformMesh(
-  mesh: MarchingCubesMesh,
-  m: ArrayLike<number>,
-): MarchingCubesMesh {
+function prepareTransform(m: ArrayLike<number>) {
   if (
-    m.length !== 16 || !Array.prototype.every.call(m, Number.isFinite) ||
+    m.length !== 16 || !Array.from(m).every(Number.isFinite) ||
     m[3] !== 0 || m[7] !== 0 || m[11] !== 0 || m[15] !== 1
   ) {
     throw new TypeError("transform must be 16 finite numbers, affine");
@@ -201,7 +221,16 @@ function transformMesh(
     m[0] * m[5] - m[1] * m[4],
   ];
   const det = m[0] * c[0] + m[4] * c[3] + m[8] * c[6];
-  if (!(Math.abs(det) > 0)) throw new TypeError("transform must be invertible");
+  if (
+    !Number.isFinite(det) || !c.every(Number.isFinite) || !(Math.abs(det) > 0)
+  ) throw new TypeError("transform must be invertible");
+  return { m, c, det };
+}
+
+function transformMesh(
+  mesh: MarchingCubesMesh,
+  { m, c, det }: ReturnType<typeof prepareTransform>,
+): MarchingCubesMesh {
   // Dividing by det's sign keeps the normal on the same side of the surface.
   const s = Math.sign(det);
   const { positions: p, normals: n, indices } = mesh;

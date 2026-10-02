@@ -19,7 +19,7 @@ import { affineWgsl } from "@molgpu/dynamics/wgsl";
 import { useCoordinates } from "../coordinates-context.ts";
 import { useStructure } from "../structure-context.ts";
 import { CoordinateKernel } from "./coordinate-kernel.ts";
-import { viewer } from "./elements.ts";
+
 import type { ViewerElement } from "../types.ts";
 import { DrawCopiesContext, InstanceContext } from "./instance-context.ts";
 import {
@@ -66,8 +66,8 @@ export function withInstances<P>(
       () => instanceCopies(nearest.resource.data),
       [nearest.resource.data.topology],
     );
-    if (!copies.length) return viewer(use(inner as LC<P>, props));
-    return viewer(copies.map((copy) =>
+    if (!copies.length) return (use(inner as LC<P>, props));
+    return (copies.map((copy) =>
       provide(
         InstanceContext,
         copy,
@@ -111,8 +111,8 @@ export function withGeometryCopies<P>(
       () => copyGroups(instanceCopies(nearest.resource.data)),
       [nearest.resource.data.topology],
     );
-    if (!groups.length) return viewer(use(inner as LC<P>, props));
-    return viewer(groups.map((group, index) =>
+    if (!groups.length) return (use(inner as LC<P>, props));
+    return (groups.map((group, index) =>
       provide(
         InstanceContext,
         Object.freeze({

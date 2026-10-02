@@ -2,7 +2,7 @@ import { assertEquals, assertThrows } from "@std/assert";
 import { byChain, compile } from "@molgpu/fields";
 import { createStructure } from "@molgpu/table";
 import { fixture } from "../../table/test/fixture.ts";
-import { gatherAtomColumns } from "../src/internal/gather.ts";
+import { gatherAtomColumns } from "./gather-oracle.ts";
 
 Deno.test("byChain fields gather the derived atom-chain column", () => {
   const data = createStructure(fixture());
