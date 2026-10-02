@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# molgpu has no persistent services, authentication, or wake-time repair work.
+printf 'No orb resume work required.\n'
