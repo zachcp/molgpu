@@ -43,6 +43,9 @@ async function setup() {
   server = await startDevServer({
     port: PORT,
     entries: ["packages/viewer/test/invalidation.html"],
+    // Labels load @use-gpu/glyph's wasm text shaper, which breaks when
+    // pre-bundled; leave it unbundled as before.
+    exclude: ["@use-gpu/glyph"],
   });
   browser = await launchWebGpuBrowser();
   page = await browser.newPage({ viewport: { width: 640, height: 480 } });
