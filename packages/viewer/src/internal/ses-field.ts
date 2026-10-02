@@ -433,6 +433,28 @@ export interface GpuSesOptions {
   /** Initial torus-probe capacity; grows and reruns that stage on overflow. */
   readonly probeCapacity?: number;
   readonly signal?: AbortSignal;
+  /** Also return the frozen coordinates and atom cell list (see `cells`). */
+  readonly retainCells?: boolean;
+}
+
+/**
+ * The coordinate generation and uniform cell list a field was computed from,
+ * for later stages over the same atoms (vertex attribution). Cells are
+ * `width` wide from `origin`, x fastest; atoms of cell c are
+ * `sortedRows[offsets[c] .. offsets[c + 1])`. The caller destroys `buffers`.
+ */
+export interface SesCells {
+  /** Packed xyz of every row, frozen for this generation. */
+  readonly frame: GPUBuffer;
+  /** The selected rows, ascending. */
+  readonly rowMap: GPUBuffer;
+  readonly offsets: GPUBuffer;
+  readonly sortedRows: GPUBuffer;
+  readonly count: number;
+  readonly dims: readonly [number, number, number];
+  readonly origin: readonly [number, number, number];
+  readonly width: number;
+  readonly buffers: readonly GPUBuffer[];
 }
 
 export interface GpuSesField {
@@ -447,6 +469,8 @@ export interface GpuSesField {
   readonly level: number;
   /** Torus probe points no sphere hides. */
   readonly probeCount: number;
+  /** With `retainCells`: the frame and cell list; the caller destroys them. */
+  readonly cells?: SesCells;
   /** Peak temporary allocation, excluding the field. */
   readonly workingBytes: number;
   readonly readbackBytes: number;
@@ -800,8 +824,27 @@ export async function gpuSesField(
     device.queue.submit([last.finish()]);
     await device.queue.onSubmittedWorkDone();
     checkCurrent();
+    let retained: SesCells | undefined;
+    if (options.retainCells) {
+      const buffers = [frame, rowMap, offsets, sortedRows];
+      for (const buffer of buffers) {
+        transient.splice(transient.indexOf(buffer), 1);
+      }
+      retained = {
+        frame,
+        rowMap,
+        offsets,
+        sortedRows,
+        count: n,
+        dims: cellDims,
+        origin: [low[0], low[1], low[2]],
+        width,
+        buffers,
+      };
+    }
     const result: GpuSesField = {
       field,
+      ...(retained ? { cells: retained } : {}),
       dims: grid.dims,
       transform: grid.transform,
       resolution,

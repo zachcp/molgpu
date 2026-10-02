@@ -112,6 +112,36 @@ that is 137 MiB of transient memory, released before the call returns. If that
 becomes a limit, packing both counts into one array, or running a sparse pass
 that touches only cut cubes, would halve it or better.
 
+## GPU attribution (`molgpu-sept-mqo.3`)
+
+`packages/viewer/src/internal/attribution-gpu.ts` finds each vertex's nearest
+selected atom row on the GPU. It reuses the coordinates and atom cell list the
+field froze; `gpuSesField(..., { retainCells: true })` hands those to the
+caller.
+
+It keeps the CPU's exactness argument:
+
+- **Window search:** the 5³ cell window around the vertex is searched first.
+- **Certification:** a hit within two cell widths is certified. Clamping the
+  cell of a vertex outside the atom bounds keeps the certificate valid.
+- **Fallback:** an uncertified vertex scans every selected atom.
+- **Ties:** equal distances resolve to the lower row.
+
+The CPU reference is `nearestAtomAttribution` of the same GPU vertices, with the
+cell size `<Surface>` passes it:
+
+| Protein |  Vertices | Different atom | GPU field + mesh + attribution | CPU attribution |
+| ------- | --------: | -------------: | -----------------------------: | --------------: |
+| 1crn    |    54,664 |              0 |                          14 ms |           40 ms |
+| 1ejg    |    55,512 |              0 |                          13 ms |           52 ms |
+| 1tqn    |   498,328 |              0 |                          42 ms |          494 ms |
+| 1a4y    | 1,108,504 |              0 |                          90 ms |        1,054 ms |
+| 4c7r    | 1,543,448 |              0 |                         126 ms |        1,496 ms |
+
+The CPU path rebuilds 1tqn in 1.15 s. The GPU path does the whole rebuild,
+including the three small readbacks, in 42 ms. That meets the bead's 100 ms
+target before any drawing work.
+
 ## Next
 
 `molgpu-sept-mqo.3` ports attribution. `molgpu-sept-mqo.4` wires the
