@@ -1,17 +1,23 @@
 import {
+  type LiveElement,
+  provide,
   render,
   unmount,
   use,
+  useAwait,
   useMemo,
   useResource,
   useState,
+  wrap,
 } from "@use-gpu/live";
-import { AutoCanvas, WebGPU } from "@use-gpu/webgpu";
+import { AutoCanvas, getGPUAdapter, mountGPUDevice } from "@use-gpu/webgpu";
 import {
   AmbientLight,
+  DeviceContext,
   DirectionalLight,
   OrbitCamera,
   Pass,
+  Queue,
   useMouseState,
   useWheelState,
 } from "@use-gpu/workbench";
@@ -116,7 +122,7 @@ const StreamOrbitControls = (
 
 // One live root per host. Re-rendering the same demo updates it in place (the
 // canvas, GPU device and orbit state survive a scrub); a different demo
-// unmounts it first so canvases and devices never accumulate.
+// unmounts it first so canvases never accumulate; all roots share one device.
 const roots = new Map<
   string,
   {
@@ -125,6 +131,55 @@ const roots = new Map<
   }
 >();
 const updates = new Map<string, (state: ViewerState) => void>();
+
+// One GPUDevice for the page, shared by every demo root. use.gpu's <WebGPU>
+// requests a new device per mount and never destroys it, so switching demos
+// accumulated devices; on a software GPU each new request grew slower (hosted
+// CI: 14 ms for the first demo, 7.5 s by the last; molgpu-sept-s5o.20).
+// Same optional features as <WebGPU>.
+const OPTIONAL_FEATURES: GPUFeatureName[] = [
+  "rg11b10ufloat-renderable",
+  "depth32float-stencil8",
+  "shader-f16",
+];
+let sharedDevice: Promise<GPUDevice> | null = null;
+const pageDevice = (): Promise<GPUDevice> =>
+  sharedDevice ??= (async () => {
+    const { device } = await mountGPUDevice(await getGPUAdapter(), {
+      required: [],
+      optional: OPTIONAL_FEATURES,
+      limits: {},
+    });
+    void device.lost.then(() => {
+      sharedDevice = null;
+    });
+    return device;
+  })().catch((error) => {
+    sharedDevice = null;
+    throw error;
+  });
+
+/** <WebGPU> over the page's shared device: fresh roots, one device. */
+const SharedWebGPU = (
+  { fallback, children }: {
+    fallback: (error: unknown) => LiveElement;
+    children: LiveElement;
+  },
+) => {
+  const [device, error] = useAwait(() => pageDevice(), []);
+  useResource((dispose) => {
+    if (!device) return;
+    const handler = (event: Event) =>
+      console.error((event as GPUUncapturedErrorEvent).error.message);
+    device.addEventListener("uncapturederror", handler);
+    dispose(() => device.removeEventListener("uncapturederror", handler));
+  }, [device]);
+  return device
+    ? provide(DeviceContext, device, wrap(Queue, children))
+    : error
+    ? fallback(error)
+    : null;
+};
 
 /**
  * Publishes the WebGPU device state on the host as `data-webgpu` (pending,
@@ -154,7 +209,7 @@ const ViewerRoot = (initial: ViewerState) => {
       delete element.dataset.webgpuMs;
     }
   }, [initial.host]);
-  return use(WebGPU, {
+  return use(SharedWebGPU, {
     fallback: (error: unknown) => {
       const element = document.querySelector<HTMLElement>(host);
       if (element) element.dataset.webgpu = "error";
