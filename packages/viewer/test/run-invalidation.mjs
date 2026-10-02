@@ -21,10 +21,7 @@
 // Run: deno task test:viewer:invalidation
 import { assert, assertEquals, assertStrictEquals } from "@std/assert";
 import { fromFileUrl } from "@std/path";
-import { createServer } from "vite";
-import { chromium } from "playwright";
-import { webgpuBrowserArgs } from "./webgpu-browser-args.mjs";
-import { workspaceAliases } from "../../../scripts/workspace-aliases.mjs";
+import { launchWebGpuBrowser, startDevServer } from "./harness.mjs";
 
 const root = fromFileUrl(new URL("../../../", import.meta.url));
 const out = `${root}packages/viewer/test/results`;
@@ -43,45 +40,14 @@ function test(name, options, fn) {
 }
 
 async function setup() {
-  server = await createServer({
-    root,
-    configFile: false,
-    logLevel: "warn",
-    resolve: { alias: workspaceAliases() },
-    server: { host: "127.0.0.1", port: PORT, strictPort: true },
-    optimizeDeps: {
-      entries: ["packages/viewer/test/invalidation.html"],
-      exclude: [
-        "@molgpu/fields",
-        "@molgpu/table",
-        "@molgpu/io",
-        "@molgpu/geo",
-        "@molgpu/select",
-        "@molgpu/timeline",
-        "@molgpu/viewer",
-        "@use-gpu/glyph",
-      ],
-      include: [
-        "@use-gpu/live",
-        "@use-gpu/workbench",
-        "@use-gpu/webgpu",
-        "@use-gpu/core",
-        // @molgpu/timeline imports this pinned easing module. Prebundle it before
-        // navigation so Vite does not reload live modules with an Outdated
-        // Optimize Dep response during the test.
-        "@use-gpu/core/mjs/ease.mjs",
-        "@use-gpu/shader",
-        "@use-gpu/shader/wgsl",
-        "@use-gpu/wgsl",
-      ],
-    },
+  server = await startDevServer({
+    port: PORT,
+    entries: ["packages/viewer/test/invalidation.html"],
+    // Labels load @use-gpu/glyph's wasm text shaper, which breaks when
+    // pre-bundled; leave it unbundled as before.
+    exclude: ["@use-gpu/glyph"],
   });
-  await server.listen();
-  browser = await chromium.launch({
-    channel: "chrome",
-    headless: true,
-    args: webgpuBrowserArgs,
-  });
+  browser = await launchWebGpuBrowser();
   page = await browser.newPage({ viewport: { width: 640, height: 480 } });
   const pageErrors = [];
   page.on("pageerror", (e) => pageErrors.push(String(e)));

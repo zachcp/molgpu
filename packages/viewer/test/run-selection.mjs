@@ -1,17 +1,12 @@
 import { assert, assertEquals } from "@std/assert";
-import { fromFileUrl } from "@std/path";
-import { createServer } from "vite";
-import { chromium } from "playwright";
-import { workspaceAliases } from "../../../scripts/workspace-aliases.mjs";
-import { webgpuBrowserArgs } from "./webgpu-browser-args.mjs";
+import { launchWebGpuBrowser, startDevServer } from "./harness.mjs";
 
 Deno.test("subtree-local public selection props", async () => {
-  const root = fromFileUrl(new URL("../../../", import.meta.url));
   const cacheDir = await Deno.makeTempDir({ prefix: "molgpu-selection-vite-" });
-  const server = await createServer({
+  const server = await startDevServer({
+    port: 5216,
+    entries: ["packages/viewer/test/selection/index.html"],
     cacheDir,
-    root,
-    configFile: false,
     oxc: {
       jsx: {
         runtime: "classic",
@@ -19,47 +14,11 @@ Deno.test("subtree-local public selection props", async () => {
         pragmaFrag: "React.Fragment",
       },
     },
-    resolve: { alias: workspaceAliases() },
-    server: { host: "127.0.0.1", port: 5216, strictPort: true },
-    optimizeDeps: {
-      noDiscovery: true,
-      entries: ["packages/viewer/test/selection/index.html"],
-      exclude: [
-        "@molgpu/viewer",
-        "@molgpu/table",
-        "@molgpu/select",
-        "@molgpu/fields",
-        "@molgpu/io",
-      ],
-      include: [
-        "@use-gpu/live",
-        "@use-gpu/workbench",
-        "@use-gpu/webgpu",
-        "@use-gpu/core",
-        "@use-gpu/core/mjs/ease.mjs",
-        "@use-gpu/shader",
-        "@use-gpu/shader/wgsl",
-        "@use-gpu/wgsl",
-        "molstar/lib/mol-io/reader/cif.js",
-        "molstar/lib/mol-model-formats/structure/mmcif.js",
-        "molstar/lib/mol-model-formats/structure/property/secondary-structure.js",
-        "molstar/lib/mol-model-formats/structure/property/bonds/chem_comp.js",
-        "molstar/lib/mol-model-formats/structure/property/bonds/struct_conn.js",
-        "molstar/lib/mol-task/index.js",
-        "molstar/lib/mol-math/geometry/molecular-surface.js",
-        "molstar/lib/mol-math/geometry/boundary.js",
-        "molstar/lib/mol-data/int/ordered-set.js",
-      ],
-    },
+    noDiscovery: true,
   });
   let browser;
   try {
-    await server.listen();
-    browser = await chromium.launch({
-      channel: "chrome",
-      headless: true,
-      args: webgpuBrowserArgs,
-    });
+    browser = await launchWebGpuBrowser();
     const page = await browser.newPage({
       viewport: { width: 640, height: 480 },
     });

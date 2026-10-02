@@ -1,8 +1,7 @@
 import { assertEquals, assertStrictEquals } from "@std/assert";
 import { extname, fromFileUrl, normalize } from "@std/path";
 import { build } from "vite";
-import { chromium } from "playwright";
-import { webgpuBrowserArgs } from "./webgpu-browser-args.mjs";
+import { launchWebGpuBrowser } from "./harness.mjs";
 
 Deno.test("GPU DSSP agrees with CPU on the pinned protein corpus", async () => {
   const fixture = fromFileUrl(new URL("./gpu-dssp/", import.meta.url));
@@ -29,11 +28,7 @@ Deno.test("GPU DSSP agrees with CPU on the pinned protein corpus", async () => {
   let browser;
   try {
     const address = server.addr;
-    browser = await chromium.launch({
-      channel: "chrome",
-      headless: true,
-      args: webgpuBrowserArgs,
-    });
+    browser = await launchWebGpuBrowser();
     const page = await browser.newPage();
     page.setDefaultTimeout(120000);
     const errors = [];

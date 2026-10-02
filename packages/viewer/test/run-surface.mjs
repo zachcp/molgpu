@@ -3,60 +3,24 @@
 // selection renders nothing without error, and color/opacity does not
 // rebuild geometry.
 import { assert, assertEquals, assertStrictEquals } from "@std/assert";
-import { fromFileUrl } from "@std/path";
-import { createServer } from "vite";
-import { chromium } from "playwright";
-import { webgpuBrowserArgs } from "./webgpu-browser-args.mjs";
-import { workspaceAliases } from "../../../scripts/workspace-aliases.mjs";
+import {
+  captureErrors,
+  launchWebGpuBrowser,
+  startDevServer,
+} from "./harness.mjs";
 
 Deno.test("viewer surface", async () => {
-  const root = fromFileUrl(new URL("../../../", import.meta.url));
-  const server = await createServer({
-    root,
-    configFile: false,
-    resolve: { alias: workspaceAliases() },
-    server: { host: "127.0.0.1", port: 5201, strictPort: true },
-    optimizeDeps: {
-      entries: ["packages/viewer/test/surface.html"],
-      exclude: [
-        "@molgpu/fields",
-        "@molgpu/table",
-        "@molgpu/io",
-        "@molgpu/geo",
-        "@molgpu/select",
-        "@molgpu/viewer",
-      ],
-      include: [
-        "@use-gpu/live",
-        "@use-gpu/workbench",
-        "@use-gpu/webgpu",
-        "@use-gpu/core",
-        // @molgpu/timeline imports this pinned easing module. Prebundle it before
-        // navigation so Vite does not reload live modules with an Outdated
-        // Optimize Dep response during the test.
-        "@use-gpu/core/mjs/ease.mjs",
-        "@use-gpu/shader",
-        "@use-gpu/shader/wgsl",
-        "@use-gpu/wgsl",
-      ],
-    },
+  const server = await startDevServer({
+    port: 5201,
+    entries: ["packages/viewer/test/surface.html"],
   });
   let browser;
   try {
-    await server.listen();
-    browser = await chromium.launch({
-      channel: "chrome",
-      headless: true,
-      args: webgpuBrowserArgs,
-    });
+    browser = await launchWebGpuBrowser();
     const page = await browser.newPage({
       viewport: { width: 640, height: 480 },
     });
-    const errors = [];
-    page.on("pageerror", (e) => errors.push(String(e)));
-    page.on("console", (m) => {
-      if (m.type() === "error") errors.push(m.text());
-    });
+    const errors = captureErrors(page);
     await page.goto("http://127.0.0.1:5201/packages/viewer/test/surface.html");
     await page.waitForFunction(
       () => globalThis.__probe?.mounted && document.querySelector("canvas"),

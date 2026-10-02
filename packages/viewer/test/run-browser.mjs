@@ -1,9 +1,8 @@
 import { assert, assertEquals, assertStrictEquals } from "@std/assert";
 import { fromFileUrl } from "@std/path";
 import { createServer } from "vite";
-import { chromium } from "playwright";
-import { webgpuBrowserArgs } from "./webgpu-browser-args.mjs";
 import { workspaceAliases } from "../../../scripts/workspace-aliases.mjs";
+import { captureErrors, launchWebGpuBrowser } from "./harness.mjs";
 
 Deno.test("viewer GPU smoke", async () => {
   const root = fromFileUrl(new URL("../../../", import.meta.url));
@@ -34,20 +33,12 @@ Deno.test("viewer GPU smoke", async () => {
   await Deno.writeTextFile(`${out}/report.json`, JSON.stringify(report));
   try {
     await server.listen();
-    browser = await chromium.launch({
-      channel: "chrome",
-      headless: true,
-      args: webgpuBrowserArgs,
-    });
+    browser = await launchWebGpuBrowser();
     const page = await browser.newPage({
       viewport: { width: 800, height: 600 },
       deviceScaleFactor: 1,
     });
-    const errors = [];
-    page.on("pageerror", (e) => errors.push(String(e)));
-    page.on("console", (m) => {
-      if (m.type() === "error") errors.push(m.text());
-    });
+    const errors = captureErrors(page);
     await page.goto("http://127.0.0.1:5186/packages/viewer/test/index.html");
     await page.waitForFunction(() => globalThis.__adapter?.mounted, null, {
       timeout: 30000,
