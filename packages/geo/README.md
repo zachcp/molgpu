@@ -50,17 +50,19 @@ interpolateSizes(state, w0, w1, w2, h0, h1, h2, 0.5); // widths and heights
 
 ## API
 
-| Export                    | Stability    | Description                                                                     |
-| ------------------------- | ------------ | ------------------------------------------------------------------------------- |
-| `marchingCubes`           | stable       | Indexed isosurface mesh from an x-major scalar grid.                            |
-| `MarchingCubesInput`      | stable       | Grid, isovalue, and origin/spacing or a full index-to-world affine `transform`. |
-| `MarchingCubesMesh`       | stable       | Positions, normals, indices and counts returned by `marchingCubes`.             |
-| `nearestAtomAttribution`  | stable       | Exact nearest atom per vertex, with a uniform-grid fast path.                   |
-| `createCurveSegmentState` | experimental | Allocate the per-segment scratch buffers.                                       |
-| `interpolateCurveSegment` | experimental | Points, tangents, normals and binormals for one segment.                        |
-| `interpolateSizes`        | experimental | Width and height profile along a segment.                                       |
-| `CurveSegmentState`       | experimental | Scratch buffers, mutated in place by the interpolators.                         |
-| `CurveSegmentControls`    | experimental | Guide points p0–p4 and end directions d12/d23 for a segment.                    |
+| Export                    | Stability    | Description                                                                        |
+| ------------------------- | ------------ | ---------------------------------------------------------------------------------- |
+| `marchingCubes`           | stable       | Indexed isosurface mesh from an x-major scalar grid.                               |
+| `MarchingCubesInput`      | stable       | Grid, isovalue, and origin/spacing or a full index-to-world affine `transform`.    |
+| `MarchingCubesMesh`       | stable       | Positions, normals, indices and counts returned by `marchingCubes`.                |
+| `marchingCubesTables`     | experimental | The lookup tables `marchingCubes` reads, packed flat (for example for a GPU port). |
+| `MarchingCubesTables`     | experimental | Edge masks, triangle edge lists, their lengths and the cube-edge corners.          |
+| `nearestAtomAttribution`  | stable       | Exact nearest atom per vertex, with a uniform-grid fast path.                      |
+| `createCurveSegmentState` | experimental | Allocate the per-segment scratch buffers.                                          |
+| `interpolateCurveSegment` | experimental | Points, tangents, normals and binormals for one segment.                           |
+| `interpolateSizes`        | experimental | Width and height profile along a segment.                                          |
+| `CurveSegmentState`       | experimental | Scratch buffers, mutated in place by the interpolators.                            |
+| `CurveSegmentControls`    | experimental | Guide points p0–p4 and end directions d12/d23 for a segment.                       |
 
 The curve-segment kernels are experimental because they mirror Mol*'s
 mutable-state calling convention. They may later be wrapped in a whole-trace

@@ -82,10 +82,38 @@ builds the pipelines. The GPU field is 7–26× faster than the CPU field.
    ms on 1tqn. The per-atom version above, with workgroup-memory neighbours,
    brought 1tqn from 69 ms to 28 ms.
 
+## GPU marching cubes (`molgpu-sept-mqo.2`)
+
+`packages/viewer/src/internal/marching-cubes-gpu.ts` reproduces `@molgpu/geo`'s
+`marchingCubes` on the GPU. It uses the same tables, which `@molgpu/geo` now
+exports packed as `marchingCubesTables()`.
+
+- **Counts and offsets:** a classify pass counts each cube's vertices and
+  indices, and two exclusive scans place every cube's output. The scans use the
+  new fold-safe `internal/gpu-scan.ts`, which the SES cell list also uses now.
+- **Readback:** only the two totals (8 bytes) are read back, to size the output.
+- **Emit:** a final pass writes the positions, normals and indices. Order,
+  winding and normals (clamped central differences mapped through the inverse
+  transpose) follow the CPU builder exactly.
+
+Each mesh below is extracted from the GPU field above, and the CPU mesh is
+`marchingCubes` of the same samples read back:
+
+| Protein |  Vertices | Index mismatches | Max position Δ | Min normal cos | GPU field + mesh | CPU mesh |
+| ------- | --------: | ---------------: | -------------: | -------------: | ---------------: | -------: |
+| 1crn    |    54,664 |                0 |         3.8e-6 |     1 − 1.0e-7 |     9.1 + 2.6 ms |    19 ms |
+| 1ejg    |    55,512 |                0 |         9.5e-6 |     1 − 1.0e-7 |     9.0 + 2.2 ms |    14 ms |
+| 1tqn    |   498,328 |                0 |         1.1e-5 |     1 − 1.0e-7 |    27.1 + 7.5 ms |   129 ms |
+| 1a4y    | 1,108,504 |                0 |         7.6e-6 |     1 − 1.0e-7 |   59.8 + 14.9 ms |   273 ms |
+| 4c7r    | 1,543,448 |                0 |         6.1e-5 |     1 − 1.0e-7 |   82.3 + 24.1 ms |   403 ms |
+
+The counts and offsets cost 16 bytes per cube while the mesh is built. For 4c7r
+that is 137 MiB of transient memory, released before the call returns. If that
+becomes a limit, packing both counts into one array, or running a sparse pass
+that touches only cut cubes, would halve it or better.
+
 ## Next
 
-`molgpu-sept-mqo.2` meshes this field on the GPU (CPU `marchingCubes` does not
-weld across cells, so the port can emit the same unwelded vertices).
 `molgpu-sept-mqo.3` ports attribution. `molgpu-sept-mqo.4` wires the
 live-coordinate `<Surface>` path. The 1tqn field leaves about 70 ms of the 100
 ms budget for meshing, attribution and the draw.

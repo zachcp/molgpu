@@ -2,9 +2,11 @@ import { activeAtoms, atomRadii } from "@molgpu/table";
 import { molecularSurfaceField, structureFromBcif } from "@molgpu/io";
 import { marchingCubes } from "@molgpu/geo";
 import { gpuSesField } from "../../src/internal/ses-field.ts";
+import { gpuMarchingCubes } from "../../src/internal/marching-cubes-gpu.ts";
 
 declare global {
   var runSesField: (id: string) => Promise<Record<string, unknown>>;
+  var runMarchingCubes: (id: string) => Promise<Record<string, unknown>>;
 }
 
 /** Total triangle area of an indexed mesh. */
@@ -138,6 +140,122 @@ globalThis.runSesField = async (id: string) => {
     cpuMs,
     workingBytes: gpu.workingBytes,
     readbackBytes: gpu.readbackBytes,
+    errors,
+  };
+};
+
+async function readBuffer(buffer: GPUBuffer, bytes: number) {
+  const staging = device.createBuffer({ size: bytes, usage: 0x0001 | 0x0008 });
+  const encoder = device.createCommandEncoder();
+  encoder.copyBufferToBuffer(buffer, 0, staging, 0, bytes);
+  device.queue.submit([encoder.finish()]);
+  await staging.mapAsync(0x0001);
+  const copy = staging.getMappedRange().slice(0);
+  staging.unmap();
+  staging.destroy();
+  return copy;
+}
+
+/**
+ * The GPU mesh of the GPU field against geo's marchingCubes of the same field
+ * read back: identical topology, positions and normals to f32 rounding.
+ */
+globalThis.runMarchingCubes = async (id: string) => {
+  if (!device) {
+    const adapter = await navigator.gpu.requestAdapter();
+    if (!adapter) throw new Error("no WebGPU adapter");
+    device = await adapter.requestDevice();
+  }
+  const bytes = new Uint8Array(
+    await (await fetch(`/${id}.bcif`)).arrayBuffer(),
+  );
+  const data = await structureFromBcif(bytes);
+  const atomCount = data.topology.atoms.count;
+  const positions = device.createBuffer({
+    size: atomCount * 12,
+    usage: 0x0080 | 0x0008,
+  });
+  device.queue.writeBuffer(positions, 0, data.positions as BufferSource);
+  const options = {
+    atomCount,
+    rows: activeAtoms(data),
+    radii: atomRadii(data),
+  };
+  const errors: string[] = [];
+  device.pushErrorScope("validation");
+  const field = (await gpuSesField(device, positions, options))!;
+  const mcOptions = {
+    dims: field.dims,
+    level: field.level,
+    transform: field.transform,
+  };
+  // Warm the pipelines, then time a field + mesh rebuild.
+  const warm = (await gpuMarchingCubes(device, field.field, mcOptions))!;
+  for (const b of [warm.positions, warm.normals, warm.indices]) b.destroy();
+  field.field.destroy();
+  const t0 = performance.now();
+  const timed = (await gpuSesField(device, positions, options))!;
+  const t1 = performance.now();
+  const mesh = (await gpuMarchingCubes(device, timed.field, mcOptions))!;
+  const t2 = performance.now();
+  const scoped = await device.popErrorScope();
+  if (scoped) errors.push(scoped.message);
+  const samples = timed.dims[0] * timed.dims[1] * timed.dims[2];
+  const values = new Float32Array(await readBuffer(timed.field, samples * 4));
+  const gpuPositions = new Float32Array(
+    await readBuffer(mesh.positions, mesh.vertexCount * 12),
+  );
+  const gpuNormals = new Float32Array(
+    await readBuffer(mesh.normals, mesh.vertexCount * 12),
+  );
+  const gpuIndices = new Uint32Array(
+    await readBuffer(mesh.indices, mesh.triangleCount * 12),
+  );
+  for (const b of [mesh.positions, mesh.normals, mesh.indices, timed.field]) {
+    b.destroy();
+  }
+  positions.destroy();
+  const t3 = performance.now();
+  const cpu = marchingCubes({ values, ...mcOptions });
+  const cpuMs = performance.now() - t3;
+  let indexMismatch = gpuIndices.length === cpu.indices.length ? 0 : -1;
+  if (!indexMismatch) {
+    for (let i = 0; i < gpuIndices.length; i++) {
+      if (gpuIndices[i] !== cpu.indices[i]) indexMismatch++;
+    }
+  }
+  let positionDiff = 0, normalDot = 1;
+  if (mesh.vertexCount === cpu.vertexCount) {
+    for (let v = 0; v < cpu.vertexCount * 3; v++) {
+      positionDiff = Math.max(
+        positionDiff,
+        Math.abs(gpuPositions[v] - cpu.positions[v]),
+      );
+    }
+    for (let v = 0; v < cpu.vertexCount; v++) {
+      const a = cpu.normals.subarray(v * 3, v * 3 + 3);
+      const b = gpuNormals.subarray(v * 3, v * 3 + 3);
+      const length = Math.hypot(...a);
+      if (length === 0) continue;
+      normalDot = Math.min(
+        normalDot,
+        (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]) / length,
+      );
+    }
+  }
+  return {
+    id,
+    vertices: mesh.vertexCount,
+    cpuVertices: cpu.vertexCount,
+    triangles: mesh.triangleCount,
+    indexMismatch,
+    positionDiff,
+    normalDot,
+    fieldMs: t1 - t0,
+    meshMs: t2 - t1,
+    cpuMeshMs: cpuMs,
+    meshBytes: mesh.vertexCount * 24 + mesh.triangleCount * 12,
+    workingBytes: mesh.workingBytes,
     errors,
   };
 };

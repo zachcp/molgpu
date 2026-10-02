@@ -6,6 +6,9 @@ All notable changes to `@molgpu/geo` are recorded here. The format follows
 
 ## [Unreleased]
 
+- `marchingCubesTables()` (experimental) returns the tables `marchingCubes`
+  reads as flat typed arrays, so a GPU port can upload exactly the same
+  configuration data.
 - `nearestAtomAttribution` is 11–14× faster: a dense CSR cell grid replaces
   per-vertex string-keyed map lookups. Results are unchanged (same search order
   and certificate); widely scattered atoms widen the grid's cells to bound its

@@ -4,7 +4,7 @@ import {
   assertStrictEquals,
   assertThrows,
 } from "@std/assert";
-import { marchingCubes } from "../src/index.ts";
+import { marchingCubes, marchingCubesTables } from "../src/index.ts";
 import { Tensor } from "molstar/lib/mol-math/linear-algebra/tensor.js";
 import { computeMarchingCubesMesh } from "molstar/lib/mol-geo/util/marching-cubes/algorithm.js";
 
@@ -194,4 +194,25 @@ Deno.test("transform excludes origin/spacing and must be an invertible affine", 
     TypeError,
     "invertible",
   );
+});
+
+Deno.test("marchingCubesTables: each configuration's triangles use exactly its cut edges", () => {
+  const { edges, triangles, triangleLengths, cubeEdges } =
+    marchingCubesTables();
+  assertEquals(edges.length, 256);
+  assertEquals(cubeEdges.length, 72);
+  for (let mask = 0; mask < 256; mask++) {
+    const length = triangleLengths[mask];
+    assertEquals(length % 3, 0);
+    let used = 0;
+    for (let k = 0; k < 16; k++) {
+      const edge = triangles[mask * 16 + k];
+      if (k < length) used |= 1 << edge;
+      else assertEquals(edge, 255);
+    }
+    assertEquals(used, edges[mask], `configuration ${mask}`);
+  }
+  // Fresh arrays per call.
+  marchingCubesTables().edges[1] = 0;
+  assertEquals(marchingCubesTables().edges[1], edges[1]);
 });

@@ -28,6 +28,21 @@ export interface MarchingCubesMesh {
   readonly triangleCount: number;
 }
 
+/**
+ * The lookup tables `marchingCubes` uses, packed as flat typed arrays (for
+ * example to upload to a GPU port). Each call returns fresh, owned arrays.
+ */
+export interface MarchingCubesTables {
+  /** Edge mask per cube configuration: 256 entries, bit e set when edge e is cut. */
+  readonly edges: Uint16Array;
+  /** Edge list per configuration, three per triangle: 256 × 16 slots, padded with 255. */
+  readonly triangles: Uint8Array;
+  /** Used slots of `triangles` per configuration: 256 entries. */
+  readonly triangleLengths: Uint8Array;
+  /** Corner offsets of the 12 cube edges: (ai, aj, ak, bi, bj, bk) per edge. */
+  readonly cubeEdges: Uint8Array;
+}
+
 /** Scratch buffers for one interpolated curve segment of `linearSegments + 1` samples. Mutated in place. */
 export interface CurveSegmentState {
   readonly curvePoints: Float32Array;

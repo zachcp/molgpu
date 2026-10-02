@@ -10,6 +10,8 @@ MarchingCubesInput
   export interface MarchingCubesInput { /** Scalar grid, x-major: `values[x + nx * (y + ny * z)]`. */ readonly values: Float32Array; /** Grid dimensions `[nx, ny, nz]`, each an integer ≥ 2. */ readonly dims: readonly [number, number, number]; /** Isovalue; a corner is "inside" when its value is below it. Default 0. */ readonly level?: number; /** World position of grid point (0, 0, 0). Default `[0, 0, 0]`. */ readonly origin?: readonly [number, number, number]; /** World distance between grid points on each axis (nonzero). Default `[1, 1, 1]`. */ readonly spacing?: readonly [number, number, number]; /** * Column-major 4×4 affine from grid index to world, which may rotate and * shear. Replaces `origin`/`spacing` (passing both is an error). Normals map * through the inverse transpose; a mirroring affine keeps winding consistent. */ readonly transform?: ArrayLike<number> }
 MarchingCubesMesh
   export interface MarchingCubesMesh { readonly positions: Float32Array; readonly normals: Float32Array; readonly indices: Uint32Array; readonly vertexCount: number; readonly triangleCount: number }
+MarchingCubesTables
+  export interface MarchingCubesTables { /** Edge mask per cube configuration: 256 entries, bit e set when edge e is cut. */ readonly edges: Uint16Array; /** Edge list per configuration, three per triangle: 256 × 16 slots, padded with 255. */ readonly triangles: Uint8Array; /** Used slots of `triangles` per configuration: 256 entries. */ readonly triangleLengths: Uint8Array; /** Corner offsets of the 12 cube edges: (ai, aj, ak, bi, bj, bk) per edge. */ readonly cubeEdges: Uint8Array }
 createCurveSegmentState
   export function createCurveSegmentState(linearSegments: number): CurveSegmentState;
 interpolateCurveSegment
@@ -18,5 +20,7 @@ interpolateSizes
   export function interpolateSizes(state: CurveSegmentState, w0: number, w1: number, w2: number, h0: number, h1: number, h2: number, shift: number): void;
 marchingCubes
   export function marchingCubes(input: MarchingCubesInput): MarchingCubesMesh;
+marchingCubesTables
+  export function marchingCubesTables(): MarchingCubesTables;
 nearestAtomAttribution
   export function nearestAtomAttribution(positions: Float32Array, atomPositions: Float32Array, cellSize: number): Uint32Array;
