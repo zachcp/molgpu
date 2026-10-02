@@ -39,6 +39,15 @@ GPUDevice.prototype.createBuffer = function (desc) {
   }
   return buffer;
 };
+// Destroyed buffers by label: a GPU surface build's frozen frame is destroyed
+// when the build finishes or aborts, so frames created minus destroyed counts
+// builds in flight.
+probe.destroyed = {};
+const destroy = GPUBuffer.prototype.destroy;
+GPUBuffer.prototype.destroy = function () {
+  probe.destroyed[this.label] = (probe.destroyed[this.label] ?? 0) + 1;
+  return destroy.call(this);
+};
 const write = GPUQueue.prototype.writeBuffer;
 GPUQueue.prototype.writeBuffer = function (
   buffer,

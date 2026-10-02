@@ -233,6 +233,18 @@ Deno.test("viewer surface", async () => {
       await page.evaluate((x) => globalThis.__probe.setShift(x), 3 + i * 0.25);
       await page.evaluate(() => new Promise(requestAnimationFrame));
     }
+    // Wait until every GPU build has finished or aborted: a slow (software)
+    // GPU can still be building a burst generation after a few frames.
+    const quiesce = () =>
+      page.waitForFunction(
+        () =>
+          globalThis.__probe.storageBuffers.filter((b) =>
+            b.label === "molgpu:ses:frame"
+          ).length === (globalThis.__probe.destroyed["molgpu:ses:frame"] ?? 0),
+        null,
+        { timeout: 120000, polling: 100 },
+      );
+    await quiesce();
     await settle();
     await settle();
     const burst = await gpuMeshes();
@@ -245,6 +257,7 @@ Deno.test("viewer surface", async () => {
     await page.evaluate(() => globalThis.__probe.setColor([0.2, 0.6, 0.9, 1]));
     await settle();
     await settle();
+    await quiesce();
     assertEquals(
       await gpuMeshes(),
       burst,
