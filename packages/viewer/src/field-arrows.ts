@@ -1,7 +1,7 @@
 // <FieldArrows>: E = −∇φ glyphs on a lattice in a plane through the nearest
 // volume. Every endpoint is a shader function of the arrow index, the plane
 // uniforms and the live samples: no compute pass and no per-move buffer.
-// See docs/findings/2026-09-27-efield-plan.md (egp.7).
+// See docs/findings/2026-09-27-efield-plan.md.
 import { use, useMemo } from "@use-gpu/live";
 import {
   ArrowLayer,

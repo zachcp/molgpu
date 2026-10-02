@@ -63,7 +63,7 @@ export function useCoordinateFocus(
       maxRadius = Math.max(maxRadius, radii[row] * atomRadiusScale);
     }
     // Representations draw the asymmetric unit, so assembly instance
-    // transforms do not widen the framing (molgpu-sept-crj.8).
+    // transforms do not widen the framing.
     const lo = bounds.min.map((value) => value - maxRadius);
     const hi = bounds.max.map((value) => value + maxRadius);
     const center = lo.map((value, axis) => (value + hi[axis]) / 2);

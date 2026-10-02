@@ -16,7 +16,7 @@ export interface PickEntry {
  * (indices maps drawn instance -> atom row, or null when the representation drew
  * the whole structure and instance index === atom row).
  *
- * Returns `{ id, resource, atom, instance } | null`. Null means the cursor is
+ * Returns `{ id, resource, atom, drawIndex } | null`. Null means the cursor is
  * over the background (object id 0) or over an object not in the registry, or a
  * stale instance index outside the current selection.
  */
@@ -33,7 +33,7 @@ export const resolvePick = (
   const { resource, indices } = entry;
   if (indices) {
     if (instance < 0 || instance >= indices.length) return null;
-    return { id, resource, atom: indices[instance], instance };
+    return { id, resource, atom: indices[instance], drawIndex: instance };
   }
-  return { id, resource, atom: instance, instance };
+  return { id, resource, atom: instance, drawIndex: instance };
 };

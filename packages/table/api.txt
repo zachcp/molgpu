@@ -5,7 +5,7 @@
 ATTRIBUTE_DOMAINS
   export const ATTRIBUTE_DOMAINS: Readonly<{ element: "atom"; occupancy: "atom"; bfactor: "atom"; radius: "atom"; residue: "atom"; atomChain: "atom"; formalCharge: "atom"; partialCharge: "atom"; labelSeq: "residue"; chain: "residue"; ssCode: "residue" }>;
 Atoms
-  export interface Atoms { readonly count: number; readonly id: readonly string[]; readonly name: readonly string[]; readonly altloc: readonly string[]; readonly residue: Uint32Array; /** Atomic number; 0 denotes unknown. */ readonly element: Uint8Array; readonly occupancy: Float32Array; readonly bfactor: Float32Array; readonly radius?: Float32Array; /** Per-atom chemical component, present only when some residue mixes components (microheterogeneity); residues.comp is then the residue's first atom's. */ readonly comp?: readonly string[]; /** * Formal charge on hand-built structures; resolves as `formalCharge` with * provenance `legacy`. @deprecated Set the derived `formalCharge` attribute * with `withAttributes`; `@molgpu/io` no longer writes this column. */ readonly formalCharge?: Int8Array }
+  export interface Atoms { readonly count: number; readonly id: readonly string[]; readonly name: readonly string[]; readonly altloc: readonly string[]; readonly residue: Uint32Array; /** Atomic number; 0 denotes unknown. */ readonly element: Uint8Array; readonly occupancy: Float32Array; readonly bfactor: Float32Array; readonly radius?: Float32Array; /** Per-atom chemical component, present only when some residue mixes components (microheterogeneity); residues.comp is then the residue's first atom's. */ readonly comp?: readonly string[] }
 AttributeColumn
   export interface AttributeColumn extends AttributeColumnInput { readonly name: string }
 AttributeColumnInput
@@ -13,7 +13,7 @@ AttributeColumnInput
 AttributeDomain
   export type AttributeDomain = "atom" | "residue";
 AttributeProvenance
-  export type AttributeProvenance = "legacy" | "default" | "user" | `imported:${string}` | `template:${string}` | `computed:${string}` | `gpu:${string}`;
+  export type AttributeProvenance = "topology" | "default" | "user" | `imported:${string}` | `template:${string}` | `computed:${string}` | `gpu:${string}`;
 AttributeValues
   export type AttributeValues = Float32Array | Int8Array | Uint8Array | Int32Array | Uint32Array;
 BOND_FLAGS
@@ -33,7 +33,7 @@ Links
 MAX_VOLUME_SAMPLES
   export const MAX_VOLUME_SAMPLES: number;
 Residues
-  export interface Residues { readonly count: number; readonly chain: Uint32Array; /** -1 denotes missing label_seq_id. */ readonly labelSeq: Int32Array; readonly authSeq: readonly string[]; readonly insertionCode: readonly string[]; readonly comp: readonly string[]; readonly polymer: readonly ("protein" | "rna" | "dna" | "other")[]; /** * 3-state secondary structure on hand-built structures; resolves as `ssCode` * (helix H, sheet E) with provenance `legacy`. @deprecated Set the derived * `ssCode` attribute with `withAttributes`; `@molgpu/io` no longer writes * this column. */ readonly secondaryStructure?: readonly ("helix" | "sheet" | "coil")[]; /** 1 when the residue's first atom is not a group_PDB ATOM record (a HETATM). Absent when the source has no group_PDB. */ readonly het?: Uint8Array }
+  export interface Residues { readonly count: number; readonly chain: Uint32Array; /** -1 denotes missing label_seq_id. */ readonly labelSeq: Int32Array; readonly authSeq: readonly string[]; readonly insertionCode: readonly string[]; readonly comp: readonly string[]; readonly polymer: readonly ("protein" | "rna" | "dna" | "other")[]; /** 1 when the residue's first atom is not a group_PDB ATOM record (a HETATM). Absent when the source has no group_PDB. */ readonly het?: Uint8Array }
 SS_CODES
   export const SS_CODES: readonly ["-", "H", "B", "E", "G", "I", "T", "S", "P"];
 SecondaryStructureTrace

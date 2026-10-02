@@ -31,7 +31,7 @@ Deno.test("a whole-structure pickable maps instance index straight to the atom r
     id: 7,
     resource: resource("R-all"),
     atom: 3,
-    instance: 3,
+    drawIndex: 3,
   });
 });
 
@@ -40,7 +40,7 @@ Deno.test("a selection pickable maps the instance index through its indices", ()
     id: 9,
     resource: resource("R-sel"),
     atom: 20,
-    instance: 2,
+    drawIndex: 2,
   });
 });
 

@@ -1,6 +1,6 @@
 // @molgpu/select — pure selection queries and dataset-bound resolved selections.
 //
-// Two concepts, kept deliberately apart (see the Phase 2 architecture review):
+// Two concepts, kept deliberately apart (see the architecture review):
 //
 //   SelectionQuery  a reusable, structure-independent recipe. Building one
 //                   touches no dataset, so the same query resolves against many

@@ -55,7 +55,7 @@ NormalMode
 NormalModeProps
   export interface NormalModeProps { children?: ViewerElement; mode: NormalModeData; amplitude: number; /** Cycles per second; a nonzero value requires a TimelineProvider. */ frequency?: number; /** Radians at time zero. */ phase?: number }
 PickHit
-  export interface PickHit { readonly id: number; readonly resource: StructureResource; readonly atom: number; readonly instance: number }
+  export interface PickHit { readonly id: number; readonly resource: StructureResource; readonly atom: number; readonly drawIndex: number }
 PickingProvider
   export const PickingProvider: ViewerComponent<{ children?: ViewerElement }>;
 PointLayerOptions
@@ -166,7 +166,7 @@ StructureBounds
 StructureResource
   export interface StructureResource { readonly data: StructureData; readonly identity: StructureData["identity"]; readonly topologyRevision: number; readonly positionsRevision: number; readonly attributesRevision: number; /** Lazily computed and cached; throws once the resource is disposed. */ readonly bounds: StructureBounds | null; dispose(): void }
 StructureSources
-  export interface StructureSources { /** @deprecated Read the nearest stream with useCoordinates().source. */ readonly positions: ShaderSource; readonly radii: ShaderSource }
+  export interface StructureSources { /** * The root dataset's positions. Below a coordinate provider they are stale, * and reading them throws in development; use useCoordinates().source for * the nearest live stream. */ readonly positions: ShaderSource; readonly radii: ShaderSource }
 WorldSpacePointLayer
   export const WorldSpacePointLayer: LC<{ positions: ShaderSource; colors?: ShaderSource; radii: ShaderSource; count: number; scale?: number } & Omit<PointLayerProps, "positions" | "colors" | "sizes" | "count" | "depth">>;
 createStructureResource

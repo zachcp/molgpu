@@ -507,10 +507,17 @@ Deno.test("secondary-structure flags need the column", () => {
   );
   assertThrows(() => rows(helix), TypeError, "ssCode column");
   const input = fixture();
-  input.topology.residues.secondaryStructure = ["helix", "coil", "sheet"];
-  assertEquals(rows(helix, createStructure(input)), [0, 1]);
-  // A derived ssCode wins over the legacy column: G is a helix, T is not.
-  const derived = withAttributes(createStructure(input), {
+  const annotated = withAttributes(createStructure(input), {
+    ssCode: {
+      domain: "residue",
+      kind: "code",
+      provenance: "user",
+      values: Uint8Array.of(1, 0, 3), // H, coil, E
+    },
+  });
+  assertEquals(rows(helix, annotated), [0, 1]);
+  // A replacement ssCode is read as is: G is a helix, T is not.
+  const derived = withAttributes(annotated, {
     ssCode: {
       domain: "residue",
       kind: "code",
@@ -663,11 +670,17 @@ Deno.test("every core symbol evaluates like Mol*'s runtime", () => {
 
 Deno.test("het, formal charge and entity columns, and errors without them", () => {
   const input = fixture();
-  input.topology.atoms.formalCharge = Int8Array.from([1, 0, 0, 0, -1, 0]);
   input.topology.residues.het = Uint8Array.from([0, 1, 0]);
   input.topology.chains.entityId = ["7"];
   input.topology.chains.entityType = ["polymer"];
-  const full = createStructure(input);
+  const full = withAttributes(createStructure(input), {
+    formalCharge: {
+      domain: "atom",
+      kind: "code",
+      provenance: "user",
+      values: Int8Array.from([1, 0, 0, 0, -1, 0]),
+    },
+  });
   assertEquals(rows(atoms(prop("macromolecular.is-het")), full), [2, 3]);
   assertEquals(
     rows(

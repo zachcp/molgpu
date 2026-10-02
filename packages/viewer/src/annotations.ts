@@ -35,7 +35,7 @@ const anchorOf = (
 /**
  * LabelLayer binds a singular `position` as a vec4<f32> constant, so a bare
  * [x,y,z] arrives with w = 0 — a direction, projected to infinity — and the
- * glyphs silently land off-screen (hj0.6). Promote anchors to a homogeneous
+ * glyphs silently land off-screen. Promote anchors to a homogeneous
  * point before handing them over.
  */
 const toPoint = (

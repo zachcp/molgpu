@@ -118,7 +118,7 @@ const Readout = () => {
     },
   });
   probe.hover = hover
-    ? { id: hover.id, atom: hover.atom, instance: hover.instance }
+    ? { id: hover.id, atom: hover.atom, drawIndex: hover.drawIndex }
     : null;
   probe.pick = pick ? { id: pick.id, atom: pick.atom } : null;
   return null;

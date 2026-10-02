@@ -463,10 +463,11 @@ export interface PointLayerOptions {
 // --- Picking ----------------------------------------------------------------
 
 /** An atom resolved from a picking hit. `resource` is the StructureResource the
- *  atom belongs to; `atom` is its row; `instance` is the drawn instance index. */
+ *  atom belongs to; `atom` is its row; `drawIndex` is the index of the drawn
+ *  primitive within its layer (not an assembly instance). */
 export interface PickHit {
   readonly id: number;
   readonly resource: StructureResource;
   readonly atom: number;
-  readonly instance: number;
+  readonly drawIndex: number;
 }

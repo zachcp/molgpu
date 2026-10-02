@@ -66,8 +66,6 @@ for (const fixture of corpus.filter((f) => f.models === 1)) {
       column.provenance,
       hasCategory ? "imported:mmcif" : "default",
     );
-    // io no longer writes the deprecated topology column.
-    assertStrictEquals(residues.secondaryStructure, undefined);
     let helixOrSheet = 0;
     for (let r = 0; r < residues.count; r++) {
       const chainLabel = chains.labelId[residues.chain[r]];

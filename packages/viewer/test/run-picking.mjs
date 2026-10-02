@@ -115,7 +115,7 @@ Deno.test("viewer picking", async () => {
     const selected = await snap();
     assertEquals(selected.errors, [], "selected picking WebGPU errors");
     assertEquals(
-      selected.hover && [selected.hover.atom, selected.hover.instance],
+      selected.hover && [selected.hover.atom, selected.hover.drawIndex],
       [1, 0],
       `selected draw must resolve the middle atom as instance 0, got ${
         JSON.stringify(selected.hover)

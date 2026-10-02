@@ -26,7 +26,22 @@ function identity16(): number[] {
  * Chain1: 1 protein residue with only CA (no C/O) — direction fallback.
  * Chain2: 2 DNA residues with full C4'/C3' backbone, no coil/helix distinction.
  */
-function fixture({ withAnnotation = true } = {}): Mutable<StructureInput> {
+/** The fixture as a structure; annotated residues 0-1 are helix (code 1). */
+function build({ withAnnotation = true } = {}): StructureData {
+  const data = createStructure(fixture());
+  return withAnnotation
+    ? withAttributes(data, {
+      ssCode: {
+        domain: "residue",
+        kind: "code",
+        provenance: "user",
+        values: Uint8Array.of(1, 1, 0, 0, 0, 0),
+      },
+    })
+    : data;
+}
+
+function fixture(): Mutable<StructureInput> {
   const atoms = {
     // chain0 res0..res2: CA, C, O per residue
     positions: [
@@ -110,16 +125,6 @@ function fixture({ withAnnotation = true } = {}): Mutable<StructureInput> {
     comp: ["ALA", "ALA", "ALA", "GLY", "DA", "DC"],
     polymer: ["protein", "protein", "protein", "protein", "dna", "dna"],
   };
-  if (withAnnotation) {
-    residues.secondaryStructure = [
-      "helix",
-      "helix",
-      "coil",
-      "coil",
-      "coil",
-      "coil",
-    ];
-  }
   return {
     positions: Float32Array.from(atoms.positions),
     topology: {
@@ -174,7 +179,7 @@ function assertUnit(direction: Float32Array, k: number) {
 }
 
 Deno.test("rejects a non-Uint32Array selection", () => {
-  const data = createStructure(fixture());
+  const data = build();
   const trace = traceTable(data, all(data));
   assertThrows(
     // @ts-expect-error: a plain array, not a Uint32Array
@@ -185,7 +190,7 @@ Deno.test("rejects a non-Uint32Array selection", () => {
 });
 
 Deno.test("imported annotation labels each sample, and direction follows the real C=O / C4'-C3' bond", () => {
-  const data = createStructure(fixture());
+  const data = build();
   const selection = all(data);
   const trace = traceTable(data, selection);
   const ss = secondaryStructureTrace(data, selection, trace);
@@ -203,7 +208,7 @@ Deno.test("imported annotation labels each sample, and direction follows the rea
 });
 
 Deno.test("a residue missing its direction atoms (CA-only) falls back to a fixed, finite direction", () => {
-  const data = createStructure(fixture());
+  const data = build();
   const selection = all(data);
   const trace = traceTable(data, selection);
   const ss = secondaryStructureTrace(data, selection, trace);
@@ -216,7 +221,7 @@ Deno.test("a residue missing its direction atoms (CA-only) falls back to a fixed
 });
 
 Deno.test("nucleic residues resolve a direction from C4'-C3' with no crash and default to coil", () => {
-  const data = createStructure(fixture());
+  const data = build();
   const selection = all(data);
   const trace = traceTable(data, selection);
   const ss = secondaryStructureTrace(data, selection, trace);
@@ -227,7 +232,7 @@ Deno.test("nucleic residues resolve a direction from C4'-C3' with no crash and d
 });
 
 Deno.test("first/last mark run boundaries and secondary-structure transitions, never mid-block", () => {
-  const data = createStructure(fixture());
+  const data = build();
   const selection = all(data);
   const trace = traceTable(data, selection);
   const ss = secondaryStructureTrace(data, selection, trace);
@@ -244,8 +249,8 @@ Deno.test("first/last mark run boundaries and secondary-structure transitions, n
   assertStrictEquals(ss.last[start + 2], 1, "run end is always a block end");
 });
 
-Deno.test("with no residues.secondaryStructure column at all, every sample is coil", () => {
-  const data = createStructure(fixture({ withAnnotation: false }));
+Deno.test("with no ssCode column at all, every sample is coil", () => {
+  const data = build({ withAnnotation: false });
   const selection = all(data);
   const trace = traceTable(data, selection);
   const ss = secondaryStructureTrace(data, selection, trace);
@@ -268,25 +273,20 @@ Deno.test("SS_CODES and ssKind project DSSP codes onto the cartoon's three kinds
   ]);
 });
 
-Deno.test("a legacy 3-state column resolves as ssCode with provenance legacy", () => {
-  const data = createStructure(fixture());
-  const column = attributeColumn(data, "ssCode")!;
-  assertStrictEquals(column.provenance, "legacy");
+Deno.test("ssCode comes only from attributes; built-ins carry topology provenance", () => {
+  const column = attributeColumn(build(), "ssCode")!;
+  assertStrictEquals(column.provenance, "user");
   assertStrictEquals(column.domain, "residue");
   assertEquals([...column.values], [1, 1, 0, 0, 0, 0]);
-  assertStrictEquals(
-    attributeColumn(
-      createStructure(fixture({ withAnnotation: false })),
-      "ssCode",
-    ),
-    undefined,
-  );
+  const bare = build({ withAnnotation: false });
+  assertStrictEquals(attributeColumn(bare, "ssCode"), undefined);
+  assertStrictEquals(attributeColumn(bare, "bfactor")!.provenance, "topology");
 });
 
-Deno.test("a derived ssCode wins over the legacy column in the SS trace", () => {
-  const legacy = createStructure(fixture());
+Deno.test("a computed ssCode replaces a user column in the SS trace", () => {
+  const annotated = build();
   // G (3-10) on res0, E on res1 and res2: helix, sheet, sheet.
-  const data = withAttributes(legacy, {
+  const data = withAttributes(annotated, {
     ssCode: {
       domain: "residue",
       kind: "code",
@@ -300,7 +300,7 @@ Deno.test("a derived ssCode wins over the legacy column in the SS trace", () => 
   const start = trace.residue.indexOf(0);
   assertEquals(ss.kind.slice(start, start + 3), ["helix", "sheet", "sheet"]);
   // Turn and bend codes draw as coil.
-  const turns = withAttributes(legacy, {
+  const turns = withAttributes(annotated, {
     ssCode: {
       domain: "residue",
       kind: "code",

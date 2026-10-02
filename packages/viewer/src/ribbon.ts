@@ -123,7 +123,7 @@ const RibbonResolved: ViewerComponent<
     throw new TypeError("Ribbon secondaryStructure must be model or dssp");
   }
   const indices = useActiveRows(resource, select, "Ribbon");
-  // DSSP covers the whole of each model the ribbon draws (efv.10), not only
+  // DSSP covers the whole of each model the ribbon draws, not only
   // the first model: a selection of model 2 gets model 2's codes.
   const dsspRows = useMemo(
     () =>
@@ -174,7 +174,7 @@ const RibbonResolved: ViewerComponent<
       indices,
     ],
   );
-  // Phase 10 keeps an unchanged column's object across attribute revisions.
+  // withAttributes keeps an unchanged column's object across attribute revisions.
   const ssColumn = data ? attributeColumn(data, "ssCode") : undefined;
   const ss = useStableProjection(
     trace,

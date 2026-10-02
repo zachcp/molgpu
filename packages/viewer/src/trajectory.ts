@@ -150,7 +150,7 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
 // Every topology row is trajectory atom i.
 const WHOLE = wgsl`${HEAD}${BODY.replace("ROW", "p = blend(i);")}`;
 // No trajectory yet (opening or failed): copy upstream through the same kernel,
-// so descendants keep one subtree when playback attaches (molgpu-sept-s5o.19).
+// so descendants keep one subtree when playback attaches.
 const COPY = wgsl`
 @link fn getSize() -> vec2<u32>;
 @link fn getInput(i: u32) -> vec3<f32>;

@@ -14,7 +14,7 @@
 // correct baseline exists (see 0sj.6's WGSL-extrusion note for the same
 // kind of call). Labels are the `ssCode` residue column projected by ssKind:
 // imported annotation (@molgpu/io from mmCIF struct_conf/struct_sheet_range),
-// a computed assignment, or the legacy residues.secondaryStructure of a
+// a computed assignment, or a user-supplied column of a
 // hand-built structure. Without any of them every residue is 'coil'.
 import type { StructureData } from "./structure-types.ts";
 import type { SecondaryStructureTrace, Trace } from "./trace-types.ts";
@@ -66,7 +66,7 @@ export function secondaryStructureTrace(
   }
 
   const { count } = trace;
-  // The ssCode column (imported, computed or a legacy 3-state view), projected
+  // The ssCode column (imported, computed or user-supplied), projected
   // to the cartoon's three kinds; all coil without one.
   const codes = attributeColumn(data, "ssCode")?.values;
   const direction = new Float32Array(count * 3);

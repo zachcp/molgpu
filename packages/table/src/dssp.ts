@@ -129,7 +129,7 @@ export function dssp(
 
 /**
  * Set `ssCode` by Mol*'s secondary-structure modes. `"auto"` (the default)
- * keeps an imported, legacy or user column and runs DSSP when the column is
+ * keeps an imported or user column and runs DSSP when the column is
  * absent or `default` (a file without annotation); `"dssp"` always runs it;
  * `"model"` returns `data` unchanged. Computed codes carry provenance
  * `computed:dssp`.

@@ -1,6 +1,6 @@
 // GPU stages for Mol* compatible DSSP. Coordinates are packed xyz. Each
 // descriptor is three vec4<i32> records from prepareDsspLayout. The cell list
-// is the Phase 13 count/scan/scatter index over gathered CA positions.
+// is the shared count/scan/scatter cell-list index over gathered CA positions.
 const COMMON = `
 struct Descriptor {
   backbone: vec4<i32>, // N, CA, C, O

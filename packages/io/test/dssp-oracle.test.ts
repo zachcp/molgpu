@@ -134,21 +134,10 @@ Deno.test("withSecondaryStructure follows Mol*'s auto, dssp and model modes", as
   const bna = await load("1bna");
   assertEquals(provenance(bna), "default");
   assertEquals(provenance(withSecondaryStructure(bna)), "computed:dssp");
-  // A legacy hand-built column and a user column are kept by auto.
+  // A user column is kept by auto.
   const { topology, positions } = crn;
-  const kinds = [...attributeColumn(crn, "ssCode")!.values].map((c) =>
-    c === 1 ? "helix" as const : c === 3 ? "sheet" as const : "coil" as const
-  );
-  const legacy = createStructure({
-    positions,
-    topology: {
-      ...topology,
-      residues: { ...topology.residues, secondaryStructure: kinds },
-    },
-  });
-  assertEquals(provenance(legacy), "legacy");
-  assertStrictEquals(withSecondaryStructure(legacy), legacy);
-  const user = withAttributes(legacy, {
+  const bareCrn = createStructure({ positions, topology });
+  const user = withAttributes(bareCrn, {
     ssCode: {
       domain: "residue",
       kind: "code",

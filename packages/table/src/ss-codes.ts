@@ -13,16 +13,3 @@ export function ssKind(code: number): "helix" | "sheet" | "coil" {
     ? "sheet"
     : "coil";
 }
-
-const LEGACY: Readonly<Record<string, number>> = {
-  helix: 1,
-  sheet: 3,
-  coil: 0,
-};
-
-/** Codes for a legacy 3-state column: helix → H, sheet → E, coil → 0. */
-export function legacySsCodes(
-  kinds: readonly ("helix" | "sheet" | "coil")[],
-): Uint8Array {
-  return Uint8Array.from(kinds, (k) => LEGACY[k] ?? 0);
-}
