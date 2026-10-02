@@ -390,6 +390,10 @@ Empty selections are valid and explicit (`isEmpty`, `count`).
 
 ## Place in the dependency graph
 
+The public entry is an explicit export list. `selection.ts` keeps recipes,
+resolution, revision identity and set operations together; expression evaluation
+and chemical graph operations retain their existing modules and contracts.
+
 `@molgpu/select` depends only on `@molgpu/table` (runtime) and is consumed by
 `@molgpu/viewer` and the examples. It sits beside `@molgpu/fields` above
 `table`.

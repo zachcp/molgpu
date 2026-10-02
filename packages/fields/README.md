@@ -274,6 +274,10 @@ before 0.1.0. _advanced_: for renderer integrations (the viewer), not app code.
 
 ## Place in the dependency graph
 
+The explicit public entry exports field construction from `construction.ts`, CPU
+evaluation from `evaluation.ts`, and WGSL lowering from `compile.ts`. Private
+node helpers connect these responsibilities; they add no public entries.
+
 ```
 table ──► fields ──► viewer
 ```
