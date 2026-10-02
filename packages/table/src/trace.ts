@@ -65,6 +65,7 @@ interface TraceBuilder {
   normal: number[];
   binormal: number[];
   residue: number[];
+  atom: number[];
   runKind: TraceKind[];
   runs: number[];
 }
@@ -92,6 +93,7 @@ function emitRun(
     out.normal.push(...normal);
     out.binormal.push(...binormal);
     out.residue.push(residueRows[k]);
+    out.atom.push(guideAtom[residueRows[k]]);
     ref = normal;
   }
   out.runKind.push(residues.polymer[residueRows[0]] as TraceKind);
@@ -151,6 +153,7 @@ export function traceTable(
     normal: [],
     binormal: [],
     residue: [],
+    atom: [],
     runKind: [],
     runs: [0],
   };
@@ -176,6 +179,7 @@ export function traceTable(
     normal: Float32Array.from(out.normal),
     binormal: Float32Array.from(out.binormal),
     residue: Uint32Array.from(out.residue),
+    atom: Uint32Array.from(out.atom),
     runs: Uint32Array.from(out.runs),
     runKind: out.runKind,
   };

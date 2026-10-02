@@ -144,6 +144,38 @@ Deno.test("viewer tube", async () => {
       "a width/color edit must not re-upload trace/spline geometry",
     );
 
+    // Colour Fields (molgpu-sept-o4r): per-sample colours from each sample's
+    // guide atom; switching fields rebuilds and re-uploads no geometry.
+    let previous = styled, previousShot = styledShot;
+    for (const name of ["chain", "seq", "chain"]) {
+      await page.evaluate((n) => globalThis.__probe.setField(n), name);
+      await settle();
+      await settle();
+      const fielded = await snap();
+      const fieldShot = await shot();
+      assertEquals(fielded.errors, [], `${name} field: WebGPU errors`);
+      assert(
+        !fieldShot.equals(previousShot),
+        `the ${name} colour field must change the rendered image`,
+      );
+      assertEquals(
+        fielded.storageLabels.slice(previous.storage).filter((label) =>
+          label === "molgpu:positions" || label === "molgpu:segments"
+        ),
+        [],
+        `a ${name} colour field must not rebuild tube geometry`,
+      );
+      assertEquals(
+        fielded.storageWrites.slice(previous.storageWrites.length).filter((w) =>
+          w.label === "molgpu:positions" || w.label === "molgpu:segments"
+        ),
+        [],
+        `a ${name} colour field must not re-upload tube geometry`,
+      );
+      previous = fielded;
+      previousShot = fieldShot;
+    }
+
     assertEquals(errors, [], "page errors");
     assertEquals(styled.errors, [], "uncaptured WebGPU errors");
 

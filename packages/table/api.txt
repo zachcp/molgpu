@@ -45,7 +45,7 @@ StructureInput
 Topology
   export interface Topology { readonly atoms: Atoms; readonly residues: Residues; readonly chains: Chains; readonly bonds: Bonds; readonly instances: Instances; readonly links?: Links }
 Trace
-  export interface Trace { readonly count: number; readonly guide: Float32Array; readonly tangent: Float32Array; readonly normal: Float32Array; readonly binormal: Float32Array; /** Source residue row per sample (sample-to-residue mapping / retained residue IDs). */ readonly residue: Uint32Array; /** Run r spans [runs[r], runs[r + 1]); length is runCount + 1. */ readonly runs: Uint32Array; readonly runKind: readonly ("protein" | "rna" | "dna")[] }
+  export interface Trace { readonly count: number; readonly guide: Float32Array; readonly tangent: Float32Array; readonly normal: Float32Array; readonly binormal: Float32Array; /** Source residue row per sample (sample-to-residue mapping / retained residue IDs). */ readonly residue: Uint32Array; /** Guide atom row per sample (CA, or the nucleic trace atom), for atom-domain lookups. */ readonly atom: Uint32Array; /** Run r spans [runs[r], runs[r + 1]); length is runCount + 1. */ readonly runs: Uint32Array; readonly runKind: readonly ("protein" | "rna" | "dna")[] }
 TrajectoryData
   export interface TrajectoryData { /** Atoms per frame. */ readonly atomCount: number; readonly frameCount: number; readonly time: Float64Array; readonly timeUnit: TrajectoryTimeUnit; /** Trajectory atom `i` moves topology row `atomMap[i]`; other rows keep upstream coordinates. */ readonly atomMap?: Uint32Array; readonly source: FrameSource }
 TrajectoryFrame

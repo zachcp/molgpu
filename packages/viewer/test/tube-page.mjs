@@ -12,6 +12,7 @@ import {
 } from "@use-gpu/workbench";
 import { createStructure } from "@molgpu/table";
 import { resolve, where } from "@molgpu/select";
+import { byChain, bySeq } from "@molgpu/fields";
 import { Structure, Tube } from "../src/index.ts";
 
 const probe = globalThis.__probe = {
@@ -180,6 +181,7 @@ const TubeProbe = () => {
   probe.setMode = setMode;
   probe.setRadius = setRadius;
   probe.setColor = setColor;
+  probe.setField = (name) => setColor({ chain: byChain(), seq: bySeq() }[name]);
   probe.mounted = true;
   const props = mode === "empty"
     ? { select: nothing, radius, color }
