@@ -82,18 +82,18 @@ export function elasticNetworkData(
       "custom elastic guides need explicit node masses (110 amu is a residue)",
     );
   }
-  const guideRows = guide === "CA"
-    ? caGuideRows(topology)
-    : Uint32Array.from(guide);
-  if (guideRows.length < 3) {
+  const inputRows = guide === "CA" ? caGuideRows(topology) : guide;
+  if (inputRows.length < 3) {
     throw new TypeError("an elastic network needs at least three guide nodes");
   }
   const network = buildElasticNetwork(
     positions,
-    guideRows,
+    inputRows,
     cutoff,
     maxContacts,
   );
+  // Reuse the kernel's owned rows, validated before integer packing.
+  const guideRows = network.rows;
   const reference = new Float32Array(3 * guideRows.length);
   guideRows.forEach((row, node) =>
     reference.set(positions.subarray(3 * row, 3 * row + 3), 3 * node)

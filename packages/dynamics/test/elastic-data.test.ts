@@ -1,6 +1,10 @@
 import { assert, assertEquals, assertThrows } from "@std/assert";
 import { structureFromBcif } from "@molgpu/io";
-import { caGuideRows, elasticNetworkData } from "../src/index.ts";
+import {
+  buildElasticNetwork,
+  caGuideRows,
+  elasticNetworkData,
+} from "../src/index.ts";
 
 const corpus = async (id: string) =>
   structureFromBcif(
@@ -8,6 +12,46 @@ const corpus = async (id: string) =>
       new URL(`../../io/test/fixtures/${id}.bcif`, import.meta.url),
     ),
   );
+
+Deno.test("elastic entry points validate original guide values before packing", async () => {
+  const { positions, topology } = await corpus("1crn");
+  const masses = new Float32Array(3).fill(110);
+  for (
+    const guide of [
+      [0.1, 1, 2],
+      [NaN, 1, 2],
+      [Infinity, 1, 2],
+      [-1, 1, 2],
+      [2 ** 32, 1, 2],
+      [0, 1, topology.atoms.count],
+      [0, 1, 1],
+      [0, 2, 1],
+    ]
+  ) {
+    assertThrows(
+      () => buildElasticNetwork(positions, guide, 15),
+      TypeError,
+      "guide rows",
+    );
+    assertThrows(
+      () =>
+        elasticNetworkData(positions, topology, {
+          guide,
+          masses,
+          version: 0,
+        }),
+      TypeError,
+      "guide rows",
+    );
+  }
+  const guide = caGuideRows(topology);
+  const custom = elasticNetworkData(positions, topology, {
+    guide: Array.from(guide),
+    masses: new Float32Array(guide.length).fill(110),
+    version: 0,
+  });
+  assertEquals(custom, elasticNetworkData(positions, topology, { version: 0 }));
+});
 
 Deno.test("CA guides: one per protein residue of the first model", async () => {
   const crambin = await corpus("1crn");
