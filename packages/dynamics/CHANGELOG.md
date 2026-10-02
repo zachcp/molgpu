@@ -5,6 +5,12 @@ All notable changes to `@molgpu/dynamics` are recorded here. See
 
 ## [Unreleased]
 
+- `coulombWgsl`'s `sumGrid` computes `COULOMB_GRID_BLOCK` (4) consecutive grid
+  samples per invocation, chooses the potential model once per tile, and clamps
+  `r²` instead of taking a square root where the model allows. Dispatch
+  `ceil(count / COULOMB_GRID_BLOCK)` invocations. 128³ × 50k atoms (distance
+  model) runs 4.3× faster with results unchanged within 1e-6.
+
 - **Changed (experimental):** the package has two entries.
   - `.` keeps the domain API: template and Gasteiger charges, elastic networks
     and normal modes (`buildElasticNetwork`, `solveElasticModes`,

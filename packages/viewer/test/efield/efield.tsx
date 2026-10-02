@@ -242,7 +242,7 @@ interface Probe {
   readLines(): Promise<{ vertices: number[]; generation: number }>;
   hold(): void;
   release(): void;
-  dispatchPairs(n: number): void;
+  dispatchPairs(n?: number): void;
   surfaceStats(chain: string): Promise<{ mean: number; count: number }>;
   center: [number, number, number];
   /** ms from a coordinate change to the finished recomputation. */
@@ -336,7 +336,9 @@ probe.release = () => {
   efieldTesting.gate = null;
   releaseGate?.();
 };
-probe.dispatchPairs = (n) => {
+const DEFAULT_DISPATCH_PAIRS = efieldTesting.pairsPerDispatch;
+/** Override the per-dispatch pair bound; no argument restores the default. */
+probe.dispatchPairs = (n = DEFAULT_DISPATCH_PAIRS) => {
   efieldTesting.pairsPerDispatch = n;
 };
 

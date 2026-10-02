@@ -69,6 +69,8 @@ templateCharges
 
 AffineMatrix
   export type AffineMatrix = ArrayLike<number>;
+COULOMB_GRID_BLOCK
+  export const COULOMB_GRID_BLOCK = 4;
 COULOMB_MODEL_CODE
   export const COULOMB_MODEL_CODE: Readonly<Record<string, number>>;
 COULOMB_PARAMS_BYTES
