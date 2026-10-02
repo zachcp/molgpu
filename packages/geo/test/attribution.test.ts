@@ -85,3 +85,59 @@ Deno.test("rejects malformed inputs", () => {
     "cellSize",
   );
 });
+
+Deno.test("scattered atoms widen the grid but stay exact", () => {
+  // Corners of a 2 km cube at a 0.5 Å hint would need ~6e19 dense cells.
+  const atoms = Float32Array.from([
+    -1000,
+    -1000,
+    -1000,
+    1000,
+    -1000,
+    -1000,
+    -1000,
+    1000,
+    -1000,
+    1000,
+    1000,
+    1000,
+    0.5,
+    0.25,
+    0,
+    999,
+    999,
+    998,
+  ]);
+  const vertices = Float32Array.from([
+    0,
+    0,
+    0,
+    998,
+    999,
+    999,
+    -990,
+    -1000,
+    -1000,
+    400,
+    400,
+    400,
+    1000,
+    1000,
+    1001,
+  ]);
+  const got = nearestAtomAttribution(vertices, atoms, 0.5);
+  const brute = Array.from({ length: vertices.length / 3 }, (_, v) => {
+    let best = -1, bestDist = Infinity;
+    for (let a = 0; a < atoms.length / 3; a++) {
+      const d = (vertices[v * 3] - atoms[a * 3]) ** 2 +
+        (vertices[v * 3 + 1] - atoms[a * 3 + 1]) ** 2 +
+        (vertices[v * 3 + 2] - atoms[a * 3 + 2]) ** 2;
+      if (d < bestDist) {
+        bestDist = d;
+        best = a;
+      }
+    }
+    return best;
+  });
+  assertEquals([...got], brute);
+});
