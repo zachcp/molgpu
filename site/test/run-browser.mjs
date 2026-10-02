@@ -55,6 +55,37 @@ const waitForVisibleCanvas = async (page) => {
   await rendered.dispose();
 };
 
+// The site viewer publishes `data-webgpu` (pending | ready | error) on the
+// host. Ready is set inside AutoCanvas, so the canvas element then exists.
+const waitForWebGpu = async (page) => {
+  const host = page.locator("#molecule-canvas");
+  const settled = await page.waitForFunction(
+    () => {
+      const state = document.querySelector("#molecule-canvas")?.dataset
+        .webgpu;
+      return state === "ready" || state === "error" ? state : false;
+    },
+    null,
+    { timeout: 30000, polling: 50 },
+  ).catch(async (failure) => {
+    throw new Error(
+      `WebGPU device not ready after 30 s (state ${await host.getAttribute(
+        "data-webgpu",
+      )})`,
+      { cause: failure },
+    );
+  });
+  const state = await settled.jsonValue();
+  await settled.dispose();
+  if (state === "error") {
+    throw new Error(
+      `WebGPU failed: ${await page.locator("[data-webgpu-error]")
+        .textContent()}`,
+    );
+  }
+  return { ms: Number(await host.getAttribute("data-webgpu-ms")) };
+};
+
 Deno.test("site landing page and maintained gallery routes", async () => {
   const root = fromFileUrl(new URL("../", import.meta.url));
   const server = await createServer({
@@ -133,6 +164,8 @@ Deno.test("site landing page and maintained gallery routes", async () => {
     );
     await page.setViewportSize({ width: 960, height: 720 });
 
+    /** WebGPU device acquisition per demo route, in ms (flake evidence). */
+    const deviceMs = {};
     for (const { id, title, fixture } of demos) {
       route = `#demos/${id}`;
       await page.goto(`http://127.0.0.1:5190/#demos/${id}`);
@@ -180,7 +213,10 @@ Deno.test("site landing page and maintained gallery routes", async () => {
         1,
         "each route keeps a status region for WebGPU errors",
       );
-      await page.waitForTimeout(250);
+      // Each demo mounts a fresh WebGPU root; wait for its device (or its
+      // reported failure) instead of a timer, and keep the timing as evidence.
+      const gpu = await waitForWebGpu(page);
+      deviceMs[id] = gpu.ms;
       assertStrictEquals(
         await page.locator("[data-webgpu-error]").textContent(),
         "",
@@ -347,6 +383,7 @@ Deno.test("site landing page and maintained gallery routes", async () => {
         );
       }
     }
+    console.log(`WebGPU device ms per demo: ${JSON.stringify(deviceMs)}`);
     route = "overview and back";
     await page.getByRole("link", { name: "Overview" }).click();
     await page.waitForSelector("#molecule-canvas", { state: "detached" });
