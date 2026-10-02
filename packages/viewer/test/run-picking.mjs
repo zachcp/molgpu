@@ -122,6 +122,36 @@ Deno.test("viewer picking", async () => {
       }`,
     );
 
+    // Assembly copies (molgpu-sept-fch.3): each copy picks the same atom row
+    // and reports its own operator.
+    await page.goto(
+      "http://127.0.0.1:5213/packages/viewer/test/picking.html?assembly",
+    );
+    await page.waitForFunction(
+      () => globalThis.__probe?.mounted && document.querySelector("canvas"),
+      null,
+      { timeout: 30000 },
+    );
+    await settle();
+    await settle();
+    await page.mouse.move(cx, cy);
+    await settle();
+    const base = (await snap()).hover;
+    assertEquals(
+      base && [base.atom, base.operatorId],
+      [1, "1"],
+      `the identity copy picks the middle atom: ${JSON.stringify(base)}`,
+    );
+    let other = null;
+    for (let dy = 10; dy <= 300 && !other; dy += 10) {
+      await page.mouse.move(cx, cy - dy);
+      await settle();
+      const hit = (await snap()).hover;
+      if (hit?.operatorId === "2" && hit.atom === 1) other = hit;
+    }
+    assert(other, "the +6 Å copy picks the same atom under operator 2");
+    assert(other.id !== base.id, "each copy draws under its own picking id");
+
     assertEquals(errors, [], "page errors");
     console.log(
       JSON.stringify({

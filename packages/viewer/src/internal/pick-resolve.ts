@@ -4,6 +4,8 @@ import type { PickHit, StructureResource } from "../types.ts";
 export interface PickEntry {
   readonly resource: StructureResource;
   readonly indices: ArrayLike<number> | null;
+  /** The assembly copy this pickable drew, if any. */
+  readonly operatorId?: string;
 }
 
 /**
@@ -30,10 +32,17 @@ export const resolvePick = (
   const entry = get(id);
   if (!entry) return null;
   const instance = sample[1];
-  const { resource, indices } = entry;
+  const { resource, indices, operatorId } = entry;
+  const copy = operatorId === undefined ? {} : { operatorId };
   if (indices) {
     if (instance < 0 || instance >= indices.length) return null;
-    return { id, resource, atom: indices[instance], drawIndex: instance };
+    return {
+      id,
+      resource,
+      atom: indices[instance],
+      drawIndex: instance,
+      ...copy,
+    };
   }
-  return { id, resource, atom: instance, drawIndex: instance };
+  return { id, resource, atom: instance, drawIndex: instance, ...copy };
 };

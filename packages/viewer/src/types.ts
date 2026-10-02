@@ -472,10 +472,12 @@ export interface PointLayerOptions {
 
 /** An atom resolved from a picking hit. `resource` is the StructureResource the
  *  atom belongs to; `atom` is its row; `drawIndex` is the index of the drawn
- *  primitive within its layer (not an assembly instance). */
+ *  primitive within its layer. `operatorId` names the biological assembly
+ *  copy that was hit, and is absent when the asymmetric unit is drawn. */
 export interface PickHit {
   readonly id: number;
   readonly resource: StructureResource;
   readonly atom: number;
   readonly drawIndex: number;
+  readonly operatorId?: string;
 }

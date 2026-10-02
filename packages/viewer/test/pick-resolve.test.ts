@@ -48,3 +48,15 @@ Deno.test("an instance index outside the selection resolves to null", () => {
   assertStrictEquals(resolvePick([9, 3], get), null);
   assertStrictEquals(resolvePick([9, -1], get), null);
 });
+
+Deno.test("a pick inside an assembly copy reports its operator", () => {
+  const resource = {} as StructureResource;
+  const get = () => ({ resource, indices: null, operatorId: "2" });
+  assertEquals(resolvePick([5, 1], get), {
+    id: 5,
+    resource,
+    atom: 1,
+    drawIndex: 1,
+    operatorId: "2",
+  });
+});

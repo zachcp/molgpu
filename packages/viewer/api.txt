@@ -55,7 +55,7 @@ NormalMode
 NormalModeProps
   export interface NormalModeProps { children?: ViewerElement; mode: NormalModeData; amplitude: number; /** Cycles per second; a nonzero value requires a TimelineProvider. */ frequency?: number; /** Radians at time zero. */ phase?: number }
 PickHit
-  export interface PickHit { readonly id: number; readonly resource: StructureResource; readonly atom: number; readonly drawIndex: number }
+  export interface PickHit { readonly id: number; readonly resource: StructureResource; readonly atom: number; readonly drawIndex: number; readonly operatorId?: string }
 PickingProvider
   export const PickingProvider: ViewerComponent<{ children?: ViewerElement }>;
 PointLayerOptions

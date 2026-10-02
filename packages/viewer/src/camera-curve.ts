@@ -1,3 +1,4 @@
+import { copyRows, instanceCopies } from "./internal/instance-plan.ts";
 import { all } from "@molgpu/select";
 import {
   notifySelectionStatus,
@@ -65,8 +66,9 @@ const remember = <V extends FocusResult | null>(
 };
 
 /**
- * Framing bounds cover the drawn atoms and their display radii. Representations
- * draw the asymmetric unit, so `topology.instances` transforms do not apply
+ * Framing bounds cover the drawn atoms and their display radii: each assembly
+ * copy's own rows under its operator, or the rows as they are when the
+ * structure draws its asymmetric unit
  * (docs/findings/2026-10-01-assembly-instances-decision.md).
  */
 const displayBounds = (
@@ -78,14 +80,29 @@ const displayBounds = (
   if (!indices.length) return null;
   const min = [Infinity, Infinity, Infinity],
     max = [-Infinity, -Infinity, -Infinity];
-  for (const i of indices) {
-    const r = radii[i] * atomRadiusScale;
-    for (let axis = 0; axis < 3; axis++) {
-      const center = data.positions[i * 3 + axis];
-      min[axis] = Math.min(min[axis], center - r);
-      max[axis] = Math.max(max[axis], center + r);
+  const copies = instanceCopies(data);
+  const add = (rows: ArrayLike<number>, m: ArrayLike<number> | null) => {
+    for (let k = 0; k < rows.length; k++) {
+      const i = rows[k];
+      const x = data.positions[i * 3],
+        y = data.positions[i * 3 + 1],
+        z = data.positions[i * 3 + 2];
+      const r = radii[i] * atomRadiusScale;
+      for (let axis = 0; axis < 3; axis++) {
+        const center = m
+          ? m[axis] * x + m[axis + 4] * y + m[axis + 8] * z + m[axis + 12]
+          : [x, y, z][axis];
+        const extent = m
+          ? r * Math.hypot(m[axis], m[axis + 4], m[axis + 8])
+          : r;
+        min[axis] = Math.min(min[axis], center - extent);
+        max[axis] = Math.max(max[axis], center + extent);
+      }
     }
-  }
+  };
+  if (!copies.length) add(indices, null);
+  for (const copy of copies) add(copyRows(indices, copy), copy.matrix);
+  if (!Number.isFinite(min[0])) return null;
   return { min, max, center: min.map((v, i) => (v + max[i]) / 2) };
 };
 

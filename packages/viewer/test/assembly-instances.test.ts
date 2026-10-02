@@ -1,7 +1,8 @@
 // Executable acceptance for the assembly instance decision (molgpu-sept-crj.8):
 // docs/findings/2026-10-01-assembly-instances-decision.md. molgpu draws the
-// asymmetric unit; `topology.instances` is a validated data contract that no
-// representation consumes yet, and framing covers drawn atoms only (crj.26).
+// asymmetric unit by default; `topology.instances` is a validated contract that
+// Spacefill, Bonds and BallAndStick draw one copy per operator, and framing
+// covers every drawn copy (fch.2, fch.3).
 import { assert, assertEquals, assertThrows } from "@std/assert";
 import { createStructure, type StructureInput } from "@molgpu/table";
 import { structureFromBcif } from "@molgpu/io";
@@ -100,18 +101,15 @@ Deno.test("assembly: BCIF import emits one identity instance per chain", async (
   }
 });
 
-Deno.test({
-  name: "assembly: framing covers only drawn atoms [crj.26]",
-  fn: () => {
-    const frame = (transform: number[]) =>
-      focusSelection(
-        createStructureResource(createStructure(twoCopies(transform))),
-        all("atom"),
-      )?.bounds;
-    // The +100 Å copy is drawn by no representation, so it must not widen the
-    // camera bounds beyond those of the identity copy alone.
-    const drawn = frame(IDENTITY);
-    assert(drawn);
-    assertEquals(frame([...IDENTITY, ...SHIFTED]), drawn);
-  },
+Deno.test("assembly: framing covers every drawn copy [fch.3]", () => {
+  const frame = (transform: number[]) =>
+    focusSelection(
+      createStructureResource(createStructure(twoCopies(transform))),
+      all("atom"),
+    )?.bounds;
+  const single = frame(IDENTITY)!;
+  const both = frame([...IDENTITY, ...SHIFTED])!;
+  // The +100 Å copy is drawn, so the camera spans both copies.
+  assertEquals(both.min, single.min);
+  assertEquals(both.max[0], single.max[0] + 100);
 });
