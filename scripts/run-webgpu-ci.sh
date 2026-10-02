@@ -12,11 +12,11 @@ selected=0
 summary="${GITHUB_STEP_SUMMARY:-/dev/null}"
 printf '| Suite | Seconds | Exit code |\n| --- | ---: | ---: |\n' >> "$summary"
 for suite in site/test/run-browser.mjs packages/viewer/test/run-*.mjs \
-  packages/fields/test/run-browser.mjs; do
+  packages/fields/test/run-browser.mjs packages/dynamics/test/run-browser.mjs; do
   case "$suite" in
     site/*) group=site ;;
     */run-retirement.mjs) group=retirement ;;
-    */run-efield.mjs|packages/fields/*) group=efield ;;
+    */run-efield.mjs|packages/fields/*|packages/dynamics/*) group=efield ;;
     */run-invalidation.mjs) group=invalidation ;;
     *) group=viewer ;;
   esac

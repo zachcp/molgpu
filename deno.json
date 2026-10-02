@@ -54,6 +54,7 @@
     "dev:site": "deno run -A npm:vite@8.3.0 --config site/vite.config.mjs",
     "test:corpus": "deno test -A packages/io/test/corpus.test.ts",
     "test:fields:gpu": "deno test -A packages/fields/test/run-browser.mjs",
+    "test:dynamics:gpu": "deno test -A packages/dynamics/test/run-browser.mjs",
     "test:gpu": "deno test -A packages/viewer/test/run-browser.mjs",
     "test:viewer:sizefield": "deno test -A packages/viewer/test/run-size-field.mjs",
     "test:viewer:gate2": "deno test -A packages/viewer/test/run-gate2.mjs",

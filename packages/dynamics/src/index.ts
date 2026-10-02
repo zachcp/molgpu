@@ -1,5 +1,5 @@
-// @molgpu/dynamics: charges, normal modes, electrostatics, periodic boxes and
-// fitting on plain data. No renderer dependency. The WGSL sources and buffer
+// @molgpu/dynamics: charges, normal modes, Langevin dynamics, electrostatics,
+// periodic boxes and fitting on plain data. No renderer dependency. The WGSL sources and buffer
 // layouts @molgpu/viewer dispatches are on the ./wgsl entry.
 export {
   type ChargeAssignment,
@@ -41,5 +41,20 @@ export {
   type PeriodicBox,
   periodicBox,
 } from "./pbc.ts";
+export {
+  enmSprings,
+  kineticTemperature,
+  langevinInit,
+  type LangevinOptions,
+  type LangevinParams,
+  langevinParams,
+  type LangevinPrecision,
+  type LangevinState,
+  langevinStep,
+  type LangevinSystem,
+  langevinSystem,
+  type LangevinTug,
+  type SpringNetwork,
+} from "./langevin.ts";
 export { fitKabsch, type KabschFit } from "./kabsch.ts";
 export { CellListLimitError } from "./cell-list.ts";

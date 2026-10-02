@@ -30,6 +30,18 @@ GasteigerReport
   export interface GasteigerReport { readonly assigned: number; readonly refused: readonly GasteigerRefusal[] }
 KabschFit
   export interface KabschFit { /** Column-major proper rigid transform mapping source into reference. */ readonly matrix: AffineMatrix; /** RMSD of selected rows after applying `matrix`. */ readonly rmsd: number; readonly count: number }
+LangevinOptions
+  export interface LangevinOptions { /** K, default 300. */ readonly temperature?: number; /** Friction, 1/ps, default 1. */ readonly gamma?: number; /** Time step, ps, default 0.02. */ readonly dt?: number; /** u32 RNG seed, default 0. */ readonly seed?: number; readonly tug?: LangevinTug }
+LangevinParams
+  export interface LangevinParams { readonly temperature: number; readonly gamma: number; readonly dt: number; readonly seed: number; /** exp(-gamma dt). */ readonly c1: number; /** sqrt(1 - c1²) sqrt(418.4 kB T), Å/ps·√amu: divide by sqrt(m). */ readonly noise: number; readonly tug?: LangevinTug }
+LangevinPrecision
+  export type LangevinPrecision = "f64" | "f32";
+LangevinState
+  export interface LangevinState { step: number; readonly x: Float64Array | Float32Array; readonly v: Float64Array | Float32Array; readonly f: Float64Array | Float32Array }
+LangevinSystem
+  export interface LangevinSystem { readonly springs: SpringNetwork; /** Reference node positions, packed xyz. Initial state and rigid frame. */ readonly reference: Float32Array; readonly masses: Float32Array; readonly totalMass: number; /** Mass-weighted centroid of the reference. */ readonly centroid: readonly [number, number, number]; /** Reference positions relative to the centroid, packed xyz. */ readonly relative: Float32Array; /** Inverse inertia tensor of the reference about its centroid, row-major. */ readonly inertiaInverse: Float64Array; /** Gershgorin bound on the largest angular frequency, 1/ps. */ readonly omegaMax: number }
+LangevinTug
+  export interface LangevinTug { readonly node: number; readonly target: readonly [number, number, number]; /** kcal/mol/Å². */ readonly k: number }
 NormalModeData
   export interface NormalModeData { /** Owned xyz displacement per guide node, in node order. */ readonly vectors: Float32Array; /** Atom row to guide node, or 0xffffffff for no displacement. */ readonly atomToNode: Uint32Array; /** Increment when vectors or mapping are replaced. */ readonly version: number }
 PbcSearchLimitError
@@ -38,6 +50,8 @@ PeriodicBox
   export interface PeriodicBox { /** Column-major 3×3 box vectors (a, b, c as columns). */ readonly matrix: readonly number[]; /** Row-major inverse: fractional = inverse · Cartesian. */ readonly inverse: readonly number[]; /** Frobenius norm of the inverse, which bounds the exact image search. */ readonly inverseNorm: number }
 PotentialUnit
   export type PotentialUnit = "kT/e" | "kcal/mol/e";
+SpringNetwork
+  export interface SpringNetwork { readonly nodeCount: number; readonly offsets: Uint32Array; readonly neighbours: Uint32Array; readonly restLength: Float32Array; /** Spring constant for every spring, kcal/mol/Å². */ readonly k: number }
 TemplateChargeOptions
   export interface TemplateChargeOptions { readonly his?: "HID" | "HIE" | "HIP"; /** Template names keyed by `residueKey(data, residueRow)`. */ readonly residues?: Readonly<Record<string, string>> }
 TemplateChargeReport
@@ -46,10 +60,22 @@ buildElasticNetwork
   export function buildElasticNetwork(positions: Float32Array, guideRows: ArrayLike<number>, cutoff: number, maxContacts?: number, maxCandidates?: number): ElasticNetwork;
 electrostatics
   export function electrostatics(options?: ElectrostaticsOptions): Electrostatics;
+enmSprings
+  export function enmSprings(network: ElasticNetwork, positions: Float32Array, k?: number): SpringNetwork;
 fitKabsch
   export function fitKabsch(source: Float32Array, reference: Float32Array, rows?: ArrayLike<number> | null, translate?: boolean): KabschFit;
 gasteigerCharges
   export function gasteigerCharges(data: StructureData, options?: GasteigerOptions): ChargeAssignment<GasteigerReport>;
+kineticTemperature
+  export function kineticTemperature(system: LangevinSystem, state: LangevinState): number;
+langevinInit
+  export function langevinInit(system: LangevinSystem, params: LangevinParams, precision?: LangevinPrecision): LangevinState;
+langevinParams
+  export function langevinParams(system: LangevinSystem, options?: LangevinOptions): LangevinParams;
+langevinStep
+  export function langevinStep(system: LangevinSystem, params: LangevinParams, state: LangevinState, count?: number): void;
+langevinSystem
+  export function langevinSystem(springs: SpringNetwork, reference: Float32Array, masses?: Float32Array): LangevinSystem;
 minimumImage
   export function minimumImage(delta: ArrayLike<number>, box: ArrayLike<number>, maxCandidates?: number): readonly [number, number, number];
 normalModeFromElastic
@@ -89,6 +115,10 @@ DsspBridge
   export interface DsspBridge { readonly partner1: number; readonly partner2: number; readonly type: number; /** Generating H-bond edge and bridge test, restoring CPU generation order. */ readonly acceptor: number; readonly donor: number; readonly pattern: number }
 DsspLayout
   export interface DsspLayout { readonly descriptors: Int32Array; readonly caMap: Uint32Array; readonly residues: Uint32Array; readonly unitStarts: Uint32Array; readonly residueCount: number; readonly atomCount: number; readonly totalResidues: number }
+LANGEVIN_PARAMS_BYTES
+  export const LANGEVIN_PARAMS_BYTES = 112;
+LangevinBuffers
+  export interface LangevinBuffers { /** Binding 2: per node (relative x, y, z, mass). */ readonly nodes: Float32Array; /** Binding 3: offsets (nodeCount + 1) followed by neighbours. */ readonly csr: Uint32Array; /** Binding 4: rest length per neighbour entry. */ readonly restLength: Float32Array; /** Binding 1 at step 0: x = reference, v = f = 0; run `langevinForces` * once before the first step. x is [0, 3n), v [3n, 6n), f [6n, 9n). */ readonly state: Float32Array; /** Floats in binding 5 (moments, then per-workgroup partials). */ readonly scratchFloats: number; /** Workgroups for the per-node entries. */ readonly workgroups: number }
 SUPERPOSE_FIT_BYTES
   export const SUPERPOSE_FIT_BYTES = 144;
 UNWRAP_LINK_BYTES
@@ -115,6 +145,12 @@ finishDssp
   export function finishDssp(layout: DsspLayout, gpuFlags: Uint32Array, bridges: readonly DsspBridge[]): Uint8Array;
 isIdentityAffine
   export function isIdentityAffine(matrix: AffineMatrix): boolean;
+langevinBuffers
+  export function langevinBuffers(system: LangevinSystem): LangevinBuffers;
+langevinUniform
+  export function langevinUniform(system: LangevinSystem, params: LangevinParams): ArrayBuffer;
+langevinWgsl
+  export const langevinWgsl: string;
 normalModeWgsl
   export const normalModeWgsl: string;
 planCellList

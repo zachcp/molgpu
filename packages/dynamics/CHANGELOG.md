@@ -5,6 +5,17 @@ All notable changes to `@molgpu/dynamics` are recorded here. See
 
 ## [Unreleased]
 
+- Langevin dynamics over elastic networks. `enmSprings` turns
+  `buildElasticNetwork` contacts into a symmetric CSR spring network;
+  `langevinSystem`, `langevinParams`, `langevinInit`, `langevinStep` and
+  `kineticTemperature` are the BAOAB CPU reference (f64 or f32 storage), with
+  Philox-4x32-10 noise keyed by (seed, step), inverse-CDF normals, rigid-body
+  projection of the velocities and tug, and a Gershgorin `omegaMax · dt ≤ 1`
+  guard. `./wgsl` adds `langevinWgsl`, `langevinBuffers`, `langevinUniform` and
+  `LANGEVIN_PARAMS_BYTES`; a new browser suite (`deno task test:dynamics:gpu`)
+  checks Philox bitwise, normals within 1e-5 and 100 steps against the CPU-f32
+  reference within 1e-4 Å.
+
 - `ElectrostaticsOptions` gain optional `cutoff` and `switchWidth`. The CHARMM
   switching function (C¹ at both ends) is applied by the CPU reference, by
   `coulombWgsl`'s `kernel` (`sumPoints`), and by the new `sumGridCutoff` entry,

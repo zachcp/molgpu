@@ -96,32 +96,31 @@ checkpoints (§4) are the answer, and `lagging` makes any remaining gap visible.
   guides (all-atom) require an explicit per-node `Float32Array` (CR 2).
 - **Rigid-body modes.** An ENM has six zero modes. Under Langevin they diffuse,
   by about 11 Å for 1crn over 1e5 steps at γ = 5 (COM: 6 kT t / (M γ)), and a
-  tug would drag the whole molecule. The integrator removes the mass-weighted
-  components of the OU noise and of the tug force along the six rigid-body
-  vectors of the reference: three translations and three linearised rotations
-  about the reference centroid, with a 6×6 inverse precomputed on the CPU.
-  Initial velocities are zero. The ENM then samples the Gaussian with covariance
-  kT·H⁺ in 3N − 6 degrees of freedom. Leakage through finite rotations is second
-  order in the displacement; if the stability test sees it, the velocities get
-  the same projection (CR 1).
+  tug would drag the whole molecule. After each OU kick the integrator removes
+  the velocities' mass-weighted components along the six rigid-body vectors of
+  the reference: three translations and three linearised rotations about the
+  reference centroid, with the inverse inertia tensor precomputed on the CPU.
+  The tug force gets the same projection. Initial velocities are zero, so the
+  linear rigid-body components of the displacement stay at zero and the ENM
+  samples the Gaussian with covariance kT·H⁺ in 3N − 6 degrees of freedom (CR
+  1). _Implementation note (ahc.3):_ projecting only the noise left a
+  second-order rotational leak that turned a 50-node toy about 9.5° in 1e5 steps
+  at 300 K, with per-node variance 2.4× the oracle. Projecting the whole
+  velocity costs the same and fixed both (0.02°, 1 % variance error).
 
-**Kernel split.** One step is two main dispatches:
+**Kernel split.** One step is four dispatches:
 
-1. `BAOA`: half kick with cached forces, half drift, OU thermostat, half drift.
-2. `F + B`: compute forces at the new positions, then half kick.
+1. `langevinBao`: half kick with cached forces, half drift and the OU
+   thermostat, then per-workgroup sums of the new velocities' momentum and
+   angular momentum.
+2. `langevinFinish` (one workgroup): totals in a fixed order and the rigid-body
+   velocity to remove.
+3. `langevinDrift`: remove it, then the second half drift.
+4. `langevinForcesKick`: forces at the new positions, the half kick, and the
+   step clock in a storage buffer advances, so k steps encode without per-step
+   uniform writes.
 
-The rigid-body projection needs six noise moments before `BAOA` uses the noise.
-The noise depends only on `(seed, step, node)`, so a pass ahead of `BAOA` can
-generate and reduce it (per-workgroup partials, then one single-workgroup
-finish), and `BAOA` regenerates it. A fixed-order reduction keeps the step
-bitwise deterministic. The build bead chooses where the partials are computed
-(CR 1).
-
-Forces are gathered per node over a CSR neighbour list: each node sums its own
-springs. WGSL has no f32 atomics, and a scatter-add would make summation order,
-and therefore the trajectory, nondeterministic. Gathering doubles the edge
-storage (both directions) and in exchange gives bitwise reproducibility on a
-device.
+Fixed-order reductions keep a run bitwise reproducible on a device.
 
 **RNG.** Philox-4x32-10 keyed by `(seed, step)` with counter `node`. One call
 yields four u32 values. Three become normals through an inverse-CDF transform

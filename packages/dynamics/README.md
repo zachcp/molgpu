@@ -27,41 +27,56 @@ deno add jsr:@molgpu/dynamics
 planning that `@molgpu/viewer`'s GPU components use; it is _advanced_ and tied
 to the viewer's buffer contracts. The CPU references that the GPU kernels are
 tested against (`applyAffine`, `unwrapFrame`, `applyNormalMode`,
-`coulombPotential`, `coulombField`, `createCellList`, …) are internal.
+`coulombPotential`, `coulombField`, `createCellList`, `philox4x32`, …) are
+internal. The Langevin CPU integrator is public: it is a scientific reference an
+application can run in a worker, not only a test oracle.
 
-| Export                   | Stability    | Purpose                                                                                |
-| ------------------------ | ------------ | -------------------------------------------------------------------------------------- |
-| `CellListLimitError`     | experimental | Dense cell grid exceeds `maxCells`; carries `cells` and `limit`.                       |
-| `fitKabsch`              | experimental | CPU proper rigid fit over corresponding atom rows.                                     |
-| `KabschFit`              | experimental | Column-major rigid transform, fitted RMSD, and row count.                              |
-| `minimumImage`           | experimental | Exact nearest Cartesian lattice displacement for a periodic box.                       |
-| `periodicBox`            | experimental | Validate and invert a column-major 3×3 box, as the unwrap kernels take it.             |
-| `PeriodicBox`            | experimental | Box vectors, row-major inverse and inverse norm.                                       |
-| `PbcSearchLimitError`    | experimental | Named error for an excessive exact-image search.                                       |
-| `NormalModeData`         | experimental | Precomputed guide-node displacements and atom mapping.                                 |
-| `residueGuideMap`        | experimental | Map each atom to its residue's guide node (normally CA), altloc-aware.                 |
-| `normalModeFromElastic`  | experimental | Wrap an ANM mode and atom map as `NormalModeData`.                                     |
-| `buildElasticNetwork`    | experimental | Exact-cutoff guide contacts through `table.spatialGrid`.                               |
-| `solveElasticModes`      | experimental | CPU GNM/ANM eigenmodes: dense Jacobi or sparse Lanczos, with residual checks.          |
-| `ElasticSolveOptions`    | experimental | Solver choice (`auto`, `dense`, `lanczos`) and Lanczos basis cap.                      |
-| `ElasticNetwork`         | experimental | Sparse contact pairs and ANM directions.                                               |
-| `ElasticMode`            | experimental | Eigenvalue, vector, residual and GNM/ANM kind.                                         |
-| `templateCharges`        | experimental | Assign AMBER/PDB2PQR residue-template and monatomic-ion charges.                       |
-| `residueNetCharge`       | experimental | Sum a charge column over active atoms into residue rows.                               |
-| `TemplateChargeOptions`  | experimental | Histidine and residue-specific template overrides.                                     |
-| `TemplateChargeReport`   | experimental | Net charge, gaps, ions and unmatched names.                                            |
-| `ChargeAssignment`       | experimental | Values, assigned mask and method report.                                               |
-| `ChargeUnmatched`        | experimental | Aggregated unmatched atom name and sample residue keys.                                |
-| `gasteigerCharges`       | experimental | Assign PEOE charges to complete non-polymer components.                                |
-| `GasteigerOptions`       | experimental | Exclusion mask and iteration count.                                                    |
-| `GasteigerReport`        | experimental | Assigned count and refused components.                                                 |
-| `GasteigerRefusal`       | experimental | Component residue keys, refusal reason and detail.                                     |
-| `GasteigerRefusalReason` | experimental | Named reason an unsupported component was not charged.                                 |
-| `electrostatics`         | experimental | Validate dielectric options and derive κ, kT and the output scale.                     |
-| `ElectrostaticsOptions`  | experimental | Model (`vacuum`, `distance`, `debye`), ε, ionic strength, temperature, clamp and unit. |
-| `Electrostatics`         | experimental | Normalised physics shared by the CPU reference and the WGSL uniform.                   |
-| `DielectricModel`        | experimental | `vacuum`, `distance` (ε = D·r) or `debye`.                                             |
-| `PotentialUnit`          | experimental | `kT/e` or `kcal/mol/e`.                                                                |
+| Export                   | Stability    | Purpose                                                                                  |
+| ------------------------ | ------------ | ---------------------------------------------------------------------------------------- |
+| `CellListLimitError`     | experimental | Dense cell grid exceeds `maxCells`; carries `cells` and `limit`.                         |
+| `fitKabsch`              | experimental | CPU proper rigid fit over corresponding atom rows.                                       |
+| `KabschFit`              | experimental | Column-major rigid transform, fitted RMSD, and row count.                                |
+| `minimumImage`           | experimental | Exact nearest Cartesian lattice displacement for a periodic box.                         |
+| `periodicBox`            | experimental | Validate and invert a column-major 3×3 box, as the unwrap kernels take it.               |
+| `PeriodicBox`            | experimental | Box vectors, row-major inverse and inverse norm.                                         |
+| `PbcSearchLimitError`    | experimental | Named error for an excessive exact-image search.                                         |
+| `NormalModeData`         | experimental | Precomputed guide-node displacements and atom mapping.                                   |
+| `residueGuideMap`        | experimental | Map each atom to its residue's guide node (normally CA), altloc-aware.                   |
+| `normalModeFromElastic`  | experimental | Wrap an ANM mode and atom map as `NormalModeData`.                                       |
+| `buildElasticNetwork`    | experimental | Exact-cutoff guide contacts through `table.spatialGrid`.                                 |
+| `solveElasticModes`      | experimental | CPU GNM/ANM eigenmodes: dense Jacobi or sparse Lanczos, with residual checks.            |
+| `ElasticSolveOptions`    | experimental | Solver choice (`auto`, `dense`, `lanczos`) and Lanczos basis cap.                        |
+| `ElasticNetwork`         | experimental | Sparse contact pairs and ANM directions.                                                 |
+| `ElasticMode`            | experimental | Eigenvalue, vector, residual and GNM/ANM kind.                                           |
+| `enmSprings`             | experimental | Symmetric CSR springs (rest lengths at the reference) from `buildElasticNetwork`.        |
+| `SpringNetwork`          | experimental | CSR offsets, neighbours, rest lengths and spring constant `k` (kcal/mol/Å²).             |
+| `langevinSystem`         | experimental | Validate springs, reference nodes and masses (110 amu default); rigid frame, `omegaMax`. |
+| `LangevinSystem`         | experimental | Reference, masses, centroid, inverse inertia and Gershgorin frequency bound.             |
+| `langevinParams`         | experimental | Resolve temperature, γ, dt, seed and tug; `RangeError` when `omegaMax · dt > 1`.         |
+| `LangevinOptions`        | experimental | Temperature (300 K), γ (1 ps⁻¹), dt (0.02 ps), u32 seed and optional tug.                |
+| `LangevinParams`         | experimental | Resolved constants shared by the CPU reference and the WGSL uniform.                     |
+| `LangevinTug`            | experimental | Harmonic pull of one node toward a target in the upstream frame.                         |
+| `langevinInit`           | experimental | Step-0 state: reference positions, zero velocity, forces.                                |
+| `langevinStep`           | experimental | CPU BAOAB steps with Philox noise and rigid-body projection; f64 or f32 storage.         |
+| `LangevinState`          | experimental | Step count and packed x, v, f.                                                           |
+| `LangevinPrecision`      | experimental | `f64` (scientific reference) or `f32` (GPU parity) state storage.                        |
+| `kineticTemperature`     | experimental | Instantaneous kinetic temperature over the 3N − 6 internal degrees of freedom.           |
+| `templateCharges`        | experimental | Assign AMBER/PDB2PQR residue-template and monatomic-ion charges.                         |
+| `residueNetCharge`       | experimental | Sum a charge column over active atoms into residue rows.                                 |
+| `TemplateChargeOptions`  | experimental | Histidine and residue-specific template overrides.                                       |
+| `TemplateChargeReport`   | experimental | Net charge, gaps, ions and unmatched names.                                              |
+| `ChargeAssignment`       | experimental | Values, assigned mask and method report.                                                 |
+| `ChargeUnmatched`        | experimental | Aggregated unmatched atom name and sample residue keys.                                  |
+| `gasteigerCharges`       | experimental | Assign PEOE charges to complete non-polymer components.                                  |
+| `GasteigerOptions`       | experimental | Exclusion mask and iteration count.                                                      |
+| `GasteigerReport`        | experimental | Assigned count and refused components.                                                   |
+| `GasteigerRefusal`       | experimental | Component residue keys, refusal reason and detail.                                       |
+| `GasteigerRefusalReason` | experimental | Named reason an unsupported component was not charged.                                   |
+| `electrostatics`         | experimental | Validate dielectric options and derive κ, kT and the output scale.                       |
+| `ElectrostaticsOptions`  | experimental | Model (`vacuum`, `distance`, `debye`), ε, ionic strength, temperature, clamp and unit.   |
+| `Electrostatics`         | experimental | Normalised physics shared by the CPU reference and the WGSL uniform.                     |
+| `DielectricModel`        | experimental | `vacuum`, `distance` (ε = D·r) or `debye`.                                               |
+| `PotentialUnit`          | experimental | `kT/e` or `kcal/mol/e`.                                                                  |
 
 ### `./wgsl`
 
@@ -98,11 +113,26 @@ tested against (`applyAffine`, `unwrapFrame`, `applyNormalMode`,
 | `COULOMB_PARAMS_BYTES`   | advanced  | Size of the `coulombWgsl` uniform (112 bytes).                                       |
 | `COULOMB_WORKGROUP`      | advanced  | Invocations per workgroup and atoms per tile (64).                                   |
 | `COULOMB_MODEL_CODE`     | advanced  | Model code in the uniform: vacuum 0, distance 1, debye 2.                            |
+| `langevinWgsl`           | advanced  | BAOAB in four dispatches per step (`langevinBao`, `Finish`, `Drift`, `ForcesKick`).  |
+| `langevinBuffers`        | advanced  | Pack nodes, CSR, rest lengths and step-0 state; scratch size and workgroup count.    |
+| `LangevinBuffers`        | advanced  | Typed arrays and sizes for the storage bindings of `langevinWgsl`.                   |
+| `langevinUniform`        | advanced  | Encode the `langevinWgsl` uniform from a system and resolved params.                 |
+| `LANGEVIN_PARAMS_BYTES`  | advanced  | Size of the `langevinWgsl` uniform (112 bytes).                                      |
 
 The internal `coulombPotential`/`coulombField` are the f64 oracle for
 `coulombWgsl`, which the viewer's `<EField>` dispatches. The physics and budgets
 are recorded in
 [the electric-field plan](../../docs/findings/2026-09-27-efield-plan.md).
+
+`langevinStep` is the reference for `langevinWgsl`: BAOAB Langevin over a CSR
+spring network in Å, ps, amu and kcal/mol. Step n draws Philox-4x32-10 noise
+under key (seed, n), so a run depends only on its inputs and replays bitwise on
+one device. After each OU kick, the velocities lose their net momentum and
+angular momentum about the reference centroid, so an elastic network neither
+drifts nor rotates and samples kT·H⁺ in 3N − 6 degrees of freedom. Its full-step
+kinetic temperature is low by about (ω dt)²/4 per mode, as BAOAB's is. The
+design and its counter-review are in
+[the stateful dynamics plan](../../docs/findings/2026-10-02-stateful-dynamics-plan.md).
 
 The CPU function returns a new array. Unselected rows retain their exact input
 values. The viewer compiles the WGSL strings and owns every GPU resource.
