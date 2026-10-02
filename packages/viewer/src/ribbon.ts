@@ -43,6 +43,7 @@ import {
   modeProps,
 } from "./internal/opacity.ts";
 import { withMaterial } from "./internal/with-material.ts";
+import { CopyDraws, withGeometryCopies } from "./internal/instance-copies.ts";
 import { buildRibbonGeometry } from "./internal/ribbon-geometry.ts";
 import { ribbonDsspRows } from "./internal/ribbon-dssp.ts";
 import { useRepaint } from "./internal/use-repaint.ts";
@@ -237,20 +238,25 @@ const RibbonResolved: ViewerComponent<
     map: Record<string, StorageSource | null>,
     colors?: ShaderSource,
   ) =>
-    withMaterial(
-      material,
-      use(FaceLayer, {
-        positions: map.positions!,
-        normals: map.normals!,
-        indices: map.indices!,
-        color: drawColor,
-        ...(colors ? { colors } : {}),
-        shaded: true,
-        side: "both",
-        ...drawMode,
-        ...props,
-      }),
-    );
+    use(CopyDraws, {
+      positions: map.positions!,
+      normals: map.normals!,
+      render: (positions: ShaderSource, normals: ShaderSource | null) =>
+        withMaterial(
+          material,
+          use(FaceLayer, {
+            positions,
+            normals: normals!,
+            indices: map.indices!,
+            color: drawColor,
+            ...(colors ? { colors } : {}),
+            shaded: true,
+            side: "both",
+            ...drawMode,
+            ...props,
+          }),
+        ),
+    });
   return withColumns(specs, (map) =>
     field
       ? use(VertexFieldColors, {
@@ -291,7 +297,7 @@ export const Ribbon: ViewerComponent<
   }
   & Translucency
   & SelectionDiagnostics
-> = (props) =>
+> = withGeometryCopies((props) =>
   use(SelectionConsumer, {
     input: props.select,
     who: "Ribbon",
@@ -305,4 +311,5 @@ export const Ribbon: ViewerComponent<
         select: props.select == null ? null : select,
       });
     },
-  });
+  })
+);

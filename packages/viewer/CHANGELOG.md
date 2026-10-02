@@ -6,6 +6,10 @@ All notable changes to `@molgpu/viewer` are recorded here. The format follows
 
 ## [Unreleased]
 
+- Ribbon, Tube and Surface draw biological assembly copies: geometry is built
+  once per group of copies sharing the same chains, in model space, and drawn
+  under each copy's operator through transformed position/normal getters.
+
 - `<Label>` and `<Distance>` draw once per biological assembly copy holding
   their atoms, anchored with that copy's coordinates (an explicit `at` draws
   once).

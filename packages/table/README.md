@@ -150,8 +150,7 @@ rows for chains displayed without assembly expansion. Empty instance tables are
 valid data, but represent no explicit assembly instances. Importers emit one
 identity row per chain unless asked for an assembly
 (`structureFromBcif(input, { assembly })`). `@molgpu/viewer` draws one copy per
-operator for Spacefill, Bonds and BallAndStick; the other representations still
-draw the asymmetric unit (see
+operator (see
 [the assembly instance decision](../../docs/findings/2026-10-01-assembly-instances-decision.md)).
 
 `residueKey` includes model, both chain namespaces, label/author sequence,

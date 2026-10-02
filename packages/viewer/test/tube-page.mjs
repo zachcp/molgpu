@@ -13,7 +13,7 @@ import {
 import { createStructure } from "@molgpu/table";
 import { resolve, where } from "@molgpu/select";
 import { byChain, bySeq } from "@molgpu/fields";
-import { Structure, Tube } from "../src/index.ts";
+import { Ribbon, Structure, Surface, Tube } from "../src/index.ts";
 
 const probe = globalThis.__probe = {
   storage: [],
@@ -172,10 +172,29 @@ const data = createStructure({
 const nothing = resolve(where("atom", "none", () => false), data);
 
 // The edited state lives BELOW a stable <Pass>, as in a real app: a style edit
+// The same chains with a second assembly copy 5 Å along +y (fch.4): its
+// geometry is built once and drawn under both operators.
+const I = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+const UP = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 5, 0, 1];
+const assembled = createStructure({
+  positions: data.positions,
+  topology: {
+    ...data.topology,
+    instances: {
+      count: 4,
+      chain: Uint32Array.of(0, 1, 0, 1),
+      operatorId: ["1", "1", "2", "2"],
+      transform: Float64Array.from([...I, ...I, ...UP, ...UP]),
+    },
+  },
+});
+
 // must repaint on its own, not because the whole pass happened to re-render
 // (molgpu-sept-jrr — holding it above the Pass masked a missing repaint).
 const TubeProbe = () => {
   const [mode, setMode] = useState("multi");
+  const [kind, setKind] = useState("tube");
+  probe.setKind = setKind;
   const [radius, setRadius] = useState(0.3);
   const [color, setColor] = useState([0.45, 0.78, 0.95, 1]);
   probe.setMode = setMode;
@@ -186,7 +205,14 @@ const TubeProbe = () => {
   const props = mode === "empty"
     ? { select: nothing, radius, color }
     : { radius, color };
-  return use(Structure, { data, children: use(Tube, props) });
+  return use(Structure, {
+    data: mode === "assembly" ? assembled : data,
+    children: kind === "ribbon"
+      ? use(Ribbon, { color: props.color })
+      : kind === "surface"
+      ? use(Surface, { color: props.color, resolution: 0.6 })
+      : use(Tube, props),
+  });
 };
 
 const App = () => {

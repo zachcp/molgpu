@@ -2,6 +2,7 @@
 import { assert, assertEquals, assertStrictEquals } from "@std/assert";
 import { structureFromBcif } from "@molgpu/io";
 import {
+  copyGroups,
   copyRows,
   instanceCopies,
   type InstanceCopy,
@@ -37,4 +38,15 @@ Deno.test("instances: copy rows intersect a representation's rows", () => {
   assertEquals([...copyRows(Uint32Array.of(0, 1, 2, 5, 9), copy)], [1, 5]);
   const rows = Uint32Array.of(4, 2);
   assert(copyRows(rows, null) === rows);
+});
+
+Deno.test("instances: copies sharing chains form one geometry group", async () => {
+  const data = await structureFromBcif(bytes, { assembly: "2" });
+  const groups = copyGroups(instanceCopies(data));
+  assertEquals(groups.length, 1, "1tqn assembly 2: one shared geometry");
+  assertEquals(groups[0].copies.map((c) => c.operatorId), ["1", "2", "3", "4"]);
+  const a = { rows: Uint32Array.of(1, 2) } as InstanceCopy;
+  const b = { rows: Uint32Array.of(3) } as InstanceCopy;
+  const c = { rows: Uint32Array.of(1, 2) } as InstanceCopy;
+  assertEquals(copyGroups([a, b, c]).map((g) => g.copies.length), [2, 1]);
 });

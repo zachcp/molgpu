@@ -176,6 +176,86 @@ Deno.test("viewer tube", async () => {
       previousShot = fieldShot;
     }
 
+    // Assembly copies (molgpu-sept-fch.4): two operators over the same chains
+    // build the tube geometry once and draw it twice.
+    const lit = (png) =>
+      page.evaluate(async (base64) => {
+        const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+        const image = await createImageBitmap(
+          new Blob([bytes], { type: "image/png" }),
+        );
+        const canvas = new OffscreenCanvas(image.width, image.height);
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(image, 0, 0);
+        image.close();
+        const px = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+        let n = 0;
+        for (let i = 0; i < px.length; i += 4) {
+          if (px[i] + px[i + 1] + px[i + 2] > 90) n++;
+        }
+        return n;
+      }, png.toString("base64"));
+    await page.evaluate(() => {
+      globalThis.__probe.setColor([0.45, 0.78, 0.95, 1]);
+      globalThis.__probe.setRadius(0.3);
+      globalThis.__probe.setMode("none");
+    });
+    await settle();
+    await page.evaluate(() => globalThis.__probe.setMode("multi"));
+    await settle();
+    await settle();
+    const single = await lit(await shot());
+    const beforeAssembly = await snap();
+    await page.evaluate(() => globalThis.__probe.setMode("assembly"));
+    await settle();
+    await settle();
+    const assembled = await snap();
+    const copies = await lit(await shot());
+    const built = assembled.storageLabels.slice(beforeAssembly.storage).filter(
+      (label) => label === "molgpu:positions" || label === "molgpu:segments",
+    );
+    assertEquals(
+      built.sort(),
+      ["molgpu:positions", "molgpu:segments"],
+      "two copies build one geometry",
+    );
+    assert(
+      copies > single * 1.6,
+      `two copies draw about twice the tube: ${copies} vs ${single}`,
+    );
+    assertEquals(assembled.errors, [], "assembly copies: WebGPU errors");
+
+    // The same contract for Ribbon and Surface meshes.
+    for (const kind of ["ribbon", "surface"]) {
+      await page.evaluate((k) => {
+        globalThis.__probe.setKind(k);
+        globalThis.__probe.setMode("multi");
+      }, kind);
+      await settle();
+      await settle();
+      const one = await lit(await shot());
+      const before = await snap();
+      await page.evaluate(() => globalThis.__probe.setMode("assembly"));
+      await settle();
+      await settle();
+      await settle();
+      const after = await snap();
+      const two = await lit(await shot());
+      const meshes = after.storageLabels.slice(before.storage).filter((label) =>
+        ["molgpu:positions", "molgpu:normals", "molgpu:indices"].includes(label)
+      );
+      assertEquals(
+        meshes.sort(),
+        ["molgpu:indices", "molgpu:normals", "molgpu:positions"],
+        `${kind}: two copies build one mesh`,
+      );
+      assert(
+        one > 200 && two > one * 1.6,
+        `${kind}: two copies draw about twice: ${two} vs ${one}`,
+      );
+      assertEquals(after.errors, [], `${kind} copies: WebGPU errors`);
+    }
+
     assertEquals(errors, [], "page errors");
     assertEquals(styled.errors, [], "uncaptured WebGPU errors");
 

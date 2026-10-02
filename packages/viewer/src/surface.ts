@@ -33,6 +33,7 @@ import {
   modeProps,
 } from "./internal/opacity.ts";
 import { withMaterial } from "./internal/with-material.ts";
+import { CopyDraws, withGeometryCopies } from "./internal/instance-copies.ts";
 import { useGeometryJob } from "./use-geometry-job.ts";
 import { buildSurfaceGeometry } from "./internal/surface-geometry.ts";
 import { useRepaint } from "./internal/use-repaint.ts";
@@ -216,20 +217,25 @@ const SurfaceResolved: ViewerComponent<
     map: Record<string, StorageSource | null>,
     colors?: ShaderSource,
   ) =>
-    withMaterial(
-      material,
-      use(FaceLayer, {
-        positions: map.positions!,
-        normals: map.normals!,
-        indices: map.indices!,
-        color: drawColor,
-        ...(colors ? { colors } : {}),
-        shaded: true,
-        side: "both",
-        ...drawMode,
-        ...props,
-      }),
-    );
+    use(CopyDraws, {
+      positions: map.positions!,
+      normals: map.normals!,
+      render: (positions: ShaderSource, normals: ShaderSource | null) =>
+        withMaterial(
+          material,
+          use(FaceLayer, {
+            positions,
+            normals: normals!,
+            indices: map.indices!,
+            color: drawColor,
+            ...(colors ? { colors } : {}),
+            shaded: true,
+            side: "both",
+            ...drawMode,
+            ...props,
+          }),
+        ),
+    });
   return withColumns(specs, (map) =>
     field
       ? use(FieldFaces, {
@@ -268,7 +274,7 @@ export const Surface: ViewerComponent<
   }
   & Translucency
   & SelectionDiagnostics
-> = (props) =>
+> = withGeometryCopies((props) =>
   use(SelectionConsumer, {
     input: props.select,
     who: "Surface",
@@ -282,4 +288,5 @@ export const Surface: ViewerComponent<
         select: props.select == null ? null : select,
       });
     },
-  });
+  })
+);
