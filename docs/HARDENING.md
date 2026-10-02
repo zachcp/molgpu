@@ -66,16 +66,23 @@ remain excluded.
   no workspace consumer needs a meaningful caller-facing description in the
   README API table, which is its explicit justification for the public surface.
 
-  **Export discipline (R1–R6).** Apply these rules to every entry, including
-  subpaths:
+  **Export discipline (R1–R6).** Apply this review guidance to every entry,
+  including subpaths. Automated H5 checks enforce README classification,
+  snapshots, named-type closure and explicit re-export lists; the usefulness of
+  a named contract remains a review decision.
 
-  1. Export one `XProps` type per public component. For union props, export the
-     union; keep its variants internal.
+  1. Export a named component props type when callers need to name it
+     independently. Inline concrete prop shapes and intersections of exported
+     domain contracts are valid. Components with the same contract may share a
+     props type (for example Ribbon and Cartoon share `RibbonProps`). For named
+     union props, export the union; keep its variants internal.
   2. Export callback status/result types and public hook return types that
      callers need to name.
-  3. Remove generic utility aliases such as `TypedArray`, `VectorLike`, and
-     `Vec3Like`; inline a concrete type or `ArrayLike<number>`. Keep shared
-     domain aliases such as `ColorLike`, `Selection`, and `Field`.
+  3. Keep shared caller-facing domain aliases such as `ColorLike`, `Selection`,
+     `Field`, and viewer `VectorLike` (plain/typed vectors accepted for colours
+     and spatial values). Do not export an implementation utility solely because
+     it is shared internally; use a concrete type or `ArrayLike<number>` when an
+     alias has no useful caller-facing contract.
   4. Remove option bags with their removed owner function or component.
   5. List every public export explicitly; never use `export *` or
      `export type *` in an entry module.
@@ -146,6 +153,6 @@ gates; the [architecture gate](findings/2026-10-02-crj13-architecture-gate.md)
 records passing hosted and local acceptance. Actual Deno manifests define the
 publish contract; npm-era `types`/`import`, tarball and `repository` wording
 above is historical where it does not match those manifests. Export discipline
-R1/R3 also exceeds current enforcement (unnamed component props and `VectorLike`
-still exist); `molgpu-sept-ktr.7` tracks reconciliation. A passing hardening
-script does not prove those unenforced rules or every browser composition.
+R1/R3 was reconciled in `molgpu-sept-ktr.7`: useful shared aliases and concrete
+inline props are accepted, with no public removals. A passing hardening script
+does not prove every review judgement or browser composition.

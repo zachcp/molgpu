@@ -73,6 +73,12 @@ components under an application-owned render tree.
 
 ## Default view and selections
 
+Component signatures use concrete inline props or exported domain contracts.
+Named props are provided when useful independently; `<Ribbon>` and `<Cartoon>`
+share `RibbonProps`. `VectorLike` is the shared plain/typed vector contract for
+colours and spatial values. These supported types remain available from the
+existing entries; no alias migration is needed.
+
 A structure can retain several models and alternate conformers. Without a
 `select`, every molecular consumer (`<Spacefill>`, `<Bonds>`, `<Tube>`,
 `<Ribbon>`, `<Surface>`, `<EField>`, `<Label>` anchors and empty-focus
