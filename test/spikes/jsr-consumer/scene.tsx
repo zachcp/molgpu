@@ -109,7 +109,17 @@ export const Scene = ({ src }: { src?: string }): LiveElement => (
       />
       {src
         ? (
-          <Structure src={src} loader={loader}>
+          <Structure
+            src={src}
+            loader={loader}
+            error={(failure: unknown) => {
+              // Surface a failed load to the runner instead of a blank canvas.
+              (globalThis as { __errors?: string[] }).__errors?.push(
+                `Structure load failed: ${failure}`,
+              );
+              return null;
+            }}
+          >
             <Spacefill color={byElement()} />
           </Structure>
         )
