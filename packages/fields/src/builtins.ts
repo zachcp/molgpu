@@ -1,6 +1,6 @@
 // Built-in colour fields: a small, closed set composed from the field
 // primitives. There is deliberately no user-facing expression language — these
-// are the common presets (molgpu-sept-urn.3), and callers reach for the
+// are the common presets, and callers reach for the
 // primitives (categorical/linear/colormap) directly for anything else.
 import type { VolumeData } from "@molgpu/table";
 import {

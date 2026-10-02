@@ -1,4 +1,4 @@
-// Identity-keyed annotation joins (molgpu-sept-urn.4). External per-residue or
+// Identity-keyed annotation joins. External per-residue or
 // per-chain records are matched onto the table by an explicit identity policy —
 // chain plus residue discriminators, NEVER a raw sequence number alone — and
 // lifted to a per-atom `annotation` field that is indistinguishable from any

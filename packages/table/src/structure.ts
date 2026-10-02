@@ -106,9 +106,6 @@ export function validateStructure<T extends StructureInput>(data: T): T {
     });
   }
   if (a.comp !== undefined) strings(a.comp, a.count, "atoms.comp");
-  if (a.formalCharge !== undefined) {
-    column(a.formalCharge, a.count, Int8Array, "atoms.formalCharge");
-  }
   a.element.forEach((v, i) => {
     if (v > 118) {
       fail(`atoms.element[${i}]`, "expected atomic number 0 (unknown) to 118");
@@ -142,17 +139,6 @@ export function validateStructure<T extends StructureInput>(data: T): T {
       fail(`residues.polymer[${i}]`, "unknown polymer kind");
     }
   });
-  if (r.secondaryStructure !== undefined) {
-    strings(r.secondaryStructure, r.count, "residues.secondaryStructure");
-    r.secondaryStructure.forEach((v, i) => {
-      if (!["helix", "sheet", "coil"].includes(v)) {
-        fail(
-          `residues.secondaryStructure[${i}]`,
-          "unknown secondary structure kind",
-        );
-      }
-    });
-  }
   if (r.het !== undefined) {
     column(r.het, r.count, Uint8Array, "residues.het");
     r.het.forEach((v, i) => {

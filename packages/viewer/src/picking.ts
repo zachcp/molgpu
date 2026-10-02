@@ -102,7 +102,7 @@ export const Pickable: LC<{
 
 /**
  * Resolve the atom under the cursor. Returns `{ hover, pick }`, each either null
- * or `{ id, resource, atom, instance }`. `hover` tracks the pointer; `pick` is
+ * or `{ id, resource, atom, drawIndex }`. `hover` tracks the pointer; `pick` is
  * the last atom a left press landed on (the click-to-seek hook — the caller maps
  * the picked atom to a beat and seeks its own TimelineProvider, since time stays
  * caller-owned). Optional `onHover`/`onPick` fire on change with the same value.

@@ -36,8 +36,6 @@ Deno.test("formalCharge: imported values carry imported:mmcif", async () => {
   const column = attributeColumn(data, "formalCharge")!;
   assertEquals(column.provenance, "imported:mmcif");
   assertEquals([...column.values], [1, 0, 0, 0, -1, 2]);
-  // io writes only the derived column now.
-  assertEquals(data.topology.atoms.formalCharge, undefined);
 });
 
 Deno.test("formalCharge: all-unknown and absent fields are default zeros", async () => {

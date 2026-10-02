@@ -13,12 +13,6 @@ export interface Atoms {
   readonly radius?: Float32Array;
   /** Per-atom chemical component, present only when some residue mixes components (microheterogeneity); residues.comp is then the residue's first atom's. */
   readonly comp?: readonly string[];
-  /**
-   * Formal charge on hand-built structures; resolves as `formalCharge` with
-   * provenance `legacy`. @deprecated Set the derived `formalCharge` attribute
-   * with `withAttributes`; `@molgpu/io` no longer writes this column.
-   */
-  readonly formalCharge?: Int8Array;
 }
 export interface Residues {
   readonly count: number;
@@ -29,13 +23,6 @@ export interface Residues {
   readonly insertionCode: readonly string[];
   readonly comp: readonly string[];
   readonly polymer: readonly ("protein" | "rna" | "dna" | "other")[];
-  /**
-   * 3-state secondary structure on hand-built structures; resolves as `ssCode`
-   * (helix H, sheet E) with provenance `legacy`. @deprecated Set the derived
-   * `ssCode` attribute with `withAttributes`; `@molgpu/io` no longer writes
-   * this column.
-   */
-  readonly secondaryStructure?: readonly ("helix" | "sheet" | "coil")[];
   /** 1 when the residue's first atom is not a group_PDB ATOM record (a HETATM). Absent when the source has no group_PDB. */
   readonly het?: Uint8Array;
 }
@@ -105,8 +92,9 @@ export type AttributeValues =
   | Uint8Array
   | Int32Array
   | Uint32Array;
+/** `topology` marks a built-in view of a topology column. */
 export type AttributeProvenance =
-  | "legacy"
+  | "topology"
   | "default"
   | "user"
   | `imported:${string}`

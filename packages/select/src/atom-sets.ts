@@ -2,7 +2,7 @@
 // on its own ("singletons") or a sequence of atom sets. This mirrors Mol*'s
 // StructureSelection (mol-model/structure/query/selection.js), because MolQL
 // filters and modifiers act per set. It never leaves this package: resolve()
-// flattens it into an ordinary Selection (decision molgpu-sept-922.1).
+// flattens it into an ordinary Selection.
 //
 // Every Uint32Array here is sorted, unique atom rows.
 

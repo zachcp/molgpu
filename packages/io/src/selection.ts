@@ -1,5 +1,5 @@
 // Selection-language front end: MolScript, PyMOL, VMD and Jmol text -> a plain
-// MolQL expression tree that @molgpu/select compiles (decision molgpu-sept-922.1).
+// MolQL expression tree that @molgpu/select compiles.
 //
 // Only Mol*'s parsers are used (mol-script/language, mol-script/transpilers and
 // mol-util/monadic-parser). None of them import Mol*'s structure model. They are

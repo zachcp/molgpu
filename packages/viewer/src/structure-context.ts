@@ -30,7 +30,11 @@ import { TrajectoryContext } from "./trajectory-context.ts";
 
 /** GPU columns allocated once per structure and shared by representations. */
 export interface StructureSources {
-  /** @deprecated Read the nearest stream with useCoordinates().source. */
+  /**
+   * The root dataset's positions. Below a coordinate provider they are stale,
+   * and reading them throws in development; use useCoordinates().source for
+   * the nearest live stream.
+   */
   readonly positions: ShaderSource;
   readonly radii: ShaderSource;
 }

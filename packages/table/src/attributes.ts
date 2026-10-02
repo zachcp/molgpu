@@ -7,7 +7,6 @@ import type {
   StructureData,
 } from "./structure-types.ts";
 import { isStructureIdentity, nextStructureRevision } from "./structure.ts";
-import { legacySsCodes } from "./ss-codes.ts";
 
 type Identity = StructureData["identity"];
 const builtInAttributeCache = new WeakMap<
@@ -23,7 +22,7 @@ const finite = (value: number, path: string): void => {
 
 const ATTRIBUTE_NAMES = /^[a-z][a-z0-9-]*:[A-Za-z][A-Za-z0-9_-]*$/;
 const PROVENANCE =
-  /^(legacy|default|user|(?:imported|template|computed|gpu):[A-Za-z0-9][A-Za-z0-9._-]*)$/;
+  /^(topology|default|user|(?:imported|template|computed|gpu):[A-Za-z0-9][A-Za-z0-9._-]*)$/;
 /** Domains shared by table's built-in columns and fields' attribute builder. */
 export const ATTRIBUTE_DOMAINS: Readonly<{
   element: "atom";
@@ -114,20 +113,6 @@ const BUILT_INS = {
     kind: "code",
     read: (d: StructureData) => d.topology.residues.chain,
   },
-  formalCharge: {
-    domain: ATTRIBUTE_DOMAINS.formalCharge,
-    kind: "code",
-    read: (d: StructureData) => d.topology.atoms.formalCharge,
-  },
-  // Hand-built structures' 3-state column, as codes (helix H, sheet E).
-  ssCode: {
-    domain: ATTRIBUTE_DOMAINS.ssCode,
-    kind: "code",
-    read: (d: StructureData) => {
-      const kinds = d.topology.residues.secondaryStructure;
-      return kinds ? legacySsCodes(kinds) : undefined;
-    },
-  },
 } as const;
 const VALUE_TYPES = [
   Float32Array,
@@ -161,7 +146,7 @@ export function attributeColumn(
     domain: spec.domain,
     kind: spec.kind,
     values,
-    provenance: name === "atomChain" ? "default" : "legacy",
+    provenance: name === "atomChain" ? "default" : "topology",
   });
   cache.set(name, result);
   return result;

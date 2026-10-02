@@ -309,7 +309,7 @@ export async function gpuDssp(
     ], Math.ceil(m / GROUP));
     gatherPass.end();
 
-    // The Phase 13 reduction emits one 32-byte bound per group; merge until
+    // The shared bounds reduction emits one 32-byte bound per group; merge until
     // one remains. The readback sizes the dense grid for this generation.
     let boundCount = caCount;
     let boundInput: GPUBuffer | null = null;

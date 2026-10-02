@@ -6,6 +6,11 @@ All notable changes to `@molgpu/table` are recorded here. The format follows
 
 ## [Unreleased]
 
+- Before first publish, remove the deprecated `atoms.formalCharge` and
+  `residues.secondaryStructure` topology columns (and `legacySsCodes`); set the
+  `formalCharge` and `ssCode` attributes with `withAttributes`. Built-in views
+  of topology columns now report provenance `topology` instead of `legacy`.
+
 - Remove the unexported `frame-ss.ts` per-frame DSSP cache from the published
   source; the io DSSP oracle now runs per-frame DSSP with public `dssp` and
   `withPositions`.

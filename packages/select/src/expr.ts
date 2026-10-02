@@ -11,7 +11,7 @@
 // The language is closed. Only the symbols in SPECS below compile; anything
 // else, including an unsupported argument of a supported symbol, throws at
 // compile time. Adding a symbol needs its own bead (lkd.14 as amended by
-// molgpu-sept-922.1; docs/findings/2026-09-26-molql-selection-spike.md §4.7).
+// docs/findings/2026-09-26-molql-selection-spike.md §4.7).
 
 import {
   attributeColumn,
@@ -218,7 +218,7 @@ const ssFlag = (name: string): number => {
 // ssCode (table's SS_CODES order: -, H, B, E, G, I, T, S, P) -> Mol*'s
 // SecondaryStructureType flags for its DSSP letters. Coil carries no bits, as
 // in Mol* (so has-any(flags, 0) is false for it). An imported helix of a class
-// Mol* flags without alpha still reads H here (plan efv.6).
+// Mol* flags without alpha still reads H here.
 const CODE_SS: readonly number[] = [
   0,
   SS.Helix | SS.HelixAlpha,
@@ -854,7 +854,7 @@ const SPECS: Readonly<Record<string, Spec>> = {
 const currentSet = (ctx: Ctx): Uint32Array =>
   ctx.current ?? fail("atom-set symbol used outside a set test (filter.pick)");
 
-/** Arguments that exist in MolQL but are outside the Phase 1 allowlist. */
+/** Arguments that exist in MolQL but are outside the supported allowlist. */
 const NOT_YET: Readonly<Record<string, Readonly<Record<string, string>>>> = {
   [`${SQ}filter.is-connected-to`]: {
     invert:
