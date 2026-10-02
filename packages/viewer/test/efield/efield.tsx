@@ -25,7 +25,11 @@ import { resolve, type Selection, where } from "@molgpu/select";
 import { coordinateBounds, createVolume, sampleVolume } from "@molgpu/table";
 
 import { buildSurfaceGeometry } from "../../src/internal/surface-geometry.ts";
-import { coulombGrid } from "../../../dynamics/src/electrostatics.ts";
+import {
+  coulombGrid,
+  coulombPotential,
+} from "../../../dynamics/src/electrostatics.ts";
+import { COULOMB_GRID_BLOCK, COULOMB_WORKGROUP } from "@molgpu/dynamics/wgsl";
 import { type ElectrostaticsOptions, templateCharges } from "@molgpu/dynamics";
 import { byPotential } from "@molgpu/fields";
 import {
@@ -208,7 +212,8 @@ type Mode =
   | "lines"
   | "arrows"
   | "select"
-  | "perf";
+  | "perf"
+  | "fold";
 interface State {
   mode: Mode;
   physics: ElectrostaticsOptions;
@@ -243,6 +248,14 @@ interface Probe {
   hold(): void;
   release(): void;
   dispatchPairs(n?: number): void;
+  foldParity(): Promise<{
+    samples: number;
+    groups: number;
+    foldStart: number;
+    checked: number;
+    error: number;
+    peak: number;
+  }>;
   surfaceStats(chain: string): Promise<{ mean: number; count: number }>;
   center: [number, number, number];
   /** ms from a coordinate change to the finished recomputation. */
@@ -271,6 +284,7 @@ const probe: Probe = {
   hold: () => {},
   release: () => {},
   dispatchPairs: () => {},
+  foldParity: () => Promise.reject(new Error("not mounted")),
   surfaceStats: () => Promise.resolve({ mean: 0, count: 0 }),
   arrowEnds: () => Promise.resolve({ side: 0, ends: [] }),
   center: [0, 0, 0],
@@ -340,6 +354,61 @@ const DEFAULT_DISPATCH_PAIRS = efieldTesting.pairsPerDispatch;
 /** Override the per-dispatch pair bound; no argument restores the default. */
 probe.dispatchPairs = (n = DEFAULT_DISPATCH_PAIRS) => {
   efieldTesting.pairsPerDispatch = n;
+};
+
+/**
+ * Parity of a grid too large for one 1D dispatch (molgpu-sept-egp.11): read
+ * the GPU potential in place and compare a stride subsample plus every sample
+ * past the 2D fold (global row 1 onwards) with the f64 reference. The DIPOLE
+ * charges are summed in vacuum.
+ */
+probe.foldParity = async () => {
+  const grid = probe.grid!;
+  const [nx, ny, nz] = grid.dims;
+  const samples = nx * ny * nz;
+  const buffer = potentialBuffer!;
+  const staging = probe.device!.createBuffer({
+    size: samples * 4,
+    usage: 0x0001 | 0x0008, // MAP_READ | COPY_DST
+  });
+  const encoder = probe.device!.createCommandEncoder();
+  encoder.copyBufferToBuffer(buffer, 0, staging, 0, samples * 4);
+  probe.device!.queue.submit([encoder.finish()]);
+  await staging.mapAsync(0x0001);
+  const gpu = new Float32Array(staging.getMappedRange().slice(0));
+  staging.unmap();
+  staging.destroy();
+  const foldStart = 65535 * COULOMB_WORKGROUP * COULOMB_GRID_BLOCK;
+  const indices: number[] = [];
+  for (let i = 0; i < Math.min(samples, foldStart); i += 997) indices.push(i);
+  for (let i = foldStart; i < samples; i++) indices.push(i);
+  const t = grid.transform;
+  const points = new Float64Array(indices.length * 3);
+  indices.forEach((index, n) => {
+    const i = index % nx, j = Math.floor(index / nx) % ny;
+    const k = Math.floor(index / (nx * ny));
+    for (let c = 0; c < 3; c++) {
+      points[n * 3 + c] = t[c] * i + t[4 + c] * j + t[8 + c] * k + t[12 + c];
+    }
+  });
+  const cpu = coulombPotential(
+    points,
+    [-3, 0, 0, 1, 3, 0, 0, -1],
+    current.physics,
+  );
+  let peak = 0, worst = 0;
+  indices.forEach((index, n) => {
+    peak = Math.max(peak, Math.abs(cpu[n]));
+    worst = Math.max(worst, Math.abs(gpu[index] - cpu[n]));
+  });
+  return {
+    samples,
+    groups: Math.ceil(samples / COULOMB_GRID_BLOCK / COULOMB_WORKGROUP),
+    foldStart,
+    checked: indices.length,
+    error: worst / peak,
+    peak,
+  };
 };
 
 /** CPU oracle on the probe's grid, with the atoms each mode sums. */
@@ -672,6 +741,21 @@ const Scene = ({ state }: { state: State }): LiveElement => {
               <VolumeProbe />
             </EField>
           </WobbleCoordinates>
+        </Structure>
+      );
+    case "fold":
+      // 259³ samples: one sumGrid dispatch of 67 857 workgroups, folded 2D.
+      return (
+        <Structure data={DIPOLE}>
+          <EField
+            {...field}
+            model="vacuum"
+            box={{ min: [-16, -16, -16], max: [16.25, 16.25, 16.25] }}
+            spacing={0.125}
+            maxSamples={300 ** 3}
+          >
+            <VolumeProbe />
+          </EField>
         </Structure>
       );
     case "lines":

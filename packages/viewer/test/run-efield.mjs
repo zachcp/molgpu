@@ -262,6 +262,20 @@ Deno.test("electric fields", async () => {
     await page.evaluate(() => globalThis.__efield.dispatchPairs());
     await update({ physics: {} });
 
+    // 4c. A grid too large for one 1D dispatch folds into 2D (molgpu-sept-
+    //     egp.11): 259³ samples need 67 857 workgroups in a single sumGrid
+    //     dispatch. Every sample past the fold and a stride elsewhere match the
+    //     f64 reference.
+    await update({ mode: "none" });
+    await update({ mode: "fold", physics: { model: "vacuum" } });
+    await ready();
+    const fold = await page.evaluate(() => globalThis.__efield.foldParity());
+    assert(fold.groups > 65535, `fold case must exceed 1D: ${fold.groups}`);
+    assert(fold.samples > fold.foldStart, "samples past the fold are checked");
+    assert(fold.error < 1e-4, `folded dispatch GPU vs CPU: ${fold.error}`);
+    report.states.fold = fold;
+    await update({ mode: "none", physics: {} });
+
     // 5. Scrubbing a trajectory recomputes for the displayed frame.
     await update({ mode: "none" });
     await update({ mode: "trajectory", frame: 0 });
