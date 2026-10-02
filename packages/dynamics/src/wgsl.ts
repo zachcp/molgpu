@@ -40,6 +40,7 @@ export {
   coulombWgsl,
 } from "./electrostatics-wgsl.ts";
 export {
+  elasticDisplacementWgsl,
   LANGEVIN_PARAMS_BYTES,
   type LangevinBuffers,
   langevinBuffers,

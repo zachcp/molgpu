@@ -24,6 +24,12 @@ export {
   solveElasticModes,
 } from "./elastic-network.ts";
 export {
+  caGuideRows,
+  type ElasticNetworkData,
+  elasticNetworkData,
+  type ElasticNetworkOptions,
+} from "./elastic-data.ts";
+export {
   type NormalModeData,
   normalModeFromElastic,
   residueGuideMap,

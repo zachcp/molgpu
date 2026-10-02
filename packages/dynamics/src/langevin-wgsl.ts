@@ -291,3 +291,37 @@ fn langevinForcesKick(@builtin(global_invocation_id) gid: vec3<u32>) {
   setV(i, getV(i) + params.halfDt * (ACCEL / nodes[i].w) * f);
 }
 `;
+
+/**
+ * use.gpu-linked coordinate kernel: each mapped atom moves by its guide node's
+ * displacement, `out_i = in_i + (x_node - ref_node)`; unmapped atoms
+ * (0xffffffff) copy upstream. Link order: size, atom-to-node (u32), integrator
+ * state (f32, positions first), reference node positions (packed f32 xyz),
+ * upstream input, then packed xyz output.
+ */
+export const elasticDisplacementWgsl: string = `
+@link fn getSize() -> vec2<u32>;
+@link fn getNode(i: u32) -> u32;
+@link fn getState(i: u32) -> f32;
+@link fn getReference(i: u32) -> f32;
+@link fn getInput(i: u32) -> vec3<f32>;
+@link var<storage, read_write> output: array<f32>;
+@compute @workgroup_size(64)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+  let i = id.x;
+  if (i >= getSize().x) { return; }
+  var p = getInput(i);
+  let node = getNode(i);
+  if (node != 0xffffffffu) {
+    let o = node * 3u;
+    p += vec3<f32>(
+      getState(o) - getReference(o),
+      getState(o + 1u) - getReference(o + 1u),
+      getState(o + 2u) - getReference(o + 2u),
+    );
+  }
+  output[i * 3u] = p.x;
+  output[i * 3u + 1u] = p.y;
+  output[i * 3u + 2u] = p.z;
+}
+`;

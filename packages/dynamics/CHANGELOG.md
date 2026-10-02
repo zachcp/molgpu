@@ -5,6 +5,12 @@ All notable changes to `@molgpu/dynamics` are recorded here. See
 
 ## [Unreleased]
 
+- `elasticNetworkData(positions, topology, { guide, cutoff, k, masses,
+  maxContacts, version })`
+  builds `<ElasticNetwork>` input from reference positions the application
+  chooses; `caGuideRows` picks one CA per protein residue of the first model.
+  `./wgsl` adds `elasticDisplacementWgsl`.
+
 - Langevin dynamics over elastic networks. `enmSprings` turns
   `buildElasticNetwork` contacts into a symmetric CSR spring network;
   `langevinSystem`, `langevinParams`, `langevinInit`, `langevinStep` and

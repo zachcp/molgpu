@@ -14,6 +14,10 @@ ElasticMode
   export interface ElasticMode { readonly kind: "gnm" | "anm"; readonly eigenvalue: number; /** Scalar per node for GNM; packed xyz per node for ANM. */ readonly vector: Float32Array; readonly residual: number }
 ElasticNetwork
   export interface ElasticNetwork { readonly rows: Uint32Array; readonly pairs: Uint32Array; readonly directions: Float32Array }
+ElasticNetworkData
+  export interface ElasticNetworkData { /** Springs, reference node positions, masses and rigid frame. */ readonly system: LangevinSystem; /** Sorted atom rows of the guide nodes, in node order. */ readonly guideRows: Uint32Array; /** Atom row to guide node, or 0xffffffff for atoms that follow upstream. */ readonly atomToNode: Uint32Array; /** Identifies the reference; change it whenever the inputs change. */ readonly version: number }
+ElasticNetworkOptions
+  export interface ElasticNetworkOptions { /** * `"CA"` (default): one CA per protein residue of the first model, the * first CA row of each residue (so altloc copies do not become nodes). * Otherwise sorted, unique atom rows; non-residue guides need `masses`. */ readonly guide?: "CA" | ArrayLike<number>; /** Å, default 15. */ readonly cutoff?: number; /** kcal/mol/Å², default 1. */ readonly k?: number; /** amu per node; defaults to 110 for `"CA"`. */ readonly masses?: Float32Array; /** Contact cap; above it construction throws a RangeError, never thins. */ readonly maxContacts?: number; readonly version: number }
 ElasticSolveOptions
   export interface ElasticSolveOptions { /** * `"dense"` is exact Jacobi and limited to `MAX_ELASTIC_DIM`; `"lanczos"` is * sparse and matrix-free. `"auto"` (the default) picks dense up to the * limit and Lanczos above it. */ readonly method?: "auto" | "dense" | "lanczos"; /** Lanczos basis vectors kept (default: about 320 MB of f64 basis). */ readonly maxIterations?: number }
 Electrostatics
@@ -58,6 +62,10 @@ TemplateChargeReport
   export interface TemplateChargeReport { readonly assigned: number; readonly netCharge: number; readonly unmatched: readonly ChargeUnmatched[]; /** Template heavy atoms absent from an observed residue, so its net may be fractional. */ readonly incomplete: readonly { residue: string; template: string; missing: readonly string[] }[]; readonly gaps: readonly { before: string; after: string; distance: number | null }[]; readonly ions: readonly { residue: string; charge: number; source: string }[] }
 buildElasticNetwork
   export function buildElasticNetwork(positions: Float32Array, guideRows: ArrayLike<number>, cutoff: number, maxContacts?: number, maxCandidates?: number): ElasticNetwork;
+caGuideRows
+  export function caGuideRows(topology: Topology): Uint32Array;
+elasticNetworkData
+  export function elasticNetworkData(positions: Float32Array, topology: Topology, options: ElasticNetworkOptions): ElasticNetworkData;
 electrostatics
   export function electrostatics(options?: ElectrostaticsOptions): Electrostatics;
 enmSprings
@@ -141,6 +149,8 @@ createUnwrapForest
   export function createUnwrapForest(topology: Topology): UnwrapForest;
 dsspWgsl
   export const dsspWgsl: Readonly<{ gather: string; hbonds: string; turns: string; helix: string; bends: string; bridges: string }>;
+elasticDisplacementWgsl
+  export const elasticDisplacementWgsl: string;
 finishDssp
   export function finishDssp(layout: DsspLayout, gpuFlags: Uint32Array, bridges: readonly DsspBridge[]): Uint8Array;
 isIdentityAffine

@@ -14,11 +14,19 @@ import {
   langevinWgsl,
 } from "../src/wgsl.ts";
 import { toyNetwork } from "./langevin-fixture.ts";
+import { structureFromBcif } from "@molgpu/io";
+import {
+  buildElasticNetwork,
+  caGuideRows,
+  enmSprings,
+  langevinSystem,
+} from "../src/index.ts";
 
 const COUNTERS = 10_000, SEED = 5, STEP = 11, STEPS = 100;
 
 /** Raw WebGPU in the page: Philox words, normals, and two integrator runs. */
 async function onPage({ philoxModule, counters, langevin }) {
+  // `timeOnly` skips the Philox comparison and times one integrator run.
   if (!navigator.gpu) return { error: "no webgpu" };
   const adapter = await navigator.gpu.requestAdapter();
   const device = await adapter.requestDevice();
@@ -63,30 +71,33 @@ async function onPage({ philoxModule, counters, langevin }) {
     return copy;
   };
 
-  // Philox words and normals per counter.
-  const pm = await compile(philoxModule);
-  const words = device.createBuffer({ size: counters * 16, usage: S | C });
-  const normals = device.createBuffer({ size: counters * 16, usage: S | C });
-  const pp = device.createComputePipeline({
-    layout: "auto",
-    compute: { module: pm, entryPoint: "main" },
-  });
-  const pg = device.createBindGroup({
-    layout: pp.getBindGroupLayout(0),
-    entries: [{ binding: 0, resource: { buffer: words } }, {
-      binding: 1,
-      resource: { buffer: normals },
-    }],
-  });
-  const enc = device.createCommandEncoder();
-  const pass = enc.beginComputePass();
-  pass.setPipeline(pp);
-  pass.setBindGroup(0, pg);
-  pass.dispatchWorkgroups(Math.ceil(counters / 64));
-  pass.end();
-  device.queue.submit([enc.finish()]);
-  const gpuWords = [...new Uint32Array(await read(words, counters * 16))];
-  const gpuNormals = [...new Float32Array(await read(normals, counters * 16))];
+  let gpuWords = [], gpuNormals = [];
+  if (!langevin.timeOnly) {
+    // Philox words and normals per counter.
+    const pm = await compile(philoxModule);
+    const words = device.createBuffer({ size: counters * 16, usage: S | C });
+    const normals = device.createBuffer({ size: counters * 16, usage: S | C });
+    const pp = device.createComputePipeline({
+      layout: "auto",
+      compute: { module: pm, entryPoint: "main" },
+    });
+    const pg = device.createBindGroup({
+      layout: pp.getBindGroupLayout(0),
+      entries: [{ binding: 0, resource: { buffer: words } }, {
+        binding: 1,
+        resource: { buffer: normals },
+      }],
+    });
+    const enc = device.createCommandEncoder();
+    const pass = enc.beginComputePass();
+    pass.setPipeline(pp);
+    pass.setBindGroup(0, pg);
+    pass.dispatchWorkgroups(Math.ceil(counters / 64));
+    pass.end();
+    device.queue.submit([enc.finish()]);
+    gpuWords = [...new Uint32Array(await read(words, counters * 16))];
+    gpuNormals = [...new Float32Array(await read(normals, counters * 16))];
+  }
 
   // Langevin: explicit layout so every entry point shares one bind group.
   const lm = await compile(langevin.wgsl);
@@ -158,6 +169,14 @@ async function onPage({ philoxModule, counters, langevin }) {
     device.queue.submit([enc.finish()]);
     return [...new Float32Array(await read(state, langevin.state.length * 4))];
   };
+  if (langevin.timeOnly) {
+    // Warm up, then time batches of steps to completion.
+    await run();
+    const started = performance.now();
+    await run();
+    await device.queue.onSubmittedWorkDone();
+    return { seconds: (performance.now() - started) / 1000, errors };
+  }
   const first = await run();
   const second = await run();
   await device.queue.onSubmittedWorkDone();
@@ -250,6 +269,81 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
     );
     assert(rms <= 1e-4, `GPU vs CPU-f32 RMS ${rms} Å`);
     assert(out.first.slice(0, 3 * n).every(Number.isFinite));
+  } finally {
+    await browser.close();
+    await server.shutdown();
+  }
+});
+
+Deno.test("dynamics GPU throughput at about 100k atoms (recorded, not asserted)", async () => {
+  // Eight copies of the 4c7r CA network, 200 Å apart: about 12.3k nodes,
+  // the node count of a 100k-atom protein at CA level.
+  const data = await structureFromBcif(
+    await Deno.readFile(
+      new URL("../../io/test/fixtures/4c7r.bcif", import.meta.url),
+    ),
+  );
+  const rows = caGuideRows(data.topology);
+  const ca = new Float32Array(3 * rows.length);
+  rows.forEach((row, i) =>
+    ca.set(data.positions.subarray(3 * row, 3 * row + 3), 3 * i)
+  );
+  const copies = 8, positions = new Float32Array(copies * ca.length);
+  for (let c = 0; c < copies; c++) {
+    for (let i = 0; i < ca.length; i++) {
+      positions[c * ca.length + i] = ca[i] + (i % 3 === 0 ? 200 * c : 0);
+    }
+  }
+  const nodes = positions.length / 3;
+  const network = buildElasticNetwork(
+    positions,
+    Array.from({ length: nodes }, (_, i) => i),
+    15,
+    4_000_000,
+  );
+  const system = langevinSystem(enmSprings(network, positions), positions);
+  const params = langevinParams(system, { seed: 1 });
+  const packed = langevinBuffers(system);
+  const steps = 500;
+  const browser = await chromium.launch({
+    channel: "chrome",
+    headless: true,
+    args: webgpuBrowserArgs,
+  });
+  const server = Deno.serve(
+    { port: 5194, hostname: "127.0.0.1", onListen() {} },
+    () =>
+      new Response("<!doctype html><title>dynamics gpu</title>", {
+        headers: { "content-type": "text/html" },
+      }),
+  );
+  try {
+    const page = await browser.newPage();
+    await page.goto("http://127.0.0.1:5194/");
+    const out = await page.evaluate(onPage, {
+      philoxModule: "",
+      counters: 0,
+      langevin: {
+        wgsl: langevinWgsl,
+        uniform: [...new Uint8Array(langevinUniform(system, params))],
+        nodes: [...packed.nodes],
+        csr: [...packed.csr],
+        restLength: [...packed.restLength],
+        state: [...packed.state],
+        scratchFloats: packed.scratchFloats,
+        workgroups: packed.workgroups,
+        steps,
+        timeOnly: true,
+      },
+    });
+    assert(!out.error, out.error);
+    assertEquals(out.errors, []);
+    const perSecond = steps / out.seconds;
+    console.log(
+      `${nodes} nodes, ${network.pairs.length / 2} springs: ${
+        perSecond.toFixed(0)
+      } steps/s (${(1000 / perSecond).toFixed(3)} ms/step)`,
+    );
   } finally {
     await browser.close();
     await server.shutdown();

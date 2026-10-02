@@ -282,6 +282,9 @@ may change before 0.1.0; _advanced_ — only from `@molgpu/viewer/advanced`.
 | `UnwrapStatus`            | experimental | `ok`, `ambiguous` (ring edges that do not close), `search-limit`, `missing-box` or `invalid-box`, with a generation.                                                                                                    |
 | `NormalMode`              | experimental | Add a precomputed guide-node mode to nearest upstream coordinates; animation changes a scalar uniform.                                                                                                                  |
 | `NormalModeProps`         | experimental | Mode vectors/mapping, amplitude, frequency, phase, and children.                                                                                                                                                        |
+| `ElasticNetwork`          | experimental | Langevin dynamics of an elastic network toward a caller-owned target `step`; publishes upstream plus guide-node displacement.                                                                                           |
+| `ElasticNetworkProps`     | experimental | Network data, target step (number or curve), seed, temperature, γ, dt, per-frame step budget, tug and status callback.                                                                                                  |
+| `ElasticNetworkStatus`    | experimental | Completed and target steps, `lagging` and `perturbed`.                                                                                                                                                                  |
 | `useTrajectoryFrame`      | experimental | What the nearest `<Trajectory>` shows: requested frame, displayed pair, interpolated box; null outside one.                                                                                                             |
 | `UnitCell`                | experimental | Lines along the displayed frame's periodic box.                                                                                                                                                                         |
 | `TrajectoryProps`         | experimental | `<Trajectory>` props: `frame`, `interpolate`, `pbc`, `onStatus`, plus exactly one of `data` or `src` (with an optional `loader`).                                                                                       |
@@ -413,6 +416,39 @@ charges include it.
 - **Colouring and glyphs.** `byPotential()` colours a surface `sampleOffset` Å
   (default 1.4) off each vertex. `<FieldLines>` and `<FieldArrows>` read E = −∇φ
   from the same grid.
+
+## Elastic network dynamics
+
+`<ElasticNetwork>` integrates BAOAB Langevin dynamics of an elastic network and
+re-provides coordinates: each atom moves with its residue's guide node.
+
+```tsx
+const network = elasticNetworkData(snapshot.positions, snapshot.topology, {
+  version: 1,
+}); // CA guides, 15 Å springs, k = 1 kcal/mol/Å²
+
+<ElasticNetwork
+  network={network}
+  step={frameCurve({ frames: 600_000, fps: 600 })} // 600 steps/s
+  seed={7}
+  onStatus={setStatus}
+>
+  <Spacefill />
+</ElasticNetwork>;
+```
+
+The reference is whatever positions the application passes; the provider never
+reads root positions itself. Time stays caller-owned: holding `step` pauses (no
+dispatch, no repaint), and a lower `step` replays from step 0, so a run is a
+function of the network, parameters, seed and step on one device. Velocities are
+projected off rigid-body motion, so the molecule neither drifts nor rotates. A
+residue moves rigidly with its CA, so side chains do not rotate and peptide
+bonds stretch with neighbouring node displacements. Live representations
+(`<Spacefill>`, `<BallAndStick>`) follow every generation; `<Ribbon>`, `<Tube>`
+and `<Surface>` read coordinate snapshots and follow at the snapshot rate. At
+about 100k atoms (12k CA nodes) an Apple M-series GPU runs about 1,500 steps/s,
+so the default 20 steps per frame costs about 13 ms; `status.lagging` reports
+when the budget trails the target.
 
 ## Attribute channels
 
