@@ -6,6 +6,11 @@ All notable changes to `@molgpu/viewer` are recorded here. The format follows
 
 ## [Unreleased]
 
+- `<Trajectory src>` no longer remounts its descendants when the file opens.
+  While opening (or after a source failure) upstream coordinates are copied
+  through the same coordinate kernel that playback later uses, so
+  representations keep their geometry and GPU resources.
+
 - Remove the internal `tooltip.ts` helper and its test, left behind when
   `tooltipFields` was removed from the API; use `evaluate` from
   `@molgpu/fields`.

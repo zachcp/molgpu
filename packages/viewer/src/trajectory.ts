@@ -149,6 +149,22 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
 `;
 // Every topology row is trajectory atom i.
 const WHOLE = wgsl`${HEAD}${BODY.replace("ROW", "p = blend(i);")}`;
+// No trajectory yet (opening or failed): copy upstream through the same kernel,
+// so descendants keep one subtree when playback attaches (molgpu-sept-s5o.19).
+const COPY = wgsl`
+@link fn getSize() -> vec2<u32>;
+@link fn getInput(i: u32) -> vec3<f32>;
+@link var<storage, read_write> output: array<f32>;
+@compute @workgroup_size(64)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+  let i = id.x;
+  if (i >= getSize().x) { return; }
+  let p = getInput(i);
+  output[i * 3u] = p.x;
+  output[i * 3u + 1u] = p.y;
+  output[i * 3u + 2u] = p.z;
+}
+`;
 // A subset: getRow maps a topology row to its trajectory atom, or ~0u.
 const SUBSET = wgsl`${HEAD}@link fn getRow(i: u32) -> u32;
 ${
@@ -288,7 +304,8 @@ function useTrajectoryStatus(
 }
 
 type PlayerProps = {
-  trajectory: TrajectoryData;
+  /** Null while the source opens or after it failed: upstream copies through. */
+  trajectory: TrajectoryData | null;
   frame: number | Curve<number>;
   interpolate: "linear" | "nearest";
   pbc: "none" | "minimum-image";
@@ -307,6 +324,7 @@ const TrajectoryPlayer: LC<PlayerProps> = (
   const time = useContext(TimelineContext);
   const device = useDeviceContext();
   const requestRepaint = useContext(LoopContext);
+  const inherited = useContext(TrajectoryContext);
   const [, setLanded] = useState(0);
   const [failure, setFailure] = useState<
     { player: Player; index: number; error: unknown } | null
@@ -325,15 +343,16 @@ const TrajectoryPlayer: LC<PlayerProps> = (
     throw new TypeError("<Trajectory> frame must be finite");
   }
   const structure = upstream.resource.data;
-  useMemo(() => validateTrajectory(structure, trajectory), [
+  useMemo(() => trajectory && validateTrajectory(structure, trajectory), [
     structure,
     trajectory,
   ]);
   const player = useMemo(
-    () => new Player(device, trajectory, upstream.count),
+    () => trajectory ? new Player(device, trajectory, upstream.count) : null,
     [device, trajectory, upstream.count],
   );
   useResource((dispose) => {
+    if (!player) return;
     player.cache.onLoad = () => {
       setLanded((n) => n + 1);
       requestRepaint();
@@ -361,11 +380,48 @@ const TrajectoryPlayer: LC<PlayerProps> = (
     [failed],
   );
   useTrajectoryStatus(onStatus, failedStatus);
-
-  const clamped = Math.min(Math.max(requested, 0), trajectory.frameCount - 1);
-  const display = failed
+  const idle = !player || !trajectory;
+  const clamped = trajectory
+    ? Math.min(Math.max(requested, 0), trajectory.frameCount - 1)
+    : 0;
+  const display = idle || failed
     ? null
     : player.scheduler.update(requested, interpolate);
+  const key = display
+    ? `${player!.id}:${display.a}:${display.b}:${display.t}`
+    : `${player?.id ?? "idle"}:0`;
+  const state = useMemo<TrajectoryFrameState | null>(
+    () =>
+      trajectory
+        ? Object.freeze({
+          trajectory,
+          requested: clamped,
+          displayed: display ? Object.freeze({ ...display }) : null,
+          frame: display
+            ? display.a + display.t * (display.b - display.a)
+            : null,
+          box: player!.box(display),
+        })
+        : null,
+    [trajectory, clamped, key],
+  );
+  if (idle) {
+    // Same element types as playback below, so children are not remounted
+    // when the trajectory arrives; the inherited scope stays visible.
+    return provide(
+      TrajectoryContext,
+      inherited,
+      use(CoordinateKernel, {
+        upstream,
+        shader: COPY,
+        args: [],
+        sources: [],
+        parameterKey: "idle",
+        children,
+      }),
+    );
+  }
+
   const box = player.box(display);
   const a = display ? player.cache.get(display.a)?.box : undefined;
   const minimumImage = pbc === "minimum-image" && box && a ? a : null;
@@ -405,18 +461,8 @@ const TrajectoryPlayer: LC<PlayerProps> = (
       : ZERO3,
     prepared?.inverseNorm ?? 0,
   ];
-  const key = display
-    ? `${player.id}:${mode}:${display.a}@${slotA}:${display.b}@${slotB}:${display.t}`
-    : `${player.id}:0`;
+  const parameterKey = `${key}:${mode}:${slotA}:${slotB}`;
   const sources = player.rows ? [player.window, player.rows] : [player.window];
-  const state = useMemo<TrajectoryFrameState>(() =>
-    Object.freeze({
-      trajectory,
-      requested: clamped,
-      displayed: display ? Object.freeze({ ...display }) : null,
-      frame: display ? display.a + display.t * (display.b - display.a) : null,
-      box,
-    }), [trajectory, clamped, key]);
   return provide(
     TrajectoryContext,
     Object.freeze({ owner: upstream.resource, state }),
@@ -425,7 +471,7 @@ const TrajectoryPlayer: LC<PlayerProps> = (
       shader: player.rows ? SUBSET : WHOLE,
       args,
       sources,
-      parameterKey: key,
+      parameterKey,
       children,
     }),
   );
@@ -442,8 +488,8 @@ const defaultLoader: TrajectoryLoader = async (src, cancelled, signal) => {
  * INVARIANT 6): descendants see its frames; topology never changes. `frame`
  * is a fractional frame or a timeline curve. Frames stream on demand; until
  * the first one lands, and for rows outside `atomMap`, upstream coordinates
- * show. With `src`, children render unmoved while the file opens, then
- * remount once under the trajectory. A failed source or frame read passes
+ * show. With `src`, children render unmoved while the file opens and stay
+ * mounted when playback attaches. A failed source or frame read passes
  * upstream coordinates through and is reported through `onStatus` (or logged
  * once), never thrown.
  */
@@ -503,11 +549,12 @@ export const Trajectory: ViewerComponent<TrajectoryProps> = (
     [pending, sourceFailure, trajectory],
   );
   useTrajectoryStatus(onStatus, status);
-  // Pending, failed or cancelled sources pass upstream coordinates through.
-  if (!trajectory || pending || sourceFailure !== undefined) return children;
+  // Pending, failed or cancelled sources pass upstream coordinates through,
+  // in the same subtree that playback later attaches to.
+  const playable = pending || sourceFailure !== undefined ? null : trajectory;
   return viewer(
     use(TrajectoryProvider, {
-      trajectory,
+      trajectory: playable,
       frame,
       interpolate,
       pbc,
