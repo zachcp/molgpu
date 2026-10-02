@@ -50,10 +50,21 @@ const workspacePackages = () =>
 /**
  * Start the repository-root Vite dev server on `port` for `entries` (HTML
  * paths relative to the root). `cacheDir` isolates a cold cache; `oxc`
- * passes JSX options through; `noDiscovery` forbids late optimization.
+ * passes JSX options through; `noDiscovery` forbids late optimization;
+ * `exclude` adds packages to leave unbundled. Exclusion is per runner: an
+ * excluded dependency of a prebundled package must still resolve from the
+ * cache directory, which an isolated cacheDir outside the root cannot.
  */
 export async function startDevServer(
-  { port, entries, cacheDir, oxc, noDiscovery = false, strictPort = true },
+  {
+    port,
+    entries,
+    cacheDir,
+    oxc,
+    noDiscovery = false,
+    strictPort = true,
+    exclude = [],
+  },
 ) {
   const server = await createServer({
     ...(cacheDir ? { cacheDir } : {}),
@@ -65,9 +76,7 @@ export async function startDevServer(
     optimizeDeps: {
       ...(noDiscovery ? { noDiscovery: true } : {}),
       entries,
-      // @use-gpu/glyph loads a Rust/wasm text shaper; pre-bundling it breaks
-      // the wasm init, so leave it unbundled and let Vite serve the wasm.
-      exclude: [...workspacePackages(), "@use-gpu/glyph"],
+      exclude: [...workspacePackages(), ...exclude],
       include: [...USE_GPU_PREBUNDLE, ...ioMolstarModules()],
     },
   });

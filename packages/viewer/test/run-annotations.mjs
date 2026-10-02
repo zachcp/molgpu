@@ -15,6 +15,9 @@ Deno.test("viewer annotations", async () => {
   const server = await startDevServer({
     port: 5214,
     entries: ["packages/viewer/test/annotations.html"],
+    // @use-gpu/glyph loads a Rust/wasm text shaper; pre-bundling it breaks the
+    // wasm init, so leave it unbundled and let Vite serve the wasm.
+    exclude: ["@use-gpu/glyph"],
   });
   let browser;
   try {
