@@ -22,6 +22,7 @@ import {
 } from "@use-gpu/workbench";
 import { type PickEntry, resolvePick } from "./internal/pick-resolve.ts";
 import { live, viewer } from "./internal/elements.ts";
+import { InstanceContext } from "./internal/instance-context.ts";
 
 /** id -> what a pickable representation drew under that picking id. */
 interface PickingRegistry {
@@ -91,12 +92,17 @@ export const Pickable: LC<{
 }> = ({ resource, indices = null, render }) => {
   const registry = useRegistry();
   const id = usePickingId();
+  const copy = useContext(InstanceContext);
   // Live runs cleanup registered through `dispose`; a returned function would
   // only become the resource's value, leaving a stale entry after unmount.
   useResource((dispose) => {
-    registry.set(id, { resource, indices });
+    registry.set(id, {
+      resource,
+      indices,
+      ...(copy ? { operatorId: copy.operatorId } : {}),
+    });
     dispose(() => registry.remove(id));
-  }, [registry, id, resource, indices]);
+  }, [registry, id, resource, indices, copy]);
   return render(id) as LiveElement;
 };
 

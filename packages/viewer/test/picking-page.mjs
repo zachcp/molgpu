@@ -103,6 +103,26 @@ const data = createStructure({
   },
 });
 
+// ?assembly: the same atoms with a second copy 6 Å up (molgpu-sept-fch.3).
+const assembled = createStructure({
+  positions: data.positions,
+  topology: {
+    ...data.topology,
+    instances: {
+      count: 2,
+      chain: Uint32Array.of(0, 0),
+      operatorId: ["1", "2"],
+      transform: Float64Array.from([
+        ...[1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
+        ...[1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 6, 0, 1],
+      ]),
+    },
+  },
+});
+const shown = new URLSearchParams(location.search).has("assembly")
+  ? assembled
+  : data;
+
 // One beat per atom row; clicking an atom seeks to its beat.
 const timeline = createTimeline([{ name: "a0", time: 0 }, {
   name: "a1",
@@ -118,7 +138,12 @@ const Readout = () => {
     },
   });
   probe.hover = hover
-    ? { id: hover.id, atom: hover.atom, drawIndex: hover.drawIndex }
+    ? {
+      id: hover.id,
+      atom: hover.atom,
+      drawIndex: hover.drawIndex,
+      operatorId: hover.operatorId ?? null,
+    }
     : null;
   probe.pick = pick ? { id: pick.id, atom: pick.atom } : null;
   return null;
@@ -154,7 +179,7 @@ const App = () => {
           use(AmbientLight, { intensity: 0.3 }),
           use(DirectionalLight, { direction: [-1, -2, -1.5], intensity: 1 }),
           use(Structure, {
-            data,
+            data: shown,
             children: use(Spacefill, {
               pickable: true,
               scale: 1,

@@ -1,3 +1,4 @@
+import { instanceCopies } from "./internal/instance-plan.ts";
 import { useMemo } from "@use-gpu/live";
 import { atomRadii } from "@molgpu/table";
 import { all, resolve, where } from "@molgpu/select";
@@ -62,10 +63,31 @@ export function useCoordinateFocus(
     for (const row of framingSelection.indices) {
       maxRadius = Math.max(maxRadius, radii[row] * atomRadiusScale);
     }
-    // Representations draw the asymmetric unit, so assembly instance
-    // transforms do not widen the framing.
+    // Assembly copies frame under their operators: the GPU bounds of the
+    // selection, transformed by each copy's operator (exact when every copy
+    // covers the same chains, otherwise slightly generous).
+    const copies = instanceCopies(resource.data);
     const lo = bounds.min.map((value) => value - maxRadius);
     const hi = bounds.max.map((value) => value + maxRadius);
+    if (copies.length) {
+      lo.fill(Infinity);
+      hi.fill(-Infinity);
+      for (const { matrix } of copies) {
+        for (let corner = 0; corner < 8; corner++) {
+          const p = [0, 1, 2].map((axis) =>
+            (corner >> axis) & 1 ? bounds.max[axis] : bounds.min[axis]
+          );
+          for (let axis = 0; axis < 3; axis++) {
+            const center = matrix[axis] * p[0] + matrix[axis + 4] * p[1] +
+              matrix[axis + 8] * p[2] + matrix[axis + 12];
+            const extent = maxRadius *
+              Math.hypot(matrix[axis], matrix[axis + 4], matrix[axis + 8]);
+            lo[axis] = Math.min(lo[axis], center - extent);
+            hi[axis] = Math.max(hi[axis], center + extent);
+          }
+        }
+      }
+    }
     const center = lo.map((value, axis) => (value + hi[axis]) / 2);
     const half = lo.map((value, axis) => (hi[axis] - value) / 2);
     const halfFovX = Math.atan(Math.tan(fov / 2) * aspect);

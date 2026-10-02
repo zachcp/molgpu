@@ -6,6 +6,9 @@ All notable changes to `@molgpu/viewer` are recorded here. The format follows
 
 ## [Unreleased]
 
+- Picking and framing follow assembly copies: `PickHit.operatorId` names the
+  copy hit, and camera framing covers every drawn copy under its operator.
+
 - Spacefill, Bonds and BallAndStick draw biological assembly copies: one per
   operator in `topology.instances`, transforming the nearest live coordinates
   after every provider and drawing only that copy's chains. Identity-only
