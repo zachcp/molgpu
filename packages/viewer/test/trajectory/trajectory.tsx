@@ -3,7 +3,7 @@
  * builds it with vite and drives every mode from run-trajectory.mjs through
  * `window.__trajectory`.
  */
-import { React, render, useState } from "@use-gpu/live";
+import { React, render, useResource, useState } from "@use-gpu/live";
 import type { LiveElement } from "@use-gpu/live";
 import type { StorageSource } from "@use-gpu/core";
 import { AutoCanvas, WebGPU } from "@use-gpu/webgpu";
@@ -509,6 +509,8 @@ interface Probe {
   snapshot: { generation: number; positions: number[] } | null;
   generation: number | null;
   errors: string[];
+  /** Mounts of the reload scene's descendant probe (molgpu-sept-s5o.19). */
+  mounts: number;
   /** Every TrajectoryStatus reported by the reload and data-retry scenes. */
   statuses: TrajectoryStatus[];
   frames: number[][];
@@ -556,6 +558,7 @@ const probe: Probe = {
   snapshot: null,
   generation: null,
   errors: [],
+  mounts: 0,
   statuses: [],
   frames: FRAMES.map((f) => Array.from(f.positions)),
   root: Array.from(STRUCTURE.positions),
@@ -660,6 +663,14 @@ const played = (
     </Trajectory>
   </Structure>
 );
+
+/** Counts mounts: a remount of the subtree runs this resource again. */
+const MountProbe = (): null => {
+  useResource(() => {
+    probe.mounts++;
+  }, []);
+  return null;
+};
 
 const recordStatus = (status: TrajectoryStatus): void => {
   probe.statuses.push(status);
@@ -771,6 +782,7 @@ const Scene = ({ state }: { state: State }): LiveElement => {
             frame={state.frame}
             onStatus={recordStatus}
           >
+            <MountProbe />
             <Probe />
           </Trajectory>
         </Structure>

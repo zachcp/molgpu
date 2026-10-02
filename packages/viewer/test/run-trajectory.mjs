@@ -498,8 +498,19 @@ Deno.test("trajectory components", async () => {
     await page.waitForFunction(() =>
       globalThis.__trajectory.loads.length === 1
     );
+    const mountsWhileOpening = await page.evaluate(() =>
+      globalThis.__trajectory.mounts
+    );
     await page.evaluate(() => globalThis.__trajectory.loads[0].resolve());
     await displayed({ a: 0, b: 0, t: 0 });
+    const mountsAfterOpen = await page.evaluate(() =>
+      globalThis.__trajectory.mounts
+    );
+    assertStrictEquals(
+      mountsAfterOpen,
+      mountsWhileOpening,
+      "opening a src trajectory must not remount its descendants",
+    );
     await update({ src: "second.xtc" });
     await page.waitForFunction(() =>
       globalThis.__trajectory.loads.length === 2
@@ -1502,15 +1513,14 @@ Deno.test("trajectory components", async () => {
       [],
       "a source failure is not thrown",
     );
-    // Children read the Structure's own coordinates, outside any trajectory.
-    assertEquals(
-      await page.evaluate(() => ({
-        trajectory: globalThis.__trajectory.state,
-        label: globalThis.__trajectory.source?.buffer?.label,
-      })),
-      { trajectory: null, label: "molgpu:positions" },
-      "a failed source passes upstream coordinates through",
+    // Children see upstream coordinates (copied through the idle kernel) and
+    // no trajectory scope.
+    assertStrictEquals(
+      await page.evaluate(() => globalThis.__trajectory.state),
+      null,
+      "a failed source exposes no trajectory",
     );
+    await expectRead(rootPositions, "failed source passes upstream through");
     // Retry by changing the request; the old failure is not repeated.
     await clearStatuses();
     await update({ src: "retry.xtc" });
