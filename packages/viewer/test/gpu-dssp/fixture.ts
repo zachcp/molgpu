@@ -29,6 +29,16 @@ declare global {
       sparseEqual: boolean;
     }>;
     runDsspOverflowPolicy: () => [string, string, string];
+    measureDsspPlayback: (id: string, frames: number) => Promise<{
+      id: string;
+      frames: number;
+      residues: number;
+      totalMs: number;
+      boundsWaitMs: number;
+      boundsShare: number;
+      dispatchesPerUpdate: number;
+      submitsPerUpdate: number;
+    }>;
     runGpuDssp: (id: string, model?: "first" | number) => Promise<{
       mismatch: [number, number, number][];
       near: number;
@@ -450,5 +460,94 @@ globalThis.runGpuDssp = async (
     aborted,
     stableFrame,
     storageCopy,
+  };
+};
+
+/**
+ * Playback latency evidence for molgpu-sept-7uv: run GPU DSSP on `frames`
+ * successive jittered coordinate frames (as a trajectory would publish) and
+ * time each call end to end and the mid-pipeline bounds `mapAsync` wait.
+ */
+globalThis.measureDsspPlayback = async (id: string, frames: number) => {
+  const adapter = await navigator.gpu.requestAdapter();
+  if (!adapter) throw new Error("WebGPU adapter unavailable");
+  const device = await adapter.requestDevice();
+  const response = await fetch(`/${id}.bcif`);
+  const data = await structureFromBcif(
+    new Uint8Array(await response.arrayBuffer()),
+  );
+  const rows = activeAtoms(data);
+  const layout = prepareDsspLayout(data, rows);
+  const coordinates = device.createBuffer({
+    size: data.positions.byteLength,
+    usage: 0x0080 | 0x0004 | 0x0008,
+  });
+  const waits: number[] = [];
+  const original = GPUBuffer.prototype.mapAsync;
+  GPUBuffer.prototype.mapAsync = async function (
+    this: GPUBuffer,
+    ...args: Parameters<GPUBuffer["mapAsync"]>
+  ) {
+    const start = performance.now();
+    await original.apply(this, args);
+    if (this.label === "molgpu:dssp:bounds-readback") {
+      waits.push(performance.now() - start);
+    }
+  };
+  let dispatches = 0, submits = 0;
+  const dispatch = GPUComputePassEncoder.prototype.dispatchWorkgroups;
+  GPUComputePassEncoder.prototype.dispatchWorkgroups = function (
+    this: GPUComputePassEncoder,
+    ...args: Parameters<GPUComputePassEncoder["dispatchWorkgroups"]>
+  ) {
+    dispatches++;
+    return dispatch.apply(this, args);
+  };
+  const submit = device.queue.submit.bind(device.queue);
+  device.queue.submit = (buffers) => {
+    submits++;
+    return submit(buffers);
+  };
+  const totals: number[] = [];
+  let seed = 1;
+  const jitter = () => {
+    seed = (seed * 1103515245 + 12345) % 2147483648;
+    return (seed / 2147483648 - 0.5) * 0.1;
+  };
+  try {
+    for (let frame = 0; frame < frames; frame++) {
+      const positions = data.positions.map((v) => v + jitter());
+      device.queue.writeBuffer(coordinates, 0, positions);
+      const start = performance.now();
+      const result = await gpuDssp(device, coordinates, {
+        data,
+        rows,
+        layout,
+        generation: frame + 1,
+        overflow: "frame",
+      });
+      totals.push(performance.now() - start);
+      result.codeBuffer.destroy();
+    }
+  } finally {
+    GPUBuffer.prototype.mapAsync = original;
+    GPUComputePassEncoder.prototype.dispatchWorkgroups = dispatch;
+    coordinates.destroy();
+    device.destroy();
+  }
+  const median = (values: number[]) =>
+    [...values].sort((a, b) => a - b)[Math.floor(values.length / 2)];
+  // Drop the first frame: it includes pipeline compilation.
+  const total = median(totals.slice(1));
+  const bounds = median(waits.slice(1));
+  return {
+    id,
+    frames,
+    residues: data.topology.residues.count,
+    totalMs: Number(total.toFixed(2)),
+    boundsWaitMs: Number(bounds.toFixed(2)),
+    boundsShare: Number((bounds / total).toFixed(3)),
+    dispatchesPerUpdate: dispatches / frames,
+    submitsPerUpdate: submits / frames,
   };
 };

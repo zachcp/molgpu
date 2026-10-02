@@ -100,6 +100,13 @@ Deno.test("GPU DSSP agrees with CPU on the pinned protein corpus", async () => {
       sparseEqual: true,
     });
     if (Deno.env.get("MOLGPU_DSSP_BENCH") === "1") {
+      for (const id of ["1crn", "1tqn", "4c7r"]) {
+        const playback = await page.evaluate(
+          (entry) => globalThis.measureDsspPlayback(entry, 40),
+          id,
+        );
+        console.log(`DSSP playback: ${JSON.stringify(playback)}`);
+      }
       for (const copies of [306, 3059]) {
         const result = await page.evaluate(
           (number) => globalThis.benchmarkGpuDssp(number),
