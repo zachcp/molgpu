@@ -1,4 +1,11 @@
-import { render, unmount, use, useResource, useState } from "@use-gpu/live";
+import {
+  render,
+  unmount,
+  use,
+  useMemo,
+  useResource,
+  useState,
+} from "@use-gpu/live";
 import { AutoCanvas, WebGPU } from "@use-gpu/webgpu";
 import {
   AmbientLight,
@@ -119,12 +126,38 @@ const roots = new Map<
 >();
 const updates = new Map<string, (state: ViewerState) => void>();
 
+/**
+ * Publishes the WebGPU device state on the host as `data-webgpu` (pending,
+ * ready, error) with the device acquisition time in `data-webgpu-ms`, so tests
+ * wait on a signal instead of a timer. Mounted inside AutoCanvas, so `ready`
+ * also means the canvas exists.
+ */
+const GpuReady = ({ host, started }: { host: string; started: number }) => {
+  useResource(() => {
+    const element = document.querySelector<HTMLElement>(host);
+    if (!element) return;
+    element.dataset.webgpu = "ready";
+    element.dataset.webgpuMs = String(Math.round(performance.now() - started));
+  }, [host, started]);
+  return null;
+};
+
 const ViewerRoot = (initial: ViewerState) => {
   const [state, update] = useState(initial);
   updates.set(initial.host, update);
   const { host, data, scene, camera, options } = state;
+  const started = useMemo(() => performance.now(), [initial.host]);
+  useResource(() => {
+    const element = document.querySelector<HTMLElement>(initial.host);
+    if (element) {
+      element.dataset.webgpu = "pending";
+      delete element.dataset.webgpuMs;
+    }
+  }, [initial.host]);
   return use(WebGPU, {
     fallback: (error: unknown) => {
+      const element = document.querySelector<HTMLElement>(host);
+      if (element) element.dataset.webgpu = "error";
       const status = document.querySelector<HTMLElement>(
         "[data-webgpu-error]",
       );
@@ -141,67 +174,70 @@ const ViewerRoot = (initial: ViewerState) => {
       backgroundColor: options.lightFigure
         ? [0.22, 0.28, 0.36, 1]
         : [0.035, 0.055, 0.09, 1],
-      children: (() => {
-        const pass = (insideStructure: boolean) =>
-          use(Pass, {
-            lights: true,
-            oit: options.oit,
-            ...(options.postprocess
-              ? {
-                ssao: options.lightFigure ? 0.12 : 0.35,
-                outline: {
-                  outer: 1.5,
-                  inner: 0,
-                  color: [0.02, 0.03, 0.05, 0.6],
-                },
-              }
-              : {}),
-            children: [
-              use(AmbientLight, {
-                color: [0.7, 0.8, 1],
-                intensity: options.worldLight
-                  ? 0.1
-                  : options.lightFigure
-                  ? 0.7
-                  : 0.35,
-              }),
-              use(DirectionalLight, {
-                direction: [-1, -2, -1.5],
-                color: [1, 0.95, 0.88],
-                intensity: options.worldLight
-                  ? 1.8
-                  : options.lightFigure
-                  ? 1.55
-                  : 1.25,
-              }),
-              use(TimelineProvider, {
-                time: options.time ?? 0,
-                children: insideStructure ? scene(data) : use(Structure, {
-                  data,
-                  children: scene(data),
+      children: [
+        use(GpuReady, { host, started }),
+        (() => {
+          const pass = (insideStructure: boolean) =>
+            use(Pass, {
+              lights: true,
+              oit: options.oit,
+              ...(options.postprocess
+                ? {
+                  ssao: options.lightFigure ? 0.12 : 0.35,
+                  outline: {
+                    outer: 1.5,
+                    inner: 0,
+                    color: [0.02, 0.03, 0.05, 0.6],
+                  },
+                }
+                : {}),
+              children: [
+                use(AmbientLight, {
+                  color: [0.7, 0.8, 1],
+                  intensity: options.worldLight
+                    ? 0.1
+                    : options.lightFigure
+                    ? 0.7
+                    : 0.35,
+                }),
+                use(DirectionalLight, {
+                  direction: [-1, -2, -1.5],
+                  color: [1, 0.95, 0.88],
+                  intensity: options.worldLight
+                    ? 1.8
+                    : options.lightFigure
+                    ? 1.55
+                    : 1.25,
+                }),
+                use(TimelineProvider, {
+                  time: options.time ?? 0,
+                  children: insideStructure ? scene(data) : use(Structure, {
+                    data,
+                    children: scene(data),
+                  }),
+                }),
+              ],
+            });
+          const controls = {
+            host,
+            ...camera,
+            bearing: 0.6,
+            pitch: 0.28,
+          };
+          return options.coordinates
+            ? use(Structure, {
+              data,
+              children: use(WobbleCoordinates, {
+                phase: options.time ?? 0,
+                children: use(StreamOrbitControls, {
+                  ...controls,
+                  children: pass(true),
                 }),
               }),
-            ],
-          });
-        const controls = {
-          host,
-          ...camera,
-          bearing: 0.6,
-          pitch: 0.28,
-        };
-        return options.coordinates
-          ? use(Structure, {
-            data,
-            children: use(WobbleCoordinates, {
-              phase: options.time ?? 0,
-              children: use(StreamOrbitControls, {
-                ...controls,
-                children: pass(true),
-              }),
-            }),
-          })
-          : use(OrbitControls, { ...controls, children: pass(false) });
-      })(),
+            })
+            : use(OrbitControls, { ...controls, children: pass(false) });
+        })(),
+      ],
     }),
   });
 };
