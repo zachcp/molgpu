@@ -1,11 +1,9 @@
 # molgpu — design
 
-> Architecture refinement (2026-09-17): read
-> [the JSX/domain review](findings/2026-09-17-architecture-review.md) alongside
-> this original plan. It updates domain identity, cache invalidation, package
-> boundaries, renderer fallbacks and acceptance gates. These contracts are
-> implemented through Phase 16. This document retains the original design
-> rationale; the roadmap records delivered work and deferred follow-ons.
+> This document retains design intent and original rationale. Start with the
+> [current architecture](ARCHITECTURE.md), package READMEs and dated decisions
+> for implemented contracts and their limits. The roadmap records historical
+> phase outcomes; the October 2 gate records composition acceptance.
 
 A use.gpu-native molecular visualization library. GPU-first, declarative,
 timeline-native.
@@ -207,7 +205,7 @@ Two rules make the layout load-bearing rather than decorative:
 
 ## Source language and publishing
 
-All seven packages are TypeScript source (they were hand-written `.mjs` plus
+All eight packages are TypeScript source (they were hand-written `.mjs` plus
 `.d.ts` until epic `0lg`), targeting [JSR](https://jsr.io) (findings in
 `docs/findings/2026-09-26-jsr-spike.md`). Each `exports` entry points `types`
 and `import` at the same `src/*.ts` file.

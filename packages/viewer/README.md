@@ -503,18 +503,21 @@ rounded profiles and cyclic polymers.
 ## Coordinate consumers
 
 `<Spacefill>` and `<Bonds>` read the nearest GPU coordinate source each draw.
-`<Ribbon>`, `<Tube>`, `<Surface>`, `<Label>`, and `<Distance>` rebuild from the
-latest `useCoordinateSnapshot()` result. Snapshots are shared below each
-provider, default to 4 Hz during motion, and publish once more after a pause.
-They are asynchronous; CPU geometry is absent until the first snapshot arrives.
-The latest completed positions can remain visible during an update to the same
-source; replacing the source buffer or structure starts pending again.
-`useCoordinateSelection()` resolves `within` and other position-dependent
-queries against that snapshot. Topology-only queries resolve directly against
-the root data. Picking keeps atom-row IDs, so its result follows live geometry.
-`useCoordinateBounds()` reduces min/max/centroid on the GPU and reads back only
-the partials; `useCoordinateFocus()` applies radius padding for camera targets.
-Spacefill, Bonds and BallAndStick draw one copy per assembly operator in
+`<Ribbon>`, `<Tube>`, `<Label>`, and `<Distance>` rebuild from the latest
+`useCoordinateSnapshot()` result. Snapshots are shared below each provider,
+default to 4 Hz during motion, and publish once more after a pause. `<Surface>`
+rebuilds supported moving-coordinate grids on the GPU, with one job in flight
+and the latest request winning; root/static coordinates and unsupported GPU
+cases use the CPU snapshot fallback. They are asynchronous; CPU geometry is
+absent until the first snapshot arrives. The latest completed positions can
+remain visible during an update to the same source; replacing the source buffer
+or structure starts pending again. `useCoordinateSelection()` resolves `within`
+and other position-dependent queries against that snapshot. Topology-only
+queries resolve directly against the root data. Picking keeps atom-row IDs, so
+its result follows live geometry. `useCoordinateBounds()` reduces
+min/max/centroid on the GPU and reads back only the partials;
+`useCoordinateFocus()` applies radius padding for camera targets. Spacefill,
+Bonds and BallAndStick draw one copy per assembly operator in
 `topology.instances` (an identity-only table draws as is): each copy applies its
 operator to the nearest live coordinates, after every coordinate provider, and
 draws only its chains' rows. Atoms are never duplicated. Ribbon, Tube and
@@ -549,12 +552,13 @@ complete example.
 ## Place in the dependency graph
 
 `viewer` is the top of the graph. It depends on `@molgpu/table`, `io`, `select`,
-`fields`, `geo` and `timeline`; nothing in the workspace depends on it. It is
-the only package that imports `@use-gpu/live`, `@use-gpu/workbench` or
-`@use-gpu/shader`, and the only one allowed to expose use.gpu types (from
-`./advanced` only). It must not import `molstar` at runtime: Mol* parsing goes
-through `@molgpu/io`, which `<Structure src>` loads lazily. Consumers must not
-reach into `src/internal`.
+`fields`, `geo`, `dynamics` (including `./wgsl`) and `timeline`; no other
+workspace package depends on it. It is the only package that imports
+`@use-gpu/live`, `@use-gpu/workbench` or `@use-gpu/shader`, and the only one
+allowed to expose use.gpu types. The main entry uses native `LiveElement`
+through `ViewerElement`; other upstream types belong to `./advanced`. It must
+not import `molstar` at runtime: Mol* parsing goes through `@molgpu/io`, which
+`<Structure src>` loads lazily. Consumers must not reach into `src/internal`.
 
 ## Browser smoke check
 

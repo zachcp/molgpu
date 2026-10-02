@@ -207,7 +207,8 @@ ordinary `annotation` field (lifted onto atoms by default; a `chain` join must
 be lifted). Missing rows follow `policy` (`fallback`/`fail`); colliding keys
 follow `duplicate` (`error`/`first`/`last`). The result composes like any other
 field, e.g. `colormap(linear(joined, { domain }), stops)`. The join is pure CPU
-work; the viewer's `useAnnotation` adds fetching and loading state.
+work. The application owns fetching and loading state, then passes the joined
+field to a viewer representation. No annotation-fetching hook is exported.
 
 ## API
 
@@ -254,8 +255,8 @@ table ──► fields ──► viewer
 ```
 
 `@molgpu/fields` depends only on `@molgpu/table` and is consumed by
-`@molgpu/viewer` (which lowers compiled fields to use.gpu sources in `useField`,
-and wraps `joinAnnotation` in `useAnnotation`).
+`@molgpu/viewer` (which lowers compiled fields to use.gpu sources in the
+advanced `useField` adapter and binds pure joined annotations).
 
 It must not import `molstar` (only `@molgpu/io` may), any `@use-gpu/*` package
 (GPU lowering and use.gpu types live in `@molgpu/viewer`), or any other

@@ -138,8 +138,14 @@ described:
 - A dry-run publish of the whole workspace succeeds in dependency order.
   Actually publishing to JSR is a separate human decision.
 
-Status (2026-09-25): all packages are at `0.1.0` with a `CHANGELOG.md` (manual
+Status (2026-10-02): all packages are at `0.1.0` with a `CHANGELOG.md` (manual
 procedure in [RELEASING.md](RELEASING.md)). `geo`, `io` and `table` carry the
 Mol* MIT notice in `LICENSE`. The root [README](../README.md) and the examples
 gallery link every package README. `.github/workflows/ci.yml` runs the Deno
-gates. Still open until a remote exists: a first green CI run.
+gates; the [architecture gate](findings/2026-10-02-crj13-architecture-gate.md)
+records passing hosted and local acceptance. Actual Deno manifests define the
+publish contract; npm-era `types`/`import`, tarball and `repository` wording
+above is historical where it does not match those manifests. Export discipline
+R1/R3 also exceeds current enforcement (unnamed component props and `VectorLike`
+still exist); `molgpu-sept-ktr.7` tracks reconciliation. A passing hardening
+script does not prove those unenforced rules or every browser composition.

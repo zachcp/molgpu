@@ -23,6 +23,7 @@ Each package has a `CHANGELOG.md` next to its README.
 
 - [Project site](site/README.md): the landing page and maintained WebGPU
   demonstrations.
+- [Current architecture and reading guide](docs/ARCHITECTURE.md).
 - [Design](docs/DESIGN.md), [roadmap](docs/ROADMAP.md) and
   [hardening criteria](docs/HARDENING.md).
 - [Releasing](docs/RELEASING.md): versioning, changelogs and the publish
@@ -43,7 +44,7 @@ deno task typecheck            # check package source and tests
 deno task check:hardening      # per-package manifest/types/API checks
 deno task test:components      # typed consumer in Chrome WebGPU
 deno task test:site            # check the project site in Chrome
-deno task test:gpu             # run viewer WebGPU suites in Chrome
+deno task test:gpu             # run run-browser.mjs; other GPU suites have separate tasks
 ```
 
 MIT licensed; see [LICENSE](LICENSE). `geo`, `io` and `table` contain code
