@@ -38,6 +38,29 @@ const ENTRIES = [
   "@molgpu/viewer/advanced",
 ];
 const USE_GPU = ["live", "webgpu", "workbench", "core", "shader"];
+const workspaceVersions = await Promise.all(
+  PACKAGES.map(async (name) => {
+    const config = JSON.parse(
+      await Deno.readTextFile(join(root, "packages", name, "deno.json")),
+    );
+    return config.version as string;
+  }),
+);
+const [workspaceVersion] = workspaceVersions;
+if (!workspaceVersions.every((version) => version === workspaceVersion)) {
+  throw new Error(`workspace package versions differ: ${workspaceVersions}`);
+}
+const match = /^(\d+)\.(\d+)\.(\d+)$/.exec(workspaceVersion);
+if (!match) {
+  throw new Error(`unsupported workspace version: ${workspaceVersion}`);
+}
+const [, majorText, minorText, patchText] = match;
+const major = Number(majorText),
+  minor = Number(minorText),
+  patch = Number(patchText);
+const compatibleVersion = `${major}.${minor}.${patch + 1}`;
+const divergentVersion = major === 0 ? `0.${minor + 1}.0` : `${major + 1}.0.0`;
+const workspaceRange = `^${workspaceVersion}`;
 
 const registry = startRegistry();
 const env = { JSR_URL: registry.url, NO_COLOR: "1" };
@@ -84,7 +107,7 @@ async function consumer(
   return dir;
 }
 
-const molgpu = (version = "0.1.0") =>
+const molgpu = (version = workspaceVersion) =>
   Object.fromEntries(
     PACKAGES.map((
       name,
@@ -301,12 +324,20 @@ try {
     }
     return { label, mine, theirs, ...JSON.parse(result.stdout) };
   };
-  await publishCopy("table", "0.1.1");
-  await publishCopy("timeline", "0.1.1");
-  const compatible = await probe("compatible", "0.1.1", "^0.1.0");
-  await publishCopy("table", "0.2.0");
-  await publishCopy("timeline", "0.2.0");
-  const divergent = await probe("divergent", "0.2.0", "^0.1.0");
+  await publishCopy("table", compatibleVersion);
+  await publishCopy("timeline", compatibleVersion);
+  const compatible = await probe(
+    "compatible",
+    compatibleVersion,
+    workspaceRange,
+  );
+  await publishCopy("table", divergentVersion);
+  await publishCopy("timeline", divergentVersion);
+  const divergent = await probe(
+    "divergent",
+    divergentVersion,
+    workspaceRange,
+  );
 
   // A consumer on another use.gpu line than the viewer's exact pin.
   const otherLive = await consumer({ ...molgpu(), ...useGpu("0.19.0") }, [
