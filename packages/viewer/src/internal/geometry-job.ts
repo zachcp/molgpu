@@ -81,11 +81,6 @@ export function assertGridBudget(
   return bytes;
 }
 
-/** An owned copy, so a job can outlive or transform data without risking a shared/detached buffer still owned by Structure. */
-export function copyOwned<T extends { slice(): T }>(typedArray: T): T {
-  return typedArray.slice();
-}
-
 /**
  * Run a (possibly async) geometry kernel under the shared cancellation
  * contract. The kernel stays a plain function of pure kernels; this only

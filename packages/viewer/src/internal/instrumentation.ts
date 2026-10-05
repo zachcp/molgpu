@@ -84,7 +84,6 @@ const clear = (): void => {
 };
 clear();
 
-export const isInstrumented = (): boolean => enabled;
 export const enableInstrumentation = (): void => {
   enabled = true;
 };

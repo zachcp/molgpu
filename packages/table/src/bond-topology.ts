@@ -1,5 +1,5 @@
 // Display radii and inferred bond topology.
-import type { BondPolicy, Bonds, StructureData } from "./structure-types.ts";
+import type { Bonds, StructureData } from "./structure-types.ts";
 import { isStructureIdentity } from "./structure.ts";
 import { spatialGrid } from "./spatial-grid.ts";
 
@@ -165,28 +165,4 @@ export function bondTopology(
   });
   byPolicy.set(key, result);
   return result;
-}
-
-/** @internal Deep-module helper; selection consumers use bondTopology. */
-export function selectBonds(
-  data: StructureData,
-  atomIndices: Uint32Array,
-  options: { readonly mode?: "both" | "either"; readonly policy?: BondPolicy } =
-    {},
-): Uint32Array {
-  const { mode = "both", policy } = options;
-  if (!(atomIndices instanceof Uint32Array)) {
-    fail("atomIndices", "expected Uint32Array");
-  }
-  if (!["both", "either"].includes(mode)) {
-    fail("mode", "expected both or either");
-  }
-  const selected = new Set(atomIndices),
-    bonds = bondTopology(data, policy),
-    rows: number[] = [];
-  for (let i = 0; i < bonds.count; i++) {
-    const hitA = selected.has(bonds.a[i]), hitB = selected.has(bonds.b[i]);
-    if (mode === "both" ? hitA && hitB : hitA || hitB) rows.push(i);
-  }
-  return Uint32Array.from(rows);
 }

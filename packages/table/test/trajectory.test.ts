@@ -13,11 +13,8 @@ import {
   type StructureInput,
   validateTrajectory,
 } from "@molgpu/table";
-import {
-  frameAtTime,
-  trajectoryFromModels,
-  validateTrajectoryFrame,
-} from "../src/trajectory.ts";
+import { validateTrajectoryFrame } from "../src/trajectory.ts";
+import { trajectoryFromModels } from "./models-trajectory.ts";
 import { fixture } from "./fixture.ts";
 
 const frame = (n: number, v: number) => ({
@@ -285,22 +282,6 @@ Deno.test("validateTrajectoryFrame names the field", () => {
     TypeError,
     "frame.velocities: expected Float32Array[3]",
   );
-});
-
-Deno.test("frameAtTime interpolates, clamps and handles repeated times", () => {
-  const t = createTrajectory({
-    atomCount: 1,
-    frames: [0, 1, 2, 3].map((v) => frame(1, v)),
-    time: [10, 12, 12, 20],
-    timeUnit: "ps",
-  });
-  assertEquals(frameAtTime(t, 0), 0);
-  assertEquals(frameAtTime(t, 10), 0);
-  assertAlmostEquals(frameAtTime(t, 11), 0.5);
-  assertEquals(frameAtTime(t, 12), 1);
-  assertAlmostEquals(frameAtTime(t, 16), 2.5);
-  assertEquals(frameAtTime(t, 99), 3);
-  assertThrows(() => frameAtTime(t, NaN), TypeError);
 });
 
 Deno.test("trajectoryFromModels plays models as frames over model 1", async () => {

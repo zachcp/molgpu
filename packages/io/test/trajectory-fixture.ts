@@ -12,7 +12,7 @@
  * the writers real protein geometry.
  */
 import { structureFromBcif } from "../src/index.ts";
-import { trajectoryFromModels } from "../../table/src/trajectory.ts";
+import { trajectoryFromModels } from "../../table/test/models-trajectory.ts";
 
 class Bytes {
   #buffer = new ArrayBuffer(1024);
