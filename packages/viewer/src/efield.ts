@@ -69,9 +69,9 @@ const COPY_DST = 0x0008;
 /** Uniform offsets must be multiples of 256 bytes. */
 const PARAMS_STRIDE = 256;
 const MAX_GROUPS = 65535;
-export const EFIELD_DEFAULT_SAMPLES = 128 ** 3;
+const EFIELD_DEFAULT_SAMPLES = 128 ** 3;
 /** Default ceiling on samples × summed atoms per computation (~1.7e10). */
-export const EFIELD_DEFAULT_PAIRS = 2 ** 34;
+const EFIELD_DEFAULT_PAIRS = 2 ** 34;
 
 /**
  * Test hooks, not public API: `pairsPerDispatch` bounds each dispatch's cost

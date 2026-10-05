@@ -12,7 +12,7 @@ import {
 import { useDeviceContext } from "@use-gpu/workbench";
 import { prepareDsspLayout } from "@molgpu/dynamics/wgsl";
 import { activeAtoms, withAttributes } from "@molgpu/table";
-import { AttributeSnapshotContext } from "./attribute-snapshot.ts";
+import { AttributeSnapshotContext } from "./attribute-snapshot-context.ts";
 import { AttributesContext } from "./attributes-context.ts";
 import { useCoordinates } from "./coordinates-context.ts";
 import { StructureContext } from "./structure-context.ts";

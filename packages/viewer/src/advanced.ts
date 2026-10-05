@@ -9,7 +9,7 @@
 export { WorldSpacePointLayer } from "./world-space-points.ts";
 export { AttributeProducer } from "./attribute-producer.ts";
 export { useAttributeSnapshot } from "./attribute-snapshot.ts";
-export type { AttributeSnapshot } from "./attribute-snapshot.ts";
+export type { AttributeSnapshot } from "./attribute-snapshot-context.ts";
 export { useField } from "./use-field.ts";
 export type { StructureBounds, StructureResource } from "./types.ts";
 export { createStructureResource } from "./internal/structure-resource.ts";

@@ -26,11 +26,6 @@ import {
 } from "./attribute-snapshot-context.ts";
 import { snapshotAttributeValues } from "./internal/attribute-values.ts";
 
-export type { AttributeSnapshot } from "./attribute-snapshot-context.ts";
-export {
-  AttributeSnapshotContext,
-  EMPTY_ATTRIBUTE_SNAPSHOTS,
-} from "./attribute-snapshot-context.ts";
 interface Request {
   maxHz: number;
   onPause: boolean;

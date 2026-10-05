@@ -8,7 +8,8 @@ import { use, useContext, useMemo } from "@use-gpu/live";
 import { LabelLayer, LineLayer } from "@use-gpu/workbench";
 import { useStructure } from "./structure-context.ts";
 import { useCoordinateSnapshot } from "./coordinate-snapshot.ts";
-import { copyRows, InstanceContext } from "./internal/instance-context.ts";
+import { InstanceContext } from "./internal/instance-context.ts";
+import { copyRows } from "./internal/instance-plan.ts";
 import { withInstances } from "./internal/instance-copies.ts";
 
 import {
