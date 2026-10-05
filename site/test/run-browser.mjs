@@ -265,6 +265,47 @@ Deno.test("site landing page and maintained gallery routes", async () => {
         "successful mounting clears the loading status",
       );
       await waitForVisibleCanvas(page);
+      if (id === demos[0].id) {
+        // Save PNG downloads the presented frame at canvas pixel size.
+        const [download] = await Promise.all([
+          page.waitForEvent("download"),
+          page.getByRole("button", { name: "Save PNG" }).click(),
+        ]);
+        assertStrictEquals(download.suggestedFilename(), `molgpu-${id}.png`);
+        await page.waitForSelector('#molecule-canvas[data-capture="done"]');
+        const size = await page.evaluate(() => {
+          const canvas = document.querySelector("#molecule-canvas canvas");
+          return `${canvas.width}x${canvas.height}`;
+        });
+        assertStrictEquals(await host.getAttribute("data-capture-size"), size);
+        const png = await Deno.readFile(await download.path());
+        assertEquals(
+          [...png.subarray(0, 8)],
+          [137, 80, 78, 71, 13, 10, 26, 10],
+          "the download is a PNG",
+        );
+        const lit = await page.evaluate(async (bytes) => {
+          const bitmap = await createImageBitmap(
+            new Blob([new Uint8Array(bytes)], { type: "image/png" }),
+          );
+          const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+          const context = canvas.getContext("2d");
+          context.drawImage(bitmap, 0, 0);
+          const { data } = context.getImageData(
+            0,
+            0,
+            bitmap.width,
+            bitmap.height,
+          );
+          bitmap.close();
+          let count = 0;
+          for (let i = 0; i < data.length; i += 4) {
+            if (data[i] + data[i + 1] + data[i + 2] > 120) count++;
+          }
+          return count;
+        }, [...png]);
+        assert(lit > 0, "the saved PNG contains the rendered molecule");
+      }
       await host.hover();
       await page.mouse.down();
       await page.mouse.move(600, 420, { steps: 4 });
