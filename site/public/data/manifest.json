@@ -1,0 +1,41 @@
+{
+  "note": "Copies for the site examples and bundler-free single pages. Fetch as `${base}data/<file>`. Structure files are copies of packages/io/test/fixtures (a site test checks they match).",
+  "files": [
+    {
+      "file": "1crn.bcif",
+      "format": "bcif",
+      "kind": "structure",
+      "description": "Crambin (PDB 1CRN), 46-residue soluble plant seed protein; not an enzyme."
+    },
+    {
+      "file": "1crn-amber.pqr",
+      "format": "pqr",
+      "kind": "charges",
+      "description": "PDB2PQR AMBER partial charges and radii for 1CRN, with hydrogens."
+    },
+    {
+      "file": "1crn-motion.xtc",
+      "format": "xtc",
+      "kind": "trajectory",
+      "description": "60-frame XTC trajectory of 1CRN atoms."
+    },
+    {
+      "file": "1tqn.bcif",
+      "format": "bcif",
+      "kind": "structure",
+      "description": "Cytochrome P450 3A4 (PDB 1TQN), a membrane-associated enzyme with heme."
+    },
+    {
+      "file": "1a4y.bcif",
+      "format": "bcif",
+      "kind": "structure",
+      "description": "Protein complex (PDB 1A4Y), angiogenin bound to ribonuclease inhibitor."
+    },
+    {
+      "file": "1bna.bcif",
+      "format": "bcif",
+      "kind": "structure",
+      "description": "B-DNA dodecamer (PDB 1BNA)."
+    }
+  ]
+}

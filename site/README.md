@@ -3,10 +3,17 @@
 The project landing page and maintained WebGPU examples. Application pages are
 TSX; `index.html` is only Vite's document shell.
 
-The gallery includes an opaque molecular surface by default, atom-element
-surface coloring, material and selection controls, a moving camera timeline,
-tube or ball-and-stick trajectory playback, and adjustable electrostatic grid
-and field-line settings. The 3D solvent-excluded surface uses marching cubes.
+The gallery has five capability examples, each with a few controls: Compose
+(layer cartoon, tube, sticks, spacefill, glass surface, sulfur highlight),
+Select + color (queries coloured by element or partial charge), Surface +
+material, Motion (XTC trajectory, GPU wobble, elastic-network dynamics, camera
+move) and Volumes (density map, electrostatic potential). Hashes from the former
+16-demo gallery redirect to the matching settings.
+
+`public/data/` holds local example files (see `manifest.json`), served at
+`<base>data/<file>` for examples and bundler-free pages. Structure and charge
+files are copies of `packages/io/test/fixtures`; the site test checks they
+match.
 
 ```bash
 deno task dev:site

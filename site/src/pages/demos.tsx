@@ -1,10 +1,8 @@
 import React, { useEffect, useState } from "react";
 import {
-  activeAtoms,
   attributeColumn,
   bondTopology,
   type StructureData,
-  traceTable,
 } from "@molgpu/table";
 import crambinUrl from "../../../packages/io/test/fixtures/1crn.bcif?url";
 import chargesUrl from "../../../packages/io/test/fixtures/1crn-amber.pqr?url";
@@ -14,8 +12,21 @@ import {
   loadChargedCrambin,
   loadCrambin,
 } from "../demos/data.ts";
-import { demoById, demoCamera, type DemoId, demos } from "../demos/registry.ts";
 import {
+  type ComposeLayer,
+  demoById,
+  demoCamera,
+  demoFromRoute,
+  type DemoId,
+  demoOptions,
+  type DemoPreset,
+  demos,
+  type MotionMode,
+  scrubbed,
+  type VolumeMode,
+} from "../demos/registry.ts";
+import {
+  type FieldMode,
   type MaterialMode,
   renderDemoScene,
   selectionFor,
@@ -26,28 +37,60 @@ import {
 } from "../demos/scenes.tsx";
 import { disposeViewer, mountViewer } from "../demos/viewer.tsx";
 
-/** Demos whose scene is driven by the scrub slider's seconds. */
-const scrubbed = (id: DemoId): boolean =>
-  id === "timeline" || id === "coordinates" || id === "trajectory" ||
-  id === "dynamics";
 const SCRUB_DURATION = 4;
 
-const demoFromHash = (): DemoId =>
-  demoById(location.hash.replace(/^#demos\/?/, "")).id;
+const LAYERS: ReadonlyArray<readonly [ComposeLayer, string]> = [
+  ["cartoon", "Cartoon"],
+  ["tube", "Tube"],
+  ["sticks", "Ball and stick"],
+  ["spacefill", "Spacefill"],
+  ["surface", "Glass surface"],
+  ["sulfur", "Sulfur atoms"],
+];
+
+/** Normalise a hash to the current ids, keeping the legacy preset once. */
+const routeFromHash = () => {
+  const route = demoFromRoute(location.hash);
+  if (
+    location.hash.startsWith("#demos/") &&
+    location.hash !== `#demos/${route.id}`
+  ) {
+    history.replaceState(null, "", `#demos/${route.id}`);
+  }
+  return route;
+};
 
 export const DemosPage = () => {
-  const [id, setId] = useState<DemoId>(demoFromHash);
+  const [initial] = useState(routeFromHash);
+  const [id, setId] = useState<DemoId>(initial.id);
   const [time, setTime] = useState(0);
   const [playing, setPlaying] = useState(false);
+  const [layers, setLayers] = useState<readonly ComposeLayer[]>(
+    initial.preset?.layers ?? ["cartoon", "sulfur"],
+  );
   const [surfaceMode, setSurfaceMode] = useState<SurfaceMode>("opaque");
   const [surfaceColorMode, setSurfaceColorMode] = useState<SurfaceColorMode>(
     "neutral",
   );
-  const [materialMode, setMaterialMode] = useState<MaterialMode>("matte");
+  const [materialMode, setMaterialMode] = useState<MaterialMode>(
+    initial.preset?.materialMode ?? "matte",
+  );
+  const [worldLight, setWorldLight] = useState(
+    initial.preset?.worldLight ?? false,
+  );
   const [selectionMode, setSelectionMode] = useState<SelectionMode>(
-    "near-cysteine",
+    initial.preset?.selectionMode ?? "near-cysteine",
+  );
+  const [fieldMode, setFieldMode] = useState<FieldMode>(
+    initial.preset?.fieldMode ?? "element",
+  );
+  const [motionMode, setMotionMode] = useState<MotionMode>(
+    initial.preset?.motionMode ?? "trajectory",
   );
   const [trajectoryMode, setTrajectoryMode] = useState<TrajectoryMode>("tube");
+  const [volumeMode, setVolumeMode] = useState<VolumeMode>(
+    initial.preset?.volumeMode ?? "density",
+  );
   const [efieldSpacing, setEfieldSpacing] = useState(1);
   const [seedSpacing, setSeedSpacing] = useState(7);
   const [lineDistance, setLineDistance] = useState(30);
@@ -55,8 +98,22 @@ export const DemosPage = () => {
   const [sliceFraction, setSliceFraction] = useState(0.5);
   const [isoSigma, setIsoSigma] = useState(2);
   const demo = demoById(id);
+  const applyPreset = (preset?: DemoPreset) => {
+    if (!preset) return;
+    if (preset.layers) setLayers(preset.layers);
+    if (preset.selectionMode) setSelectionMode(preset.selectionMode);
+    if (preset.fieldMode) setFieldMode(preset.fieldMode);
+    if (preset.worldLight !== undefined) setWorldLight(preset.worldLight);
+    if (preset.materialMode) setMaterialMode(preset.materialMode);
+    if (preset.motionMode) setMotionMode(preset.motionMode);
+    if (preset.volumeMode) setVolumeMode(preset.volumeMode);
+  };
   useEffect(() => {
-    const update = () => setId(demoFromHash());
+    const update = () => {
+      const route = routeFromHash();
+      setId(route.id);
+      applyPreset(route.preset);
+    };
     addEventListener("hashchange", update);
     return () => removeEventListener("hashchange", update);
   }, []);
@@ -64,8 +121,7 @@ export const DemosPage = () => {
   useEffect(() => {
     setTime(0);
     setPlaying(false);
-    setSurfaceMode("opaque");
-  }, [id]);
+  }, [id, motionMode]);
   useEffect(() => {
     if (!playing || !scrubbed(id)) return;
     let frame = 0;
@@ -88,7 +144,9 @@ export const DemosPage = () => {
       if (status) status.textContent = "Loading real 1CRN structure…";
       try {
         const crambin = await loadCrambin(crambinUrl);
-        const data = demo.id === "charge" || demo.id === "efield"
+        // Charges are applied to every structure that can use them: select
+        // colours by them and volume's potential sums them.
+        const data = demo.id === "select" || demo.id === "volume"
           ? await loadChargedCrambin(crambin, chargesUrl)
           : crambin;
         if (cancelled) return;
@@ -100,41 +158,39 @@ export const DemosPage = () => {
           host.dataset.orbit = "enabled";
           host.dataset.atomCount = String(data.topology.atoms.count);
           host.dataset.residueCount = String(data.topology.residues.count);
-          host.dataset.worldLight = String(!!demo.options?.worldLight);
+          host.dataset.worldLight = String(demo.id === "surface" && worldLight);
+          host.dataset.motion = demo.id === "motion" ? motionMode : "";
+          host.dataset.volume = demo.id === "volume" ? volumeMode : "";
+          host.dataset.layers = demo.id === "compose" ? layers.join(",") : "";
           if (demo.id === "select") {
             host.dataset.selectedCount = String(
               selectionFor(data, selectionMode).indices.length,
             );
+            const charge = attributeColumn(data, "partialCharge")!;
+            let net = 0;
+            for (const q of charge.values) net += q;
+            host.dataset.netCharge = net.toFixed(3);
+            host.dataset.chargeProvenance = charge.provenance;
           }
-          if (demo.id === "bonds") {
+          if (demo.id === "compose") {
             host.dataset.bondCount = String(bondTopology(data).count);
-          }
-          if (demo.id === "tube" || demo.id === "ribbon") {
-            host.dataset.traceCount = String(
-              traceTable(data, activeAtoms(data)).count,
-            );
-          }
-          if (demo.id === "figure") {
             host.dataset.sulfurCount = String(
               resolve(element(16), data).indices.length,
             );
           }
         }
-        const sliceIndex = demo.id === "volume"
+        const sliceIndex = demo.id === "volume" && volumeMode === "density"
           ? sliceFraction * (densityMapFor(data).dims[2] - 1)
           : 0;
-        if (host && demo.id === "charge") {
-          const charge = attributeColumn(data, "partialCharge")!;
-          let net = 0;
-          for (const q of charge.values) net += q;
-          host.dataset.netCharge = net.toFixed(3);
-          host.dataset.chargeProvenance = charge.provenance;
-        }
         if (host && demo.id === "volume") {
           host.dataset.sliceIndex = sliceIndex.toFixed(2);
         }
         const scene = (current: StructureData) =>
           renderDemoScene(demo.id, current, {
+            layers,
+            fieldMode,
+            motionMode,
+            volumeMode,
             surfaceMode,
             surfaceColorMode,
             materialMode,
@@ -146,22 +202,29 @@ export const DemosPage = () => {
             sliceIndex,
             isoSigma,
           });
-        const camera = demoCamera(data, demo.id, time);
+        const camera = demoCamera(
+          data,
+          demo.id,
+          { motionMode, volumeMode },
+          time,
+        );
         if (host) {
           host.dataset.cameraRadius = camera.radius.toFixed(3);
-          if (demo.id === "efield") {
+          if (demo.id === "volume" && volumeMode === "potential") {
             host.dataset.gridSpacing = String(efieldSpacing);
             host.dataset.seedSpacing = String(seedSpacing);
             host.dataset.lineDistance = String(lineDistance);
           }
         }
+        const options = demoOptions(demo, { motionMode, worldLight });
         mountViewer(
-          demo.id,
+          // Motion sources differ in tree shape, so each gets its own root.
+          demo.id === "motion" ? `motion-${motionMode}` : demo.id,
           "#molecule-canvas",
           data,
           scene,
           camera,
-          scrubbed(demo.id) ? { ...demo.options, time } : demo.options,
+          scrubbed(demo.id) ? { ...options, time } : options,
         );
         if (status) status.textContent = "";
       } catch (error) {
@@ -178,6 +241,11 @@ export const DemosPage = () => {
   }, [
     demo,
     time,
+    layers,
+    fieldMode,
+    motionMode,
+    volumeMode,
+    worldLight,
     surfaceMode,
     surfaceColorMode,
     materialMode,
@@ -198,38 +266,67 @@ export const DemosPage = () => {
         <p className="demo-assertion" data-demo-assertion={demo.id}>
           Behavior: {demo.assertion}.
         </p>
-        {scrubbed(demo.id) && (
-          <div className="timeline-control">
-            <label htmlFor="timeline-time">Scrub</label>
-            <input
-              id="timeline-time"
-              aria-label="Timeline time in seconds"
-              type="range"
-              min="0"
-              max={SCRUB_DURATION}
-              step="0.01"
-              value={time}
-              onChange={(event) => setTime(Number(event.currentTarget.value))}
-            />{" "}
-            <output htmlFor="timeline-time">{time.toFixed(2)} s</output>
-            <button
-              type="button"
-              aria-label={playing
-                ? "Pause looping playback"
-                : "Play looping playback"}
-              aria-pressed={playing}
-              onClick={() => setPlaying((value) => !value)}
-            >
-              {playing ? "Pause" : "Play"}
-            </button>
-          </div>
+        {demo.id === "compose" && (
+          <fieldset className="timeline-control">
+            <legend>Layers</legend>
+            {LAYERS.map(([layer, label]) => (
+              <label key={layer}>
+                <input
+                  type="checkbox"
+                  checked={layers.includes(layer)}
+                  onChange={(event) => {
+                    const on = event.currentTarget.checked;
+                    setLayers((current) =>
+                      on
+                        ? LAYERS.map(([name]) => name).filter((name) =>
+                          name === layer || current.includes(name)
+                        )
+                        : current.filter((name) => name !== layer)
+                    );
+                  }}
+                />{" "}
+                {label}
+                {" "}
+              </label>
+            ))}
+          </fieldset>
+        )}
+        {demo.id === "select" && (
+          <>
+            <label className="timeline-control">
+              Selection{" "}
+              <select
+                aria-label="Selection query"
+                value={selectionMode}
+                onChange={(event) =>
+                  setSelectionMode(event.currentTarget.value as SelectionMode)}
+              >
+                <option value="near-cysteine">Within 5 Å of cysteine</option>
+                <option value="cysteine">Cysteine residues</option>
+                <option value="sulfur">Sulfur atoms</option>
+                <option value="all">All atoms</option>
+              </select>
+            </label>
+            <label className="timeline-control">
+              Color{" "}
+              <select
+                aria-label="Color field"
+                value={fieldMode}
+                onChange={(event) =>
+                  setFieldMode(event.currentTarget.value as FieldMode)}
+              >
+                <option value="element">Element</option>
+                <option value="charge">Partial charge</option>
+              </select>
+            </label>
+          </>
         )}
         {demo.id === "surface" && (
           <>
             <label className="timeline-control">
               Surface{" "}
               <select
-                aria-label="Surface material"
+                aria-label="Surface style"
                 value={surfaceMode}
                 onChange={(event) =>
                   setSurfaceMode(event.currentTarget.value as SurfaceMode)}
@@ -253,129 +350,183 @@ export const DemosPage = () => {
                 <option value="element">Nearest atom element</option>
               </select>
             </label>
+            <label className="timeline-control">
+              Material{" "}
+              <select
+                aria-label="Material model"
+                value={materialMode}
+                disabled={surfaceMode === "pumice"}
+                onChange={(event) =>
+                  setMaterialMode(event.currentTarget.value as MaterialMode)}
+              >
+                <option value="matte">Matte PBR</option>
+                <option value="metal">Metal PBR</option>
+                <option value="basic">Basic</option>
+                <option value="normal">Normal debug</option>
+              </select>
+            </label>
+            <label className="timeline-control">
+              <input
+                type="checkbox"
+                aria-label="World-fixed light"
+                checked={worldLight}
+                onChange={(event) => setWorldLight(event.currentTarget.checked)}
+              />{" "}
+              World-fixed light
+            </label>
           </>
         )}
-        {demo.id === "select" && (
-          <label className="timeline-control">
-            Selection{" "}
-            <select
-              aria-label="Selection query"
-              value={selectionMode}
-              onChange={(event) =>
-                setSelectionMode(event.currentTarget.value as SelectionMode)}
-            >
-              <option value="near-cysteine">Within 5 Å of cysteine</option>
-              <option value="cysteine">Cysteine residues</option>
-              <option value="sulfur">Sulfur atoms</option>
-            </select>
-          </label>
-        )}
-        {demo.id === "trajectory" && (
-          <label className="timeline-control">
-            Representation{" "}
-            <select
-              aria-label="Trajectory representation"
-              value={trajectoryMode}
-              onChange={(event) =>
-                setTrajectoryMode(event.currentTarget.value as TrajectoryMode)}
-            >
-              <option value="tube">Backbone tube</option>
-              <option value="ball-and-stick">Ball and stick</option>
-            </select>
-          </label>
-        )}
-        {demo.id === "efield" && (
+        {demo.id === "motion" && (
           <>
             <label className="timeline-control">
-              Grid spacing{" "}
+              Source{" "}
               <select
-                aria-label="Potential grid spacing"
-                value={efieldSpacing}
+                aria-label="Motion source"
+                value={motionMode}
                 onChange={(event) =>
-                  setEfieldSpacing(Number(event.currentTarget.value))}
+                  setMotionMode(event.currentTarget.value as MotionMode)}
               >
-                <option value={1.5}>Coarse · 1.5 Å</option>
-                <option value={1}>Standard · 1 Å</option>
-                <option value={0.75}>Fine · 0.75 Å</option>
+                <option value="trajectory">XTC trajectory</option>
+                <option value="wobble">GPU coordinate wobble</option>
+                <option value="elastic">Elastic network dynamics</option>
+                <option value="camera">Camera move</option>
               </select>
             </label>
-            <label className="timeline-control">
-              Field line density{" "}
-              <select
-                aria-label="Field line seed spacing"
-                value={seedSpacing}
-                onChange={(event) =>
-                  setSeedSpacing(Number(event.currentTarget.value))}
+            <div className="timeline-control">
+              <label htmlFor="timeline-time">Scrub</label>
+              <input
+                id="timeline-time"
+                aria-label="Timeline time in seconds"
+                type="range"
+                min="0"
+                max={SCRUB_DURATION}
+                step="0.01"
+                value={time}
+                onChange={(event) => setTime(Number(event.currentTarget.value))}
+              />{" "}
+              <output htmlFor="timeline-time">{time.toFixed(2)} s</output>
+              <button
+                type="button"
+                aria-label={playing
+                  ? "Pause looping playback"
+                  : "Play looping playback"}
+                aria-pressed={playing}
+                onClick={() => setPlaying((value) => !value)}
               >
-                <option value={9}>Sparse · 9 Å</option>
-                <option value={7}>Standard · 7 Å</option>
-                <option value={3.5}>Dense · 3.5 Å</option>
-              </select>
-            </label>
-            <label className="timeline-control">
-              Field line distance{" "}
-              <select
-                aria-label="Field line distance"
-                value={lineDistance}
-                onChange={(event) =>
-                  setLineDistance(Number(event.currentTarget.value))}
-              >
-                <option value={18}>Short · 18 Å</option>
-                <option value={30}>Standard · 30 Å</option>
-                <option value={60}>Long · 60 Å</option>
-              </select>
-            </label>
+                {playing ? "Pause" : "Play"}
+              </button>
+            </div>
+            {motionMode === "trajectory" && (
+              <label className="timeline-control">
+                Representation{" "}
+                <select
+                  aria-label="Trajectory representation"
+                  value={trajectoryMode}
+                  onChange={(event) =>
+                    setTrajectoryMode(
+                      event.currentTarget.value as TrajectoryMode,
+                    )}
+                >
+                  <option value="tube">Backbone tube</option>
+                  <option value="ball-and-stick">Ball and stick</option>
+                </select>
+              </label>
+            )}
           </>
         )}
         {demo.id === "volume" && (
           <>
             <label className="timeline-control">
-              Slice{" "}
-              <input
-                aria-label="Slice position"
-                type="range"
-                min="0"
-                max="1"
-                step="0.01"
-                value={sliceFraction}
+              Volume{" "}
+              <select
+                aria-label="Volume source"
+                value={volumeMode}
                 onChange={(event) =>
-                  setSliceFraction(Number(event.currentTarget.value))}
-              />{" "}
-              <output data-output="slice">
-                {Math.round(sliceFraction * 100)}%
-              </output>
+                  setVolumeMode(event.currentTarget.value as VolumeMode)}
+              >
+                <option value="density">Atom density map</option>
+                <option value="potential">Electrostatic potential</option>
+              </select>
             </label>
-            <label className="timeline-control">
-              Isolevel{" "}
-              <input
-                aria-label="Isosurface level in sigma"
-                type="range"
-                min="0.5"
-                max="4"
-                step="0.1"
-                value={isoSigma}
-                onChange={(event) =>
-                  setIsoSigma(Number(event.currentTarget.value))}
-              />{" "}
-              <output data-output="iso">{isoSigma.toFixed(1)} σ</output>
-            </label>
+            {volumeMode === "density" && (
+              <>
+                <label className="timeline-control">
+                  Slice{" "}
+                  <input
+                    aria-label="Slice position"
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.01"
+                    value={sliceFraction}
+                    onChange={(event) =>
+                      setSliceFraction(Number(event.currentTarget.value))}
+                  />{" "}
+                  <output data-output="slice">
+                    {Math.round(sliceFraction * 100)}%
+                  </output>
+                </label>
+                <label className="timeline-control">
+                  Isolevel{" "}
+                  <input
+                    aria-label="Isosurface level in sigma"
+                    type="range"
+                    min="0.5"
+                    max="4"
+                    step="0.1"
+                    value={isoSigma}
+                    onChange={(event) =>
+                      setIsoSigma(Number(event.currentTarget.value))}
+                  />{" "}
+                  <output data-output="iso">{isoSigma.toFixed(1)} σ</output>
+                </label>
+              </>
+            )}
+            {volumeMode === "potential" && (
+              <details className="timeline-control">
+                <summary>Advanced</summary>
+                <label className="timeline-control">
+                  Grid spacing{" "}
+                  <select
+                    aria-label="Potential grid spacing"
+                    value={efieldSpacing}
+                    onChange={(event) =>
+                      setEfieldSpacing(Number(event.currentTarget.value))}
+                  >
+                    <option value={1.5}>Coarse · 1.5 Å</option>
+                    <option value={1}>Standard · 1 Å</option>
+                    <option value={0.75}>Fine · 0.75 Å</option>
+                  </select>
+                </label>
+                <label className="timeline-control">
+                  Field line density{" "}
+                  <select
+                    aria-label="Field line seed spacing"
+                    value={seedSpacing}
+                    onChange={(event) =>
+                      setSeedSpacing(Number(event.currentTarget.value))}
+                  >
+                    <option value={9}>Sparse · 9 Å</option>
+                    <option value={7}>Standard · 7 Å</option>
+                    <option value={3.5}>Dense · 3.5 Å</option>
+                  </select>
+                </label>
+                <label className="timeline-control">
+                  Field line distance{" "}
+                  <select
+                    aria-label="Field line distance"
+                    value={lineDistance}
+                    onChange={(event) =>
+                      setLineDistance(Number(event.currentTarget.value))}
+                  >
+                    <option value={18}>Short · 18 Å</option>
+                    <option value={30}>Standard · 30 Å</option>
+                    <option value={60}>Long · 60 Å</option>
+                  </select>
+                </label>
+              </details>
+            )}
           </>
-        )}
-        {demo.id === "materials" && (
-          <label className="timeline-control">
-            Material{" "}
-            <select
-              aria-label="Material model"
-              value={materialMode}
-              onChange={(event) =>
-                setMaterialMode(event.currentTarget.value as MaterialMode)}
-            >
-              <option value="matte">Matte PBR</option>
-              <option value="metal">Metal PBR</option>
-              <option value="basic">Basic</option>
-              <option value="normal">Normal debug</option>
-            </select>
-          </label>
         )}
         <p className="hint">
           Drag or touch-drag to orbit; scroll, trackpad, or pinch to zoom.

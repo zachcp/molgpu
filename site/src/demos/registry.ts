@@ -2,206 +2,166 @@ import { coordinateBounds, type StructureData } from "@molgpu/table";
 import { comp, resolve, toAtoms } from "@molgpu/select";
 import { cameraFor } from "./data.ts";
 
-export type DemoId =
-  | "scene"
-  | "select"
-  | "lighting"
-  | "timeline"
-  | "bonds"
+export type DemoId = "compose" | "select" | "surface" | "motion" | "volume";
+export type MotionMode = "trajectory" | "wobble" | "elastic" | "camera";
+export type VolumeMode = "density" | "potential";
+export type ComposeLayer =
+  | "cartoon"
   | "tube"
-  | "ribbon"
+  | "sticks"
+  | "spacefill"
   | "surface"
-  | "materials"
-  | "figure"
-  | "coordinates"
-  | "trajectory"
-  | "volume"
-  | "charge"
-  | "efield"
-  | "dynamics";
+  | "sulfur";
+
+export interface DemoOptions {
+  worldLight?: boolean;
+  oit?: boolean;
+  time?: number;
+  postprocess?: boolean;
+  coordinates?: boolean;
+  lightFigure?: boolean;
+  picking?: boolean;
+}
+
 export interface DemoDefinition {
   readonly id: DemoId;
   readonly title: string;
   readonly summary: string;
   readonly fixture: "1crn";
   readonly assertion: string;
-  readonly options?: {
-    worldLight?: boolean;
-    oit?: boolean;
-    time?: number;
-    postprocess?: boolean;
-    coordinates?: boolean;
-    lightFigure?: boolean;
-    picking?: boolean;
-  };
+  readonly options?: DemoOptions;
 }
 
 export const demos: readonly DemoDefinition[] = [
   {
-    id: "scene",
-    title: "Composed scene",
+    id: "compose",
+    title: "Compose",
     summary:
-      "Spacefill and ball-and-stick share one imported 1CRN structure and render pass.",
+      "Layer cartoon, tube, sticks, spacefill, a glass surface and a sulfur highlight over one imported 1CRN structure and one render pass.",
     fixture: "1crn",
     assertion:
-      "both representations are composed from public viewer components",
+      "every layer is a public viewer component reading the same structure",
+    options: { oit: true },
   },
   {
     id: "select",
-    title: "Selections + fields",
+    title: "Select + color",
     summary:
-      "Choose cysteine residues, their 5 Å neighborhood, or sulfur atoms and color the result by element.",
-    fixture: "1crn",
-    assertion: "the highlighted neighbourhood is a real @molgpu/select result",
-  },
-  {
-    id: "lighting",
-    title: "World-fixed lighting",
-    summary:
-      "Orbit the imported 1CRN structure while the directional key light remains world-fixed.",
-    fixture: "1crn",
-    assertion: "the scene uses a world-space directional light",
-    options: { worldLight: true },
-  },
-  {
-    id: "timeline",
-    title: "Controlled timeline",
-    summary:
-      "Scrub a four-second color and camera move from all of 1CRN toward its cysteine residues.",
+      "Pick atoms with a query (cysteines, their 5 Å neighbourhood, sulfur, everything) and colour them by element or by imported partial charge.",
     fixture: "1crn",
     assertion:
-      "timeline time controls color and selection-derived camera framing",
-  },
-  {
-    id: "bonds",
-    title: "Bond topology",
-    summary:
-      "Covalent sticks are inferred from the imported 1CRN atom topology.",
-    fixture: "1crn",
-    assertion: "bond representation reads the structure topology",
-  },
-  {
-    id: "tube",
-    title: "Backbone tube",
-    summary: "The polymer trace is GPU-extruded into a shaded tube.",
-    fixture: "1crn",
-    assertion: "tube is constructed from the real 1CRN backbone",
-  },
-  {
-    id: "ribbon",
-    title: "Secondary-structure cartoon",
-    summary:
-      "1CRN's imported annotation shapes a Mol*-style cartoon: helix ribbons, sheet arrows and coil tubes, coloured by secondary structure.",
-    fixture: "1crn",
-    assertion:
-      "cartoon draws helix, sheet and coil from the imported annotation",
+      "the highlighted atoms are a real @molgpu/select result coloured by a field",
   },
   {
     id: "surface",
-    title: "Solvent-excluded surface",
+    title: "Surface + material",
     summary:
-      "The full 1CRN solvent-excluded surface is extracted with marching cubes; compare appearance and atom-derived color.",
+      "A marching-cubes solvent-excluded surface: choose opaque, glass or pumice, colour by atom element, compare shading models and fix the key light to the world.",
     fixture: "1crn",
-    assertion: "surface geometry is computed from 1CRN atom radii",
+    assertion:
+      "surface geometry is computed from 1CRN atom radii and the material reaches the shaded representation",
     options: { oit: true },
   },
   {
-    id: "materials",
-    title: "Materials",
+    id: "motion",
+    title: "Motion",
     summary:
-      "Compare matte PBR, metal PBR, unlit basic, and normal-debug shading on one fixed molecular surface.",
+      "Scrub or play time through a 60-frame XTC trajectory, a GPU coordinate wobble, live elastic-network dynamics, or a camera move into the cysteines.",
     fixture: "1crn",
     assertion:
-      "the public material specification reaches the shaded representation",
-    options: { oit: true },
-  },
-  {
-    id: "coordinates",
-    title: "Coordinate stream",
-    summary:
-      "Scrub a GPU wobble through two coordinate providers. Atoms and bonds move live; the ribbon follows a throttled snapshot and focus follows GPU bounds.",
-    fixture: "1crn",
-    assertion:
-      "the provider chain updates live geometry, snapshot geometry, and camera focus",
-    options: { coordinates: true },
-  },
-  {
-    id: "trajectory",
-    title: "Trajectory playback",
-    summary:
-      "Scrub a 60-frame XTC trajectory of 1CRN and switch between a snapshot-following tube and live ball-and-stick.",
-    fixture: "1crn",
-    assertion:
-      "the timeline seeks trajectory frames that stream into the coordinate stream",
+      "the timeline drives the chosen source: streamed frames, coordinate kernels, integrator steps, or the camera",
   },
   {
     id: "volume",
-    title: "Density volume",
+    title: "Volumes",
     summary:
-      "A Gaussian density map built from 1CRN is contoured as a glass isosurface, cut by a scrubbable slice, and sampled at every atom to colour packing.",
+      "Contour a Gaussian density map with a scrubbable slice, or compute the Coulomb potential of 1CRN's charges and trace its field lines.",
     fixture: "1crn",
     assertion:
-      "the isosurface, slice, and atom colours share one uploaded VolumeData",
+      "volumes are uploaded or computed once and shared by isosurface, slice, surface colour and field lines",
     options: { oit: true },
-  },
-  {
-    id: "charge",
-    title: "Partial charge",
-    summary:
-      "PDB2PQR's AMBER charges for 1CRN are applied to the heavy-atom structure, folding each hydrogen onto its atom, and coloured on Mol*'s red-white-blue charge scale.",
-    fixture: "1crn",
-    assertion:
-      "imported partial charges colour atoms through a field, with the charge column uploaded once",
-  },
-  {
-    id: "efield",
-    title: "Electrostatic potential",
-    summary:
-      "Explore the Coulomb potential of 1CRN's PQR charges with adjustable grid spacing, field-line density, and path distance.",
-    fixture: "1crn",
-    assertion:
-      "a computed Volume colours the surface and seeds field lines without a CPU round trip",
-    options: { oit: true },
-  },
-  {
-    id: "dynamics",
-    title: "Elastic network dynamics",
-    summary:
-      "Langevin dynamics of 1CRN's CA elastic network, recorded every 10 steps: scrub back and forth through the run, and press Play then right-drag an atom to tug it.",
-    fixture: "1crn",
-    assertion:
-      "the timeline drives the integrator step and checkpoints make the run scrubbable",
-    options: { picking: true },
-  },
-  {
-    id: "figure",
-    title: "Feature composition",
-    summary:
-      "Ribbon, surface, selected sulfur sites, material, and postprocessing compose one explanatory molecular figure.",
-    fixture: "1crn",
-    assertion:
-      "multiple maintained public representations share one 1CRN scene",
-    options: { oit: true, postprocess: true, lightFigure: true },
   },
 ];
 
+/** Hashes from the former 16-demo gallery, with the settings that reproduce each. */
+export const legacyDemos: Readonly<
+  Record<string, { id: DemoId; preset?: DemoPreset }>
+> = {
+  scene: { id: "compose", preset: { layers: ["spacefill", "sticks"] } },
+  bonds: { id: "compose", preset: { layers: ["sticks"] } },
+  tube: { id: "compose", preset: { layers: ["tube"] } },
+  ribbon: { id: "compose", preset: { layers: ["cartoon"] } },
+  figure: {
+    id: "compose",
+    preset: { layers: ["cartoon", "surface", "sulfur"] },
+  },
+  charge: {
+    id: "select",
+    preset: { selectionMode: "all", fieldMode: "charge" },
+  },
+  lighting: { id: "surface", preset: { worldLight: true } },
+  materials: { id: "surface", preset: { materialMode: "metal" } },
+  timeline: { id: "motion", preset: { motionMode: "camera" } },
+  coordinates: { id: "motion", preset: { motionMode: "wobble" } },
+  trajectory: { id: "motion", preset: { motionMode: "trajectory" } },
+  dynamics: { id: "motion", preset: { motionMode: "elastic" } },
+  efield: { id: "volume", preset: { volumeMode: "potential" } },
+};
+
+export interface DemoPreset {
+  layers?: readonly ComposeLayer[];
+  selectionMode?: "near-cysteine" | "cysteine" | "sulfur" | "all";
+  fieldMode?: "element" | "charge";
+  worldLight?: boolean;
+  materialMode?: "matte" | "metal" | "basic" | "normal";
+  motionMode?: MotionMode;
+  volumeMode?: VolumeMode;
+}
+
+/** Viewer options for a demo; the motion sources differ in tree shape. */
+export const demoOptions = (
+  demo: DemoDefinition,
+  state: { motionMode: MotionMode; worldLight: boolean },
+): DemoOptions => ({
+  ...demo.options,
+  ...(demo.id === "surface" ? { worldLight: state.worldLight } : {}),
+  ...(demo.id === "motion" && state.motionMode === "wobble"
+    ? { coordinates: true }
+    : {}),
+  ...(demo.id === "motion" && state.motionMode === "elastic"
+    ? { picking: true }
+    : {}),
+});
+
+/** Demos whose scene is driven by the scrub slider's seconds. */
+export const scrubbed = (id: DemoId): boolean => id === "motion";
+
 export const demoById = (id: string | null): DemoDefinition =>
   demos.find((demo) => demo.id === id) ?? demos[0];
+
+/** Resolve a `#demos/<id>` hash, accepting ids from the former gallery. */
+export const demoFromRoute = (
+  hash: string,
+): { id: DemoId; preset?: DemoPreset } => {
+  const name = hash.replace(/^#demos\/?/, "");
+  const legacy = legacyDemos[name];
+  return legacy ?? { id: demoById(name).id };
+};
 const timelineFocus = new WeakMap<
   StructureData,
   ReturnType<typeof coordinateBounds>
 >();
-export const demoCamera = (data: StructureData, id: DemoId, time = 0) => {
+export const demoCamera = (
+  data: StructureData,
+  id: DemoId,
+  state: { motionMode: MotionMode; volumeMode: VolumeMode },
+  time = 0,
+) => {
   const whole = cameraFor(
     data,
-    id === "lighting" ? 2.2 : id === "efield"
-      ? 2.4
-      // The cartoon spans only the backbone, so frame it closer.
-      : id === "ribbon"
-      ? 1.2
-      : 1.7,
+    id === "volume" && state.volumeMode === "potential" ? 2.4 : 1.7,
   );
-  if (id !== "timeline") return whole;
+  if (id !== "motion" || state.motionMode !== "camera") return whole;
   let focus = timelineFocus.get(data);
   if (focus === undefined) {
     const selected = toAtoms(resolve(comp(["CYS"]), data), data);
