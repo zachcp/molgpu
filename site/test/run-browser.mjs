@@ -562,6 +562,40 @@ Deno.test("site landing page and maintained gallery routes", async () => {
           await page.getByLabel("Trajectory representation").inputValue(),
           "tube",
         );
+        // <Ramachandran> inset: 1CRN's 44 residues with both torsions, drawn
+        // only in the bottom-right corner of the canvas.
+        await dataIs("ramaCount", "44");
+        const insetFirst = await host.getAttribute("data-rama-first");
+        const corners = await page.evaluate(async () => {
+          const canvas = document.querySelector("#molecule-canvas canvas");
+          const bitmap = await createImageBitmap(
+            await new Promise((resolve) => canvas.toBlob(resolve)),
+          );
+          const snapshot = new OffscreenCanvas(bitmap.width, bitmap.height);
+          const context = snapshot.getContext("2d");
+          context.drawImage(bitmap, 0, 0);
+          const scale = bitmap.width / canvas.getBoundingClientRect().width;
+          const box = Math.round(216 * scale), gap = Math.round(16 * scale);
+          const lit = (x0, y0) => {
+            const { data } = context.getImageData(x0, y0, box - gap, box - gap);
+            let count = 0;
+            for (let i = 0; i < data.length; i += 4) {
+              if (data[i] + data[i + 1] + data[i + 2] > 300) count++;
+            }
+            return count;
+          };
+          const result = {
+            inset: lit(bitmap.width - box, bitmap.height - box),
+            opposite: lit(gap, gap),
+          };
+          bitmap.close();
+          return result;
+        });
+        console.log("ramachandran inset", JSON.stringify(corners));
+        assert(
+          corners.inset > 200 && corners.opposite === 0,
+          `the inset draws in its corner only: ${JSON.stringify(corners)}`,
+        );
         // Scrubbing seeks: frames stream in and the displayed frame follows
         // the looping 15 fps curve (2 s → frame 30, 3.5 s → frame 52.5).
         for (const [seconds, frame] of [[2, 30], [3.5, 52.5], [0.5, 7.5]]) {
@@ -577,6 +611,14 @@ Deno.test("site landing page and maintained gallery routes", async () => {
             { timeout: 15000 },
           );
         }
+        // The inset is live: trajectory frames move its points.
+        await page.waitForFunction(
+          (first) =>
+            document.querySelector("#molecule-canvas")?.dataset.ramaFirst !==
+              first,
+          insetFirst,
+          { timeout: 15000 },
+        );
         await page.getByLabel("Trajectory representation").selectOption(
           "ball-and-stick",
         );
