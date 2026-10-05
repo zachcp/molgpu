@@ -1,6 +1,5 @@
 import {
   assert,
-  assertAlmostEquals,
   assertEquals,
   assertMatch,
   assertRejects,
