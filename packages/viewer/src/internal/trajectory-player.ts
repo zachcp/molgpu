@@ -14,12 +14,8 @@ import {
   TrajectoryImageBoxLimitError,
   WINDOW_SLOTS,
 } from "./frame-window.ts";
-import {
-  count,
-  gauge,
-  releaseOwnedBuffer,
-  trackOwnedBuffer,
-} from "./instrumentation.ts";
+import { count, gauge } from "./instrumentation.ts";
+import { ComputeBuffers } from "./compute-buffers.ts";
 
 const STORAGE = 0x0080;
 const COPY_DST = 0x0008;
@@ -155,6 +151,7 @@ export class Player {
   readonly rows: StorageSource | null;
   readonly cache: FrameCache;
   readonly scheduler: FrameScheduler;
+  readonly #buffers: ComputeBuffers;
   constructor(device: GPUDevice, trajectory: TrajectoryData, rows: number) {
     const n = trajectory.atomCount;
     this.atomCount = n;
@@ -166,12 +163,14 @@ export class Player {
           `over this device's maxStorageBufferBindingSize (${limit})`,
       );
     }
-    const buffer = device.createBuffer({
-      size: bytes,
-      usage: STORAGE | COPY_DST | COPY_SRC,
-      label: "molgpu:coords:trajectory:window",
-    });
-    trackOwnedBuffer(buffer, "coords:trajectory:window");
+    this.#buffers = new ComputeBuffers(device);
+    const buffer = this.#buffers.buffer(
+      bytes,
+      STORAGE | COPY_DST | COPY_SRC,
+      "coords:trajectory:window",
+      undefined,
+      4,
+    );
     gauge("coords:trajectory:window:bytes", bytes);
     this.window = Object.freeze({
       buffer,
@@ -184,21 +183,11 @@ export class Player {
     if (map) {
       const inverse = new Uint32Array(rows).fill(0xffffffff);
       map.forEach((row, j) => inverse[row] = j);
-      const rowBuffer = device.createBuffer({
-        size: Math.max(4, inverse.byteLength),
-        usage: STORAGE | COPY_DST,
-        label: "molgpu:coords:trajectory:map",
-      });
-      device.queue.writeBuffer(rowBuffer, 0, inverse);
-      trackOwnedBuffer(rowBuffer, "coords:trajectory:map");
-      count("uploadBytes", "coords:trajectory:map", inverse.byteLength);
-      this.rows = Object.freeze({
-        buffer: rowBuffer,
-        format: "u32",
-        length: rows,
-        size: [rows],
-        version: 1,
-      }) as StorageSource;
+      this.rows = this.#buffers.source(
+        inverse,
+        STORAGE | COPY_DST,
+        "coords:trajectory:map",
+      );
     } else this.rows = null;
     this.cache = new FrameCache(trajectory.source, trajectory.frameCount);
     this.scheduler = new FrameScheduler(
@@ -233,11 +222,7 @@ export class Player {
 
   close(): void {
     this.cache.close();
-    for (const source of [this.window, this.rows]) {
-      if (!source) continue;
-      releaseOwnedBuffer(source.buffer);
-      source.buffer.destroy();
-    }
+    this.#buffers.destroy();
   }
 }
 

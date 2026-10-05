@@ -8,7 +8,6 @@ import {
   use,
   useContext,
   useMemo,
-  useResource,
 } from "@use-gpu/live";
 import { useDeviceContext } from "@use-gpu/workbench";
 import { fitKabsch } from "@molgpu/dynamics";
@@ -16,11 +15,7 @@ import { SUPERPOSE_FIT_BYTES, superposeWgsl } from "@molgpu/dynamics/wgsl";
 import type { StructureData, TrajectoryData } from "@molgpu/table";
 import { useCoordinates } from "./coordinates-context.ts";
 import { CoordinatePasses } from "./internal/coordinate-passes.ts";
-import {
-  count,
-  releaseOwnedBuffer,
-  trackOwnedBuffer,
-} from "./internal/instrumentation.ts";
+import { useComputeBuffers } from "./internal/compute-buffers.ts";
 
 import { useStatusReadback } from "./internal/status-readback.ts";
 import { useSourceRequest } from "./internal/source-request.ts";
@@ -134,58 +129,26 @@ const Fitted: LC<{
     fitKabsch(out, out);
     return out;
   }, [reference.id, rowsKey, fitCount]);
-  const buffers = useMemo(() => {
-    const make = (size: number, usage: number, label: string) => {
-      const buffer = device.createBuffer({
-        size: Math.max(16, size),
-        usage,
-        label: `molgpu:${label}`,
-      });
-      trackOwnedBuffer(buffer, label);
-      return buffer;
-    };
-    const rowBuffer = make(
+  const buffers = useComputeBuffers((owned) => ({
+    rows: owned.buffer(
       (rows?.length ?? 0) * 4,
       STORAGE | COPY_DST,
       "coords:superpose:rows",
-    );
-    if (rows?.length) {
-      device.queue.writeBuffer(rowBuffer, 0, rows);
-      count("uploadBytes", "coords:superpose:rows", rows.byteLength);
-    }
-    const referenceBuffer = make(
+      rows ?? undefined,
+    ),
+    reference: owned.buffer(
       gathered.byteLength,
       STORAGE | COPY_DST,
       "coords:superpose:reference",
-    );
-    device.queue.writeBuffer(referenceBuffer, 0, gathered);
-    count("uploadBytes", "coords:superpose:reference", gathered.byteLength);
-    return {
-      rows: rowBuffer,
-      reference: referenceBuffer,
-      fit: make(
-        SUPERPOSE_FIT_BYTES,
-        STORAGE | COPY_SRC,
-        "coords:superpose:fit",
-      ),
-      params: make(16, UNIFORM | COPY_DST, "coords:superpose:params"),
-    };
-  }, [device, gathered, rows]);
-  useResource((dispose) => {
-    dispose(() => {
-      for (
-        const buffer of [
-          buffers.rows,
-          buffers.reference,
-          buffers.fit,
-          buffers.params,
-        ]
-      ) {
-        releaseOwnedBuffer(buffer);
-        buffer.destroy();
-      }
-    });
-  }, [buffers]);
+      gathered,
+    ),
+    fit: owned.buffer(
+      SUPERPOSE_FIT_BYTES,
+      STORAGE | COPY_SRC,
+      "coords:superpose:fit",
+    ),
+    params: owned.buffer(16, UNIFORM | COPY_DST, "coords:superpose:params"),
+  }), [gathered, rows]);
   const statusReadback = useStatusReadback(
     SUPERPOSE_FIT_BYTES,
     "coords:superpose:staging",

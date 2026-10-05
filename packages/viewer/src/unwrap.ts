@@ -22,11 +22,7 @@ import { type PeriodicBox, periodicBox } from "@molgpu/dynamics";
 import type { Topology } from "@molgpu/table";
 import { useCoordinates } from "./coordinates-context.ts";
 import { CoordinatePasses } from "./internal/coordinate-passes.ts";
-import {
-  count,
-  releaseOwnedBuffer,
-  trackOwnedBuffer,
-} from "./internal/instrumentation.ts";
+import { useComputeBuffers } from "./internal/compute-buffers.ts";
 
 import { useStatusReadback } from "./internal/status-readback.ts";
 import { useTrajectoryFrame } from "./use-trajectory-frame.ts";
@@ -167,32 +163,12 @@ const Unwrapped: LC<{
   const graph = useMemo(() => graphOf(topology), [topology]);
   const { forest } = graph;
   const n = upstream.count;
-  const buffers = useMemo(() => {
+  const buffers = useComputeBuffers((owned) => {
     const layout = centerLayout(forest, centerRows);
-    const made: GPUBuffer[] = [];
-    const make = (
-      size: number,
-      usage: number,
-      label: string,
-      data?: ArrayBufferView,
-    ) => {
-      const buffer = device.createBuffer({
-        size: Math.max(16, Math.ceil(size / 4) * 4),
-        usage,
-        label: `molgpu:${label}`,
-      });
-      trackOwnedBuffer(buffer, label);
-      made.push(buffer);
-      if (data?.byteLength) {
-        device.queue.writeBuffer(buffer, 0, data as BufferSource);
-        count("uploadBytes", label, data.byteLength);
-      }
-      return buffer;
-    };
+    const make = owned.buffer.bind(owned);
     const graphData = (data: ArrayBufferView, label: string) =>
       make(data.byteLength, STORAGE | COPY_DST, label, data);
     return {
-      all: made,
       centered: layout.components.length,
       parent: graphData(forest.parent, "coords:unwrap:graph"),
       component: graphData(forest.component, "coords:unwrap:graph"),
@@ -236,15 +212,7 @@ const Unwrapped: LC<{
         "coords:unwrap:params",
       ),
     };
-  }, [device, forest, graph, centerKey, n]);
-  useResource((dispose) => {
-    dispose(() => {
-      for (const buffer of buffers.all) {
-        releaseOwnedBuffer(buffer);
-        buffer.destroy();
-      }
-    });
-  }, [buffers]);
+  }, [forest, graph, centerKey, n]);
   const statusReadback = useStatusReadback(
     16,
     "coords:unwrap:staging",

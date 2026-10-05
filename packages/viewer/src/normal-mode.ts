@@ -4,20 +4,13 @@ import {
   use,
   useContext,
   useMemo,
-  useResource,
 } from "@use-gpu/live";
-import type { StorageSource } from "@use-gpu/core";
 import { wgsl } from "@use-gpu/shader/wgsl";
-import { useDeviceContext } from "@use-gpu/workbench";
 import type { NormalModeData } from "@molgpu/dynamics";
 import { normalModeWgsl, validateNormalMode } from "@molgpu/dynamics/wgsl";
 import { useCoordinates } from "./coordinates-context.ts";
 import { CoordinateKernel } from "./internal/coordinate-kernel.ts";
-import {
-  count,
-  releaseOwnedBuffer,
-  trackOwnedBuffer,
-} from "./internal/instrumentation.ts";
+import { useComputeBuffers } from "./internal/compute-buffers.ts";
 
 import { TimelineContext } from "./timeline-context.ts";
 import type { NormalModeProps, ViewerComponent } from "./types.ts";
@@ -35,49 +28,28 @@ const Mode: LC<{
   children: LiveElement;
 }> = ({ mode, scale, active, children }) => {
   const upstream = useCoordinates();
-  const device = useDeviceContext();
   useMemo(() => {
     if (upstream) validateNormalMode(mode, upstream.count);
     return true;
   }, [mode, mode.version, upstream?.count]);
-  const sources = useMemo<readonly StorageSource[] | null>(() => {
+  const sources = useComputeBuffers((buffers) => {
     if (!upstream || !active) return null;
-    const make = (
-      data: Float32Array | Uint32Array,
-      format: "f32" | "u32",
-      label: string,
-    ): StorageSource => {
-      const buffer = device.createBuffer({
-        size: Math.max(4, data.byteLength),
-        usage: STORAGE | COPY_DST,
-        label,
-      });
-      if (data.byteLength) device.queue.writeBuffer(buffer, 0, data);
-      trackOwnedBuffer(buffer, label);
-      count("uploadBytes", label, data.byteLength);
-      return Object.freeze({
-        buffer,
-        format,
-        length: data.length,
-        size: [data.length],
-        version: mode.version,
-      }) as StorageSource;
-    };
+    const usage = STORAGE | COPY_DST;
     return [
-      make(mode.atomToNode, "u32", "coords:normal-mode:map"),
-      make(mode.vectors, "f32", "coords:normal-mode:vectors"),
+      buffers.source(
+        mode.atomToNode,
+        usage,
+        "coords:normal-mode:map",
+        mode.version,
+      ),
+      buffers.source(
+        mode.vectors,
+        usage,
+        "coords:normal-mode:vectors",
+        mode.version,
+      ),
     ];
-  }, [device, upstream?.count, mode, mode.version, active]);
-  useResource((dispose) => {
-    if (sources) {
-      dispose(() => {
-        for (const source of sources) {
-          releaseOwnedBuffer(source.buffer);
-          source.buffer.destroy();
-        }
-      });
-    }
-  }, [sources]);
+  }, [upstream?.count, mode, mode.version, active]);
   if (!upstream || !sources) return children;
   return use(CoordinateKernel, {
     upstream,

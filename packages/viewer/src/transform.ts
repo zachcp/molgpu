@@ -1,14 +1,5 @@
-import {
-  type LC,
-  type LiveElement,
-  use,
-  useContext,
-  useMemo,
-  useResource,
-} from "@use-gpu/live";
-import type { StorageSource } from "@use-gpu/core";
+import { type LC, type LiveElement, use, useContext } from "@use-gpu/live";
 import { wgsl } from "@use-gpu/shader/wgsl";
-import { useDeviceContext } from "@use-gpu/workbench";
 import {
   affineSelectedWgsl,
   affineWgsl,
@@ -19,11 +10,7 @@ import type { Selection } from "@molgpu/select";
 import { type Curve, sample } from "@molgpu/timeline";
 import { useCoordinates } from "./coordinates-context.ts";
 import { CoordinateKernel } from "./internal/coordinate-kernel.ts";
-import {
-  count,
-  releaseOwnedBuffer,
-  trackOwnedBuffer,
-} from "./internal/instrumentation.ts";
+import { useComputeBuffers } from "./internal/compute-buffers.ts";
 
 import { TimelineContext } from "./timeline-context.ts";
 import type { TransformProps, ViewerComponent } from "./types.ts";
@@ -69,35 +56,12 @@ const Selected: LC<{
 }> = ({ matrix, select, children }) => {
   const upstream = useCoordinates();
   const selection = select;
-  const device = useDeviceContext();
   const identity = isIdentityAffine(matrix);
-  const source = useMemo<StorageSource | null>(() => {
+  const source = useComputeBuffers((buffers) => {
     if (identity || !upstream || !selection?.indices.length) return null;
     const bits = bitset(selection, upstream.count);
-    const buffer = device.createBuffer({
-      size: Math.max(4, bits.byteLength),
-      usage: STORAGE | COPY_DST,
-      label: "molgpu:coords:transform:mask",
-    });
-    device.queue.writeBuffer(buffer, 0, bits);
-    trackOwnedBuffer(buffer, "coords:transform:mask");
-    count("uploadBytes", "coords:transform:mask", bits.byteLength);
-    return Object.freeze({
-      buffer,
-      format: "u32",
-      length: bits.length,
-      size: [bits.length],
-      version: 1,
-    }) as StorageSource;
-  }, [device, identity, upstream?.count, selection?.id]);
-  useResource((dispose) => {
-    if (source) {
-      dispose(() => {
-        releaseOwnedBuffer(source.buffer);
-        source.buffer.destroy();
-      });
-    }
-  }, [source]);
+    return buffers.source(bits, STORAGE | COPY_DST, "coords:transform:mask");
+  }, [identity, upstream?.count, selection?.id]);
   if (!upstream || !source) return children;
   return use(CoordinateKernel, {
     upstream,
