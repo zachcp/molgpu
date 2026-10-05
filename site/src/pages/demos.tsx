@@ -60,6 +60,35 @@ const routeFromHash = () => {
   return route;
 };
 
+/**
+ * Download the canvas's presented frame as a PNG at canvas pixel size (device
+ * pixel ratio included). The browser snapshots the last presented WebGPU
+ * frame, so no GPU readback buffer is created; the site tests read the canvas
+ * the same way. Size and byte count land on the host for tests.
+ */
+const savePng = async (id: string) => {
+  const host = document.querySelector<HTMLElement>("#molecule-canvas");
+  const canvas = host?.querySelector("canvas");
+  if (!host || !canvas) return;
+  host.dataset.capture = "pending";
+  const blob = await new Promise<Blob | null>((resolve) =>
+    canvas.toBlob(resolve, "image/png")
+  );
+  if (!blob) {
+    host.dataset.capture = "error";
+    return;
+  }
+  host.dataset.captureSize = `${canvas.width}x${canvas.height}`;
+  host.dataset.captureBytes = String(blob.size);
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `molgpu-${id}.png`;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+  host.dataset.capture = "done";
+};
+
 export const DemosPage = () => {
   const [initial] = useState(routeFromHash);
   const [id, setId] = useState<DemoId>(initial.id);
@@ -531,6 +560,9 @@ export const DemosPage = () => {
         <p className="hint">
           Drag or touch-drag to orbit; scroll, trackpad, or pinch to zoom.
         </p>
+        <button type="button" onClick={() => void savePng(demo.id)}>
+          Save PNG
+        </button>
         <nav className="demo-links" aria-label="Demo gallery">
           {demos.map((item) => (
             <a
