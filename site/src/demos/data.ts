@@ -20,17 +20,26 @@ export const cameraFor = (data: StructureData, scale = 1.7) => {
   };
 };
 
-let crambin: Promise<StructureData> | undefined;
+const structures = new Map<string, Promise<StructureData>>();
 
-/** Lazily load the real annotated 1CRN structure only for geometry-sensitive demos. */
-export const loadCrambin = (url: string): Promise<StructureData> => {
-  crambin ??= fetch(url).then(async (response) => {
-    if (!response.ok) {
-      throw new Error(`Unable to load 1CRN (${response.status})`);
-    }
-    return structureFromBcif(new Uint8Array(await response.arrayBuffer()));
-  });
-  return crambin;
+/** Lazily load one example structure, once per URL. */
+export const loadStructure = (
+  url: string,
+  name: string,
+): Promise<StructureData> => {
+  let loading = structures.get(url);
+  if (!loading) {
+    loading = fetch(url).then(async (response) => {
+      if (!response.ok) {
+        throw new Error(`Unable to load ${name} (${response.status})`);
+      }
+      return structureFromBcif(new Uint8Array(await response.arrayBuffer()));
+    });
+    // A failed load may be retried by choosing the structure again.
+    loading.catch(() => structures.delete(url));
+    structures.set(url, loading);
+  }
+  return loading;
 };
 
 let charged: Promise<StructureData> | undefined;

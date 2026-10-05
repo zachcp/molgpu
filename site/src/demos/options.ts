@@ -1,12 +1,22 @@
-import type { ComposeLayer, MotionMode, VolumeMode } from "./registry.ts";
+import type {
+  ComposeLayer,
+  MotionMode,
+  StructureId,
+  VolumeMode,
+} from "./registry.ts";
 
 export type SurfaceMode = "opaque" | "glass" | "pumice";
 export type SurfaceColorMode = "neutral" | "element";
 export type MaterialMode = "matte" | "metal" | "basic" | "normal";
-export type SelectionMode = "near-cysteine" | "cysteine" | "sulfur" | "all";
+export type SelectionMode =
+  | "site"
+  | "cysteine"
+  | "sulfur"
+  | "all";
 export type FieldMode = "element" | "charge";
 export type TrajectoryMode = "tube" | "ball-and-stick";
 export interface SceneOptions {
+  readonly structure: StructureId;
   readonly layers: readonly ComposeLayer[];
   readonly surfaceMode: SurfaceMode;
   readonly surfaceColorMode: SurfaceColorMode;

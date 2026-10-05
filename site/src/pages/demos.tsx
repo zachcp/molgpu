@@ -6,12 +6,14 @@ import {
   type StructureData,
 } from "@molgpu/table";
 import crambinUrl from "../../../packages/io/test/fixtures/1crn.bcif?url";
+import p450Url from "../../../packages/io/test/fixtures/1tqn.bcif?url";
+import complexUrl from "../../../packages/io/test/fixtures/1a4y.bcif?url";
 import chargesUrl from "../../../packages/io/test/fixtures/1crn-amber.pqr?url";
 import { element, resolve } from "@molgpu/select";
 import {
   densityMapFor,
   loadChargedCrambin,
-  loadCrambin,
+  loadStructure,
 } from "../demos/data.ts";
 import {
   type ComposeLayer,
@@ -24,6 +26,9 @@ import {
   demos,
   type MotionMode,
   scrubbed,
+  structureById,
+  type StructureId,
+  structures,
   type VolumeMode,
 } from "../demos/registry.ts";
 import {
@@ -41,6 +46,12 @@ import { disposeViewer, mountViewer } from "../demos/viewer.tsx";
 import { addPick, formatMeasurement, measure } from "../demos/measurements.ts";
 
 const SCRUB_DURATION = 4;
+
+const STRUCTURE_URLS: Record<StructureId, string> = {
+  "1crn": crambinUrl,
+  "1tqn": p450Url,
+  "1a4y": complexUrl,
+};
 
 const LAYERS: ReadonlyArray<readonly [ComposeLayer, string]> = [
   ["cartoon", "Cartoon"],
@@ -151,6 +162,8 @@ export const DemosPage = () => {
   const [id, setId] = useState<DemoId>(initial.id);
   const [time, setTime] = useState(0);
   const [playing, setPlaying] = useState(false);
+  const [structureId, setStructureId] = useState<StructureId>("1crn");
+  const structure = structureById(structureId);
   const [layers, setLayers] = useState<readonly ComposeLayer[]>(
     initial.preset?.layers ?? ["cartoon", "sulfur"],
   );
@@ -172,7 +185,7 @@ export const DemosPage = () => {
     initial.preset?.worldLight ?? false,
   );
   const [selectionMode, setSelectionMode] = useState<SelectionMode>(
-    initial.preset?.selectionMode ?? "near-cysteine",
+    initial.preset?.selectionMode ?? "site",
   );
   const [fieldMode, setFieldMode] = useState<FieldMode>(
     initial.preset?.fieldMode ?? "element",
@@ -191,6 +204,12 @@ export const DemosPage = () => {
   const [sliceFraction, setSliceFraction] = useState(0.5);
   const [isoSigma, setIsoSigma] = useState(2);
   const demo = demoById(id);
+  // Data that only ships for some structures falls back to what every one has.
+  const effectiveField = structure.charges ? fieldMode : "element";
+  const effectiveMotion = !structure.trajectory && motionMode === "trajectory"
+    ? "wobble"
+    : motionMode;
+  const effectiveVolume = structure.charges ? volumeMode : "density";
   const applyPreset = (preset?: DemoPreset) => {
     if (!preset) return;
     if (preset.layers) setLayers(preset.layers);
@@ -214,7 +233,7 @@ export const DemosPage = () => {
   useEffect(() => {
     setTime(0);
     setPlaying(false);
-  }, [id, motionMode]);
+  }, [id, effectiveMotion]);
   useEffect(() => {
     if (!playing || !scrubbed(id)) return;
     let frame = 0;
@@ -234,19 +253,23 @@ export const DemosPage = () => {
     let cancelled = false;
     void (async () => {
       const status = document.querySelector<HTMLElement>("[data-webgpu-error]");
-      if (status) status.textContent = "Loading real 1CRN structure…";
+      if (status) status.textContent = `Loading ${structure.title}…`;
       try {
-        const crambin = await loadCrambin(crambinUrl);
-        // Charges are applied to every structure that can use them: select
-        // colours by them and volume's potential sums them.
-        const data = demo.id === "select" || demo.id === "volume"
-          ? await loadChargedCrambin(crambin, chargesUrl)
-          : crambin;
+        const loaded = await loadStructure(
+          STRUCTURE_URLS[structure.id],
+          structure.title,
+        );
+        // Charges ship for 1CRN only: select colours by them and volume's
+        // potential sums them. Other structures use element and density.
+        const data = structure.charges &&
+            (demo.id === "select" || demo.id === "volume")
+          ? await loadChargedCrambin(loaded, chargesUrl)
+          : loaded;
         if (cancelled) return;
         const host = document.querySelector<HTMLElement>("#molecule-canvas");
         if (host) {
           host.dataset.demo = demo.id;
-          host.dataset.fixture = demo.fixture;
+          host.dataset.fixture = structure.id;
           host.dataset.assertion = demo.assertion;
           host.dataset.orbit = "enabled";
           host.dataset.atomCount = String(data.topology.atoms.count);
@@ -255,18 +278,18 @@ export const DemosPage = () => {
           host.dataset.clipDepth = demo.id === "surface"
             ? String(clipDepth)
             : "";
-          host.dataset.motion = demo.id === "motion" ? motionMode : "";
-          host.dataset.volume = demo.id === "volume" ? volumeMode : "";
+          host.dataset.motion = demo.id === "motion" ? effectiveMotion : "";
+          host.dataset.volume = demo.id === "volume" ? effectiveVolume : "";
           host.dataset.layers = demo.id === "compose" ? layers.join(",") : "";
           if (demo.id === "select") {
             host.dataset.selectedCount = String(
-              selectionFor(data, selectionMode).indices.length,
+              selectionFor(data, selectionMode, structure.id).indices.length,
             );
-            const charge = attributeColumn(data, "partialCharge")!;
+            const charge = attributeColumn(data, "partialCharge");
             let net = 0;
-            for (const q of charge.values) net += q;
-            host.dataset.netCharge = net.toFixed(3);
-            host.dataset.chargeProvenance = charge.provenance;
+            for (const q of charge?.values ?? []) net += q;
+            host.dataset.netCharge = charge ? net.toFixed(3) : "";
+            host.dataset.chargeProvenance = charge?.provenance ?? "";
           }
           if (demo.id === "compose") {
             host.dataset.bondCount = String(bondTopology(data).count);
@@ -275,7 +298,7 @@ export const DemosPage = () => {
             );
           }
         }
-        const sliceIndex = demo.id === "volume" && volumeMode === "density"
+        const sliceIndex = demo.id === "volume" && effectiveVolume === "density"
           ? sliceFraction * (densityMapFor(data).dims[2] - 1)
           : 0;
         if (host && demo.id === "volume") {
@@ -283,10 +306,11 @@ export const DemosPage = () => {
         }
         const scene = (current: StructureData) =>
           renderDemoScene(demo.id, current, {
+            structure: structure.id,
             layers,
-            fieldMode,
-            motionMode,
-            volumeMode,
+            fieldMode: effectiveField,
+            motionMode: effectiveMotion,
+            volumeMode: effectiveVolume,
             surfaceMode,
             surfaceColorMode,
             clipDepth,
@@ -303,18 +327,22 @@ export const DemosPage = () => {
         const camera = demoCamera(
           data,
           demo.id,
-          { motionMode, volumeMode },
+          { motionMode: effectiveMotion, volumeMode: effectiveVolume },
           time,
         );
         if (host) {
           host.dataset.cameraRadius = camera.radius.toFixed(3);
-          if (demo.id === "volume" && volumeMode === "potential") {
+          if (demo.id === "volume" && effectiveVolume === "potential") {
             host.dataset.gridSpacing = String(efieldSpacing);
             host.dataset.seedSpacing = String(seedSpacing);
             host.dataset.lineDistance = String(lineDistance);
           }
         }
-        const options = demoOptions(demo, { motionMode, worldLight, layers });
+        const options = demoOptions(demo, {
+          motionMode: effectiveMotion,
+          worldLight,
+          layers,
+        });
         if (host && demo.id === "compose" && layers.includes("measure")) {
           const result = measure(data.positions, picks);
           host.dataset.measureRows = picks.join(",");
@@ -326,7 +354,7 @@ export const DemosPage = () => {
         }
         mountViewer(
           // Motion sources differ in tree shape, so each gets its own root.
-          demo.id === "motion" ? `motion-${motionMode}` : demo.id,
+          demo.id === "motion" ? `motion-${effectiveMotion}` : demo.id,
           "#molecule-canvas",
           data,
           scene,
@@ -347,11 +375,12 @@ export const DemosPage = () => {
     };
   }, [
     demo,
+    structure,
     time,
     layers,
-    fieldMode,
-    motionMode,
-    volumeMode,
+    effectiveField,
+    effectiveMotion,
+    effectiveVolume,
     worldLight,
     surfaceMode,
     surfaceColorMode,
@@ -374,6 +403,25 @@ export const DemosPage = () => {
         <p>{demo.summary}</p>
         <p className="demo-assertion" data-demo-assertion={demo.id}>
           Behavior: {demo.assertion}.
+        </p>
+        <label className="timeline-control">
+          Structure{" "}
+          <select
+            aria-label="Example structure"
+            value={structure.id}
+            onChange={(event) => {
+              // Picks are atom rows of the previous structure.
+              setPicks([]);
+              setStructureId(event.currentTarget.value as StructureId);
+            }}
+          >
+            {structures.map((item) => (
+              <option key={item.id} value={item.id}>{item.title}</option>
+            ))}
+          </select>
+        </label>
+        <p className="hint" data-structure-description={structure.id}>
+          {structure.description}
         </p>
         {demo.id === "compose" && (
           <fieldset className="timeline-control">
@@ -428,7 +476,7 @@ export const DemosPage = () => {
                 onChange={(event) =>
                   setSelectionMode(event.currentTarget.value as SelectionMode)}
               >
-                <option value="near-cysteine">Within 5 Å of cysteine</option>
+                <option value="site">{structure.site}</option>
                 <option value="cysteine">Cysteine residues</option>
                 <option value="sulfur">Sulfur atoms</option>
                 <option value="all">All atoms</option>
@@ -438,12 +486,14 @@ export const DemosPage = () => {
               Color{" "}
               <select
                 aria-label="Color field"
-                value={fieldMode}
+                value={effectiveField}
                 onChange={(event) =>
                   setFieldMode(event.currentTarget.value as FieldMode)}
               >
                 <option value="element">Element</option>
-                <option value="charge">Partial charge</option>
+                <option value="charge" disabled={!structure.charges}>
+                  Partial charge{structure.charges ? "" : " (1CRN only)"}
+                </option>
               </select>
             </label>
           </>
@@ -523,11 +573,13 @@ export const DemosPage = () => {
               Source{" "}
               <select
                 aria-label="Motion source"
-                value={motionMode}
+                value={effectiveMotion}
                 onChange={(event) =>
                   setMotionMode(event.currentTarget.value as MotionMode)}
               >
-                <option value="trajectory">XTC trajectory</option>
+                <option value="trajectory" disabled={!structure.trajectory}>
+                  XTC trajectory{structure.trajectory ? "" : " (1CRN only)"}
+                </option>
                 <option value="wobble">GPU coordinate wobble</option>
                 <option value="elastic">Elastic network dynamics</option>
                 <option value="camera">Camera move</option>
@@ -557,7 +609,7 @@ export const DemosPage = () => {
                 {playing ? "Pause" : "Play"}
               </button>
             </div>
-            {motionMode === "trajectory" && (
+            {effectiveMotion === "trajectory" && (
               <label className="timeline-control">
                 Representation{" "}
                 <select
@@ -581,15 +633,19 @@ export const DemosPage = () => {
               Volume{" "}
               <select
                 aria-label="Volume source"
-                value={volumeMode}
+                value={effectiveVolume}
                 onChange={(event) =>
                   setVolumeMode(event.currentTarget.value as VolumeMode)}
               >
                 <option value="density">Atom density map</option>
-                <option value="potential">Electrostatic potential</option>
+                <option value="potential" disabled={!structure.charges}>
+                  Electrostatic potential{structure.charges
+                    ? ""
+                    : " (1CRN only)"}
+                </option>
               </select>
             </label>
-            {volumeMode === "density" && (
+            {effectiveVolume === "density" && (
               <>
                 <label className="timeline-control">
                   Slice{" "}
@@ -623,7 +679,7 @@ export const DemosPage = () => {
                 </label>
               </>
             )}
-            {volumeMode === "potential" && (
+            {effectiveVolume === "potential" && (
               <details className="timeline-control">
                 <summary>Advanced</summary>
                 <label className="timeline-control">

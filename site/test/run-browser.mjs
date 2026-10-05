@@ -502,6 +502,38 @@ Deno.test("site landing page and maintained gallery routes", async () => {
         // Crambin is neutral; applyPqr's hydrogen folding keeps the total.
         const net = Number(await host.getAttribute("data-net-charge"));
         assert(Math.abs(net) < 1e-3, `net charge ${net}`);
+
+        // Example structures (0z3.3): each has its own site preset, and those
+        // without shipped charges fall back to element colour.
+        await page.getByLabel("Selection query").selectOption("site");
+        for (
+          const [structure, atoms] of [["1tqn", "3999"], ["1a4y", "8939"]]
+        ) {
+          await page.getByLabel("Example structure").selectOption(structure);
+          await dataIs("fixture", structure);
+          await dataIs("atomCount", atoms);
+          assert(
+            Number(await host.getAttribute("data-selected-count")) > 0,
+            `${structure} site preset selects atoms`,
+          );
+          assertStrictEquals(
+            await page.getByLabel("Color field").inputValue(),
+            "element",
+            `${structure} has no shipped charges`,
+          );
+          assertStrictEquals(await host.getAttribute("data-net-charge"), "");
+          await waitForWebGpu(page);
+          // Loading text clears only once the new structure has mounted.
+          await page.waitForFunction(
+            () =>
+              document.querySelector("[data-webgpu-error]")?.textContent === "",
+            null,
+            { timeout: 30000 },
+          );
+        }
+        await page.getByLabel("Example structure").selectOption("1crn");
+        await dataIs("fixture", "1crn");
+        await dataIs("chargeProvenance", "imported:pqr");
       }
       if (id === "surface") {
         assertStrictEquals(
