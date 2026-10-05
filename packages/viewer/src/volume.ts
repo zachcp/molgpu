@@ -1,4 +1,4 @@
-import { useSourceRequest } from "./internal/source-request.ts";
+import { ioLoader, useSourceRequest } from "./internal/source-request.ts";
 import type { VolumeData } from "@molgpu/table";
 import type { ViewerComponent, VolumeLoader, VolumeProps } from "./types.ts";
 import {
@@ -18,11 +18,9 @@ const noop = () => {};
 const noSubscription = () => noop;
 import { useVolumeSource } from "./internal/volume-buffers.ts";
 
-const defaultLoader: VolumeLoader = async (src, cancelled, signal) => {
-  const { volumeFromCcp4 } = await import("@molgpu/io");
-  const volume = await volumeFromCcp4(src, { signal });
-  return cancelled() ? null : volume;
-};
+const defaultLoader: VolumeLoader = ioLoader((io, src, signal) =>
+  io.volumeFromCcp4(src, { signal })
+);
 
 const VolumeProvider: LC<{ volume: VolumeData; children: LiveElement }> = (
   { volume, children },

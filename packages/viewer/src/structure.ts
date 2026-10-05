@@ -1,4 +1,4 @@
-import { useSourceRequest } from "./internal/source-request.ts";
+import { ioLoader, useSourceRequest } from "./internal/source-request.ts";
 import type {
   StructureLoader,
   StructureProps,
@@ -7,11 +7,9 @@ import type {
 import { use } from "@use-gpu/live";
 import { StructureProvider } from "./structure-context.ts";
 
-const defaultLoader: StructureLoader = async (src, cancelled, signal) => {
-  const { structureFromBcif } = await import("@molgpu/io");
-  const data = await structureFromBcif(src, { signal });
-  return cancelled() ? null : data;
-};
+const defaultLoader: StructureLoader = ioLoader((io, src, signal) =>
+  io.structureFromBcif(src, { signal })
+);
 
 /**
  * Own a preloaded StructureData or load one BCIF source. It intentionally

@@ -11,7 +11,6 @@ import {
   use,
   useContext,
   useMemo,
-  useRef,
   useResource,
   useState,
 } from "@use-gpu/live";
@@ -28,7 +27,8 @@ import type {
 import { useCoordinates } from "./coordinates-context.ts";
 import { TimelineContext } from "./timeline-context.ts";
 import { CoordinateKernel } from "./internal/coordinate-kernel.ts";
-import { useSourceRequest } from "./internal/source-request.ts";
+import { ioLoader, useSourceRequest } from "./internal/source-request.ts";
+import { useStatusDelivery } from "./internal/status-delivery.ts";
 import {
   COPY_UPSTREAM,
   playbackKernel,
@@ -39,28 +39,22 @@ import { TrajectoryContext } from "./trajectory-context.ts";
 
 type StatusCallback = ((status: TrajectoryStatus) => void) | undefined;
 
-/**
- * Deliver each distinct status once, after render. A failure without a
- * callback is logged once instead of thrown: Live has no error boundary.
- */
+/** A failure without a callback is logged once instead of thrown. */
+function logTrajectoryFailure(status: TrajectoryStatus): void {
+  if (status.status !== "error") return;
+  console.error(
+    status.phase === "source"
+      ? "<Trajectory>: source failed to open"
+      : `<Trajectory>: frame ${status.frame} failed to load`,
+    status.error,
+  );
+}
+
 function useTrajectoryStatus(
   onStatus: StatusCallback,
   status: TrajectoryStatus | null,
 ): void {
-  const callback = useRef<StatusCallback>(onStatus);
-  callback.current = onStatus;
-  useResource(() => {
-    if (!status) return;
-    if (callback.current) callback.current(status);
-    else if (status.status === "error") {
-      console.error(
-        status.phase === "source"
-          ? "<Trajectory>: source failed to open"
-          : `<Trajectory>: frame ${status.frame} failed to load`,
-        status.error,
-      );
-    }
-  }, [status]);
+  useStatusDelivery(onStatus, status, logTrajectoryFailure);
 }
 
 type PlayerProps = {
@@ -199,11 +193,9 @@ const TrajectoryPlayer: LC<PlayerProps> = (
   );
 };
 
-const defaultLoader: TrajectoryLoader = async (src, cancelled, signal) => {
-  const { openTrajectory } = await import("@molgpu/io");
-  const trajectory = await openTrajectory(src, { signal });
-  return cancelled() ? null : trajectory;
-};
+const defaultLoader: TrajectoryLoader = ioLoader((io, src, signal) =>
+  io.openTrajectory(src, { signal })
+);
 
 /**
  * Play a trajectory over the nearest coordinates (a coordinate provider): descendants see its frames; topology never changes. `frame`
