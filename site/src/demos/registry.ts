@@ -3,6 +3,52 @@ import { comp, resolve, toAtoms } from "@molgpu/select";
 import { cameraFor } from "./data.ts";
 
 export type DemoId = "compose" | "select" | "surface" | "motion" | "volume";
+export type StructureId = "1crn" | "1tqn" | "1a4y";
+
+export interface StructureDefinition {
+  readonly id: StructureId;
+  readonly title: string;
+  readonly description: string;
+  /** Label for the structure's "site" selection preset. */
+  readonly site: string;
+  /** PDB2PQR partial charges ship for this structure (charge colour, potential). */
+  readonly charges: boolean;
+  /** An XTC trajectory ships for this structure. */
+  readonly trajectory: boolean;
+}
+
+/** Example structures; each loads lazily from the site's data directory. */
+export const structures: readonly StructureDefinition[] = [
+  {
+    id: "1crn",
+    title: "Crambin (1CRN)",
+    description: "46-residue soluble plant seed protein with three disulfides.",
+    site: "Disulfide neighbourhood",
+    charges: true,
+    trajectory: true,
+  },
+  {
+    id: "1tqn",
+    title: "Cytochrome P450 3A4 (1TQN)",
+    description:
+      "Membrane-associated drug-metabolising enzyme with bound heme.",
+    site: "Heme pocket",
+    charges: false,
+    trajectory: false,
+  },
+  {
+    id: "1a4y",
+    title: "Inhibitor complex (1A4Y)",
+    description:
+      "Ribonuclease inhibitor bound to angiogenin; two copies in the unit.",
+    site: "Inhibitor at the angiogenin interface",
+    charges: false,
+    trajectory: false,
+  },
+];
+
+export const structureById = (id: string | null): StructureDefinition =>
+  structures.find((structure) => structure.id === id) ?? structures[0];
 export type MotionMode = "trajectory" | "wobble" | "elastic" | "camera";
 export type VolumeMode = "density" | "potential";
 export type ComposeLayer =
@@ -38,7 +84,7 @@ export const demos: readonly DemoDefinition[] = [
     id: "compose",
     title: "Compose",
     summary:
-      "Layer cartoon, tube, sticks, spacefill, a glass surface and a sulfur highlight over one imported 1CRN structure and one render pass.",
+      "Layer cartoon, tube, sticks, spacefill, a glass surface and a sulfur highlight over one imported structure and one render pass.",
     fixture: "1crn",
     assertion:
       "every layer is a public viewer component reading the same structure",
@@ -52,6 +98,7 @@ export const demos: readonly DemoDefinition[] = [
     fixture: "1crn",
     assertion:
       "the highlighted atoms are a real @molgpu/select result coloured by a field",
+    options: { oit: true },
   },
   {
     id: "surface",
@@ -60,7 +107,7 @@ export const demos: readonly DemoDefinition[] = [
       "A marching-cubes solvent-excluded surface: choose opaque, glass or pumice, colour by atom element, compare shading models and fix the key light to the world.",
     fixture: "1crn",
     assertion:
-      "surface geometry is computed from 1CRN atom radii and the material reaches the shaded representation",
+      "surface geometry is computed from the structure's atom radii and the material reaches the shaded representation",
     options: { oit: true },
   },
   {
@@ -76,7 +123,7 @@ export const demos: readonly DemoDefinition[] = [
     id: "volume",
     title: "Volumes",
     summary:
-      "Contour a Gaussian density map with a scrubbable slice, or compute the Coulomb potential of 1CRN's charges and trace its field lines.",
+      "Contour a Gaussian density map with a scrubbable slice, or compute the Coulomb potential of 1CRN's shipped charges and trace its field lines.",
     fixture: "1crn",
     assertion:
       "volumes are uploaded or computed once and shared by isosurface, slice, surface colour and field lines",
@@ -111,7 +158,7 @@ export const legacyDemos: Readonly<
 
 export interface DemoPreset {
   layers?: readonly ComposeLayer[];
-  selectionMode?: "near-cysteine" | "cysteine" | "sulfur" | "all";
+  selectionMode?: "site" | "cysteine" | "sulfur" | "all";
   fieldMode?: "element" | "charge";
   worldLight?: boolean;
   materialMode?: "matte" | "metal" | "basic" | "normal";
