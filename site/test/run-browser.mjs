@@ -4,6 +4,7 @@ import {
   assertEquals,
   assertMatch,
   assertStrictEquals,
+  assertStringIncludes,
 } from "@std/assert";
 import { fromFileUrl } from "@std/path";
 import { createServer } from "vite";
@@ -256,6 +257,11 @@ Deno.test("site landing page and maintained gallery routes", async () => {
         (await page.locator("#demo-title").textContent())?.trim(),
         title,
       );
+      // The panel shows the example file that runs (0z3.2), not a copy.
+      const source = await page.locator(`[data-demo-source="${id}"] pre`)
+        .textContent();
+      assertStringIncludes(source ?? "", `export const ${id}Scene`);
+      assertStringIncludes(source ?? "", "@molgpu/viewer");
       const host = page.locator("#molecule-canvas");
       assertStrictEquals(await host.getAttribute("data-fixture"), fixture);
       assert(Number(await host.getAttribute("data-atom-count")) > 0);

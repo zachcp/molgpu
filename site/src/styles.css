@@ -246,6 +246,39 @@ fieldset.timeline-control {
   outline: 2px solid #7ed6cc;
   outline-offset: 2px;
 }
+.demo-source {
+  grid-column: 1 / -1;
+  border: 1px solid #2f486a;
+  border-radius: 1rem;
+  background: #09101d;
+  padding: .8rem 1rem;
+  position: relative;
+}
+.demo-source summary {
+  cursor: pointer;
+  color: #b9c7da;
+}
+.demo-source button {
+  position: absolute;
+  top: .6rem;
+  right: 1rem;
+  padding: .3rem .65rem;
+  border: 1px solid #45627f;
+  border-radius: .4rem;
+  background: #16283d;
+  color: #e2edf7;
+  cursor: pointer;
+}
+.demo-source:not([open]) button {
+  display: none;
+}
+.demo-source pre {
+  margin: .8rem 0 0;
+  max-height: 32rem;
+  overflow: auto;
+  font-size: .82rem;
+  line-height: 1.45;
+}
 @media (max-width: 720px) {
   .card-grid,
   .package-grid,
