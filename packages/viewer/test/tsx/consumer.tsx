@@ -25,6 +25,7 @@ import {
   Bonds,
   Spacefill,
   Structure,
+  Transform,
   useCoordinateFocus,
 } from "@molgpu/viewer";
 import type { StructureLoader, StructureProps } from "@molgpu/viewer";
@@ -32,6 +33,7 @@ import {
   useAttributeSnapshot,
   useCoordinateBounds,
   useCoordinates,
+  useCoordinateSelection,
   useCoordinateSnapshot,
   useStructure,
   useStructureResource,
@@ -240,6 +242,15 @@ probe.settle = (index, which) => {
   return cancelled;
 };
 
+probe.reject = (index, reason) => {
+  const request = probe.pending[index];
+  if (!request) throw new Error(`No pending load at ${index}`);
+  const cancelled = request.cancelled();
+  if (cancelled) request.settle(null);
+  else request.fail(reason);
+  return cancelled;
+};
+
 probe.invalid = () =>
   ([
     { data: left, src: "/1crn.bcif" },
@@ -255,12 +266,13 @@ probe.invalid = () =>
     }
   });
 
-const report = (next: Phase, failure: unknown = null): null => {
+const report = (next: Phase, failure?: unknown): null => {
   // Keep the transitions, not just the resting state: a fast load would
   // otherwise make the loading prop unobservable from the test.
   if (probe.phase !== next) probe.history.push(next);
   probe.phase = next;
-  probe.failure = failure === null ? null : String(failure);
+  // Any rejection value, including null, reaches the error prop as itself.
+  probe.failure = next === "error" ? String(failure) : null;
   return null;
 };
 
@@ -309,6 +321,23 @@ const AttributeSnapshotProbe = ({ name = "gpu:test" }: {
   return null;
 };
 
+// Position-dependent: only a published snapshot can answer it.
+const EAST = where(
+  "atom",
+  "x > -12.5",
+  (data, row) => data.positions[row * 3] > -12.5,
+  ["positions"],
+);
+
+const CoordinateSelectionProbe = ({ at }: { at: string }): LiveElement => {
+  const selection = useCoordinateSelection(EAST);
+  probe.coordinateSelection = {
+    ...probe.coordinateSelection,
+    [at]: selection ? [...selection.indices] : null,
+  };
+  return null;
+};
+
 const SnapshotProbe = (): LiveElement => {
   const snapshot = useCoordinateSnapshot({ maxHz: 4 });
   probe.coordinateBounds = useCoordinateBounds();
@@ -334,12 +363,73 @@ const FIRST_TWO = resolve(
 );
 const NO_ATOMS = resolve(where("atom", "none", () => false), bonded);
 
+// Two disjoint 5-row sets with the same 32-bit FNV-1a membership hash
+// (molgpu-sept-0vs.5), placed left and right of the camera target. Every other
+// row sits far behind it and is never selected.
+const COLLIDING: Record<"left" | "right", readonly number[]> = {
+  left: [265, 316, 363, 518, 554],
+  right: [176, 293, 558, 652, 787],
+};
+const collisionData = (() => {
+  const base = cluster(0, 1.8, 1000);
+  const positions = new Float32Array(1000 * 3).fill(0);
+  for (let row = 0; row < 1000; row++) positions[row * 3 + 2] = -500;
+  for (const [side, rows] of Object.entries(COLLIDING)) {
+    rows.forEach((row, k) => {
+      positions[row * 3] = (side === "left" ? -12 : 12) + (k - 2) * 0.8;
+      positions[row * 3 + 2] = 0;
+    });
+  }
+  return createStructure({ positions, topology: base.topology });
+})();
+const collisionSelections = {
+  left: resolve(
+    where("atom", "left", (_, row) => COLLIDING.left.includes(row)),
+    collisionData,
+  ),
+  right: resolve(
+    where("atom", "right", (_, row) => COLLIDING.right.includes(row)),
+    collisionData,
+  ),
+};
+// Moves selected rows 100 Å along +x; unselected rows keep their position.
+const SHIFT = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 100, 0, 0, 1];
+
+const TransformedProbe = (): LiveElement => {
+  const snapshot = useCoordinateSnapshot({ maxHz: 10 });
+  if (snapshot) {
+    const moved: number[] = [];
+    for (let row = 0; row < 1000; row++) {
+      if (snapshot.data.positions[row * 3] > 50) moved.push(row);
+    }
+    probe.transformed = moved;
+  }
+  return null;
+};
+
 const Scene = (
-  { mode, src, offsetX, attributeName, source, attempt }: Pick<
+  { mode, src, offsetX, attributeName, source, attempt, collision }: Pick<
     State,
-    "mode" | "src" | "offsetX" | "attributeName" | "source" | "attempt"
+    | "mode"
+    | "src"
+    | "offsetX"
+    | "attributeName"
+    | "source"
+    | "attempt"
+    | "collision"
   >,
 ): LiveElement => {
+  if (mode === "collision") {
+    const select = collisionSelections[collision];
+    return (
+      <Structure data={collisionData}>
+        <Spacefill select={select} />
+        <Transform matrix={SHIFT} select={select}>
+          <TransformedProbe />
+        </Transform>
+      </Structure>
+    );
+  }
   if (mode === "preloaded") {
     return (
       <Structure data={left}>
@@ -456,9 +546,11 @@ const Scene = (
           <IdentityCoordinates>
             <OffsetCoordinates offset={[-2, 1, 0]}>
               <SnapshotProbe />
+              <CoordinateSelectionProbe at="provider" />
             </OffsetCoordinates>
           </IdentityCoordinates>
         </OffsetCoordinates>
+        <CoordinateSelectionProbe at="root" />
       </Structure>
     );
   }
@@ -529,6 +621,7 @@ const App = (): LiveElement => {
     attributeName: "gpu:test",
     source: "src",
     attempt: 0,
+    collision: "left",
   });
   try {
     useCoordinates();
@@ -567,6 +660,7 @@ const App = (): LiveElement => {
               attributeName={state.attributeName}
               source={state.source}
               attempt={state.attempt}
+              collision={state.collision}
             />
           )
           : null}

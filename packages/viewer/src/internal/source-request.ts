@@ -1,15 +1,27 @@
 import { useResource, useState } from "@use-gpu/live";
 
-/** Request-local pending/error state; replacement aborts and suppresses late results. */
+/**
+ * Outcome of one source request. Rejection is explicit, so any rejection value,
+ * including undefined, null, false, 0 or "", is reported unchanged as a failure.
+ */
+export type SourceOutcome<T> =
+  | { readonly state: "idle" }
+  | { readonly state: "pending" }
+  | { readonly state: "resolved"; readonly value: T }
+  | { readonly state: "rejected"; readonly error: unknown };
+
+const IDLE = Object.freeze({ state: "idle" as const });
+const PENDING = Object.freeze({ state: "pending" as const });
+
+/** Request-local outcome; replacement aborts and suppresses late results. */
 export function useSourceRequest<T>(
   load: ((signal: AbortSignal) => T | Promise<T>) | null,
   dependencies: unknown[],
-): [T | undefined, unknown, boolean] {
+): SourceOutcome<T> {
   const [result, setResult] = useState<
     {
-      owner: AbortController;
-      value?: T;
-      error?: unknown;
+      readonly owner: AbortController;
+      readonly outcome: SourceOutcome<T>;
     } | null
   >(null);
   const owner = useResource((dispose) => {
@@ -22,19 +34,25 @@ export function useSourceRequest<T>(
       }).then(
         (value) => {
           if (!controller.signal.aborted) {
-            setResult({ owner: controller, value });
+            setResult({
+              owner: controller,
+              outcome: Object.freeze({ state: "resolved", value }),
+            });
           }
         },
         (error) => {
           if (!controller.signal.aborted) {
-            setResult({ owner: controller, error });
+            setResult({
+              owner: controller,
+              outcome: Object.freeze({ state: "rejected", error }),
+            });
           }
         },
       );
     }
     return controller;
   }, dependencies);
-  if (!load) return [undefined, undefined, false];
-  if (result?.owner !== owner) return [undefined, undefined, true];
-  return [result.value, result.error, false];
+  if (!load) return IDLE;
+  if (result?.owner !== owner) return PENDING;
+  return result.outcome;
 }

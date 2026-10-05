@@ -520,35 +520,37 @@ export const Trajectory: ViewerComponent<TrajectoryProps> = (
   if (!["none", "minimum-image"].includes(pbc)) {
     throw new TypeError("<Trajectory> pbc must be none or minimum-image");
   }
-  const [loaded, failure, pending] = useSourceRequest(
+  const request = useSourceRequest(
     data === undefined
       ? async (signal: AbortSignal) =>
         await loader(src!, () => signal.aborted, signal)
       : null,
     [data, src, loader],
   );
+  const loaded = request.state === "resolved" ? request.value : null;
   const trajectory = data ?? loaded ?? null;
-  const sourceFailure = data === undefined && !pending ? failure : undefined;
+  const pending = request.state === "pending";
+  const failed = request.state === "rejected";
   const status = useMemo<TrajectoryStatus | null>(
     () =>
-      pending
+      request.state === "pending"
         ? Object.freeze({ status: "opening" as const })
-        : sourceFailure !== undefined
+        : request.state === "rejected"
         ? Object.freeze({
           status: "error",
           phase: "source" as const,
           frame: null,
-          error: sourceFailure,
+          error: request.error,
         })
         : trajectory
         ? Object.freeze({ status: "ready", frameCount: trajectory.frameCount })
         : null,
-    [pending, sourceFailure, trajectory],
+    [request, trajectory],
   );
   useTrajectoryStatus(onStatus, status);
   // Pending, failed or cancelled sources pass upstream coordinates through,
   // in the same subtree that playback later attaches to.
-  const playable = pending || sourceFailure !== undefined ? null : trajectory;
+  const playable = pending || failed ? null : trajectory;
   return (use(TrajectoryProvider, {
     trajectory: playable,
     sourceStatus: status,

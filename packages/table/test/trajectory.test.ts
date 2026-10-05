@@ -201,6 +201,44 @@ Deno.test("in-memory source reads, rejects out of range and honours abort", asyn
   controller.abort();
   const error = await assertRejects(() => t.source.read(0, controller.signal));
   assertEquals((error as DOMException).name, "AbortError");
+  const reason = new Error("caller reason");
+  const custom = new AbortController();
+  custom.abort(reason);
+  assertStrictEquals(
+    await assertRejects(() => t.source.read(0, custom.signal)),
+    reason,
+  );
+});
+
+Deno.test("source-backed reads keep the abort reason before and after the read", async () => {
+  const reason = new Error("caller reason");
+  let abortDuringRead: AbortController | null = null;
+  const t = createTrajectory({
+    atomCount: 1,
+    frameCount: 1,
+    // A source that ignores its signal entirely.
+    source: {
+      read: () => {
+        abortDuringRead?.abort(reason);
+        return Promise.resolve(frame(1, 3));
+      },
+    },
+  });
+  const pre = new AbortController();
+  pre.abort(reason);
+  assertStrictEquals(
+    await assertRejects(() => t.source.read(0, pre.signal)),
+    reason,
+  );
+  const during = new AbortController();
+  abortDuringRead = during;
+  assertStrictEquals(
+    await assertRejects(() => t.source.read(0, during.signal)),
+    reason,
+    "an abort before publication is not swallowed by an unaware source",
+  );
+  abortDuringRead = null;
+  assertEquals([...(await t.source.read(0)).positions], [3, 3, 3]);
 });
 
 Deno.test("validateTrajectory checks atom count and atomMap rows", () => {

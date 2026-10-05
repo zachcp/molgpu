@@ -443,3 +443,33 @@ Deno.test("URL fallback stops a chunked download at maxDownload", async () => {
   assert(cancelled, "the response body is cancelled at the limit");
   assert(chunks < 10, "the stream is not consumed to completion");
 });
+
+Deno.test("XTC frame reads reject with the abort reason after bytes arrive", async () => {
+  const bytes = writeXtc([{ positions: new Float32Array([1, 2, 3]) }]);
+  const reason = new Error("cancelled after bytes became available");
+  let abortAfterRead: AbortController | null = null;
+  const opening = new AbortController();
+  const t = await openTrajectory({
+    size: bytes.length,
+    read(offset, length) {
+      const controller = abortAfterRead;
+      // Abort only once readExactly has seen the bytes, before decode/publish.
+      if (controller) {
+        queueMicrotask(() => queueMicrotask(() => controller.abort(reason)));
+      }
+      return Promise.resolve(bytes.subarray(offset, offset + length));
+    },
+  }, { format: "xtc", signal: opening.signal });
+  // Frame signals are independent of the opening signal.
+  opening.abort();
+  assertEquals((await t.source.read(0)).positions.length, 3);
+  const late = new AbortController();
+  abortAfterRead = late;
+  const error = await assertRejects(() => t.source.read(0, late.signal));
+  assert(error === reason, "post-byte abort keeps signal.reason");
+  abortAfterRead = null;
+  const again = await assertRejects(() => t.source.read(0, late.signal));
+  assert(again === reason, "pre-aborted read keeps signal.reason");
+  const fresh = await t.source.read(0, new AbortController().signal);
+  assertEquals(fresh.positions.length, 3, "a fresh read still succeeds");
+});

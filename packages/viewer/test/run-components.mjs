@@ -680,7 +680,66 @@ Deno.test("viewer components", async () => {
       { timeout: 10000 },
     );
     assert(secondSnapshot.revision > firstSnapshot.revision);
-    report.states.snapshot = { first: firstSnapshot, second: secondSnapshot };
+    // useCoordinateSelection re-resolves a positions query per snapshot:
+    // x = -13,-10,-7 at offset 5 keeps rows 1,2; -12,-9,-6 at offset 6 keeps
+    // all three. Without a provider it reads root positions -16,-13,-10.
+    const selectionAt = (at, expected) =>
+      page.waitForFunction(
+        ([key, rows]) =>
+          JSON.stringify(globalThis.__viewer.coordinateSelection[key]) ===
+            JSON.stringify(rows),
+        [at, expected],
+        { timeout: 10000 },
+      );
+    await selectionAt("provider", [0, 1, 2]);
+    await selectionAt("root", [2]);
+    await update({ offsetX: 5 }, true);
+    await selectionAt("provider", [1, 2]);
+    await selectionAt("root", [2]);
+    const coordinateSelection = await page.evaluate(() =>
+      globalThis.__viewer.coordinateSelection
+    );
+    report.states.snapshot = {
+      first: firstSnapshot,
+      second: secondSnapshot,
+      coordinateSelection,
+    };
+    await update({ mode: "preloaded" });
+
+    // 1d. Two row sets whose 32-bit membership hashes collide on one structure
+    //     (0vs.5): switching between them must update what Spacefill draws and
+    //     which rows Transform moves, both keyed by Selection.id.
+    const collision = {};
+    for (const side of ["left", "right", "left"]) {
+      await update({ mode: "collision", collision: side });
+      const rows = side === "left"
+        ? [265, 316, 363, 518, 554]
+        : [176, 293, 558, 652, 787];
+      await page.waitForFunction(
+        (expected) =>
+          JSON.stringify(globalThis.__viewer.transformed) ===
+            JSON.stringify(expected),
+        rows,
+        { timeout: 10000 },
+      ).catch(async (failure) => {
+        console.log(
+          "collision transform",
+          JSON.stringify(
+            await page.evaluate(() => globalThis.__viewer.transformed),
+          ),
+        );
+        throw failure;
+      });
+      const drawn = await blobs(`collision-${side}`, `components-${side}`);
+      assertStrictEquals(drawn.length, 1, `${side} set draws one body`);
+      assert(
+        side === "left" ? drawn[0].x < 400 : drawn[0].x > 400,
+        `Spacefill draws the ${side} set: ${JSON.stringify(drawn)}`,
+      );
+      collision[side] = { transformed: rows, blob: drawn[0] };
+    }
+    assertEquals((await snapshot()).errors, [], "collision WebGPU errors");
+    report.states.collision = collision;
     await update({ mode: "preloaded" });
 
     // 2. The runtime rejects the same prop combinations the types reject.
@@ -911,7 +970,40 @@ Deno.test("viewer components", async () => {
       1,
       "the data source draws",
     );
+    // 7c. Every rejection value, including falsy ones, reaches the error prop
+    //     unchanged instead of leaving the source silently empty (0vs.7).
+    const rejections = {};
+    for (const [step, reason] of [undefined, null, false, 0, ""].entries()) {
+      const at = (await snapshot()).pending;
+      await update({
+        source: "src",
+        src: `/reject-${step}`,
+        attempt: 10 + step,
+      });
+      await until((n) => globalThis.__viewer.snapshot().pending === n + 1, at);
+      // Index in the page: Playwright serializes an undefined argument as null.
+      const cancelled = await page.evaluate(
+        ([i, k]) =>
+          globalThis.__viewer.reject(i, [undefined, null, false, 0, ""][k]),
+        [at, step],
+      );
+      assertStrictEquals(cancelled, false, "the current request rejects");
+      await until(() => globalThis.__viewer.snapshot().phase === "error");
+      const rejected = await snapshot();
+      assertEquals(
+        rejected.history,
+        ["loading", "error"],
+        `rejecting with ${String(reason)} shows the error prop`,
+      );
+      assertStrictEquals(rejected.failure, String(reason));
+      rejections[JSON.stringify(reason) ?? "undefined"] = rejected.history;
+    }
+    // Back to the preloaded data for the remaining lifecycle checks.
+    await update({ source: "data" });
+    await until(() => globalThis.__viewer.snapshot().dataset === "left");
+
     report.states.lifecycle = {
+      rejections,
       failed: lifecycleFailed.history,
       retried: retried.history,
       switched: switched.history,

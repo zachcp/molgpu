@@ -126,7 +126,11 @@ export async function trajectoryFromXtc(
             `XTC frame ${i}`,
           ),
         ]);
+        // The decoder may load after the bytes arrive, and one frame's decode
+        // is too short to reach Mol*'s cooperative abort points: check around it.
+        signal?.throwIfAborted();
         const parsed = await parseXtc(frame).run();
+        signal?.throwIfAborted();
         if (parsed.isError || parsed.result.frames.length !== 1) {
           throw trajectoryError(
             `XTC: Mol* could not decode frame ${i}`,

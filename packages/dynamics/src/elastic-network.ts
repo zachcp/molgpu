@@ -292,13 +292,7 @@ export function solveElasticModes(
       { length: d },
       (_, i) => vectors[i * d + column],
     );
-    let pivot = 0;
-    for (let i = 1; i < d; i++) {
-      if (Math.abs(vector[i]) > Math.abs(vector[pivot])) pivot = i;
-    }
-    if (vector[pivot] < 0) {
-      for (let i = 0; i < d; i++) vector[i] = -vector[i];
-    }
+    orient(vector);
     let residualSquared = 0;
     for (let i = 0; i < d; i++) {
       let value = -eigenvalue * vector[i];
@@ -309,16 +303,9 @@ export function solveElasticModes(
     if (!Number.isFinite(residual) || residual > 1e-6) {
       throw new RangeError("elastic mode residual exceeds tolerance");
     }
+    // Re-orient after f32 rounding, which can move the pivot or break a tie.
     const compact = Float32Array.from(vector);
-    let compactPivot = 0;
-    for (let i = 1; i < d; i++) {
-      if (Math.abs(compact[i]) > Math.abs(compact[compactPivot])) {
-        compactPivot = i;
-      }
-    }
-    if (compact[compactPivot] < 0) {
-      for (let i = 0; i < d; i++) compact[i] = -compact[i];
-    }
+    orient(compact);
     modes.push(Object.freeze({ kind, eigenvalue, vector: compact, residual }));
     if (modes.length === count) break;
   }

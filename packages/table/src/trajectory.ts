@@ -29,9 +29,6 @@ const finiteArray = (values: ArrayLike<number>, path: string): void => {
   }
 };
 
-const abortError = (): Error =>
-  new DOMException("frame read aborted", "AbortError");
-
 /** @internal Frame validation is part of createTrajectory's public contract. */
 export function validateTrajectoryFrame(
   frame: TrajectoryFrame,
@@ -94,7 +91,7 @@ const ownFrame = (
 function memorySource(frames: readonly TrajectoryFrame[]): FrameSource {
   return Object.freeze({
     read(index: number, signal?: AbortSignal): Promise<TrajectoryFrame> {
-      if (signal?.aborted) return Promise.reject(abortError());
+      if (signal?.aborted) return Promise.reject(signal.reason);
       try {
         inRange(index, frames.length);
       } catch (error) {
@@ -117,9 +114,11 @@ function validatedSource(
 ): FrameSource {
   return Object.freeze({
     async read(index: number, signal?: AbortSignal): Promise<TrajectoryFrame> {
-      if (signal?.aborted) throw abortError();
+      signal?.throwIfAborted();
       inRange(index, frameCount);
       const frame = await source.read(index, signal);
+      // A source that ignores its signal must still not publish after abort.
+      signal?.throwIfAborted();
       return ownFrame(
         frame,
         atomCount,
