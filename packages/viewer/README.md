@@ -229,6 +229,32 @@ material shaders. Native wrappers can supply lazy values, shader maps, render
 callbacks and the full upstream color syntax. Native wrappers use upstream
 material defaults (PBR roughness 0.5 unless specified).
 
+### Ramachandran inset
+
+`<Ramachandran>` plots φ/ψ for the nearest structure's default view (first
+model, primary conformers) as a screen-locked inset in a canvas corner. It draws
+inside the scene's own pass: the vertex shader maps inset pixels through the
+camera's inverse projection-view matrix, so it needs no extra pass or camera and
+orbiting uploads nothing. Points follow live coordinates at the
+coordinate-snapshot cadence (`snapshotHz`, default 4 Hz and on pause), so a
+trajectory or coordinate provider moves them. Grid lines mark 0 and ±90°.
+
+```tsx
+<Structure data={data}>
+  <Trajectory src={url} frame={frame}>
+    <Cartoon />
+    <Ramachandran
+      corner="bottom-right"
+      size={240}
+      color={bySecondaryStructure()}
+    />
+  </Trajectory>
+</Structure>;
+```
+
+`ramachandranPoints(data, color)` returns the same points for apps that draw
+their own plot.
+
 ## API
 
 Stability: _stable_ — relied on by the examples and settled; _experimental_ —
@@ -276,6 +302,10 @@ may change in 0.x minor releases; _advanced_ — only from
 | `ElasticNetworkStatus`    | experimental | Completed and target steps, `lagging` and `perturbed`.                                                                                                                                                                  |
 | `useTrajectoryFrame`      | experimental | What the nearest `<Trajectory>` shows: requested frame, displayed pair, interpolated box; null outside one.                                                                                                             |
 | `UnitCell`                | experimental | Lines along the displayed frame's periodic box.                                                                                                                                                                         |
+| `Ramachandran`            | experimental | Screen-locked inset φ/ψ plot of the nearest structure, drawn inside the scene pass; live at the coordinate-snapshot cadence.                                                                                            |
+| `ramachandranPoints`      | experimental | Public purpose: the plotted `{ residue, phi, psi, color }` points for a structure, for apps drawing their own plot or tests.                                                                                            |
+| `RamachandranPoint`       | experimental | One plotted residue: row, φ/ψ in degrees and RGBA colour.                                                                                                                                                               |
+| `RamachandranCorner`      | experimental | Public purpose: the `corner` prop's values (`top-left`, `top-right`, `bottom-left`, `bottom-right`).                                                                                                                    |
 | `TrajectoryProps`         | experimental | `<Trajectory>` props: `frame`, `interpolate`, `pbc`, `onStatus`, plus exactly one of `data` or `src` (with an optional `loader`).                                                                                       |
 | `TrajectoryStatus`        | experimental | `onStatus` value: `opening`, `ready` (frame count), or `error` with phase `source`/`frame`; failures pass upstream coordinates through.                                                                                 |
 | `TrajectoryLoader`        | experimental | Cancellable `(src, cancelled) => TrajectoryData` loader.                                                                                                                                                                |

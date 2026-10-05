@@ -20,6 +20,8 @@ import {
   EField,
   FieldLines,
   Isosurface,
+  Ramachandran,
+  type RamachandranPoint,
   Ribbon,
   Spacefill,
   Surface,
@@ -219,6 +221,18 @@ const surfaceScene = (data: StructureData, options: SceneOptions) => {
   ].filter(Boolean);
 };
 
+// Test hook: the inset's plotted points, published on the canvas host.
+const publishRama = (points: readonly RamachandranPoint[]) => {
+  const host = document.querySelector<HTMLElement>("#molecule-canvas");
+  if (!host) return;
+  host.dataset.ramaCount = String(points.length);
+  host.dataset.ramaFirst = points.length
+    ? `${points[0].residue}:${points[0].phi.toFixed(2)},${
+      points[0].psi.toFixed(2)
+    }`
+    : "";
+};
+
 const motionScene = (data: StructureData, options: SceneOptions) => {
   switch (options.motionMode) {
     case "trajectory":
@@ -228,6 +242,12 @@ const motionScene = (data: StructureData, options: SceneOptions) => {
             ? <Tube radius={0.48} color={[0.55, 0.85, 0.6, 1]} />
             : <BallAndStick ball={0.28} stick={0.22} color={byElement()} />}
           <FrameReadout />
+          <Ramachandran
+            corner="bottom-right"
+            size={200}
+            color={bySecondaryStructure()}
+            onPoints={publishRama}
+          />
         </Trajectory>
       );
     case "wobble":

@@ -55,6 +55,12 @@ export { Cartoon, Ribbon } from "./ribbon.ts";
 export type { RibbonProps } from "./ribbon.ts";
 export { Surface } from "./surface.ts";
 export { UnitCell } from "./unit-cell.ts";
+export { Ramachandran } from "./ramachandran.ts";
+export { ramachandranPoints } from "./internal/ramachandran-points.ts";
+export type {
+  RamachandranCorner,
+  RamachandranPoint,
+} from "./internal/ramachandran-points.ts";
 export { Distance, Label } from "./annotations.ts";
 export { Volume } from "./volume.ts";
 export { Isosurface } from "./isosurface.ts";

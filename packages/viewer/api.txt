@@ -68,6 +68,12 @@ PickingProvider
   export const PickingProvider: ViewerComponent<{ children?: ViewerElement }>;
 PointLayerOptions
   export interface PointLayerOptions { shape?: "circle" | "diamond" | "square" | "up" | "down" | "left" | "right"; hard?: boolean; hollow?: boolean; outline?: number; shaded?: boolean; depth?: number; zBias?: number; blend?: BlendMode | null; shadow?: boolean; depthTest?: boolean; depthWrite?: boolean; alphaToCoverage?: boolean; alphaToDiscard?: boolean }
+Ramachandran
+  export const Ramachandran: ViewerComponent<{ corner?: RamachandranCorner; /** Plot edge in CSS pixels. Defaults to 220. */ size?: number; /** Gap to the canvas edges in CSS pixels. Defaults to 16. */ margin?: number; /** A colour or a Field evaluated per atom (e.g. bySecondaryStructure()). */ color?: Field | VectorLike; /** Point diameter in CSS pixels. Defaults to 5. */ pointSize?: number; background?: VectorLike; gridColor?: VectorLike; snapshotHz?: number; /** Called with the plotted points whenever a snapshot changes them. */ onPoints?: (points: readonly RamachandranPoint[]) => void }>;
+RamachandranCorner
+  export type RamachandranCorner = "top-left" | "top-right" | "bottom-left" | "bottom-right";
+RamachandranPoint
+  export interface RamachandranPoint { readonly residue: number; readonly phi: number; readonly psi: number; readonly color: readonly [number, number, number, number] }
 Ribbon
   export const Ribbon: ViewerComponent<RibbonProps>;
 RibbonProps
@@ -146,6 +152,8 @@ pointerToPlane
   export function pointerToPlane(u: number, v: number, projectionView: ArrayLike<number>, anchor: ArrayLike<number>): [number, number, number];
 projectToPointer
   export function projectToPointer(point: ArrayLike<number>, projectionView: ArrayLike<number>): [number, number, number];
+ramachandranPoints
+  export function ramachandranPoints(data: StructureData, color?: Field | VectorLike): RamachandranPoint[];
 useCameraCurve
   export function useCameraCurve(curve: CameraCurve, resource: StructureResource, options?: FocusOptions): CameraPose;
 useCoordinateFocus
