@@ -22,7 +22,6 @@ import {
   useCameraCurve,
 } from "../src/index.ts";
 import { createStructureResource } from "../src/advanced.ts";
-import { createCameraCurve } from "../src/camera-curve.ts";
 
 const probe = globalThis.__probe = {
   storage: [],
@@ -148,7 +147,7 @@ const oxygen = where(
   (table, i) => table.topology.atoms.element[i] === 8,
 );
 const focusResource = createStructureResource(data);
-const cameraCurve = createCameraCurve([
+const cameraCurve = Object.freeze([
   { time: 0, target: [0, 0, 0], radius: 14, bearing: 0.6, pitch: 0.35 },
   { time: 2, focus: oxygen, bearing: 1.1, pitch: 0.35 },
 ]);

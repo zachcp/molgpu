@@ -269,14 +269,18 @@ export function focusSelection(
   );
 }
 
+// Curves validated by identity: a stable curve is checked once, not per frame.
+const validCurves = new WeakSet<CameraCurve>();
+
 /** Camera frames may target a fixed point/radius or a reusable focus query.
- * Focus is resolved only in sampleCamera, never when the curve is created. */
-export function createCameraCurve(frames: CameraCurve): CameraCurve {
+ * Focus is resolved only when sampled, never during validation. */
+function validateCameraCurve(frames: CameraCurve): void {
+  if (validCurves.has(frames)) return;
   if (!Array.isArray(frames) || frames.length < 2) {
     throw new TypeError("camera curve needs at least two frames");
   }
   let previous = -Infinity;
-  return Object.freeze(frames.map((frame: AnyFrame, i): AnyFrame => {
+  frames.forEach((frame: AnyFrame, i) => {
     finite(frame?.time, `frame ${i} time`);
     if (frame.time <= previous) {
       throw new RangeError("camera frame times must increase");
@@ -301,12 +305,8 @@ export function createCameraCurve(frames: CameraCurve): CameraCurve {
         throw new RangeError("camera radius must be positive");
       }
     }
-    return Object.freeze({
-      ...frame,
-      target: frame.target &&
-        Object.freeze(point(frame.target, `frame ${i} target`)),
-    }) as AnyFrame;
-  }));
+  });
+  validCurves.add(frames);
 }
 
 /** Pure arbitrary-time camera sample. A current StructureResource is explicit;
@@ -317,6 +317,7 @@ export function sampleCamera(
   resource: StructureResource,
   options?: FocusOptions,
 ): CameraPose {
+  validateCameraCurve(curve);
   finite(time, "sample time");
   const resolved = curve.map((frame) => {
     const view = "focus" in frame
