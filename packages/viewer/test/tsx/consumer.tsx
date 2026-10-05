@@ -19,9 +19,16 @@ import {
 } from "@use-gpu/workbench";
 import { createStructure, withAttributes } from "@molgpu/table";
 import { all, resolve, where } from "@molgpu/select";
-import { attribute, byChain, colormap, linear } from "@molgpu/fields";
+import {
+  attribute,
+  byChain,
+  byElement,
+  colormap,
+  linear,
+} from "@molgpu/fields";
 import type { StructureData } from "@molgpu/table";
 import {
+  BallAndStick,
   Bonds,
   Spacefill,
   Structure,
@@ -192,6 +199,8 @@ const left = cluster(-13, 1.8),
   bonded = cluster(-13, 1.8, 3, true),
   right = cluster(7, 3.2),
   blank = emptyStructure();
+const replacement = cluster(4, 1.2, 7, true);
+const FIRST_THREE = where("atom", "first-three", (_, row) => row < 3);
 const attributesA = withAttributes(bonded, {
   "user:a": {
     domain: "atom",
@@ -432,6 +441,21 @@ const Scene = (
     | "collision"
   >,
 ): LiveElement => {
+  // In-place data replacement under several representations: one Structure
+  // instance, its data prop switching between different-size bonded tables.
+  if (mode === "replace") {
+    return (
+      <Structure data={attempt % 2 ? replacement : bonded}>
+        <Spacefill scale={0.4} color={byElement()} />
+        <BallAndStick
+          select={FIRST_THREE}
+          ball={0.3}
+          stick={0.2}
+          color={byElement()}
+        />
+      </Structure>
+    );
+  }
   if (mode === "collision") {
     const select = collisionSelections[collision];
     return (

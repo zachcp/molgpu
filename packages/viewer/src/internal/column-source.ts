@@ -16,17 +16,17 @@ import {
 
 type Render = (source: StorageSource) => LiveElement;
 
-// The source and its buffer are owned by this subtree. RawData 0.20.0 does not destroy buffers.
+// The source and its buffer are owned by this subtree. Cleanup releases that
+// ownership but does not destroy the buffer: a retained draw from a replaced
+// representation can still submit it (docs/findings/2026-09-29-gpu-retirement-decision.md),
+// so native reachability reclaims it once no draw references it.
 export const OwnedSource: LC<
   { source: StorageSource; label?: string; counter?: string; render: Render }
 > = ({ source, label, counter, render }) => {
   if (label) source.buffer.label = `molgpu:${label}`;
   useResource((dispose) => {
     trackOwnedBuffer(source.buffer, counter ?? "");
-    dispose(() => {
-      releaseOwnedBuffer(source.buffer);
-      source.buffer.destroy();
-    });
+    dispose(() => releaseOwnedBuffer(source.buffer));
   }, [source.buffer]);
   return render(source);
 };
