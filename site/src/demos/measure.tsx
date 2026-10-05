@@ -22,7 +22,7 @@ const atom = (data: StructureData, row: number) =>
   resolve(where("atom", `picked atom ${row}`, (_, i) => i === row), data);
 
 /** Report the atom row under each left press to the page. */
-const PickListener = ({ onPick }: { onPick: (row: number) => void }) => {
+export const PickListener = ({ onPick }: { onPick: (row: number) => void }) => {
   usePicking({ onPick: (hit) => hit && onPick(hit.atom) });
   return null;
 };
