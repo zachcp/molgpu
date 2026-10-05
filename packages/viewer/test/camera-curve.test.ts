@@ -7,11 +7,8 @@ import {
 import { createStructure, withPositions } from "@molgpu/table";
 import { all, resolve, where } from "@molgpu/select";
 import { createStructureResource } from "../src/internal/structure-resource.ts";
-import {
-  createCameraCurve,
-  focusSelection,
-  sampleCamera,
-} from "../src/camera-curve.ts";
+import { focusSelection, sampleCamera } from "../src/camera-curve.ts";
+import type { CameraCurve } from "../src/types.ts";
 
 const identity = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
 const shifted = [...identity];
@@ -103,10 +100,10 @@ Deno.test("camera focus resolves current positions on every sample and rewinds",
     evaluations++;
     return table.topology.atoms.element[i] === 8;
   });
-  const curve = createCameraCurve([
+  const curve: CameraCurve = [
     { time: 0, target: [0, 0, 0], radius: 20, bearing: 0, pitch: 0 },
     { time: 2, focus: query, bearing: 1, pitch: 0.25 },
-  ]);
+  ];
   const first = createStructureResource(data);
   const start = sampleCamera(curve, 0, first);
   const end = sampleCamera(curve, 2, first);
@@ -141,4 +138,31 @@ Deno.test("camera focus resolves current positions on every sample and rewinds",
     6,
     "dataset replacement re-resolves the query",
   );
+});
+
+Deno.test("sampled camera curves are validated on the public path", () => {
+  const resource = createStructureResource(data);
+  const fixed = { target: [0, 0, 0], radius: 5, bearing: 0, pitch: 0 };
+  const cases: [CameraCurve, ErrorConstructor, string][] = [
+    [[{ time: 0, ...fixed }], TypeError, "two frames"],
+    [[{ time: 1, ...fixed }, { time: 1, ...fixed }], RangeError, "increase"],
+    [
+      [{ time: 0, ...fixed }, { time: 1, ...fixed, radius: 0 }],
+      RangeError,
+      "radius must be positive",
+    ],
+    [
+      [{ time: 0, ...fixed }, { time: 1, ...fixed, target: [0, NaN, 0] }],
+      TypeError,
+      "frame 1 target[1] must be finite",
+    ],
+    [
+      [{ time: 0, ...fixed }, { time: 1, ...fixed, pitch: Infinity }],
+      TypeError,
+      "frame 1 pitch must be finite",
+    ],
+  ];
+  for (const [curve, type, message] of cases) {
+    assertThrows(() => sampleCamera(curve, 0.5, resource), type, message);
+  }
 });
