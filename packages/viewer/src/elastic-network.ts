@@ -2,10 +2,11 @@
 // provider. The application owns progress (a target `step`); this component
 // owns the integrator state and publishes upstream + node displacement.
 //
-// Raw WebGPU, not a use.gpu Kernel, for the integrator: one rendered frame
-// encodes up to `maxStepsPerFrame` steps of four dependent dispatches each,
-// and Kernel dispatches once per version and cannot repeat a dispatch
-// sequence k times in a frame. The integrator submits its own command buffer
+// Raw WebGPU for the integrator: use.gpu 0.20.0 Iterate can repeat an
+// ordered compute sequence, but recording here ends the compute pass to copy
+// checkpoint buffers between steps; restoring also copies before the pass.
+// Iterate receives a compute-pass encoder and does not express those command-
+// encoder copy boundaries. The integrator submits its own command buffer
 // from render, as <EField> does, so it lands before the frame's compute pass
 // where CoordinateKernel applies the displacement. Retirement follows the
 // GPU retirement decision: the provider releases ownership of its buffers and

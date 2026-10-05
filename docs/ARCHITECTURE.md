@@ -1,6 +1,6 @@
 # Current architecture and reading guide
 
-Reviewed 2026-10-02 against `origin/main` at `9b1c5b1`. This is the navigation
+Reviewed 2026-10-05 against `origin/main` at `8bf1005`. This is the navigation
 and composition map; package READMEs describe supported APIs, dated findings
 retain decisions and evidence, and Beads track remaining work.
 [DESIGN](DESIGN.md) records intent and [ROADMAP](ROADMAP.md) retains historical
@@ -91,6 +91,23 @@ includes its owner/source/layout and local generation. Retained
 draw/dispatch/copy references govern lifetime. Style edits do not regenerate
 geometry or upload coordinates; first demand for an immutable column may upload
 it once.
+
+## Current review and follow-ups
+
+The [post-overhaul review](findings/2026-10-04-post-overhaul-review.md)
+(`molgpu-sept-0vs`) reviews the code after the completed October 2 fixes. It
+retains the package/scope model and tracks selection-key collisions, frame
+cancellation, arbitrary loader rejection values, field-alpha transparency and a
+small scientific helper cleanup. Its validation is scoped; it does not replace
+the historical full acceptance matrix.
+
+Composition order matters: a full Trajectory replaces upstream positions; a
+mapped trajectory preserves unmapped rows. Put transforms below it when they
+should affect displayed frames. UnitCell displays trajectory box metadata, not a
+box transformed through every coordinate provider. EField uses live positions on
+a grid fixed from root bounds unless given an explicit box; allow enough extent
+for large motion. IO frame picoseconds and timeline seconds remain separate,
+joined by explicit frame curves.
 
 ## Current decisions and evidence
 

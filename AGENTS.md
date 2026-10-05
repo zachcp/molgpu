@@ -8,12 +8,14 @@ device, camera, lights and render passes. Molecular components compose beneath
 them.
 
 Read the root README, the relevant package README and its `deno.json`, then
-[the current architecture review](docs/findings/2026-09-28-stack-architecture-review.md).
-`docs/DESIGN.md` records intent; dated findings and Beads record evidence and
-open work. Historical phase gates do not prove every composition works today.
-`docs/HARDENING.md` still contains npm-era requirements; use actual Deno
-manifests and report discrepancies instead of introducing package.json files to
-satisfy it.
+[the current architecture guide](docs/ARCHITECTURE.md). The
+[September 28 review](docs/findings/2026-09-28-stack-architecture-review.md)
+records the original findings; consult completion notes before treating them as
+open. `docs/DESIGN.md` records intent; dated findings and Beads record evidence
+and open work. Historical phase gates do not prove every composition works
+today. `docs/HARDENING.md` defines the Deno/JSR checks. Use actual Deno
+manifests; do not introduce package.json files to satisfy historical npm-era
+findings.
 
 ## Work Tracking
 
@@ -22,7 +24,9 @@ orientation bead `molgpu-sept-634`; verify the `molgpu-sept-` issue prefix. Do
 not change global routing. Inspect the relevant issue, dependencies and current
 source before starting. Reuse existing issues; do not duplicate or close another
 contributor's work based only on stale descriptions. Reference decisions remain
-references. The architecture follow-up epic is `molgpu-sept-crj`.
+references. The completed architecture epics are `molgpu-sept-crj` and
+`molgpu-sept-ktr`. The post-overhaul review and its open follow-ups are
+`molgpu-sept-0vs`.
 
 Respect the requested scope: review/planning tasks produce evidence and bounded
 issues, not unsolicited implementation. For architectural uncertainty, a spike
@@ -96,8 +100,7 @@ Run checks proportional to the change:
 - Before handing off changed files: formatting and lint for their scope.
 
 `deno task test:gpu` runs only `run-browser.mjs`, not every GPU suite.
-`run-gate2.mjs` currently has a known failure tracked by `molgpu-sept-19s` and
-is skipped in CI. Do not claim a clean full GPU gate without running its
-relevant suites. Distinguish a source-reviewed risk, a reproduced failure, an
-environment limitation and a passing check. Do not publish or deploy as part of
-validation.
+`run-gate2.mjs` is included in CI; its earlier failure (`molgpu-sept-19s`) is
+closed. Do not claim a clean full GPU gate without running its relevant suites.
+Distinguish a source-reviewed risk, a reproduced failure, an environment
+limitation and a passing check. Do not publish or deploy as part of validation.
