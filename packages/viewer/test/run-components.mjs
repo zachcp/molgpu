@@ -654,6 +654,10 @@ Deno.test("viewer components", async () => {
       await page.evaluate(() => globalThis.__viewer.emptyBounds),
       null,
     );
+    assertStrictEquals(
+      await page.evaluate(() => globalThis.__viewer.nonAtomBoundsError),
+      "TypeError: useCoordinateBounds received a non-atom selection",
+    );
     await page.waitForFunction(
       () => globalThis.__viewer.coordinateFocus?.target[0] === -10,
       null,

@@ -88,6 +88,7 @@ export interface Probe {
   } | null;
   selectedBounds: Probe["coordinateBounds"];
   emptyBounds: Probe["coordinateBounds"];
+  nonAtomBoundsError: string | null;
   coordinateFocus: { target: readonly number[]; radius: number } | null;
   device: GPUDevice | null;
   submissions: number;
@@ -136,6 +137,7 @@ export const probe: Probe = {
   coordinateBounds: null,
   selectedBounds: null,
   emptyBounds: null,
+  nonAtomBoundsError: null,
   coordinateFocus: null,
   device: null,
   submissions: 0,

@@ -92,10 +92,17 @@ function reduce(
   });
 }
 
-/** Asynchronous GPU bounds and centroid for the nearest coordinate stream. */
+/** Asynchronous GPU bounds and centroid for the nearest coordinate stream.
+ * The selection must be an atom-domain selection of the same dataset. A run
+ * that fails (for example on device loss) publishes nothing: the hook keeps
+ * returning the last published value, or null, and never throws later. */
 export function useCoordinateBounds(
   selection: Selection | null = null,
 ): CoordinateBounds | null {
+  // Checked before any hook so a rejected call leaves no partial hook state.
+  if (selection && selection.domain !== "atom") {
+    throw new TypeError("useCoordinateBounds received a non-atom selection");
+  }
   const coordinates = useCoordinates();
   const device = useDeviceContext();
   if (
