@@ -29,7 +29,7 @@ import {
 } from "./internal/instrumentation.ts";
 
 import { useStatusReadback } from "./internal/status-readback.ts";
-import { useTrajectoryFrame } from "./trajectory-context.ts";
+import { useTrajectoryFrame } from "./use-trajectory-frame.ts";
 import type { UnwrapProps, UnwrapStatus, ViewerComponent } from "./types.ts";
 import { useSelectionInput } from "./internal/use-selection-input.ts";
 import { type Selection, where } from "@molgpu/select";

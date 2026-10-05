@@ -3,7 +3,7 @@
 import type { VectorLike, ViewerComponent } from "./types.ts";
 import { use, useMemo } from "@use-gpu/live";
 import { LineLayer } from "@use-gpu/workbench";
-import { useTrajectoryFrame } from "./trajectory-context.ts";
+import { useTrajectoryFrame } from "./use-trajectory-frame.ts";
 import { type ColumnSpec, withColumns } from "./internal/representation.ts";
 import { applyOpacity, checkOpacity, modeProps } from "./internal/opacity.ts";
 
