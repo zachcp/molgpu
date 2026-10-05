@@ -34,3 +34,24 @@ export function workspaceAliases() {
   }
   return Object.fromEntries([...subpaths, ...roots]);
 }
+
+/** Wrap a fixture's Vite `build` options so that, only while
+ * MOLGPU_BROWSER_COVERAGE is set, bundles carry inline source maps with
+ * absolute `sources`. scripts/browser-coverage-hook.mjs reads them to map V8
+ * coverage of a bundle back to workspace files; otherwise `build` is unchanged. */
+export function coverageBuild(build) {
+  if (!Deno.env.get("MOLGPU_BROWSER_COVERAGE")) return build;
+  const output = build.rollupOptions?.output ?? {};
+  return {
+    ...build,
+    sourcemap: "inline",
+    rollupOptions: {
+      ...build.rollupOptions,
+      output: {
+        ...output,
+        sourcemapPathTransform: (source, mapPath) =>
+          new URL(source, `file://${mapPath}`).pathname,
+      },
+    },
+  };
+}
