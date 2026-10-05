@@ -23,6 +23,11 @@ export const USE_GPU_PREBUNDLE = [
   "@use-gpu/wgsl",
 ];
 
+/** The automatic JSX runtime is injected by the transform, so the dependency
+ * scan cannot see it; on a slow cold start Vite found it after navigation and
+ * answered with an Outdated Optimize Dep 504 (PR #88 CI, run-superpose-source). */
+const JSX_RUNTIME_PREBUNDLE = ["react/jsx-dev-runtime"];
+
 /**
  * Every Mol* module @molgpu/io loads, read from its source. io is a workspace
  * package excluded from optimization, so without these Vite discovers them
@@ -77,7 +82,11 @@ export async function startDevServer(
       ...(noDiscovery ? { noDiscovery: true } : {}),
       entries,
       exclude: [...workspacePackages(), ...exclude],
-      include: [...USE_GPU_PREBUNDLE, ...ioMolstarModules()],
+      include: [
+        ...USE_GPU_PREBUNDLE,
+        ...JSX_RUNTIME_PREBUNDLE,
+        ...ioMolstarModules(),
+      ],
     },
   });
   await server.listen();
