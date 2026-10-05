@@ -378,6 +378,18 @@ Deno.test("site landing page and maintained gallery routes", async () => {
         await page.getByLabel("Cartoon").uncheck();
         await dataIs("layers", "sticks,surface,sulfur");
 
+        // The layer list stays in its column: with wide fonts it once ran
+        // under the canvas, which then intercepted the checkbox clicks.
+        const fieldset = await page.locator("fieldset.timeline-control")
+          .boundingBox();
+        const canvasBox = await page.locator("#molecule-canvas").boundingBox();
+        assert(
+          fieldset.x + fieldset.width <= canvasBox.x + 1 ||
+            fieldset.y + fieldset.height <= canvasBox.y + 1,
+          `layer controls overlap the canvas: ${
+            JSON.stringify([fieldset, canvasBox])
+          }`,
+        );
         // Measure alone: click lit pixels (atoms or bonds) until four atoms
         // are picked; each reported value matches the 1CRN coordinates.
         for (

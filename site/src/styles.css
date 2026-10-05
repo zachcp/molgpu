@@ -210,6 +210,12 @@ footer {
   gap: .55rem;
   color: #b9c7da;
 }
+/* The Compose layer list wraps inside its column instead of running under
+   the canvas, whose pointer events would take the clicks. */
+fieldset.timeline-control {
+  flex-wrap: wrap;
+  min-width: 0;
+}
 .measure-readout {
   flex-direction: column;
   align-items: flex-start;

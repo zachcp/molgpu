@@ -1,4 +1,3 @@
-// deno-lint-ignore-file jsx-key
 /** @jsx LiveReact.createElement */
 import { React as LiveReact } from "@use-gpu/live";
 import { FontLoader, SDFFontProvider } from "@use-gpu/workbench";
