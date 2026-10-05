@@ -135,8 +135,10 @@ described:
 
 **X3 — Release.**
 
-- CI runs `deno task fmt`, `deno task test`, `deno task typecheck`,
-  `deno task check:hardening` and `deno task jsr:check`.
+- CI runs `deno task fmt`, `lint`, `test`, `typecheck`, `typecheck:components`,
+  `typecheck:site`, `check:hardening` and `jsr:check`, then the WebGPU browser
+  suites in groups via `scripts/run-webgpu-ci.sh`. The viewer group includes
+  `run-jsr-consumer.mjs`, the suite behind `deno task gate:consumer`.
 - Package versions and top-level `CHANGELOG.md` files follow the documented
   manual procedure in [RELEASING.md](RELEASING.md). Deno manifests define the
   publish contract; npm `repository.directory` metadata is not a requirement.

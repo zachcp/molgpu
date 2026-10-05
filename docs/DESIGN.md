@@ -134,15 +134,14 @@ Representations memoize geometry on `(selection, geometry params)` only. Style
 fields change uniforms and bound buffers. This is what makes animation cheap and
 is the main reason to be on use.gpu rather than porting naively.
 
-Under moving coordinates every consumer declares a policy. **Live** consumers
-(spacefill, ball-and-stick, bonds) read the GPU coordinate source and follow for
-free. **Snapshot** consumers (ribbon, tube and CPU selections such as `within`)
-rebuild from a throttled asynchronous readback and on pause. Surface uses a live
-GPU rebuild for supported moving-coordinate grids and a CPU snapshot fallback
-otherwise. Readbacks are accepted by owner/source/layout and local generation,
-not by a generation number alone. Bounds and centroid move to a GPU reduction so
-framing works on live coordinates. GPU-native ribbon/tube geometry is a
-follow-on only if snapshot playback proves inadequate.
+Under moving coordinates every consumer declares a policy: **live** consumers
+read the GPU coordinate source and follow for free; **snapshot** consumers
+rebuild from a throttled asynchronous readback and on pause. Readbacks are
+accepted by owner/source/layout and local generation, not by a generation number
+alone. Bounds and centroid use a GPU reduction so framing works on live
+coordinates. GPU-native ribbon/tube geometry is a follow-on only if snapshot
+playback proves inadequate. The current consumer-by-consumer policy is kept in
+[ARCHITECTURE.md](ARCHITECTURE.md#live-and-snapshot-policies).
 
 ### 6. Framing derives from selections
 
