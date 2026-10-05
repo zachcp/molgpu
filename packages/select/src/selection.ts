@@ -597,8 +597,8 @@ const sortedUnique = (
   return Uint32Array.from(out);
 };
 
-// FNV-1a over the index bytes: a content hash so equal membership yields equal id
-// and changed membership yields a different one, independent of the caller label.
+// FNV-1a over the index bytes: a cheap bucket key so equal membership lands in
+// the same bucket. A 32-bit hash can collide, so it never decides identity alone.
 const hashIndices = (indices: Uint32Array): string => {
   let h = 0x811c9dc5;
   for (let k = 0; k < indices.length; k++) {
@@ -606,6 +606,68 @@ const hashIndices = (indices: Uint32Array): string => {
     h = Math.imul(h, 0x01000193);
   }
   return (h >>> 0).toString(16);
+};
+
+const sameRows = (a: Uint32Array, b: Uint32Array): boolean => {
+  if (a.length !== b.length) return false;
+  for (let k = 0; k < a.length; k++) if (a[k] !== b[k]) return false;
+  return true;
+};
+
+// Exact membership interning per dataset. Rows that compare equal to a live
+// selection's rows reuse its ordinal; anything else, including a hash collision,
+// takes the next ordinal. Ordinals are never reused within a dataset, so an id
+// left in a consumer cache after its selection is collected cannot later name
+// different rows. Rows are held weakly and emptied buckets are dropped.
+interface Interned {
+  readonly rows: WeakRef<Uint32Array>;
+  readonly ordinal: number;
+}
+interface InternStore {
+  next: number;
+  readonly buckets: Map<string, Interned[]>;
+}
+const internStores = new WeakMap<StructureData["identity"], InternStore>();
+
+const prune = (store: InternStore, key: string): Interned[] | undefined => {
+  const bucket = store.buckets.get(key)?.filter((e) => e.rows.deref());
+  if (bucket?.length) store.buckets.set(key, bucket);
+  else store.buckets.delete(key);
+  return bucket?.length ? bucket : undefined;
+};
+const collected = new FinalizationRegistry<
+  { readonly store: WeakRef<InternStore>; readonly key: string }
+>(({ store, key }) => {
+  const live = store.deref();
+  if (live) prune(live, key);
+});
+
+/** Library-owned id: equal ids imply identical rows; equal rows share an id while one is reachable. */
+const selectionId = (
+  domain: Domain,
+  dataset: StructureData["identity"],
+  token: number,
+  revisions: Revisions,
+  indices: Uint32Array,
+): string => {
+  let store = internStores.get(dataset);
+  if (!store) {
+    internStores.set(dataset, store = { next: 0, buckets: new Map() });
+  }
+  const key = `${domain}@${token}#${
+    revisionString(revisions)
+  }:${indices.length}:${hashIndices(indices)}`;
+  const bucket = prune(store, key) ?? [];
+  const match = bucket.find((e) => {
+    const rows = e.rows.deref();
+    return rows !== undefined && sameRows(rows, indices);
+  });
+  // Every equal selection keeps the ordinal alive, not only the first one.
+  const ordinal = match?.ordinal ?? store.next++;
+  bucket.push({ rows: new WeakRef(indices), ordinal });
+  store.buckets.set(key, bucket);
+  collected.register(indices, { store: new WeakRef(store), key });
+  return `${key}~${ordinal}`;
 };
 
 const revisionString = (revisions: Revisions): string =>
@@ -638,17 +700,19 @@ const makeSelection = (
   const count = DOMAIN_COUNT[domain](data);
   const indices = sortedUnique(rawRows, count, `${domain} indices`);
   const revisions = dependency(data, deps);
-  const token = datasetToken(data);
-  const revString = revisionString(revisions);
   return Object.freeze({
     domain,
     dataset: data.identity,
     indices,
     deps: revisions,
     label,
-    id: `${domain}@${token}#${revString}:${indices.length}:${
-      hashIndices(indices)
-    }`,
+    id: selectionId(
+      domain,
+      data.identity,
+      datasetToken(data),
+      revisions,
+      indices,
+    ),
     source: source ?? null,
   });
 };
@@ -906,18 +970,20 @@ const combine = (
   }
   rows.sort((x, y) => x - y);
   const deps: Revisions = Object.freeze({ ...b.deps, ...a.deps });
-  const revString = revisionString(deps);
   const indices = Uint32Array.from(rows);
-  const token = datasetOrdinals.get(a.dataset);
   return Object.freeze({
     domain: a.domain,
     dataset: a.dataset,
     indices,
     deps,
     label,
-    id: `${a.domain}@${token}#${revString}:${indices.length}:${
-      hashIndices(indices)
-    }`,
+    id: selectionId(
+      a.domain,
+      a.dataset,
+      datasetOrdinals.get(a.dataset)!,
+      deps,
+      indices,
+    ),
     source: null,
   });
 };

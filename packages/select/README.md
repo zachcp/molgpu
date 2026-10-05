@@ -72,8 +72,12 @@ Queries describe what to select; resolved selections contain the matching rows:
   a library-owned `id`. The caller's label is only a label, never the cache key.
   Identity is derived from dataset, revisions and membership, so two datasets
   that share a query label still get distinct ids, and changed membership
-  changes the id. Treat `indices` as immutable: JavaScript cannot freeze typed
-  arrays, and mutating them would make the content-derived `id` stale.
+  changes the id. Equal ids always mean identical rows: membership is compared
+  exactly, not by hash, and an id is never reassigned to other rows. Equal rows
+  share an id while some selection with those rows is still reachable; ids are
+  opaque strings, so do not parse them. Treat `indices` as immutable: JavaScript
+  cannot freeze typed arrays, and mutating them would make the content-derived
+  `id` stale.
 
 ### Query authoring
 

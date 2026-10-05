@@ -70,7 +70,7 @@ export const Volume: ViewerComponent<VolumeProps> = (
   if (typeof loader !== "function") {
     throw new TypeError("<Volume> loader must be a function");
   }
-  const [loaded, failure, pending] = useSourceRequest(
+  const request = useSourceRequest(
     data === undefined
       ? async (signal: AbortSignal) =>
         await loader(src!, () => signal.aborted, signal)
@@ -82,8 +82,13 @@ export const Volume: ViewerComponent<VolumeProps> = (
   }
   // Replacing src marks the request pending again, so the previous volume
   // cannot flash back while its successor is in flight.
-  if (pending) return typeof loading === "function" ? loading() : loading;
-  if (failure) return typeof error === "function" ? error(failure) : error;
+  if (request.state === "pending") {
+    return typeof loading === "function" ? loading() : loading;
+  }
+  if (request.state === "rejected") {
+    return typeof error === "function" ? error(request.error) : error;
+  }
+  const loaded = request.state === "resolved" ? request.value : null;
   // A cancelled request resolves to null and must not mount stale content.
   return loaded
     ? (use(VolumeProvider, { volume: loaded, children: children }))

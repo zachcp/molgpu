@@ -27,7 +27,8 @@ export type Mode =
   | "attribute-revision"
   | "attribute-producer"
   | "attribute-roundtrip"
-  | "snapshot";
+  | "snapshot"
+  | "collision";
 export type Phase = "idle" | "loading" | "error" | "ready";
 export interface State {
   mode: Mode;
@@ -39,13 +40,15 @@ export interface State {
   source: "src" | "data";
   /** Lifecycle mode: the Structure key, so a retry is a deliberate remount. */
   attempt: number;
+  /** Collision mode: which of two hash-colliding row sets is selected. */
+  collision: "left" | "right";
 }
 /** One in-flight load handed to the test rather than resolved by the fixture. */
 export interface Pending {
   src: string;
   cancelled: () => boolean;
   settle: (data: StructureData | null) => void;
-  fail: (error: Error) => void;
+  fail: (error: unknown) => void;
 }
 
 export interface Probe {
@@ -62,6 +65,10 @@ export interface Probe {
   rootPositionReads: { cpu: string; gpu: string } | null;
   coordinateSource: StorageSource | null;
   bondSource: StorageSource | null;
+  /** useCoordinateSelection rows, keyed by where the probe is mounted. */
+  coordinateSelection: Record<string, number[] | null>;
+  /** Collision mode: rows a selected Transform moved, read from its snapshot. */
+  transformed: number[] | null;
   coordinateSnapshot: {
     generation: number;
     revision: number;
@@ -105,6 +112,8 @@ export interface Probe {
    * whether Live had cancelled it.
    */
   settle(index: number, which: "left" | "right" | "fail" | null): boolean;
+  /** Reject the nth outstanding load with an arbitrary value; reports cancellation. */
+  reject(index: number, reason: unknown): boolean;
   /** Runtime messages for the prop combinations the type system also rejects. */
   invalid(): string[];
 }
@@ -120,6 +129,8 @@ export const probe: Probe = {
   rootPositionReads: null,
   coordinateSource: null,
   bondSource: null,
+  coordinateSelection: {},
+  transformed: null,
   coordinateSnapshot: null,
   attributeSnapshot: null,
   coordinateBounds: null,
@@ -150,6 +161,7 @@ export const probe: Probe = {
     errors: [...probe.errors],
   }),
   settle: () => false,
+  reject: () => false,
   invalid: () => [],
 };
 (globalThis as unknown as { __viewer: Probe }).__viewer = probe;

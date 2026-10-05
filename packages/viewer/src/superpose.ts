@@ -282,24 +282,25 @@ const Resolve: LC<{
   const trajectory = to === "first" && !sourceFailed
     ? scope!.state?.trajectory ?? null
     : null;
-  const [first, failure, pending] = useSourceRequest(
+  const request = useSourceRequest(
     trajectory
       ? (signal) => firstFrame(trajectory, upstream.count, signal)
       : null,
     [trajectory, upstream.resource, upstream.count],
   );
+  const first = request.state === "resolved" ? request.value : null;
   const status = useMemo<SuperposeStatus | null>(() => {
-    if (to !== "first" || (!sourceFailed && !pending && first)) return null;
+    if (to !== "first" || (!sourceFailed && first)) return null;
     return Object.freeze({
-      status: sourceFailed || (!pending && failure !== undefined)
+      status: sourceFailed || request.state === "rejected"
         ? "error"
         : "pending",
       rmsd: null,
       generation: upstream.generation,
       ...(sourceFailed
         ? { phase: "source" as const, error: sourceError }
-        : !pending && failure !== undefined
-        ? { phase: "reference" as const, error: failure }
+        : request.state === "rejected"
+        ? { phase: "reference" as const, error: request.error }
         : {}),
     });
   }, [
@@ -308,8 +309,7 @@ const Resolve: LC<{
     scope?.status,
     sourceFailed,
     sourceError,
-    pending,
-    failure,
+    request,
     first,
   ]);
   const callback = useRef<typeof onStatus>(onStatus);
@@ -327,7 +327,7 @@ const Resolve: LC<{
   }, [status]);
   let reference: Reference | null;
   if (to === "first") {
-    reference = !pending && first ? referenceOf(first, first) : null;
+    reference = first ? referenceOf(first, first) : null;
   } else {
     const positions = to instanceof Float32Array
       ? to
