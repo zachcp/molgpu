@@ -9,7 +9,7 @@ import {
 import { philoxWgsl } from "./philox.ts";
 
 /** Invocations per workgroup in every `langevinWgsl` entry point. */
-export const LANGEVIN_WORKGROUP = 64;
+const LANGEVIN_WORKGROUP = 64;
 /** Bytes of the `Params` uniform (binding 0). */
 export const LANGEVIN_PARAMS_BYTES = 112;
 /** Leading floats of the scratch buffer that hold the finished moments. */

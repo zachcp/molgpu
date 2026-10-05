@@ -15,7 +15,7 @@ interface SparseVector {
  * unused); both are overwritten, `d` with eigenvalues in ascending order.
  * `rows` lists the eigenvector rows to accumulate, so a convergence check can
  * track only the last row. Returns those rows, row-major, column per value. */
-export function tridiagonalEigen(
+function tridiagonalEigen(
   d: Float64Array,
   e: Float64Array,
   rows: readonly number[],

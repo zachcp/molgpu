@@ -131,7 +131,3 @@ export interface StructureData extends StructureInput {
     readonly attributes: number;
   };
 }
-export interface BondPolicy {
-  readonly padding?: number;
-  readonly interChain?: boolean;
-}

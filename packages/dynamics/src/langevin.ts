@@ -12,7 +12,7 @@ export const ACCELERATION_UNIT = 418.4;
 /** Boltzmann constant in kcal/mol/K. */
 export const BOLTZMANN = 0.0019872041;
 /** Default node mass for residue-level (CA) guides, in amu. */
-export const RESIDUE_MASS = 110;
+const RESIDUE_MASS = 110;
 
 /** Springs as a symmetric CSR neighbour list: node i's neighbours are
  * `neighbours[offsets[i] .. offsets[i + 1])`, each with its rest length. */

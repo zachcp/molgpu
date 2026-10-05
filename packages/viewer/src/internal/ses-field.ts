@@ -397,7 +397,7 @@ export interface SesGrid {
  * largest van der Waals radius plus one resolution step, `ceil` of its
  * scaled size per axis, and samples at `min + resolution · i`.
  */
-export function sesGrid(
+function sesGrid(
   low: ArrayLike<number>,
   high: ArrayLike<number>,
   maxRadius: number,

@@ -12,7 +12,7 @@ export interface FramePair {
 }
 
 /** Fractional frames this close to an integer show that frame alone. */
-export const FRAME_SNAP = 1e-6;
+const FRAME_SNAP = 1e-6;
 
 /** GPU slots in the frame window: the displayed pair plus two prefetches. */
 export const WINDOW_SLOTS = 4;

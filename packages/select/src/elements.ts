@@ -9,8 +9,6 @@
 // selection-specific radii and masses keep Mol* query semantics. Regenerate
 // from Mol* rather than editing by hand.
 
-export { ELEMENT_SYMBOL } from "@molgpu/table";
-
 export const ELEMENT_VDW_RADIUS: readonly number[] = [
   1.7,
   1.1,

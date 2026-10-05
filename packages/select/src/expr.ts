@@ -16,6 +16,7 @@
 import {
   attributeColumn,
   BOND_FLAGS,
+  ELEMENT_SYMBOL,
   spatialGrid,
   type StructureData,
 } from "@molgpu/table";
@@ -32,11 +33,7 @@ import {
   sortedRows,
   subtractRows,
 } from "./atom-sets.ts";
-import {
-  ELEMENT_MASS,
-  ELEMENT_SYMBOL,
-  ELEMENT_VDW_RADIUS,
-} from "./elements.ts";
+import { ELEMENT_MASS, ELEMENT_VDW_RADIUS } from "./elements.ts";
 import type { RevisionStream } from "./internal/revision.ts";
 import { type BondGraph, bondGraph } from "./bond-graph.ts";
 import { type TopologyCache, topologyCache } from "./topology-cache.ts";
@@ -1477,7 +1474,7 @@ const formatValue = (e: SelectionExpr): string => {
 };
 
 /** Canonical one-line S-expression for an expression; stable under key order. */
-export function formatExpr(expr: SelectionExpr): string {
+function formatExpr(expr: SelectionExpr): string {
   return formatValue(expr);
 }
 

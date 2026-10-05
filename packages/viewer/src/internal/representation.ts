@@ -13,7 +13,8 @@ import type { ColumnFormat } from "./columns.ts";
 import type { StructureResource, ViewerElement } from "../types.ts";
 import { ColumnSource } from "./column-source.ts";
 import { count } from "./instrumentation.ts";
-import { copyRows, InstanceContext } from "./instance-context.ts";
+import { InstanceContext } from "./instance-context.ts";
+import { copyRows } from "./instance-plan.ts";
 
 /** Reject a selection resolved against another structure or in another domain. */
 export function checkAtomSelection(

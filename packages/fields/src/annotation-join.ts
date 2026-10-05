@@ -38,7 +38,7 @@ export function residueIdentity(
 }
 
 /** Chain identity as a plain object. */
-export function chainIdentity(data: StructureData, row: number): ChainIdentity {
+function chainIdentity(data: StructureData, row: number): ChainIdentity {
   const c = row;
   const { chains } = data.topology;
   return {
@@ -51,7 +51,7 @@ export function chainIdentity(data: StructureData, row: number): ChainIdentity {
 const CHAIN_FIELDS: readonly IdentityField[] = ["chainLabel", "chainAuth"];
 
 /** Canonical string key over the chosen identity fields. */
-export const identityKey = (
+const identityKey = (
   identity: Partial<Record<IdentityField, unknown>>,
   fields: readonly IdentityField[],
 ): string => JSON.stringify(fields.map((f) => identity[f] ?? null));
