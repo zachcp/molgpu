@@ -64,7 +64,7 @@ export { EField } from "./efield.ts";
 export { FieldLines } from "./field-lines.ts";
 export { FieldArrows } from "./field-arrows.ts";
 export { Trajectory } from "./trajectory.ts";
-export { useTrajectoryFrame } from "./trajectory-context.ts";
+export { useTrajectoryFrame } from "./use-trajectory-frame.ts";
 export { Transform } from "./transform.ts";
 export { Superpose } from "./superpose.ts";
 export { Unwrap } from "./unwrap.ts";
