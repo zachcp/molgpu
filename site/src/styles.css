@@ -250,29 +250,3 @@ footer {
     min-height: 400px;
   }
 }
-.ramachandran {
-  width: min(100%, 18rem);
-  touch-action: none;
-  cursor: crosshair;
-  user-select: none;
-}
-.ramachandran text {
-  fill: #8fa3bb;
-  font-size: 9px;
-}
-.rama-frame {
-  fill: #0d1724;
-  stroke: #45627f;
-}
-.rama-grid {
-  stroke: #24384e;
-}
-.rama-brush {
-  fill: rgba(126, 214, 204, .15);
-  stroke: #7ed6cc;
-}
-.rama-marked {
-  fill: none;
-  stroke: #ffffff;
-  stroke-width: 2;
-}
