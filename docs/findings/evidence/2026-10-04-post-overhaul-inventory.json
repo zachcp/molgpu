@@ -1,0 +1,264 @@
+{
+  "baseline": "8bf1005",
+  "method": "Text import-specifier inventory includes type and dynamic imports; counts source files per specifier, not runtime cost.",
+  "packages": {
+    "dynamics": {
+      "files": 24,
+      "lines": 16247,
+      "entries": {
+        ".": "./src/index.ts",
+        "./wgsl": "./src/wgsl.ts"
+      },
+      "external_specifiers": {
+        "@molgpu/table": 7
+      },
+      "largest_files": [
+        [
+          10267,
+          "packages/dynamics/src/templates.generated.ts"
+        ],
+        [
+          542,
+          "packages/dynamics/src/gasteiger.ts"
+        ],
+        [
+          492,
+          "packages/dynamics/src/electrostatics-wgsl.ts"
+        ],
+        [
+          455,
+          "packages/dynamics/src/langevin.ts"
+        ],
+        [
+          347,
+          "packages/dynamics/src/template-charges.ts"
+        ]
+      ]
+    },
+    "fields": {
+      "files": 9,
+      "lines": 1697,
+      "entries": "./src/index.ts",
+      "external_specifiers": {
+        "@molgpu/table": 7
+      },
+      "largest_files": [
+        [
+          477,
+          "packages/fields/src/construction.ts"
+        ],
+        [
+          383,
+          "packages/fields/src/compile.ts"
+        ],
+        [
+          220,
+          "packages/fields/src/evaluation.ts"
+        ],
+        [
+          199,
+          "packages/fields/src/builtins.ts"
+        ],
+        [
+          179,
+          "packages/fields/src/annotation-join.ts"
+        ]
+      ]
+    },
+    "geo": {
+      "files": 6,
+      "lines": 1423,
+      "entries": "./src/index.ts",
+      "external_specifiers": {},
+      "largest_files": [
+        [
+          563,
+          "packages/geo/src/marching-cubes-tables.ts"
+        ],
+        [
+          271,
+          "packages/geo/src/index.ts"
+        ],
+        [
+          201,
+          "packages/geo/src/vec3.ts"
+        ],
+        [
+          181,
+          "packages/geo/src/curve-segment.ts"
+        ],
+        [
+          137,
+          "packages/geo/src/attribution.ts"
+        ]
+      ]
+    },
+    "io": {
+      "files": 17,
+      "lines": 3055,
+      "entries": "./src/index.ts",
+      "external_specifiers": {
+        "@molgpu/table": 10,
+        "molstar/lib/mol-data/int/ordered-set.js": 1,
+        "molstar/lib/mol-io/reader/ccp4/parser.js": 1,
+        "molstar/lib/mol-io/reader/cif.js": 1,
+        "molstar/lib/mol-io/reader/xtc/parser.js": 1,
+        "molstar/lib/mol-math/geometry/boundary.js": 1,
+        "molstar/lib/mol-math/geometry/molecular-surface.js": 1,
+        "molstar/lib/mol-model-formats/structure/mmcif.js": 1,
+        "molstar/lib/mol-model-formats/structure/property/bonds/chem_comp.js": 1,
+        "molstar/lib/mol-model-formats/structure/property/bonds/struct_conn.js": 1,
+        "molstar/lib/mol-model-formats/structure/property/secondary-structure.js": 1,
+        "molstar/lib/mol-model-formats/volume/ccp4.js": 1,
+        "molstar/lib/mol-model/structure/model/properties/symmetry.js": 1,
+        "molstar/lib/mol-model/volume/grid.js": 1,
+        "molstar/lib/mol-script/language/parser.js": 1,
+        "molstar/lib/mol-script/script/mol-script/symbols.js": 1,
+        "molstar/lib/mol-task/index.js": 1
+      },
+      "largest_files": [
+        [
+          573,
+          "packages/io/src/bcif.ts"
+        ],
+        [
+          510,
+          "packages/io/src/pqr.ts"
+        ],
+        [
+          361,
+          "packages/io/src/byte-source.ts"
+        ],
+        [
+          251,
+          "packages/io/src/dcd.ts"
+        ],
+        [
+          206,
+          "packages/io/src/selection.ts"
+        ]
+      ]
+    },
+    "select": {
+      "files": 9,
+      "lines": 3742,
+      "entries": "./src/index.ts",
+      "external_specifiers": {
+        "@molgpu/table": 5
+      },
+      "largest_files": [
+        [
+          1512,
+          "packages/select/src/expr.ts"
+        ],
+        [
+          1101,
+          "packages/select/src/selection.ts"
+        ],
+        [
+          311,
+          "packages/select/src/bond-graph.ts"
+        ],
+        [
+          287,
+          "packages/select/src/bond-thresholds.ts"
+        ],
+        [
+          260,
+          "packages/select/src/elements.ts"
+        ]
+      ]
+    },
+    "table": {
+      "files": 17,
+      "lines": 2855,
+      "entries": "./src/index.ts",
+      "external_specifiers": {},
+      "largest_files": [
+        [
+          436,
+          "packages/table/src/dssp.ts"
+        ],
+        [
+          352,
+          "packages/table/src/trajectory.ts"
+        ],
+        [
+          350,
+          "packages/table/src/volume.ts"
+        ],
+        [
+          278,
+          "packages/table/src/structure.ts"
+        ],
+        [
+          240,
+          "packages/table/src/attributes.ts"
+        ]
+      ]
+    },
+    "timeline": {
+      "files": 2,
+      "lines": 510,
+      "entries": "./src/index.ts",
+      "external_specifiers": {
+        "@use-gpu/core/mjs/ease.mjs": 1
+      },
+      "largest_files": [
+        [
+          332,
+          "packages/timeline/src/index.ts"
+        ],
+        [
+          178,
+          "packages/timeline/src/internal/upstream-interpolation.ts"
+        ]
+      ]
+    },
+    "viewer": {
+      "files": 108,
+      "lines": 16868,
+      "entries": {
+        ".": "./src/index.ts",
+        "./advanced": "./src/advanced.ts"
+      },
+      "external_specifiers": {
+        "@molgpu/dynamics": 9,
+        "@molgpu/dynamics/wgsl": 10,
+        "@molgpu/fields": 14,
+        "@molgpu/geo": 4,
+        "@molgpu/io": 4,
+        "@molgpu/select": 21,
+        "@molgpu/table": 51,
+        "@molgpu/timeline": 5,
+        "@use-gpu/core": 25,
+        "@use-gpu/live": 60,
+        "@use-gpu/shader": 16,
+        "@use-gpu/shader/wgsl": 14,
+        "@use-gpu/workbench": 37
+      },
+      "largest_files": [
+        [
+          868,
+          "packages/viewer/src/internal/ses-field.ts"
+        ],
+        [
+          676,
+          "packages/viewer/src/efield.ts"
+        ],
+        [
+          564,
+          "packages/viewer/src/elastic-network.ts"
+        ],
+        [
+          561,
+          "packages/viewer/src/trajectory.ts"
+        ],
+        [
+          558,
+          "packages/viewer/src/types.ts"
+        ]
+      ]
+    }
+  }
+}

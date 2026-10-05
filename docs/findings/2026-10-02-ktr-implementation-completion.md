@@ -39,10 +39,12 @@ passed trajectory, electric-field, invalidation and all 11 retirement subruns
 retained at `/tmp/molgpu-ktr8-evidence`; the existing evidence edits were
 restored.
 
-This is scoped acceptance, not a clean full GPU-gate claim. The known gate2
-failure remains tracked separately by `molgpu-sept-19s`. The reference decisions
-and other architecture epics remain independently tracked; no publication or
-deployment was performed.
+This is scoped acceptance, not a clean full GPU-gate claim. Correction recorded
+2026-10-04: the earlier handoff described Gate 2 as still failing, but
+`molgpu-sept-19s` was already closed and Gate 2 is included in CI. The
+[post-overhaul review](2026-10-04-post-overhaul-review.md) records a fresh pass.
+The reference decisions and other architecture epics remain independently
+tracked; no publication or deployment was performed.
 
 PR #83's first full CI run (`37070874403`) passed every browser suite except
 elastic, including gate2. Elastic's 4C7R stability case advanced to step 55,000

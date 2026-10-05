@@ -1,0 +1,5 @@
+{
+  "imports": {
+    "@use-gpu/live": "../../../node_modules/@use-gpu/live/mjs/index.mjs"
+  }
+}

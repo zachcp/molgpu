@@ -106,7 +106,7 @@ new dataset. Use `withAttributes` to replace derived attribute columns while
 retaining dataset identity. Identity is tracked in module-private state, so
 `withPositions` and `bondTopology` only accept structures made by
 `createStructure` from the same module instance. JSR publishes internal
-dependencies as caret ranges (for example, `jsr:@molgpu/table@^0.1.0`). Keep
+dependencies as caret ranges (for example, `jsr:@molgpu/table@^0.2.0`). Keep
 compatible versions so the application resolves one shared copy: identity and
 revision state are module-private. Values from divergent copies can be rejected
 by identity-dependent operations. Use `deno info` and the lockfile to find

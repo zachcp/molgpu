@@ -25,10 +25,10 @@ inspect `deno info` and the lockfile, then align dependency ranges. The app must
 match use.gpu `0.20.0` exactly. Bundle viewer entries for the browser: direct
 Deno execution cannot link workbench's CommonJS `LoopContext` re-export.
 
-**H2 — Types match the runtime.** Each `exports` entry's `types` and `import`
-files exist (for TypeScript source they are the same `src/*.ts` file), and the
-set of exported names is identical between them, as checked by script. It has no
-`any` in public signatures, except where a comment explains why.
+**H2 — Types match the runtime.** Each `deno.json` export resolves to its
+TypeScript source file. Public declarations are checked from that same source;
+there is no separate JavaScript/declaration export pair. Public signatures have
+no `any`, except where a comment explains why.
 
 **H3 — No leaked dependency types.** For every package except `viewer`, the
 public entry (and anything it re-exports) mentions neither `@use-gpu/*` nor
@@ -94,9 +94,9 @@ remain excluded.
 **H6 — Packs and imports cleanly.**
 
 - `deno publish --dry-run` succeeds for the package: it type-checks, passes
-  JSR's no-slow-types rule, and resolves every import as JSR will. Packages
-  whose entries are TypeScript are imported under Deno instead of from the npm
-  tarball, because Node won't strip types under `node_modules`.
+  JSR's no-slow-types rule, and resolves every import as JSR will.
+- `deno task gate:consumer` tests published package contents through a local
+  stand-in JSR registry, including bundled browser consumption of viewer.
 - No import has to reach into `/src/internal`.
 
 **H7 — README.**
@@ -137,23 +137,23 @@ described:
 
 - CI runs `deno task fmt`, `deno task test`, `deno task typecheck`,
   `deno task check:hardening` and `deno task jsr:check`.
-- Every package moves to `0.1.0` and gains a top-level `CHANGELOG.md`, managed
-  by changesets or a documented manual procedure.
-- `repository` (with `directory`) is added once a remote exists.
+- Package versions and top-level `CHANGELOG.md` files follow the documented
+  manual procedure in [RELEASING.md](RELEASING.md). Deno manifests define the
+  publish contract; npm `repository.directory` metadata is not a requirement.
 - `LICENSE` is present, and the upstream attribution for the Mol*-ported `geo`
   code is preserved.
 - The docs and examples gallery link to each package README.
 - A dry-run publish of the whole workspace succeeds in dependency order.
   Actually publishing to JSR is a separate human decision.
 
-Status (2026-10-02): all packages are at `0.1.0` with a `CHANGELOG.md` (manual
-procedure in [RELEASING.md](RELEASING.md)). `geo`, `io` and `table` carry the
-Mol* MIT notice in `LICENSE`. The root [README](../README.md) and the examples
-gallery link every package README. `.github/workflows/ci.yml` runs the Deno
-gates; the [architecture gate](findings/2026-10-02-crj13-architecture-gate.md)
-records passing hosted and local acceptance. Actual Deno manifests define the
-publish contract; npm-era `types`/`import`, tarball and `repository` wording
-above is historical where it does not match those manifests. Export discipline
-R1/R3 was reconciled in `molgpu-sept-ktr.7`: useful shared aliases and concrete
-inline props are accepted, with no public removals. A passing hardening script
-does not prove every review judgement or browser composition.
+Status (2026-10-04, source `8bf1005`): all packages are at `0.2.0` with a
+`CHANGELOG.md` (manual procedure in [RELEASING.md](RELEASING.md)). `geo`, `io`
+and `table` carry the Mol* MIT notice in `LICENSE`. The root
+[README](../README.md) and the examples gallery link every package README.
+`.github/workflows/ci.yml` runs the Deno gates; the
+[architecture gate](findings/2026-10-02-crj13-architecture-gate.md) records
+passing hosted and local acceptance. Actual Deno manifests define the publish
+contract; historical npm-era findings do not add manifest requirements. Export
+discipline R1/R3 was reconciled in `molgpu-sept-ktr.7`: useful shared aliases
+and concrete inline props are accepted, with no public removals. A passing
+hardening script does not prove every review judgement or browser composition.

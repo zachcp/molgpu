@@ -136,10 +136,12 @@ is the main reason to be on use.gpu rather than porting naively.
 
 Under moving coordinates every consumer declares a policy. **Live** consumers
 (spacefill, ball-and-stick, bonds) read the GPU coordinate source and follow for
-free. **Snapshot** consumers (ribbon, tube, surface, CPU selections such as
-`within`) rebuild from a throttled asynchronous readback and on pause; a stale
-readback is discarded by `version`. Bounds and centroid move to a GPU reduction
-so framing works on live coordinates. GPU-native ribbon/tube geometry is a
+free. **Snapshot** consumers (ribbon, tube and CPU selections such as `within`)
+rebuild from a throttled asynchronous readback and on pause. Surface uses a live
+GPU rebuild for supported moving-coordinate grids and a CPU snapshot fallback
+otherwise. Readbacks are accepted by owner/source/layout and local generation,
+not by a generation number alone. Bounds and centroid move to a GPU reduction so
+framing works on live coordinates. GPU-native ribbon/tube geometry is a
 follow-on only if snapshot playback proves inadequate.
 
 ### 6. Framing derives from selections
@@ -207,8 +209,8 @@ Two rules make the layout load-bearing rather than decorative:
 
 All eight packages are TypeScript source (they were hand-written `.mjs` plus
 `.d.ts` until epic `0lg`), targeting [JSR](https://jsr.io) (findings in
-`docs/findings/2026-09-26-jsr-spike.md`). Each `exports` entry points `types`
-and `import` at the same `src/*.ts` file.
+`docs/findings/2026-09-26-jsr-spike.md`). Each `deno.json` export points
+directly at its `src/*.ts` source file.
 
 - **Toolchain minimum:** Deno 2.9. npm dependencies are resolved through Deno's
   `npm:` compatibility layer; browser checks use Deno to launch their ESM

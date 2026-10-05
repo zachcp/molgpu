@@ -25,7 +25,7 @@ Multiple Live copies do not share contexts and can cause type or runtime
 failures.
 
 JSR publishes internal dependencies as caret ranges (for example,
-`jsr:@molgpu/table@^0.1.0`). Keep compatible versions so the application
+`jsr:@molgpu/table@^0.2.0`). Keep compatible versions so the application
 resolves one shared copy: identity and revision state are module-private. Values
 from divergent copies can be rejected by identity-dependent operations. Use
 `deno info` and the lockfile to find duplicate versions, then align the
@@ -98,9 +98,11 @@ selection status callbacks.
 ## Transparency
 
 Every representation takes `opacity` (0–1), which is multiplied into the
-colour's alpha. That works the same whether `color` is a flat colour or a
-`@molgpu/fields` Field. When the result is below 1, the representation draws in
-transparent mode on its own. Add `oit` to the workbench `<Pass>` so overlapping
+colour's alpha, for both flat colours and `@molgpu/fields` Fields. Automatic
+transparent mode considers the flat colour alpha and the `opacity` prop. It does
+not inspect per-row Field alpha or alpha introduced by a material wrapper: use
+`mode="transparent"` for those translucent inputs. This limitation is tracked by
+`molgpu-sept-0vs.8`. Add `oit` to the workbench `<Pass>` so overlapping
 translucent geometry composites correctly:
 
 ```tsx

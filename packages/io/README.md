@@ -19,11 +19,11 @@ deno add jsr:@molgpu/io jsr:@molgpu/table
 
 | Package         | Range    | Kind       | Notes                                                                                                                                                                                                                                               |
 | --------------- | -------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@molgpu/table` | `^0.1.0` | dependency | Provides `StructureData`; compatible JSR caret ranges resolve one shared table copy.                                                                                                                                                                |
+| `@molgpu/table` | `^0.2.0` | dependency | Provides `StructureData`; compatible JSR caret ranges resolve one shared table copy.                                                                                                                                                                |
 | `molstar`       | `5.12.0` | dependency | Loaded dynamically for BCIF, molecular surfaces, CCP4/MRC, text selections and XTC frame decoding. Bundlers can place these imports in lazy chunks; callers using other formats need not load them. Loader failures are reported through `IoError`. |
 
 JSR publishes internal dependencies as caret ranges (for example,
-`jsr:@molgpu/table@^0.1.0`). Keep compatible versions so the application
+`jsr:@molgpu/table@^0.2.0`). Keep compatible versions so the application
 resolves one shared copy: identity and revision state are module-private. Values
 from divergent copies can be rejected by identity-dependent operations. Use
 `deno info` and the lockfile to find duplicate versions, then align the
