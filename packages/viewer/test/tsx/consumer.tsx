@@ -356,12 +356,25 @@ const SnapshotProbe = (): LiveElement => {
   return null;
 };
 
+/** Residue rows must never be read as atom rows. The check runs before any
+ * hook, so catching it here leaves the hook order intact. */
+const NonAtomBoundsProbe = (): LiveElement => {
+  try {
+    useCoordinateBounds(RESIDUES);
+    probe.nonAtomBoundsError = null;
+  } catch (failure) {
+    probe.nonAtomBoundsError = String(failure);
+  }
+  return null;
+};
+
 const ALL_ATOMS = all("atom");
 const FIRST_TWO = resolve(
   where("atom", "first-two", (_, row) => row < 2),
   bonded,
 );
 const NO_ATOMS = resolve(where("atom", "none", () => false), bonded);
+const RESIDUES = resolve(all("residue"), bonded);
 
 // Two disjoint 5-row sets with the same 32-bit FNV-1a membership hash
 // (molgpu-sept-0vs.5), placed left and right of the camera target. Every other
@@ -546,6 +559,7 @@ const Scene = (
           <IdentityCoordinates>
             <OffsetCoordinates offset={[-2, 1, 0]}>
               <SnapshotProbe />
+              <NonAtomBoundsProbe />
               <CoordinateSelectionProbe at="provider" />
             </OffsetCoordinates>
           </IdentityCoordinates>
