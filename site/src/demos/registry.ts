@@ -11,7 +11,8 @@ export type ComposeLayer =
   | "sticks"
   | "spacefill"
   | "surface"
-  | "sulfur";
+  | "sulfur"
+  | "measure";
 
 export interface DemoOptions {
   worldLight?: boolean;
@@ -121,9 +122,16 @@ export interface DemoPreset {
 /** Viewer options for a demo; the motion sources differ in tree shape. */
 export const demoOptions = (
   demo: DemoDefinition,
-  state: { motionMode: MotionMode; worldLight: boolean },
+  state: {
+    motionMode: MotionMode;
+    worldLight: boolean;
+    layers?: readonly ComposeLayer[];
+  },
 ): DemoOptions => ({
   ...demo.options,
+  ...(demo.id === "compose" && state.layers?.includes("measure")
+    ? { picking: true }
+    : {}),
   ...(demo.id === "surface" ? { worldLight: state.worldLight } : {}),
   ...(demo.id === "motion" && state.motionMode === "wobble"
     ? { coordinates: true }

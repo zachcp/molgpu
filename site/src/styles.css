@@ -210,6 +210,15 @@ footer {
   gap: .55rem;
   color: #b9c7da;
 }
+.measure-readout {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: .2rem;
+  font-variant-numeric: tabular-nums;
+}
+.measure-readout p {
+  margin: 0;
+}
 .timeline-control input {
   accent-color: #7ed6cc;
 }

@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   attributeColumn,
+  backboneDihedrals,
   bondTopology,
   type StructureData,
 } from "@molgpu/table";
@@ -36,6 +37,7 @@ import {
   type TrajectoryMode,
 } from "../demos/scenes.tsx";
 import { disposeViewer, mountViewer } from "../demos/viewer.tsx";
+import { addPick, formatMeasurement, measure } from "../demos/measurements.ts";
 
 const SCRUB_DURATION = 4;
 
@@ -46,6 +48,7 @@ const LAYERS: ReadonlyArray<readonly [ComposeLayer, string]> = [
   ["spacefill", "Spacefill"],
   ["surface", "Glass surface"],
   ["sulfur", "Sulfur atoms"],
+  ["measure", "Measure (click atoms)"],
 ];
 
 /** Normalise a hash to the current ids, keeping the legacy preset once. */
@@ -58,6 +61,34 @@ const routeFromHash = () => {
     history.replaceState(null, "", `#demos/${route.id}`);
   }
   return route;
+};
+
+/** Picked atom names, the measurement and the last residue's phi/psi. */
+const measureReadout = (
+  data: StructureData,
+  picks: readonly number[],
+): string[] => {
+  const { atoms, residues } = data.topology;
+  const name = (row: number) => {
+    const r = atoms.residue[row];
+    return `${residues.comp[r]}${residues.authSeq[r]} ${atoms.name[row]}`;
+  };
+  const lines = [picks.map(name).join(" – ")];
+  const result = measure(data.positions, picks);
+  if (result.kind !== "none") {
+    lines.push(`${result.kind}: ${formatMeasurement(result)}`);
+  }
+  if (picks.length) {
+    const r = atoms.residue[picks[picks.length - 1]];
+    const { phi, psi } = backboneDihedrals(data);
+    const deg = (v: number) => Number.isFinite(v) ? `${v.toFixed(1)}°` : "—";
+    lines.push(
+      `${residues.comp[r]}${residues.authSeq[r]} φ ${deg(phi[r])} ψ ${
+        deg(psi[r])
+      }`,
+    );
+  }
+  return lines;
 };
 
 /**
@@ -99,6 +130,12 @@ export const DemosPage = () => {
   );
   const [surfaceMode, setSurfaceMode] = useState<SurfaceMode>("opaque");
   const [clipDepth, setClipDepth] = useState(0);
+  const [picks, setPicks] = useState<readonly number[]>([]);
+  const [readout, setReadout] = useState<readonly string[]>([]);
+  const onPick = useCallback(
+    (row: number) => setPicks((current) => addPick(current, row)),
+    [],
+  );
   const [surfaceColorMode, setSurfaceColorMode] = useState<SurfaceColorMode>(
     "neutral",
   );
@@ -227,6 +264,7 @@ export const DemosPage = () => {
             surfaceMode,
             surfaceColorMode,
             clipDepth,
+            measure: { picks, onPick },
             materialMode,
             selectionMode,
             trajectoryMode,
@@ -250,7 +288,16 @@ export const DemosPage = () => {
             host.dataset.lineDistance = String(lineDistance);
           }
         }
-        const options = demoOptions(demo, { motionMode, worldLight });
+        const options = demoOptions(demo, { motionMode, worldLight, layers });
+        if (host && demo.id === "compose" && layers.includes("measure")) {
+          const result = measure(data.positions, picks);
+          host.dataset.measureRows = picks.join(",");
+          host.dataset.measureKind = result.kind;
+          host.dataset.measureValue = result.kind === "none"
+            ? ""
+            : String(result.value);
+          setReadout(measureReadout(data, picks));
+        }
         mountViewer(
           // Motion sources differ in tree shape, so each gets its own root.
           demo.id === "motion" ? `motion-${motionMode}` : demo.id,
@@ -283,6 +330,7 @@ export const DemosPage = () => {
     surfaceMode,
     surfaceColorMode,
     clipDepth,
+    picks,
     materialMode,
     selectionMode,
     trajectoryMode,
@@ -325,6 +373,24 @@ export const DemosPage = () => {
               </label>
             ))}
           </fieldset>
+        )}
+        {demo.id === "compose" && layers.includes("measure") && (
+          <div
+            className="timeline-control measure-readout"
+            data-measure-readout
+          >
+            {picks.length === 0
+              ? <p>Click 2–4 atoms: distance, angle, dihedral.</p>
+              : readout.map((line) => <p key={line}>{line}</p>)}
+            {picks.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setPicks([])}
+              >
+                Clear
+              </button>
+            )}
+          </div>
         )}
         {demo.id === "select" && (
           <>
