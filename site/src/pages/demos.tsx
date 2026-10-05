@@ -38,12 +38,6 @@ import {
 } from "../demos/scenes.tsx";
 import { disposeViewer, mountViewer } from "../demos/viewer.tsx";
 import { addPick, formatMeasurement, measure } from "../demos/measurements.ts";
-import {
-  brushed,
-  type RamaBrush,
-  RamachandranPlot,
-  ramachandranPoints,
-} from "../demos/ramachandran.tsx";
 
 const SCRUB_DURATION = 4;
 
@@ -137,12 +131,6 @@ export const DemosPage = () => {
   const [surfaceMode, setSurfaceMode] = useState<SurfaceMode>("opaque");
   const [clipDepth, setClipDepth] = useState(0);
   const [picks, setPicks] = useState<readonly number[]>([]);
-  const [ramaData, setRamaData] = useState<StructureData | null>(null);
-  const [brush, setBrush] = useState<RamaBrush | null>(null);
-  const [ramaPick, setRamaPick] = useState<number | null>(null);
-  const onRamaPick = useCallback((row: number) => setRamaPick(row), []);
-  const ramaPoints = ramaData ? ramachandranPoints(ramaData) : [];
-  const brushedResidues = brushed(ramaPoints, brush);
   const [readout, setReadout] = useState<readonly string[]>([]);
   const onPick = useCallback(
     (row: number) => setPicks((current) => addPick(current, row)),
@@ -246,8 +234,7 @@ export const DemosPage = () => {
           host.dataset.layers = demo.id === "compose" ? layers.join(",") : "";
           if (demo.id === "select") {
             host.dataset.selectedCount = String(
-              selectionFor(data, selectionMode, brushedResidues).indices
-                .length,
+              selectionFor(data, selectionMode).indices.length,
             );
             const charge = attributeColumn(data, "partialCharge")!;
             let net = 0;
@@ -278,7 +265,6 @@ export const DemosPage = () => {
             surfaceColorMode,
             clipDepth,
             measure: { picks, onPick },
-            rama: { residues: brushedResidues, onPick: onRamaPick },
             materialMode,
             selectionMode,
             trajectoryMode,
@@ -302,24 +288,7 @@ export const DemosPage = () => {
             host.dataset.lineDistance = String(lineDistance);
           }
         }
-        const options = demoOptions(demo, {
-          motionMode,
-          worldLight,
-          layers,
-          ramachandran: selectionMode === "ramachandran",
-        });
-        if (demo.id === "select") {
-          setRamaData(data);
-          if (host) {
-            host.dataset.ramaBrush = brush
-              ? [...brush.phi, ...brush.psi].join(",")
-              : "";
-            host.dataset.ramaResidues = brushed(
-              ramachandranPoints(data),
-              brush,
-            ).join(",");
-          }
-        }
+        const options = demoOptions(demo, { motionMode, worldLight, layers });
         if (host && demo.id === "compose" && layers.includes("measure")) {
           const result = measure(data.positions, picks);
           host.dataset.measureRows = picks.join(",");
@@ -353,7 +322,6 @@ export const DemosPage = () => {
   }, [
     demo,
     time,
-    brush,
     layers,
     fieldMode,
     motionMode,
@@ -438,28 +406,8 @@ export const DemosPage = () => {
                 <option value="cysteine">Cysteine residues</option>
                 <option value="sulfur">Sulfur atoms</option>
                 <option value="all">All atoms</option>
-                <option value="ramachandran">Ramachandran brush</option>
               </select>
             </label>
-            {selectionMode === "ramachandran" && (
-              <div className="timeline-control measure-readout">
-                <RamachandranPlot
-                  points={ramaPoints}
-                  brush={brush}
-                  marked={ramaPick !== null && ramaData
-                    ? ramaData.topology.atoms.residue[ramaPick]
-                    : null}
-                  onBrush={setBrush}
-                />
-                <p data-rama-readout>
-                  {brush
-                    ? `${brushedResidues.length} residues: φ ${
-                      brush.phi.map((v) => v.toFixed(0)).join("…")
-                    }°, ψ ${brush.psi.map((v) => v.toFixed(0)).join("…")}°`
-                    : "Drag a box to select residues; click an atom to find it."}
-                </p>
-              </div>
-            )}
             <label className="timeline-control">
               Color{" "}
               <select

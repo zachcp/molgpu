@@ -10,7 +10,7 @@ import { createServer } from "vite";
 import { chromium } from "playwright";
 import { webgpuBrowserArgs } from "../../packages/viewer/test/webgpu-browser-args.mjs";
 import { demos } from "../src/demos/registry.ts";
-import { backboneDihedrals, dihedralAngle } from "@molgpu/table";
+import { dihedralAngle } from "@molgpu/table";
 import { structureFromBcif } from "@molgpu/io";
 
 // The structure the site loads, for recomputing measurements independently.
@@ -484,94 +484,6 @@ Deno.test("site landing page and maintained gallery routes", async () => {
         // Crambin is neutral; applyPqr's hydrogen folding keeps the total.
         const net = Number(await host.getAttribute("data-net-charge"));
         assert(Math.abs(net) < 1e-3, `net charge ${net}`);
-
-        // Ramachandran brush: drag over the alpha-helix basin; the brushed
-        // residues equal those recomputed here, and they are drawn in 3D.
-        await page.getByLabel("Selection query").selectOption("ramachandran");
-        const plot = page.locator("svg.ramachandran");
-        await plot.waitFor();
-        const box = await plot.boundingBox();
-        // viewBox 296 = 240 plot + 2 × 28 padding; φ/ψ span −180…180.
-        const at = (phi, psi) => [
-          box.x + (28 + (phi + 180) / 360 * 240) * box.width / 296,
-          box.y + (28 + (180 - psi) / 360 * 240) * box.height / 296,
-        ];
-        const [x0, y0] = at(-110, 0);
-        const [x1, y1] = at(-30, -80);
-        await page.mouse.move(x0, y0);
-        await page.mouse.down();
-        await page.mouse.move(x1, y1, { steps: 5 });
-        await page.mouse.up();
-        await page.waitForFunction(() =>
-          document.querySelector("#molecule-canvas")?.dataset.ramaResidues
-        );
-        const [phi0, phi1, psi0, psi1] = (await host.getAttribute(
-          "data-rama-brush",
-        )).split(",").map(Number);
-        const { phi, psi } = backboneDihedrals(crambin);
-        const expected = [];
-        for (let r = 0; r < phi.length; r++) {
-          if (
-            phi[r] >= phi0 && phi[r] <= phi1 && psi[r] >= psi0 &&
-            psi[r] <= psi1
-          ) expected.push(r);
-        }
-        assert(expected.length >= 8, `1CRN helices are brushed: ${expected}`);
-        assertEquals(
-          (await host.getAttribute("data-rama-residues")).split(",").map(
-            Number,
-          ),
-          expected,
-        );
-        await page.waitForFunction(
-          () =>
-            Number(
-              document.querySelector("#molecule-canvas")?.dataset.selectedCount,
-            ) > 0,
-        );
-        // 3D -> plot: clicking an atom rings its residue's point.
-        const targets = await page.evaluate(async () => {
-          const canvas = document.querySelector("#molecule-canvas canvas");
-          const bitmap = await createImageBitmap(
-            await new Promise((resolve) => canvas.toBlob(resolve)),
-          );
-          const snapshot = new OffscreenCanvas(bitmap.width, bitmap.height);
-          const context = snapshot.getContext("2d");
-          context.drawImage(bitmap, 0, 0);
-          const { data } = context.getImageData(
-            0,
-            0,
-            bitmap.width,
-            bitmap.height,
-          );
-          const rect = canvas.getBoundingClientRect();
-          const points = [];
-          for (let y = 0; y < bitmap.height; y += 11) {
-            for (let x = 0; x < bitmap.width; x += 11) {
-              const i = 4 * (y * bitmap.width + x);
-              if (data[i] + data[i + 1] + data[i + 2] > 200) {
-                points.push([
-                  rect.left + x * rect.width / bitmap.width,
-                  rect.top + y * rect.height / bitmap.height,
-                ]);
-              }
-            }
-          }
-          bitmap.close();
-          return points;
-        });
-        const marked = page.locator("svg.ramachandran [data-marked]");
-        const stride = Math.max(1, Math.floor(targets.length / 40));
-        for (let k = 0; k < targets.length; k += stride) {
-          await page.mouse.click(targets[k][0], targets[k][1]);
-          await page.waitForTimeout(100);
-          if (await marked.count()) break;
-        }
-        assertMatch(
-          (await marked.getAttribute("data-marked")) ?? "",
-          /^[A-Z]{3}\d+$/,
-          "a picked atom marks its residue in the plot",
-        );
       }
       if (id === "surface") {
         assertStrictEquals(

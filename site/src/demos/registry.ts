@@ -126,11 +126,9 @@ export const demoOptions = (
     motionMode: MotionMode;
     worldLight: boolean;
     layers?: readonly ComposeLayer[];
-    ramachandran?: boolean;
   },
 ): DemoOptions => ({
   ...demo.options,
-  ...(demo.id === "select" && state.ramachandran ? { picking: true } : {}),
   ...(demo.id === "compose" && state.layers?.includes("measure")
     ? { picking: true }
     : {}),
