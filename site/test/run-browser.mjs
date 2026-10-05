@@ -1,5 +1,6 @@
 import {
   assert,
+  assertAlmostEquals,
   assertEquals,
   assertMatch,
   assertStrictEquals,
@@ -9,6 +10,15 @@ import { createServer } from "vite";
 import { chromium } from "playwright";
 import { webgpuBrowserArgs } from "../../packages/viewer/test/webgpu-browser-args.mjs";
 import { demos } from "../src/demos/registry.ts";
+import { dihedralAngle } from "@molgpu/table";
+import { structureFromBcif } from "@molgpu/io";
+
+// The structure the site loads, for recomputing measurements independently.
+const crambin = await structureFromBcif(
+  await Deno.readFile(
+    new URL("../../packages/io/test/fixtures/1crn.bcif", import.meta.url),
+  ),
+);
 
 // Wait for rendered molecular output, not a frame count or page compositor
 // screenshot. Software-GPU shader compilation can outlast several animation
@@ -367,6 +377,89 @@ Deno.test("site landing page and maintained gallery routes", async () => {
         await dataIs("layers", "cartoon,sticks,surface,sulfur");
         await page.getByLabel("Cartoon").uncheck();
         await dataIs("layers", "sticks,surface,sulfur");
+
+        // Measure alone: click lit pixels (atoms or bonds) until four atoms
+        // are picked; each reported value matches the 1CRN coordinates.
+        for (
+          const label of ["Ball and stick", "Glass surface", "Sulfur atoms"]
+        ) {
+          await page.getByLabel(label).uncheck();
+        }
+        await page.getByLabel("Measure (click atoms)").check();
+        await dataIs("layers", "measure");
+        await waitForVisibleCanvas(page);
+        const targets = await page.evaluate(async () => {
+          const canvas = document.querySelector("#molecule-canvas canvas");
+          const bitmap = await createImageBitmap(
+            await new Promise((resolve) => canvas.toBlob(resolve)),
+          );
+          const snapshot = new OffscreenCanvas(bitmap.width, bitmap.height);
+          const context = snapshot.getContext("2d");
+          context.drawImage(bitmap, 0, 0);
+          const { data } = context.getImageData(
+            0,
+            0,
+            bitmap.width,
+            bitmap.height,
+          );
+          const rect = canvas.getBoundingClientRect();
+          const points = [];
+          for (let y = 0; y < bitmap.height; y += 9) {
+            for (let x = 0; x < bitmap.width; x += 9) {
+              const i = 4 * (y * bitmap.width + x);
+              if (data[i] + data[i + 1] + data[i + 2] > 300) {
+                points.push([
+                  rect.left + x * rect.width / bitmap.width,
+                  rect.top + y * rect.height / bitmap.height,
+                ]);
+              }
+            }
+          }
+          bitmap.close();
+          return points;
+        });
+        assert(targets.length > 20, "atoms are drawn for picking");
+        const rows = () =>
+          page.evaluate(() =>
+            document.querySelector("#molecule-canvas").dataset.measureRows ?? ""
+          );
+        const step = Math.max(1, Math.floor(targets.length / 97));
+        const seen = [];
+        for (let k = 0; k < targets.length && seen.length < 4; k += step) {
+          const before = await rows();
+          await page.mouse.click(targets[k][0], targets[k][1]);
+          for (let t = 0; t < 10 && (await rows()) === before; t++) {
+            await new Promise((resolve) => setTimeout(resolve, 50));
+          }
+          const now = (await rows()).split(",").filter(Boolean).map(Number);
+          if (now.length !== seen.length) {
+            seen.splice(0, seen.length, ...now);
+            const kind = await host.getAttribute("data-measure-kind");
+            const value = Number(await host.getAttribute("data-measure-value"));
+            const P = crambin.positions;
+            const at = (row) => [0, 1, 2].map((c) => P[3 * row + c]);
+            if (seen.length === 2) {
+              const [a, b] = seen.map(at);
+              assertStrictEquals(kind, "distance");
+              assertAlmostEquals(
+                value,
+                Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]),
+                1e-4,
+              );
+            }
+            if (seen.length === 4) {
+              assertStrictEquals(kind, "dihedral");
+              assertAlmostEquals(value, dihedralAngle(P, ...seen), 1e-3);
+            }
+          }
+        }
+        assertEquals(seen.length, 4, "four clicks landed on atoms");
+        assertMatch(
+          await page.locator("[data-measure-readout]").innerText(),
+          /dihedral: -?\d+\.\d°/,
+        );
+        await page.getByRole("button", { name: "Clear" }).click();
+        await dataIs("measureRows", "");
       }
       if (id === "select") {
         const before = Number(await host.getAttribute("data-selected-count"));

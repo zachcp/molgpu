@@ -31,6 +31,7 @@ import {
 } from "@molgpu/viewer";
 import motionUrl from "../../assets/1crn-motion.xtc?url";
 import { ClipSlab } from "./clip.ts";
+import { MeasureScene } from "./measure.tsx";
 import { densityMapFor } from "./data.ts";
 import type {
   ComposeLayer,
@@ -78,6 +79,11 @@ export interface SceneOptions {
   readonly isoSigma: number;
   /** Surface clip depth from the viewer's side: 0 off, 0.5 halfway, 1 all. */
   readonly clipDepth: number;
+  /** Compose measure layer: picked atom rows and the page's pick handler. */
+  readonly measure?: {
+    readonly picks: readonly number[];
+    readonly onPick: (row: number) => void;
+  };
 }
 
 export const selectionFor = (data: StructureData, mode: SelectionMode) =>
@@ -113,9 +119,16 @@ const materialFor = (mode: MaterialMode) =>
     ? { type: "normal" as const }
     : { type: "pbr" as const, roughness: 0.85, metalness: 0 };
 
-const composeScene = (data: StructureData, layers: readonly ComposeLayer[]) => {
+const composeScene = (
+  data: StructureData,
+  layers: readonly ComposeLayer[],
+  measure: SceneOptions["measure"],
+) => {
   const on = (layer: ComposeLayer) => layers.includes(layer);
   return [
+    on("measure") && measure && (
+      <MeasureScene data={data} picks={measure.picks} onPick={measure.onPick} />
+    ),
     on("cartoon") && <Cartoon color={bySecondaryStructure()} />,
     on("tube") && <Tube radius={0.5} color={[0.55, 0.85, 0.6, 1]} />,
     on("spacefill") && <Spacefill scale={0.55} color={[0.75, 0.78, 0.86, 1]} />,
@@ -288,7 +301,7 @@ export const renderDemoScene = (
 ) => {
   switch (id) {
     case "compose":
-      return composeScene(data, options.layers);
+      return composeScene(data, options.layers, options.measure);
     case "select": {
       const everything = options.selectionMode === "all";
       const color = options.fieldMode === "charge"
