@@ -18,6 +18,8 @@ AttributeValues
   export type AttributeValues = Float32Array | Int8Array | Uint8Array | Int32Array | Uint32Array;
 BOND_FLAGS
   export const BOND_FLAGS: Readonly<{ covalent: 1; metallic: 2; hydrogen: 4; disulfide: 8; aromatic: 16; computed: 32 }>;
+BackboneDihedrals
+  export interface BackboneDihedrals { /** C(i-1)–N(i)–CA(i)–C(i). */ readonly phi: Float32Array; /** N(i)–CA(i)–C(i)–N(i+1). */ readonly psi: Float32Array; /** CA(i)–C(i)–N(i+1)–CA(i+1): the peptide bond following residue i. */ readonly omega: Float32Array }
 Bonds
   export interface Bonds { readonly count: number; readonly a: Uint32Array; readonly b: Uint32Array; /** 0 unknown, 1/2/3 multiplicity, 4 aromatic. */ readonly order: Uint8Array; readonly source: readonly ("explicit" | "inferred")[]; /** Bond type bits (see `BOND_FLAGS`); 0 is unknown. Inferred bonds are covalent | computed. */ readonly flags?: Uint8Array }
 Chains
@@ -32,6 +34,8 @@ Links
   export interface Links { readonly count: number; readonly a: Uint32Array; readonly b: Uint32Array; /** 0 unknown, 1/2/3/4 multiplicity. */ readonly order: Uint8Array; /** Bond type bits (see `BOND_FLAGS`); 0 is unknown. */ readonly flags: Uint8Array; /** Where the link came from: a chem_comp_bond template, or a struct_conn record. */ readonly source: readonly ("component" | "struct_conn")[] }
 MAX_VOLUME_SAMPLES
   export const MAX_VOLUME_SAMPLES: number;
+PEPTIDE_BREAK_DISTANCE
+  export const PEPTIDE_BREAK_DISTANCE = 2.5;
 Residues
   export interface Residues { readonly count: number; readonly chain: Uint32Array; /** -1 denotes missing label_seq_id. */ readonly labelSeq: Int32Array; readonly authSeq: readonly string[]; readonly insertionCode: readonly string[]; readonly comp: readonly string[]; readonly polymer: readonly ("protein" | "rna" | "dna" | "other")[]; /** 1 when the residue's first atom is not a group_PDB ATOM record (a HETATM). Absent when the source has no group_PDB. */ readonly het?: Uint8Array }
 SS_CODES
@@ -72,6 +76,8 @@ attributeColumn
   export function attributeColumn(data: StructureData, name: string): AttributeColumn | undefined;
 attributeNames
   export function attributeNames(data: StructureData): string[];
+backboneDihedrals
+  export function backboneDihedrals(data: StructureData, options?: { /** Atom rows to read, ascending. Defaults to every model with primary * altlocs. With all altlocs, the first conformer in file order wins. */ readonly rows?: ArrayLike<number>; readonly positions?: Float32Array }): BackboneDihedrals;
 bondTopology
   export function bondTopology(data: StructureData, policy?: { readonly padding?: number; readonly interChain?: boolean }): Bonds;
 coordinateBounds
@@ -84,6 +90,8 @@ createVolume
   export function createVolume(input: VolumeInput, options?: { maxSamples?: number }): VolumeData;
 createVolumeGrid
   export function createVolumeGrid(input: Omit<VolumeInput, "values">, options?: { maxSamples?: number }): VolumeGrid;
+dihedralAngle
+  export function dihedralAngle(p: ArrayLike<number>, a: number, b: number, c: number, d: number): number;
 dssp
   export function dssp(data: StructureData, options?: { /** Atom rows to read, ascending. Defaults to every model with primary * altlocs. With all altlocs, the first conformer in file order wins. */ readonly rows?: ArrayLike<number> }): Uint8Array;
 elementRadius

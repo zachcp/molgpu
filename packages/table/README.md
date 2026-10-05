@@ -216,6 +216,10 @@ Element identity exports:
 | `ssKind`                  | experimental | Cartoon kind of an `ssCode` value: H/G/I helix, E/B sheet, otherwise coil.                                                         |
 | `dssp`                    | experimental | Mol*-ported DSSP: `ssCode` values per residue, per chain and model; accepts optional atom rows.                                    |
 | `withSecondaryStructure`  | experimental | Set `ssCode` by Mol*'s `auto`, `dssp` or `model` mode; computed codes carry `computed:dssp`.                                       |
+| `backboneDihedrals`       | experimental | Per-residue phi/psi/omega in degrees (NaN at termini, breaks and non-protein); optional atom rows and live positions.              |
+| `BackboneDihedrals`       | experimental | Type: `{ phi, psi, omega }` Float32Arrays indexed by residue row.                                                                  |
+| `dihedralAngle`           | experimental | Signed IUPAC dihedral in degrees for four atom rows of a packed position array.                                                    |
+| `PEPTIDE_BREAK_DISTANCE`  | experimental | C–N distance (2.5 Å) above which consecutive residues are a chain break.                                                           |
 | `StructureInput`          | experimental | Unvalidated `{ topology, positions }` input to `createStructure`.                                                                  |
 | `Topology`                | experimental | The five column domains of a structure.                                                                                            |
 | `Atoms`                   | experimental | Per-atom columns (names, altloc, residue FK, element, occupancy, B-factor, optional radius).                                       |
