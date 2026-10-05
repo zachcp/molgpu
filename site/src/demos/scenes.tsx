@@ -11,7 +11,15 @@ import {
   curve,
   volumeSample,
 } from "@molgpu/fields";
-import { all, comp, element, resolve, toAtoms, within } from "@molgpu/select";
+import {
+  all,
+  comp,
+  element,
+  resolve,
+  toAtoms,
+  where,
+  within,
+} from "@molgpu/select";
 import { frameCurve } from "@molgpu/timeline";
 import {
   BallAndStick,
@@ -20,6 +28,7 @@ import {
   EField,
   FieldLines,
   Isosurface,
+  PickingProvider,
   Ribbon,
   Spacefill,
   Surface,
@@ -31,7 +40,7 @@ import {
 } from "@molgpu/viewer";
 import motionUrl from "../../assets/1crn-motion.xtc?url";
 import { ClipSlab } from "./clip.ts";
-import { MeasureScene } from "./measure.tsx";
+import { MeasureScene, PickListener } from "./measure.tsx";
 import { densityMapFor } from "./data.ts";
 import type {
   ComposeLayer,
@@ -57,7 +66,12 @@ const FrameReadout = () => {
 export type SurfaceMode = "opaque" | "glass" | "pumice";
 export type SurfaceColorMode = "neutral" | "element";
 export type MaterialMode = "matte" | "metal" | "basic" | "normal";
-export type SelectionMode = "near-cysteine" | "cysteine" | "sulfur" | "all";
+export type SelectionMode =
+  | "near-cysteine"
+  | "cysteine"
+  | "sulfur"
+  | "all"
+  | "ramachandran";
 export type FieldMode = "element" | "charge";
 export type TrajectoryMode = "tube" | "ball-and-stick";
 export interface SceneOptions {
@@ -80,14 +94,35 @@ export interface SceneOptions {
   /** Surface clip depth from the viewer's side: 0 off, 0.5 halfway, 1 all. */
   readonly clipDepth: number;
   /** Compose measure layer: picked atom rows and the page's pick handler. */
+  /** Select example's Ramachandran brush: residue rows and the pick handler. */
+  readonly rama?: {
+    readonly residues: readonly number[];
+    readonly onPick: (row: number) => void;
+  };
   readonly measure?: {
     readonly picks: readonly number[];
     readonly onPick: (row: number) => void;
   };
 }
 
-export const selectionFor = (data: StructureData, mode: SelectionMode) =>
-  mode === "near-cysteine"
+export const selectionFor = (
+  data: StructureData,
+  mode: SelectionMode,
+  brushedResidues: readonly number[] = [],
+) =>
+  mode === "ramachandran"
+    ? toAtoms(
+      resolve(
+        where(
+          "residue",
+          `Ramachandran brush (${brushedResidues.length})`,
+          (_, r) => brushedResidues.includes(r),
+        ),
+        data,
+      ),
+      data,
+    )
+    : mode === "near-cysteine"
     ? resolve(within(5, comp(["CYS"])), data)
     : mode === "cysteine"
     ? toAtoms(resolve(comp(["CYS"]), data), data)
@@ -307,6 +342,24 @@ export const renderDemoScene = (
       const color = options.fieldMode === "charge"
         ? byCharge({ domain: [-0.8, 0.8] })
         : byElement();
+      if (options.selectionMode === "ramachandran") {
+        const rama = options.rama;
+        const picked = selectionFor(data, "ramachandran", rama?.residues);
+        return (
+          <PickingProvider>
+            <Spacefill scale={0.35} color={[0.3, 0.33, 0.4, 1]} pickable />
+            {picked.indices.length > 0 && (
+              <BallAndStick
+                select={picked}
+                ball={0.35}
+                stick={0.28}
+                color={color}
+              />
+            )}
+            {rama && <PickListener onPick={rama.onPick} />}
+          </PickingProvider>
+        );
+      }
       return [
         <Spacefill scale={0.35} color={[0.3, 0.33, 0.4, 1]} />,
         everything ? <Spacefill scale={0.6} color={color} /> : (
