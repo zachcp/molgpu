@@ -56,3 +56,20 @@ export function useSourceRequest<T>(
   if (result?.owner !== owner) return PENDING;
   return result.outcome;
 }
+
+type Io = typeof import("@molgpu/io");
+
+/** A default `src` loader: import IO lazily (it holds the Mol* wall), read
+ * with the request signal, and drop a result whose request was cancelled. */
+export function ioLoader<T>(
+  read: (io: Io, src: string, signal?: AbortSignal) => Promise<T>,
+): (
+  src: string,
+  cancelled: () => boolean,
+  signal?: AbortSignal,
+) => Promise<T | null> {
+  return async (src, cancelled, signal) => {
+    const value = await read(await import("@molgpu/io"), src, signal);
+    return cancelled() ? null : value;
+  };
+}

@@ -1,4 +1,3 @@
-import { useSourceRequest } from "./internal/source-request.ts";
 // <Superpose>: a coordinate provider that rigidly fits live coordinates onto a
 // reference. The fit runs on the GPU against the same upstream generation it
 // moves: centroid, then centered covariance and a 3×3 proper-rotation solve,
@@ -9,7 +8,6 @@ import {
   use,
   useContext,
   useMemo,
-  useRef,
   useResource,
 } from "@use-gpu/live";
 import { useDeviceContext } from "@use-gpu/workbench";
@@ -25,6 +23,8 @@ import {
 } from "./internal/instrumentation.ts";
 
 import { useStatusReadback } from "./internal/status-readback.ts";
+import { useSourceRequest } from "./internal/source-request.ts";
+import { useStatusDelivery } from "./internal/status-delivery.ts";
 import { TrajectoryContext } from "./trajectory-context.ts";
 import type {
   SuperposeProps,
@@ -261,6 +261,16 @@ const Fitted: LC<{
   });
 };
 
+/** Trajectory already reports source errors; log only our own read failure. */
+function logReferenceFailure(status: SuperposeStatus): void {
+  if (status.status === "error" && status.phase === "reference") {
+    console.error(
+      "<Superpose>: the trajectory's first frame failed",
+      status.error,
+    );
+  }
+}
+
 const Resolve: LC<{
   to: SuperposeProps["to"];
   rows: Uint32Array | null;
@@ -312,19 +322,7 @@ const Resolve: LC<{
     request,
     first,
   ]);
-  const callback = useRef<typeof onStatus>(onStatus);
-  callback.current = onStatus;
-  useResource(() => {
-    if (!status) return;
-    if (callback.current) callback.current(status);
-    // Trajectory already reports source errors. Only log our own read failure.
-    else if (status.status === "error" && status.phase === "reference") {
-      console.error(
-        "<Superpose>: the trajectory's first frame failed",
-        status.error,
-      );
-    }
-  }, [status]);
+  useStatusDelivery(onStatus, status, logReferenceFailure);
   let reference: Reference | null;
   if (to === "first") {
     reference = first ? referenceOf(first, first) : null;
