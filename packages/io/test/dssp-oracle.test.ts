@@ -26,7 +26,7 @@ import {
   withPositions,
   withSecondaryStructure,
 } from "@molgpu/table";
-import { trajectoryFromModels } from "../../table/src/trajectory.ts";
+import { trajectoryFromModels } from "../../table/test/models-trajectory.ts";
 import { structureFromBcif } from "../src/index.ts";
 import { corpus } from "./corpus.ts";
 

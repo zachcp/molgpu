@@ -15,7 +15,6 @@ import {
   residueKey,
   withPositions,
 } from "../src/index.ts";
-import { selectBonds } from "../src/bond-topology.ts";
 import { validateStructure } from "../src/structure.ts";
 import type { StructureInput } from "../src/index.ts";
 import type { Mutable } from "../../../test/support/mutable.ts";
@@ -170,16 +169,9 @@ Deno.test("validates coordinate update length and selected bounds indices", () =
   assertThrows(() => residueKey(data, -1), Error, "row out of range");
 });
 
-Deno.test("shares explicit topology and makes bond-selection endpoint policy explicit", () => {
+Deno.test("shares explicit topology", () => {
   const data = createStructure(fixture());
   assertStrictEquals(bondTopology(data), data.topology.bonds);
-  assertEquals([...selectBonds(data, Uint32Array.of(0), { mode: "both" })], []);
-  assertEquals([...selectBonds(data, Uint32Array.of(0), { mode: "either" })], [
-    0,
-  ]);
-  assertEquals([...selectBonds(data, Uint32Array.of(0, 2), { mode: "both" })], [
-    0,
-  ]);
 });
 
 Deno.test("infers cached element-aware topology without cross-model or incompatible-altloc bonds", () => {

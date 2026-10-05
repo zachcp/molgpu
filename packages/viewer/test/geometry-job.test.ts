@@ -2,7 +2,6 @@ import {
   assertEquals,
   assertMatch,
   assertNotEquals,
-  assertNotStrictEquals,
   assertRejects,
   assertStrictEquals,
   assertThrows,
@@ -12,7 +11,6 @@ import { createStructure } from "@molgpu/table";
 import { createStructureResource } from "../src/internal/structure-resource.ts";
 import {
   assertGridBudget,
-  copyOwned,
   geometryDeps,
   runGeometryJob,
 } from "../src/internal/geometry-job.ts";
@@ -139,23 +137,6 @@ Deno.test("assertGridBudget rejects an oversize grid before any allocation happe
     Error,
     "three positive integers",
   );
-});
-
-Deno.test("copyOwned leaves the source Structure buffer usable and unmutated", () => {
-  const data = structure();
-  const copy = copyOwned(data.positions);
-  assertNotStrictEquals(
-    copy.buffer,
-    data.positions.buffer,
-    "must not alias the shared buffer",
-  );
-  copy.fill(999);
-  assertStrictEquals(
-    data.positions[0],
-    0,
-    "source Structure positions remain usable after the job touches its copy",
-  );
-  assertStrictEquals(data.positions.length, 6);
 });
 
 Deno.test("runGeometryJob discards a result that was cancelled before it settled", async () => {

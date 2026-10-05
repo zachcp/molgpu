@@ -138,13 +138,6 @@ function validatedSource(
  * (`timeUnit: "index"`).
  */
 export function createTrajectory(input: TrajectoryInput): TrajectoryData {
-  return buildTrajectory(input, false);
-}
-
-function buildTrajectory(
-  input: TrajectoryInput,
-  adoptFrames: boolean,
-): TrajectoryData {
   if (!input || typeof input !== "object") {
     fail("trajectory", "expected object");
   }
@@ -166,7 +159,7 @@ function buildTrajectory(
       );
     }
     const owned = frames.map((frame, i) =>
-      ownFrame(frame, atomCount, `trajectory.frames[${i}]`, adoptFrames)
+      ownFrame(frame, atomCount, `trajectory.frames[${i}]`, false)
     );
     frameCount = owned.length;
     read = memorySource(Object.freeze(owned));
@@ -261,91 +254,4 @@ export function validateTrajectory(
     }
   }
   return trajectory;
-}
-
-/** @internal Timeline interpolation helper; not part of the package entrypoint. */
-export function frameAtTime(trajectory: TrajectoryData, t: number): number {
-  if (!Number.isFinite(t)) fail("time", "expected finite number");
-  const time = trajectory.time;
-  const last = time.length - 1;
-  if (t <= time[0]) return 0;
-  if (t >= time[last]) return time.indexOf(time[last]);
-  let lo = 0, hi = last; // time[lo] < t < time[hi]
-  while (hi - lo > 1) {
-    const mid = (lo + hi) >> 1;
-    if (time[mid] < t) lo = mid;
-    else hi = mid;
-  }
-  return lo + (t - time[lo]) / (time[hi] - time[lo]);
-}
-
-/** @internal Convert an NMR multi-model structure into its trajectory view.
- *
- * A multi-model structure (an NMR ensemble) as a trajectory over the same
- * structure: frame `k` holds model `k`'s coordinates, in the order models are
- * first encountered, and `atomMap` points at the rows of the first model — the
- * model the default view policy shows. Every model must list the same atoms in
- * the same order; the first difference throws a `TypeError` naming the model
- * and row. A single-model structure gives one frame and no `atomMap`.
- */
-export function trajectoryFromModels(data: StructureData): TrajectoryData {
-  const { atoms: a, residues: r, chains: c } = data.topology;
-  if (!a.count) fail("structure", "expected at least one atom");
-  const models: number[] = [];
-  const rowsOf = new Map<number, number[]>();
-  for (let i = 0; i < a.count; i++) {
-    const residue = a.residue[i];
-    const model = c.model[r.chain[residue]];
-    let rows = rowsOf.get(model);
-    if (!rows) {
-      rowsOf.set(model, rows = []);
-      models.push(model);
-    }
-    rows.push(i);
-  }
-  const first = rowsOf.get(models[0])!;
-  const key = (i: number): string => {
-    const residue = a.residue[i];
-    return JSON.stringify([
-      a.element[i],
-      a.name[i],
-      a.altloc[i],
-      a.comp?.[i] ?? r.comp[residue],
-      r.labelSeq[residue],
-      c.labelId[r.chain[residue]],
-    ]);
-  };
-  const reference = first.map(key);
-  const frames = models.map((model) => {
-    const rows = rowsOf.get(model)!;
-    if (rows.length !== first.length) {
-      fail(
-        `model ${model}`,
-        `has ${rows.length} atoms, but model ${
-          models[0]
-        } has ${first.length}; models must list the same atoms`,
-      );
-    }
-    const positions = new Float32Array(rows.length * 3);
-    rows.forEach((row, j) => {
-      if (key(row) !== reference[j]) {
-        fail(
-          `model ${model} row ${row}`,
-          `atom ${j} differs from model ${models[0]} row ${first[j]} (${
-            reference[j]
-          } vs ${key(row)})`,
-        );
-      }
-      positions[j * 3] = data.positions[row * 3];
-      positions[j * 3 + 1] = data.positions[row * 3 + 1];
-      positions[j * 3 + 2] = data.positions[row * 3 + 2];
-    });
-    return { positions };
-  });
-  // The frames are fresh arrays nothing else references: adopt them.
-  return buildTrajectory({
-    atomCount: first.length,
-    frames,
-    ...(first.length === a.count ? {} : { atomMap: first }),
-  }, true);
 }
