@@ -120,6 +120,12 @@ export function useCoordinateBounds(
       },
     }), [device]);
   const rows = selection?.indices ?? null;
+  // Not internal/status-readback.ts: that helper reports (data, generation)
+  // and drops a copy when no staging slot is free. Bounds must retry until the
+  // latest generation lands, and attributes each result to the source buffer
+  // and rows captured at dispatch, because generations are provider-local and
+  // the nearest coordinates can switch provider at an equal generation
+  // (docs/findings/2026-10-05-coordinate-bounds-readback.md).
   const buffers = useMemo(() => {
     const rowBuffer = device.createBuffer({
       size: Math.max(4, (rows?.length ?? 0) * 4),
