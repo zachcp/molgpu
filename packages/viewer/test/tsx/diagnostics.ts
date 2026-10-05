@@ -28,7 +28,8 @@ export type Mode =
   | "attribute-producer"
   | "attribute-roundtrip"
   | "snapshot"
-  | "collision";
+  | "collision"
+  | "replace";
 export type Phase = "idle" | "loading" | "error" | "ready";
 export interface State {
   mode: Mode;

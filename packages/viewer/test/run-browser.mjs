@@ -147,10 +147,16 @@ Deno.test("viewer GPU smoke", async () => {
     assertStrictEquals((await screenshot("empty")).length, 0);
     const empty = await snapshot();
     assert(Object.values(empty.sources).every((s) => s === null));
+    assert(before.owned.live > 0, "columns were owned before emptying");
+    assertStrictEquals(
+      empty.owned.live,
+      0,
+      "empty input must release every observed column buffer",
+    );
     assertStrictEquals(
       empty.destroyed,
-      before.buffers,
-      "empty input must release every observed column buffer",
+      0,
+      "released column buffers are not explicitly destroyed while draws may retain them",
     );
     await update({ empty: false });
     assertStrictEquals((await screenshot("remounted")).length, 2);
@@ -158,9 +164,9 @@ Deno.test("viewer GPU smoke", async () => {
     await update({ mounted: false });
     const unmounted = await snapshot();
     assertStrictEquals(
-      unmounted.destroyed,
-      unmounted.buffers,
-      "all observed buffers destroyed on unmount",
+      unmounted.owned.live,
+      0,
+      "unmount releases ownership of every observed buffer",
     );
     report.cleanup = unmounted;
     await update({ mounted: true, trace: false, mode: "hook-segments" });

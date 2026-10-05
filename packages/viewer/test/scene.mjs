@@ -10,6 +10,12 @@ import {
   useRawSource,
 } from "@use-gpu/workbench";
 import { ColumnSource } from "../src/internal/column-source.ts";
+import {
+  enableInstrumentation,
+  snapshotCounters,
+} from "../src/internal/instrumentation.ts";
+
+enableInstrumentation();
 
 const probe = globalThis.__adapter = {
   errors: [],
@@ -46,6 +52,8 @@ GPUAdapter.prototype.requestDevice = async function (...args) {
 let device;
 probe.snapshot = () => ({
   destroyed: probe.buffers.filter((b) => destroyed.has(b)).length,
+  // Ownership released by ColumnSource; native reachability frees the memory.
+  owned: snapshotCounters().ownedBuffers,
   buffers: probe.buffers.length,
   sources: Object.fromEntries(
     Object.entries(probe.sources).map((

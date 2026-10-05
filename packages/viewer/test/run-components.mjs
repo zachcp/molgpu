@@ -710,6 +710,20 @@ Deno.test("viewer components", async () => {
     };
     await update({ mode: "preloaded" });
 
+    // 1c. Replacing Structure data in place must not submit destroyed buffers
+    //     from the superseded representations' draws.
+    for (let attempt = 0; attempt < 6; attempt++) {
+      await update({ mode: "replace", attempt });
+      await blobs(`replace-${attempt}`);
+    }
+    assertEquals(
+      (await snapshot()).errors,
+      [],
+      "in-place data replacement WebGPU errors",
+    );
+    assertEquals(errors, [], "in-place data replacement browser errors");
+    await update({ mode: "preloaded" });
+
     // 1d. Two row sets whose 32-bit membership hashes collide on one structure
     //     (0vs.5): switching between them must update what Spacefill draws and
     //     which rows Transform moves, both keyed by Selection.id.
