@@ -13,12 +13,9 @@ annotations into reusable styles.
 deno add jsr:@molgpu/fields jsr:@molgpu/table
 ```
 
-JSR publishes internal dependencies as caret ranges (for example,
-`jsr:@molgpu/table@^0.2.0`). Keep compatible versions so the application
-resolves one shared copy: identity and revision state are module-private. Values
-from divergent copies can be rejected by identity-dependent operations. Use
-`deno info` and the lockfile to find duplicate versions, then align the
-application and package dependency ranges.
+Keep all `@molgpu/*` packages on compatible versions so the application resolves
+one shared `@molgpu/table`; see
+[one shared table copy](https://jsr.io/@molgpu/table#one-shared-table-copy).
 
 ## Example
 

@@ -105,12 +105,8 @@ monotonic per dataset, including branched updates. Replacing topology requires a
 new dataset. Use `withAttributes` to replace derived attribute columns while
 retaining dataset identity. Identity is tracked in module-private state, so
 `withPositions` and `bondTopology` only accept structures made by
-`createStructure` from the same module instance. JSR publishes internal
-dependencies as caret ranges (for example, `jsr:@molgpu/table@^0.2.0`). Keep
-compatible versions so the application resolves one shared copy: identity and
-revision state are module-private. Values from divergent copies can be rejected
-by identity-dependent operations. Use `deno info` and the lockfile to find
-duplicate versions, then align the application and package dependency ranges.
+`createStructure` from the same module instance; see
+[one shared table copy](#one-shared-table-copy).
 
 Ownership follows one rule with one exception. Constructors copy caller arrays:
 `createStructure`, `withPositions`, `withAttributes` and the in-memory `frames`
@@ -151,6 +147,16 @@ into runs at gaps, chain/model changes and polymer-kind changes) from a
 selection; `secondaryStructureTrace` adds per-sample direction vectors and
 helix/sheet/coil labels over that trace. Both are inputs to the viewer's tube
 and ribbon geometry.
+
+### One shared table copy
+
+JSR publishes the `@molgpu/*` packages' dependencies on each other as caret
+ranges of the release they were built with. Keep every `@molgpu/*` package on
+compatible versions so the application resolves one shared copy of this package:
+identity and revision state are module-private, so identity-dependent operations
+can reject values from divergent copies. Use `deno info` and the lockfile to
+find duplicate versions, then align the application and package dependency
+ranges.
 
 ## Chemical data and display policies
 
