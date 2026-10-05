@@ -1,5 +1,8 @@
 import { fromFileUrl } from "@std/path";
-import { workspaceAliases } from "../../../../scripts/workspace-aliases.mjs";
+import {
+  coverageBuild,
+  workspaceAliases,
+} from "../../../../scripts/workspace-aliases.mjs";
 
 const here = (p) => fromFileUrl(new URL(p, import.meta.url));
 
@@ -7,7 +10,7 @@ const here = (p) => fromFileUrl(new URL(p, import.meta.url));
  * check runs against bundled output rather than a dev server's module graph. */
 export default {
   root: here("."),
-  build: {
+  build: coverageBuild({
     outDir: here("dist"),
     emptyOutDir: true,
     // The fixture reports uncaptured WebGPU errors; a minifier renaming the
@@ -20,7 +23,7 @@ export default {
         manualChunks: (id) => id.includes("/molstar/") ? "molstar" : undefined,
       },
     },
-  },
+  }),
   resolve: {
     alias: workspaceAliases(),
     // Without dedupe a second copy of Live would break context lookups.
