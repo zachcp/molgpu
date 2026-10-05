@@ -27,6 +27,7 @@ import {
   type VolumeMode,
 } from "../demos/registry.ts";
 import {
+  demoSource,
   type FieldMode,
   type MaterialMode,
   renderDemoScene,
@@ -118,6 +119,31 @@ const savePng = async (id: string) => {
   link.click();
   setTimeout(() => URL.revokeObjectURL(url), 0);
   host.dataset.capture = "done";
+};
+
+/** The example's real file, read-only, with a copy button. */
+const SourcePanel = ({ id }: { id: DemoId }) => {
+  const { file, source } = demoSource(id);
+  const [copied, setCopied] = useState(false);
+  useEffect(() => setCopied(false), [id]);
+  return (
+    <details className="demo-source" data-demo-source={id}>
+      <summary>
+        Source <code>{file}</code>
+      </summary>
+      <button
+        type="button"
+        onClick={() =>
+          navigator.clipboard.writeText(source).then(
+            () => setCopied(true),
+            () => setCopied(false),
+          )}
+      >
+        {copied ? "Copied" : "Copy"}
+      </button>
+      <pre><code>{source}</code></pre>
+    </details>
+  );
 };
 
 export const DemosPage = () => {
@@ -668,6 +694,7 @@ export const DemosPage = () => {
       >
         <p data-webgpu-error="true" role="status">Preparing WebGPU…</p>
       </div>
+      <SourcePanel id={demo.id} />
     </section>
   );
 };
