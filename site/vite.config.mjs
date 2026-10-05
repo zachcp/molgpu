@@ -29,6 +29,7 @@ export default {
       "@use-gpu/core",
       "@use-gpu/shader",
       "@use-gpu/wgsl",
+      "@use-gpu/wgsl/scissor/scissor-plane.wgsl",
     ],
     exclude: ["@use-gpu/glyph"],
   },

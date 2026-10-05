@@ -1,7 +1,7 @@
 // deno-lint-ignore-file jsx-key
 /** @jsx LiveReact.createElement */
 import { React as LiveReact, useResource } from "@use-gpu/live";
-import type { StructureData } from "@molgpu/table";
+import { coordinateBounds, type StructureData } from "@molgpu/table";
 import {
   byCharge,
   byElement,
@@ -30,6 +30,7 @@ import {
   VolumeSlice,
 } from "@molgpu/viewer";
 import motionUrl from "../../assets/1crn-motion.xtc?url";
+import { ClipSlab } from "./clip.ts";
 import { densityMapFor } from "./data.ts";
 import type {
   ComposeLayer,
@@ -75,6 +76,8 @@ export interface SceneOptions {
   readonly sliceIndex: number;
   /** Isosurface level in sigma above the map mean. */
   readonly isoSigma: number;
+  /** Surface clip depth from the viewer's side: 0 off, 0.5 halfway, 1 all. */
+  readonly clipDepth: number;
 }
 
 export const selectionFor = (data: StructureData, mode: SelectionMode) =>
@@ -134,7 +137,12 @@ const composeScene = (data: StructureData, layers: readonly ComposeLayer[]) => {
   ].filter(Boolean);
 };
 
-const surfaceScene = (options: SceneOptions) => {
+// Faces the viewer's initial orbit (bearing 0.6, level): the slab removes the
+// near side of the molecule. It is fixed in world space, so orbiting shows the
+// cut from other angles.
+const CLIP_NORMAL = [Math.sin(0.6), 0, -Math.cos(0.6)] as const;
+
+const surfaceLayer = (options: SceneOptions) => {
   const color = (neutral: Rgba) =>
     options.surfaceColorMode === "element" ? byElement() : neutral;
   if (options.surfaceMode === "pumice") {
@@ -148,24 +156,54 @@ const surfaceScene = (options: SceneOptions) => {
     );
   }
   const material = materialFor(options.materialMode);
-  if (options.surfaceMode === "glass") {
-    return [
-      <BallAndStick ball={0.22} stick={0.16} color={byElement()} />,
+  return options.surfaceMode === "glass"
+    ? (
       <Surface
         resolution={0.55}
         color={color([0.55, 0.72, 0.98, 1])}
         opacity={0.3}
         material={material}
-      />,
-    ];
-  }
-  return (
-    <Surface
-      resolution={0.55}
-      color={color([0.75, 0.78, 0.86, 1])}
-      material={material}
-    />
-  );
+      />
+    )
+    : (
+      <Surface
+        resolution={0.55}
+        color={color([0.75, 0.78, 0.86, 1])}
+        material={material}
+      />
+    );
+};
+
+/** Clip depth (0 none, 0.5 through the centre, 1 everything) to slab start in Å. */
+export const clipFrom = (data: StructureData, depth: number) => {
+  const { min, max, center } = coordinateBounds(data)!;
+  const radius = Math.hypot(max[0] - min[0], max[1] - min[1], max[2] - min[2]) /
+    2;
+  const middle = CLIP_NORMAL[0] * center[0] + CLIP_NORMAL[1] * center[1] +
+    CLIP_NORMAL[2] * center[2];
+  return middle - radius + 2 * radius * depth;
+};
+
+const surfaceScene = (data: StructureData, options: SceneOptions) => {
+  const surface = surfaceLayer(options);
+  const clipped = options.clipDepth > 0;
+  // Atoms show through glass, and through the opening a clip cuts.
+  const atoms = options.surfaceMode === "glass" || clipped
+    ? <BallAndStick ball={0.22} stick={0.16} color={byElement()} />
+    : null;
+  return [
+    atoms,
+    clipped
+      ? (
+        <ClipSlab
+          normal={CLIP_NORMAL}
+          from={clipFrom(data, options.clipDepth)}
+        >
+          {surface}
+        </ClipSlab>
+      )
+      : surface,
+  ].filter(Boolean);
 };
 
 const motionScene = (data: StructureData, options: SceneOptions) => {
@@ -269,7 +307,7 @@ export const renderDemoScene = (
       ];
     }
     case "surface":
-      return surfaceScene(options);
+      return surfaceScene(data, options);
     case "motion":
       return motionScene(data, options);
     case "volume":
