@@ -98,6 +98,7 @@ export const DemosPage = () => {
     initial.preset?.layers ?? ["cartoon", "sulfur"],
   );
   const [surfaceMode, setSurfaceMode] = useState<SurfaceMode>("opaque");
+  const [clipDepth, setClipDepth] = useState(0);
   const [surfaceColorMode, setSurfaceColorMode] = useState<SurfaceColorMode>(
     "neutral",
   );
@@ -188,6 +189,9 @@ export const DemosPage = () => {
           host.dataset.atomCount = String(data.topology.atoms.count);
           host.dataset.residueCount = String(data.topology.residues.count);
           host.dataset.worldLight = String(demo.id === "surface" && worldLight);
+          host.dataset.clipDepth = demo.id === "surface"
+            ? String(clipDepth)
+            : "";
           host.dataset.motion = demo.id === "motion" ? motionMode : "";
           host.dataset.volume = demo.id === "volume" ? volumeMode : "";
           host.dataset.layers = demo.id === "compose" ? layers.join(",") : "";
@@ -222,6 +226,7 @@ export const DemosPage = () => {
             volumeMode,
             surfaceMode,
             surfaceColorMode,
+            clipDepth,
             materialMode,
             selectionMode,
             trajectoryMode,
@@ -277,6 +282,7 @@ export const DemosPage = () => {
     worldLight,
     surfaceMode,
     surfaceColorMode,
+    clipDepth,
     materialMode,
     selectionMode,
     trajectoryMode,
@@ -364,6 +370,20 @@ export const DemosPage = () => {
                 <option value="glass">Glass</option>
                 <option value="pumice">Pumice</option>
               </select>
+            </label>
+            <label className="timeline-control">
+              Clip{" "}
+              <input
+                aria-label="Surface clip depth"
+                type="range"
+                min="0"
+                max="1"
+                step="0.01"
+                value={clipDepth}
+                onChange={(event) =>
+                  setClipDepth(Number(event.currentTarget.value))}
+              />{" "}
+              <output>{Math.round(clipDepth * 100)}%</output>
             </label>
             <label className="timeline-control">
               Color{" "}

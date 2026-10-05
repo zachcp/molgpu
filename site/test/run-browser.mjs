@@ -397,6 +397,51 @@ Deno.test("site landing page and maintained gallery routes", async () => {
           await page.getByLabel("Surface style").inputValue(),
           "opaque",
         );
+        // The opaque neutral surface hides every atom; clipping its near
+        // half reveals element-coloured ball-and-stick (red oxygens).
+        const redPixels = () =>
+          page.evaluate(async () => {
+            const canvas = document.querySelector("#molecule-canvas canvas");
+            const bitmap = await createImageBitmap(
+              await new Promise((resolve) => canvas.toBlob(resolve)),
+            );
+            const snapshot = new OffscreenCanvas(bitmap.width, bitmap.height);
+            const context = snapshot.getContext("2d");
+            context.drawImage(bitmap, 0, 0);
+            const { data } = context.getImageData(
+              0,
+              0,
+              bitmap.width,
+              bitmap.height,
+            );
+            bitmap.close();
+            let red = 0;
+            for (let i = 0; i < data.length; i += 4) {
+              if (
+                data[i] > 120 && data[i] > 2 * data[i + 1] &&
+                data[i] > 2 * data[i + 2]
+              ) red++;
+            }
+            return red;
+          });
+        const before = await redPixels();
+        await page.getByLabel("Surface clip depth").fill("0.55");
+        await dataIs("clipDepth", "0.55");
+        // Poll from Deno: Playwright treats an async predicate's promise as
+        // truthy, so waitForFunction would not wait for the pixels.
+        let after = before;
+        for (const start = Date.now(); Date.now() - start < 30000;) {
+          after = await redPixels();
+          if (after > before + 20) break;
+          await new Promise((resolve) => setTimeout(resolve, 200));
+        }
+        console.log("clip red pixels", before, after);
+        assert(
+          after > before + 20,
+          `clipping reveals the atoms inside (${before} -> ${after})`,
+        );
+        await page.getByLabel("Surface clip depth").fill("0");
+        await dataIs("clipDepth", "0");
         await page.getByLabel("Surface color field").selectOption("element");
         await page.getByLabel("Material model").selectOption("normal");
         assertStrictEquals(
