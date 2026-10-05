@@ -58,6 +58,12 @@ export { traceTable } from "./trace.ts";
 export { secondaryStructureTrace } from "./secondary-structure.ts";
 export { SS_CODES, ssKind } from "./ss-codes.ts";
 export { dssp, withSecondaryStructure } from "./dssp.ts";
+export {
+  backboneDihedrals,
+  dihedralAngle,
+  PEPTIDE_BREAK_DISTANCE,
+} from "./dihedrals.ts";
+export type { BackboneDihedrals } from "./dihedrals.ts";
 export { spatialGrid } from "./spatial-grid.ts";
 export {
   createVolume,
