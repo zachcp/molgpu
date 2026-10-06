@@ -14,6 +14,14 @@ import { demos } from "../src/demos/registry.ts";
 import { dihedralAngle } from "@molgpu/table";
 import { structureFromBcif } from "@molgpu/io";
 
+// The viewer's dev counters, imported in the page through Vite's /@fs route.
+const instrumentationPath = fromFileUrl(
+  new URL(
+    "../../packages/viewer/src/internal/instrumentation.ts",
+    import.meta.url,
+  ),
+);
+
 // The structure the site loads, for recomputing measurements independently.
 const crambin = await structureFromBcif(
   await Deno.readFile(
@@ -597,10 +605,88 @@ Deno.test("site landing page and maintained gallery routes", async () => {
         );
         await page.getByLabel("World-fixed light").check();
         await dataIs("worldLight", "true");
+        // Look controls are uniform or shader changes: the viewer's dev
+        // counters (the same module instance the page runs) must show no SES
+        // rebuild, gather, allocation or upload while they change.
+        await page.evaluate(async (url) => {
+          const counters = await import(url);
+          counters.enableInstrumentation();
+          counters.resetCounters();
+          globalThis.__surfaceCounters = counters;
+        }, `/@fs${instrumentationPath}`);
+        // Pumice is a new mesh (finer grid, smaller probe). Its vertex
+        // buffers upload together once the geometry job lands; wait for that
+        // before counting, so the rebuild is not attributed to a look change.
+        const meshUploaded = () =>
+          page.waitForFunction(
+            () => {
+              const { detail } = globalThis.__surfaceCounters
+                .snapshotCounters();
+              return detail["geometryBuilds:surface:mesh"] >= 1 &&
+                detail["allocations:indices"] >= 1;
+            },
+            null,
+            { timeout: 30000, polling: 50 },
+          );
         await page.getByLabel("Surface style").selectOption("pumice");
         assertStrictEquals(
           await page.getByLabel("Surface style").inputValue(),
           "pumice",
+        );
+        await dataIs("roughness", "1");
+        await dataIs("bump", "0.6,1.2");
+        await meshUploaded();
+        await page.evaluate(() => globalThis.__surfaceCounters.resetCounters());
+        const surfaceWork = () =>
+          page.evaluate(() => {
+            const s = globalThis.__surfaceCounters.snapshotCounters();
+            return {
+              geometryBuilds: s.geometryBuilds,
+              gathers: s.gathers,
+              allocations: s.allocations,
+              uploadBytes: s.uploadBytes,
+            };
+          });
+        const look = [
+          ["Pumice bump amplitude", "1.2", "bump", "1.2,1.2"],
+          ["Pumice bump scale", "2.2", "bump", "1.2,2.2"],
+          ["Surface roughness", "0.6", "roughness", "0.6"],
+          ["Environment preset", "park", "environment", "park"],
+          ["Tone mapping", "aces", "tonemap", "aces"],
+        ];
+        for (const [label, value, key, expected] of look) {
+          const control = page.getByLabel(label);
+          if (await control.evaluate((el) => el.tagName === "SELECT")) {
+            await control.selectOption(value);
+          } else await control.fill(value);
+          await dataIs(key, expected);
+        }
+        await waitForVisibleCanvas(page);
+        assertEquals(
+          await surfaceWork(),
+          { geometryBuilds: 0, gathers: 0, allocations: 0, uploadBytes: 0 },
+          "pumice bump, roughness, environment and tone map rebuild nothing",
+        );
+        await page.getByLabel("Surface style").selectOption("glass");
+        await page.getByLabel("Material model").selectOption("matte");
+        await dataIs("fresnel", "true");
+        await meshUploaded();
+        await page.evaluate(() => globalThis.__surfaceCounters.resetCounters());
+        await page.getByLabel("Fresnel glass").uncheck();
+        await dataIs("fresnel", "false");
+        await page.getByLabel("Environment preset").selectOption("road");
+        await dataIs("environment", "road");
+        await page.getByLabel("Fresnel glass").check();
+        await dataIs("fresnel", "true");
+        await waitForVisibleCanvas(page);
+        const work = await surfaceWork();
+        await page.evaluate(() =>
+          globalThis.__surfaceCounters.disableInstrumentation()
+        );
+        assertEquals(
+          work,
+          { geometryBuilds: 0, gathers: 0, allocations: 0, uploadBytes: 0 },
+          "glass Fresnel and environment toggles rebuild nothing",
         );
       }
       if (id === "motion") {

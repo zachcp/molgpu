@@ -68,6 +68,8 @@ export interface DemoOptions {
   coordinates?: boolean;
   lightFigure?: boolean;
   picking?: boolean;
+  environment?: "none" | "park" | "pisa" | "road" | "field";
+  tonemap?: "linear" | "aces" | "hable" | "reinhard";
 }
 
 export interface DemoDefinition {
@@ -173,13 +175,21 @@ export const demoOptions = (
     motionMode: MotionMode;
     worldLight: boolean;
     layers?: readonly ComposeLayer[];
+    environment?: DemoOptions["environment"];
+    tonemap?: DemoOptions["tonemap"];
   },
 ): DemoOptions => ({
   ...demo.options,
   ...(demo.id === "compose" && state.layers?.includes("measure")
     ? { picking: true }
     : {}),
-  ...(demo.id === "surface" ? { worldLight: state.worldLight } : {}),
+  ...(demo.id === "surface"
+    ? {
+      worldLight: state.worldLight,
+      environment: state.environment ?? "none",
+      tonemap: state.tonemap ?? "linear",
+    }
+    : {}),
   ...(demo.id === "motion" && state.motionMode === "wobble"
     ? { coordinates: true }
     : {}),

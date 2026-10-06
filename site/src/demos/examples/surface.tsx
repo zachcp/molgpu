@@ -1,22 +1,24 @@
-// deno-lint-ignore-file jsx-key
 /** @jsx LiveReact.createElement */
 import { React as LiveReact } from "@use-gpu/live";
 import { coordinateBounds, type StructureData } from "@molgpu/table";
 import { byElement } from "@molgpu/fields";
 import { BallAndStick, Surface } from "@molgpu/viewer";
 import { ClipSlab } from "../clip.ts";
+import { glassMaterial, pumiceMaterial } from "../surface-look.ts";
 import type { MaterialMode, SceneOptions } from "../options.ts";
 
 type Rgba = readonly [number, number, number, number];
 
-const materialFor = (mode: MaterialMode) =>
+const materialFor = (mode: MaterialMode, roughness: number) =>
   mode === "metal"
-    ? { type: "pbr" as const, roughness: 0.2, metalness: 0.8 }
+    ? { type: "pbr" as const, roughness, metalness: 0.8 }
     : mode === "basic"
     ? { type: "basic" as const }
     : mode === "normal"
     ? { type: "normal" as const }
-    : { type: "pbr" as const, roughness: 0.85, metalness: 0 };
+    : { type: "pbr" as const, roughness, metalness: 0 };
+
+const isPbr = (mode: MaterialMode) => mode === "matte" || mode === "metal";
 
 // Faces the viewer's initial orbit (bearing 0.6, level): the slab removes the
 // near side of the molecule. It is fixed in world space, so orbiting shows the
@@ -32,27 +34,39 @@ const surfaceLayer = (options: SceneOptions) => {
         probeRadius={0.5}
         resolution={0.4}
         color={color([0.52, 0.5, 0.47, 1])}
-        material={{ type: "pbr", roughness: 1, metalness: 0 }}
+        material={pumiceMaterial({
+          roughness: options.roughness,
+          amplitude: options.bump,
+          scale: options.bumpScale,
+        })}
       />
     );
   }
-  const material = materialFor(options.materialMode);
-  return options.surfaceMode === "glass"
-    ? (
+  if (options.surfaceMode === "glass") {
+    // Fresnel fades faces turned to the camera, so the base opacity is higher.
+    const fresnel = isPbr(options.materialMode);
+    return (
       <Surface
         resolution={0.55}
         color={color([0.55, 0.72, 0.98, 1])}
-        opacity={0.3}
-        material={material}
-      />
-    )
-    : (
-      <Surface
-        resolution={0.55}
-        color={color([0.75, 0.78, 0.86, 1])}
-        material={material}
+        opacity={fresnel && options.fresnel ? 0.8 : 0.3}
+        material={fresnel
+          ? glassMaterial({
+            roughness: options.roughness,
+            metalness: options.materialMode === "metal" ? 0.8 : 0,
+            fresnel: options.fresnel,
+          })
+          : materialFor(options.materialMode, options.roughness)}
       />
     );
+  }
+  return (
+    <Surface
+      resolution={0.55}
+      color={color([0.75, 0.78, 0.86, 1])}
+      material={materialFor(options.materialMode, options.roughness)}
+    />
+  );
 };
 
 /** Clip depth (0 none, 0.5 through the centre, 1 everything) to slab start in Å. */

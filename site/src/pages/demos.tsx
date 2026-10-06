@@ -33,6 +33,7 @@ import {
 } from "../demos/registry.ts";
 import {
   demoSource,
+  type EnvironmentPreset,
   type FieldMode,
   type MaterialMode,
   renderDemoScene,
@@ -40,6 +41,7 @@ import {
   type SelectionMode,
   type SurfaceColorMode,
   type SurfaceMode,
+  type Tonemap,
   type TrajectoryMode,
 } from "../demos/scenes.tsx";
 import { disposeViewer, mountViewer } from "../demos/viewer.tsx";
@@ -74,6 +76,9 @@ const routeFromHash = () => {
   }
   return route;
 };
+
+/** Roughness each material mode starts at; metal reads best glossy. */
+const defaultRoughness = (mode: MaterialMode) => mode === "metal" ? 0.2 : 0.85;
 
 /** Picked atom names, the measurement and the last residue's phi/psi. */
 const measureReadout = (
@@ -184,6 +189,14 @@ export const DemosPage = () => {
   const [worldLight, setWorldLight] = useState(
     initial.preset?.worldLight ?? false,
   );
+  const [roughness, setRoughness] = useState(
+    defaultRoughness(initial.preset?.materialMode ?? "matte"),
+  );
+  const [fresnel, setFresnel] = useState(true);
+  const [bump, setBump] = useState(0.6);
+  const [bumpScale, setBumpScale] = useState(1.2);
+  const [environment, setEnvironment] = useState<EnvironmentPreset>("none");
+  const [tonemap, setTonemap] = useState<Tonemap>("linear");
   const [selectionMode, setSelectionMode] = useState<SelectionMode>(
     initial.preset?.selectionMode ?? "site",
   );
@@ -216,7 +229,10 @@ export const DemosPage = () => {
     if (preset.selectionMode) setSelectionMode(preset.selectionMode);
     if (preset.fieldMode) setFieldMode(preset.fieldMode);
     if (preset.worldLight !== undefined) setWorldLight(preset.worldLight);
-    if (preset.materialMode) setMaterialMode(preset.materialMode);
+    if (preset.materialMode) {
+      setMaterialMode(preset.materialMode);
+      setRoughness(defaultRoughness(preset.materialMode));
+    }
     if (preset.motionMode) setMotionMode(preset.motionMode);
     if (preset.volumeMode) setVolumeMode(preset.volumeMode);
   };
@@ -278,6 +294,12 @@ export const DemosPage = () => {
           host.dataset.clipDepth = demo.id === "surface"
             ? String(clipDepth)
             : "";
+          const surface = demo.id === "surface";
+          host.dataset.environment = surface ? environment : "";
+          host.dataset.tonemap = surface ? tonemap : "";
+          host.dataset.roughness = surface ? String(roughness) : "";
+          host.dataset.fresnel = surface ? String(fresnel) : "";
+          host.dataset.bump = surface ? `${bump},${bumpScale}` : "";
           host.dataset.motion = demo.id === "motion" ? effectiveMotion : "";
           host.dataset.volume = demo.id === "volume" ? effectiveVolume : "";
           host.dataset.layers = demo.id === "compose" ? layers.join(",") : "";
@@ -314,6 +336,10 @@ export const DemosPage = () => {
             surfaceMode,
             surfaceColorMode,
             clipDepth,
+            roughness,
+            fresnel,
+            bump,
+            bumpScale,
             measure: { picks, onPick },
             materialMode,
             selectionMode,
@@ -342,6 +368,8 @@ export const DemosPage = () => {
           motionMode: effectiveMotion,
           worldLight,
           layers,
+          environment,
+          tonemap,
         });
         if (host && demo.id === "compose" && layers.includes("measure")) {
           const result = measure(data.positions, picks);
@@ -385,6 +413,12 @@ export const DemosPage = () => {
     surfaceMode,
     surfaceColorMode,
     clipDepth,
+    roughness,
+    fresnel,
+    bump,
+    bumpScale,
+    environment,
+    tonemap,
     picks,
     materialMode,
     selectionMode,
@@ -505,8 +539,13 @@ export const DemosPage = () => {
               <select
                 aria-label="Surface style"
                 value={surfaceMode}
-                onChange={(event) =>
-                  setSurfaceMode(event.currentTarget.value as SurfaceMode)}
+                onChange={(event) => {
+                  const mode = event.currentTarget.value as SurfaceMode;
+                  setSurfaceMode(mode);
+                  setRoughness(
+                    mode === "pumice" ? 1 : defaultRoughness(materialMode),
+                  );
+                }}
               >
                 <option value="opaque">Opaque</option>
                 <option value="glass">Glass</option>
@@ -547,8 +586,11 @@ export const DemosPage = () => {
                 aria-label="Material model"
                 value={materialMode}
                 disabled={surfaceMode === "pumice"}
-                onChange={(event) =>
-                  setMaterialMode(event.currentTarget.value as MaterialMode)}
+                onChange={(event) => {
+                  const mode = event.currentTarget.value as MaterialMode;
+                  setMaterialMode(mode);
+                  setRoughness(defaultRoughness(mode));
+                }}
               >
                 <option value="matte">Matte PBR</option>
                 <option value="metal">Metal PBR</option>
@@ -564,6 +606,98 @@ export const DemosPage = () => {
                 onChange={(event) => setWorldLight(event.currentTarget.checked)}
               />{" "}
               World-fixed light
+            </label>
+            <label className="timeline-control">
+              Roughness{" "}
+              <input
+                aria-label="Surface roughness"
+                type="range"
+                min="0.05"
+                max="1"
+                step="0.05"
+                value={roughness}
+                disabled={surfaceMode !== "pumice" &&
+                  materialMode !== "matte" && materialMode !== "metal"}
+                onChange={(event) =>
+                  setRoughness(Number(event.currentTarget.value))}
+              />{" "}
+              <output>{roughness.toFixed(2)}</output>
+            </label>
+            {surfaceMode === "glass" && (
+              <label className="timeline-control">
+                <input
+                  type="checkbox"
+                  aria-label="Fresnel glass"
+                  checked={fresnel}
+                  disabled={materialMode !== "matte" &&
+                    materialMode !== "metal"}
+                  onChange={(event) => setFresnel(event.currentTarget.checked)}
+                />{" "}
+                Fresnel edges
+              </label>
+            )}
+            {surfaceMode === "pumice" && (
+              <>
+                <label className="timeline-control">
+                  Bump{" "}
+                  <input
+                    aria-label="Pumice bump amplitude"
+                    type="range"
+                    min="0"
+                    max="1.5"
+                    step="0.05"
+                    value={bump}
+                    onChange={(event) =>
+                      setBump(Number(event.currentTarget.value))}
+                  />{" "}
+                  <output>{bump.toFixed(2)}</output>
+                </label>
+                <label className="timeline-control">
+                  Grain{" "}
+                  <input
+                    aria-label="Pumice bump scale"
+                    type="range"
+                    min="0.4"
+                    max="3"
+                    step="0.1"
+                    value={bumpScale}
+                    onChange={(event) =>
+                      setBumpScale(Number(event.currentTarget.value))}
+                  />{" "}
+                  <output>{bumpScale.toFixed(1)}/Å</output>
+                </label>
+              </>
+            )}
+            <label className="timeline-control">
+              Environment{" "}
+              <select
+                aria-label="Environment preset"
+                value={environment}
+                onChange={(event) =>
+                  setEnvironment(
+                    event.currentTarget.value as EnvironmentPreset,
+                  )}
+              >
+                <option value="none">None</option>
+                <option value="park">Park</option>
+                <option value="pisa">Pisa</option>
+                <option value="road">Road</option>
+                <option value="field">Field</option>
+              </select>
+            </label>
+            <label className="timeline-control">
+              Tone map{" "}
+              <select
+                aria-label="Tone mapping"
+                value={tonemap}
+                onChange={(event) =>
+                  setTonemap(event.currentTarget.value as Tonemap)}
+              >
+                <option value="linear">Linear</option>
+                <option value="aces">ACES</option>
+                <option value="hable">Hable</option>
+                <option value="reinhard">Reinhard</option>
+              </select>
             </label>
           </>
         )}
