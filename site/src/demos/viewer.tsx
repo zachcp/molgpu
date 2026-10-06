@@ -26,11 +26,14 @@ import {
 import type { StructureData } from "@molgpu/table";
 import { all } from "@molgpu/select";
 import {
+  type CameraCurve,
   Structure,
   TimelineProvider,
+  useCameraCurve,
   useCoordinateFocus,
   type ViewerElement,
 } from "@molgpu/viewer";
+import { useStructureResource } from "@molgpu/viewer/advanced";
 import { WobbleCoordinates } from "./coordinates.ts";
 import {
   figureLight,
@@ -52,6 +55,17 @@ type ViewerOptions = {
   picking?: boolean;
   /** use.gpu environment preset; "none" keeps the slot so switching is a shader change. */
   environment?: "none" | "park" | "pisa" | "road" | "field";
+  /**
+   * Click-to-focus: the orbit target and radius follow `curve` (null holds the
+   * plain camera) sampled at `time` seconds, through the same useCameraCurve
+   * binding a timeline story uses.
+   */
+  focusCamera?: {
+    curve: CameraCurve | null;
+    time: number;
+    /** The sampled target and radius, so the next move starts from them. */
+    onPose?: (pose: { target: readonly number[]; radius: number }) => void;
+  };
   /** Render into a linear RGB target and tone map to the canvas. */
   tonemap?: "linear" | "aces" | "hable" | "reinhard";
 };
@@ -135,6 +149,46 @@ const StreamOrbitControls = (
   return use(OrbitControls, {
     ...props,
     target: focus?.target as [number, number, number] ?? props.target,
+  });
+};
+
+/**
+ * Orbit controls whose target and radius come from a camera curve, evaluated
+ * against the nearest <Structure> at the enclosing timeline's seconds. Without
+ * a curve it holds the given pose (a constant two-frame curve), so starting a
+ * focus move never changes the tree.
+ */
+const CurveOrbitControls = (
+  { curve, onPose, ...props }: Parameters<typeof OrbitControls>[0] & {
+    curve: CameraCurve | null;
+    onPose?: (pose: { target: readonly number[]; radius: number }) => void;
+  },
+) => {
+  const hold = useMemo<CameraCurve>(() => {
+    const pose = {
+      bearing: 0,
+      pitch: 0,
+      target: props.target,
+      radius: props.radius,
+    };
+    return [{ time: 0, ...pose }, { time: 1, ...pose }];
+  }, [props.target, props.radius]);
+  // Padding keeps the focused residue's neighbours in view.
+  const pose = useCameraCurve(curve ?? hold, useStructureResource(), {
+    padding: 2.5,
+  });
+  useResource(() => {
+    const host = document.querySelector<HTMLElement>(props.host);
+    if (host) {
+      host.dataset.focusRadius = pose.radius.toFixed(3);
+      host.dataset.focusTarget = pose.target.map((v) => v.toFixed(3)).join(",");
+    }
+    onPose?.(pose);
+  }, [pose.radius, ...pose.target]);
+  return use(OrbitControls, {
+    ...props,
+    target: pose.target as [number, number, number],
+    radius: pose.radius,
   });
 };
 
@@ -329,6 +383,20 @@ const ViewerRoot = (initial: ViewerState) => {
             bearing: 0.6,
             pitch: options.figure ? 0.9 : 0.28,
           };
+          if (options.focusCamera) {
+            return use(Structure, {
+              data,
+              children: use(TimelineProvider, {
+                time: options.focusCamera.time,
+                children: use(CurveOrbitControls, {
+                  ...controls,
+                  curve: options.focusCamera.curve,
+                  onPose: options.focusCamera.onPose,
+                  children: pass(true),
+                }),
+              }),
+            });
+          }
           return options.coordinates
             ? use(Structure, {
               data,

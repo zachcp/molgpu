@@ -45,6 +45,8 @@ export interface SceneOptions {
   /** Pumice normal-perturbation amplitude (0 off) and noise frequency per Å. */
   readonly bump: number;
   readonly bumpScale: number;
+  /** Select: called with the atom row under a click when click-to-focus is on. */
+  readonly onFocusPick?: (row: number) => void;
   /** Compose measure layer: picked atom rows and the page's pick handler. */
   readonly measure?: {
     readonly picks: readonly number[];

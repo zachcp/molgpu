@@ -693,6 +693,107 @@ Deno.test("site landing page and maintained gallery routes", async () => {
         await page.getByLabel("Example structure").selectOption("1crn");
         await dataIs("fixture", "1crn");
         await dataIs("chargeProvenance", "imported:pqr");
+
+        // Click-to-focus: picking an atom eases the orbit target and radius
+        // to its residue through a camera curve, uploading nothing.
+        await page.getByLabel("Click to focus").check();
+        await waitForVisibleCanvas(page);
+        const wideRadius = Number(await host.getAttribute("data-focus-radius"));
+        await page.evaluate(async (url) => {
+          const counters = await import(url);
+          counters.enableInstrumentation();
+          counters.resetCounters();
+          globalThis.__focusCounters = counters;
+        }, `/@fs${instrumentationPath}`);
+        const atomPoint = await page.evaluate(async () => {
+          const canvas = document.querySelector("#molecule-canvas canvas");
+          const bitmap = await createImageBitmap(
+            await new Promise((resolve) => canvas.toBlob(resolve)),
+          );
+          const snapshot = new OffscreenCanvas(bitmap.width, bitmap.height);
+          const context = snapshot.getContext("2d");
+          context.drawImage(bitmap, 0, 0);
+          const { data, width, height } = context.getImageData(
+            0,
+            0,
+            bitmap.width,
+            bitmap.height,
+          );
+          bitmap.close();
+          const rect = canvas.getBoundingClientRect();
+          // The brightest pixel near the centre is a highlighted atom.
+          let best = null, brightest = 0;
+          for (let y = Math.floor(height * 0.3); y < height * 0.7; y += 2) {
+            for (let x = Math.floor(width * 0.3); x < width * 0.7; x += 2) {
+              const i = 4 * (y * width + x);
+              const sum = data[i] + data[i + 1] + data[i + 2];
+              if (sum > brightest) [best, brightest] = [[x, y], sum];
+            }
+          }
+          return [
+            rect.left + best[0] * rect.width / width,
+            rect.top + best[1] * rect.height / height,
+          ];
+        });
+        await page.mouse.click(atomPoint[0], atomPoint[1]);
+        await page.waitForFunction(
+          () => document.querySelector("#molecule-canvas")?.dataset.focusRow,
+          null,
+          { timeout: 30000 },
+        );
+        await dataIs("focusDone", "true");
+        const row = Number(await host.getAttribute("data-focus-row"));
+        const residue = crambin.topology.atoms.residue[row];
+        const focusRadius = Number(
+          await host.getAttribute("data-focus-radius"),
+        );
+        const target = (await host.getAttribute("data-focus-target"))
+          .split(",").map(Number);
+        // The residue's atom bounding box, from the fixture independently.
+        const lo = [Infinity, Infinity, Infinity];
+        const hi = [-Infinity, -Infinity, -Infinity];
+        crambin.topology.atoms.residue.forEach((r, i) => {
+          if (r !== residue) return;
+          for (let k = 0; k < 3; k++) {
+            const v = crambin.positions[3 * i + k];
+            lo[k] = Math.min(lo[k], v);
+            hi[k] = Math.max(hi[k], v);
+          }
+        });
+        const offset = Math.hypot(
+          ...target.map((v, k) => v - (lo[k] + hi[k]) / 2),
+        );
+        console.log(
+          "focus",
+          row,
+          residue,
+          wideRadius,
+          "->",
+          focusRadius,
+          offset,
+        );
+        assert(
+          focusRadius < wideRadius * 0.8 && offset < 1.5,
+          `the camera centres residue ${residue} (radius ${wideRadius} -> ${focusRadius}, target ${offset} Å off)`,
+        );
+        const focusWork = await page.evaluate(() => {
+          const counters = globalThis.__focusCounters;
+          const s = counters.snapshotCounters();
+          counters.disableInstrumentation();
+          return {
+            geometryBuilds: s.geometryBuilds,
+            gathers: s.gathers,
+            allocations: s.allocations,
+            uploadBytes: s.uploadBytes,
+          };
+        });
+        assertEquals(
+          focusWork,
+          { geometryBuilds: 0, gathers: 0, allocations: 0, uploadBytes: 0 },
+          "a focus move is camera-only",
+        );
+        await page.getByLabel("Click to focus").uncheck();
+        await dataIs("focusRow", "");
       }
       if (id === "surface") {
         assertStrictEquals(

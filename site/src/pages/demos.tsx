@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   attributeColumn,
   backboneDihedrals,
@@ -46,6 +46,8 @@ import {
 } from "../demos/scenes.tsx";
 import { disposeViewer, mountViewer } from "../demos/viewer.tsx";
 import { figureStage } from "../demos/figure.ts";
+import { FOCUS_SECONDS, focusCurve } from "../demos/focus.ts";
+import type { CameraCurve } from "@molgpu/viewer";
 import { addPick, formatMeasurement, measure } from "../demos/measurements.ts";
 
 const SCRUB_DURATION = 4;
@@ -181,6 +183,42 @@ export const DemosPage = () => {
     (row: number) => setPicks((current) => addPick(current, row)),
     [],
   );
+  // Select click-to-focus: a camera curve from the shown pose to the picked
+  // atom's residue, played on a local seconds clock.
+  const [focusMode, setFocusMode] = useState(false);
+  const [focus, setFocus] = useState<
+    { row: number; curve: CameraCurve } | null
+  >(null);
+  const [focusTime, setFocusTime] = useState(0);
+  const shownData = useRef<StructureData | null>(null);
+  const shownPose = useRef<{ target: readonly number[]; radius: number }>({
+    target: [0, 0, 0],
+    radius: 1,
+  });
+  const onPose = useCallback(
+    (pose: { target: readonly number[]; radius: number }) => {
+      shownPose.current = pose;
+    },
+    [],
+  );
+  const onFocusPick = useCallback((row: number) => {
+    const data = shownData.current;
+    if (!data) return;
+    setFocus({ row, curve: focusCurve(data, row, shownPose.current) });
+    setFocusTime(0);
+  }, []);
+  useEffect(() => {
+    if (!focus) return;
+    const start = performance.now();
+    let frame = 0;
+    const tick = (now: number) => {
+      const seconds = Math.min(FOCUS_SECONDS, (now - start) / 1000);
+      setFocusTime(seconds);
+      if (seconds < FOCUS_SECONDS) frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [focus]);
   const [surfaceColorMode, setSurfaceColorMode] = useState<SurfaceColorMode>(
     "neutral",
   );
@@ -254,6 +292,7 @@ export const DemosPage = () => {
     setTime(0);
     setPlaying(false);
   }, [id, effectiveMotion]);
+  useEffect(() => setFocus(null), [id, structureId, focusMode]);
   useEffect(() => {
     if (!playing || !scrubbed(id)) return;
     let frame = 0;
@@ -348,6 +387,9 @@ export const DemosPage = () => {
             bump,
             bumpScale,
             measure: { picks, onPick },
+            onFocusPick: demo.id === "select" && focusMode
+              ? onFocusPick
+              : undefined,
             materialMode,
             selectionMode,
             trajectoryMode,
@@ -379,6 +421,14 @@ export const DemosPage = () => {
           tonemap,
           figure: figure ? figureStage(data, shadows) : undefined,
         });
+        const focusing = demo.id === "select" && focusMode;
+        shownData.current = data;
+        if (host) {
+          host.dataset.focusRow = focusing && focus ? String(focus.row) : "";
+          host.dataset.focusDone = focusing && focus
+            ? String(focusTime >= FOCUS_SECONDS)
+            : "";
+        }
         if (host && demo.id === "compose" && layers.includes("measure")) {
           const result = measure(data.positions, picks);
           host.dataset.measureRows = picks.join(",");
@@ -395,7 +445,17 @@ export const DemosPage = () => {
           data,
           scene,
           camera,
-          scrubbed(demo.id) ? { ...options, time } : options,
+          scrubbed(demo.id) ? { ...options, time } : focusing
+            ? {
+              ...options,
+              picking: true,
+              focusCamera: {
+                curve: focus?.curve ?? null,
+                time: focusTime,
+                onPose,
+              },
+            }
+            : options,
         );
         if (status) status.textContent = "";
       } catch (error) {
@@ -429,6 +489,9 @@ export const DemosPage = () => {
     tonemap,
     figure,
     shadows,
+    focusMode,
+    focus,
+    focusTime,
     picks,
     materialMode,
     selectionMode,
@@ -536,6 +599,15 @@ export const DemosPage = () => {
         )}
         {demo.id === "select" && (
           <>
+            <label className="timeline-control">
+              <input
+                type="checkbox"
+                aria-label="Click to focus"
+                checked={focusMode}
+                onChange={(event) => setFocusMode(event.currentTarget.checked)}
+              />{" "}
+              Click an atom to fly to its residue
+            </label>
             <label className="timeline-control">
               Selection{" "}
               <select
