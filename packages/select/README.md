@@ -266,7 +266,7 @@ specially.
 One deliberate difference: `not X` (`query-in-selection :in-complement`) is the
 whole current input when `X` matches nothing. Mol* returns nothing there, so
 PyMOL `polymer and not hydro` would otherwise select nothing on structures
-without hydrogens. Atomic masses follow Mol* 5.12.0, including carbon 12.011 and
+without hydrogens. Atomic masses follow Mol* 5.13.0, including carbon 12.011 and
 iodine 126.9.
 
 ### Set operations and conversions

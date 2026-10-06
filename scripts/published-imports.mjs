@@ -76,8 +76,8 @@ export function checkPublishedImports(
         if (name !== "@molgpu/io" || (!dynamic && !typeOnly && !lazyOnly)) {
           errors.push(`Mol* must be a dynamic import in io: ${where}`);
         }
-        if (!/^npm:\/?molstar@5\.12\.0(\/|$)/.test(specifier)) {
-          errors.push(`Mol* must match tested pin 5.12.0: ${where}`);
+        if (!/^npm:\/?molstar@5\.13\.0(\/|$)/.test(specifier)) {
+          errors.push(`Mol* must match tested pin 5.13.0: ${where}`);
         }
       }
     };
