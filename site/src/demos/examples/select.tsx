@@ -9,6 +9,7 @@ import {
   chain,
   comp,
   element,
+  or,
   resolve,
   type SelectionQuery,
   toAtoms,
@@ -29,6 +30,9 @@ const SITES: Record<StructureId, SelectionQuery> = {
   "1tqn": within(5, comp(["HEM"])),
   // Inhibitor (chain A) atoms within 5 Å of angiogenin (chain B).
   "1a4y": and(chain("A"), within(5, chain("B"))),
+  // Archaeal lipids and squalene (the bilayer the crystal kept), plus the
+  // protein atoms within 4 Å of retinal.
+  "1c3w": or(within(0, comp(["LI1", "SQU"])), within(4, comp(["RET"]))),
 };
 
 export const selectionFor = (

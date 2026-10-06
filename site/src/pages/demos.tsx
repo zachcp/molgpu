@@ -8,6 +8,7 @@ import {
 import crambinUrl from "../../../packages/io/test/fixtures/1crn.bcif?url";
 import p450Url from "../../../packages/io/test/fixtures/1tqn.bcif?url";
 import complexUrl from "../../../packages/io/test/fixtures/1a4y.bcif?url";
+import membraneUrl from "../../../packages/io/test/fixtures/1c3w.bcif?url";
 import chargesUrl from "../../../packages/io/test/fixtures/1crn-amber.pqr?url";
 import { element, resolve } from "@molgpu/select";
 import {
@@ -56,6 +57,7 @@ const STRUCTURE_URLS: Record<StructureId, string> = {
   "1crn": crambinUrl,
   "1tqn": p450Url,
   "1a4y": complexUrl,
+  "1c3w": membraneUrl,
 };
 
 const LAYERS: ReadonlyArray<readonly [ComposeLayer, string]> = [

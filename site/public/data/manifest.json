@@ -32,6 +32,12 @@
       "description": "Protein complex (PDB 1A4Y), angiogenin bound to ribonuclease inhibitor."
     },
     {
+      "file": "1c3w.bcif",
+      "format": "bcif",
+      "kind": "structure",
+      "description": "Bacteriorhodopsin (PDB 1C3W), a seven-helix membrane proton pump with retinal and resolved archaeal lipids."
+    },
+    {
       "file": "1bna.bcif",
       "format": "bcif",
       "kind": "structure",
