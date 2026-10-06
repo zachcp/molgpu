@@ -167,7 +167,7 @@ measurement.
 | Data                     | Source and consumers                                                 | Meaning                                                                                                            |
 | ------------------------ | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
 | Atomic number and symbol | `ELEMENT_SYMBOL`; IO decoders, selection queries and dynamics labels | Atomic identity, with 0/empty for unknown; D/T and modern superheavy spellings are input aliases.                  |
-| Selection atomic mass    | `@molgpu/select` expression evaluation                               | Mol* 5.12.0 atomic-weight query values; no other package currently consumes these query semantics.                 |
+| Selection atomic mass    | `@molgpu/select` expression evaluation                               | Mol* 5.13.0 atomic-weight query values; no other package currently consumes these query semantics.                 |
 | Selection VDW radius     | `@molgpu/select` expression evaluation                               | Mol* `ElementVdwRadii` values and Mol* query default; `NaN` preserves an absent Mol* value.                        |
 | Display fallback radius  | `elementRadius`, `atomRadii` and IO's zero-PQR-radius fallback       | Common-element display radius, default 1.7 Å. A positive input `atoms.radius` overrides it.                        |
 | PQR radius               | `@molgpu/io` PQR attributes and `pqr:radius`                         | Value carried by the PQR file; zero remains in `pqr:radius`, while display radius falls back to the table default. |
