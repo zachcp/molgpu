@@ -89,8 +89,10 @@ interface Request {
 /** One demand-driven readback shared by CPU consumers below a provider. */
 export const CoordinateSnapshotBoundary: LC<{
   coordinates: Coordinates;
+  /** The buffer holds `coordinates.generation` (defaults to `ready`). */
+  current?: boolean;
   children: LiveElement;
-}> = ({ coordinates, children }) => {
+}> = ({ coordinates, current = coordinates.ready !== false, children }) => {
   const [requests, setRequests] = useState<Map<number, Request>>(new Map());
   const demand = [...requests.values()];
   const nextId = useRef(0);
@@ -170,7 +172,7 @@ export const CoordinateSnapshotBoundary: LC<{
   const maxHz = Math.max(...demand.map((request) => request.maxHz));
   const onPause = demand.some((request) => request.onPause);
   return provide(CoordinateSnapshotContext, context, [
-    demand.length && coordinates.ready !== false
+    demand.length && current
       ? use(ThrottledReadback, {
         token,
         maxHz,

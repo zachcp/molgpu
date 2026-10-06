@@ -25,8 +25,10 @@ import motionUrl from "../../../assets/1crn-motion.xtc?url";
 import { DynamicsScene } from "../dynamics.tsx";
 import type { SceneOptions } from "../options.ts";
 
-// 60 frames at 15 fps: the 0–4 s scrub range plays the loop once.
-const motion = frameCurve({ frames: 60, fps: 15, loop: true });
+// The XTC is a seamless loop (frame 60 would equal frame 0). Playing 59 frame
+// steps over the 4 s scrub range ends on frame 59, so the wrap to frame 0 is
+// one ordinary step instead of a held last frame and a jump.
+const motion = frameCurve({ frames: 59, fps: 59 / 4, loop: true });
 
 /** Mirrors the displayed frame onto the canvas host for the site test. */
 const FrameReadout = () => {
@@ -67,12 +69,16 @@ export const motionScene = (data: StructureData, options: SceneOptions) => {
             ? <Tube radius={0.48} color={[0.55, 0.85, 0.6, 1]} />
             : <BallAndStick ball={0.28} stick={0.22} color={byElement()} />}
           <FrameReadout />
-          <Ramachandran
-            corner="bottom-right"
-            size={200}
-            color={bySecondaryStructure()}
-            onPoints={publishRama}
-          />
+          {options.ramachandran
+            ? (
+              <Ramachandran
+                corner="bottom-right"
+                size={200}
+                color={bySecondaryStructure()}
+                onPoints={publishRama}
+              />
+            )
+            : null}
         </Trajectory>
       );
     case "wobble":

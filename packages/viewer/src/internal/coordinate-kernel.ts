@@ -32,14 +32,30 @@ import {
 const NONE: readonly StorageSource[] = [];
 
 /** Publish a provider's packed output buffer, which it now owns and destroys
- * on unmount, as the nearest coordinates for `children`. */
+ * on unmount, as the nearest coordinates for `children`.
+ *
+ * Pass `ready`, or `dispatched` (the latest generation whose dispatch was
+ * encoded). With `dispatched`, `ready` means this buffer has been written at
+ * least once: a later generation's dispatch is submitted before the frame's
+ * draws, so drawing stays on (molgpu-sept-icj.7: per-generation readiness hid
+ * every live consumer for a render on each trajectory frame). The CPU snapshot
+ * still waits until the published generation itself was dispatched, so a
+ * readback is never labelled with a generation the buffer does not hold. */
 export const Published: LC<{
   upstream: Coordinates;
   source: Pick<StorageTarget, "buffer">;
   generation: number;
-  ready: boolean;
+  ready?: boolean;
+  dispatched?: number;
   children: LiveElement;
-}> = ({ upstream, source, generation, ready, children }) => {
+}> = ({ upstream, source, generation, dispatched, children, ...props }) => {
+  // The first generation this buffer can hold: a reallocated output starts
+  // unwritten even if an earlier buffer was dispatched.
+  const since = useMemo(() => generation, [source.buffer]);
+  const ready = dispatched === undefined
+    ? props.ready ?? false
+    : dispatched >= since;
+  const current = dispatched === undefined ? ready : dispatched === generation;
   const requestRepaint = useContext(LoopContext);
   // ComputeBuffer's f32 target is packed; the vec3to4 accessor reconstructs
   // logical vec3 rows without imposing WGSL's 16-byte array<vec3> stride.
@@ -73,6 +89,7 @@ export const Published: LC<{
     coordinates,
     use(CoordinateSnapshotBoundary, {
       coordinates,
+      current,
       children,
     }),
   );
@@ -104,8 +121,8 @@ export interface CoordinateKernelProps {
  * Write a GPU coordinate transform: run `shader` over the upstream positions
  * into one packed buffer this component owns (destroyed on unmount) and publish
  * it as the nearest coordinates for `children`, with a generation that advances
- * per dispatch and CPU snapshots below it. Until the first dispatch lands,
- * descendants see `ready: false`.
+ * per dispatch and CPU snapshots below it. Until the first dispatch into its
+ * output lands, descendants see `ready: false`; later generations keep it true.
  */
 export const CoordinateKernel: LC<CoordinateKernelProps> = (
   { upstream, shader, args = [], sources = NONE, parameterKey, children },
@@ -121,7 +138,6 @@ export const CoordinateKernel: LC<CoordinateKernelProps> = (
   ]);
   const [dispatchedGeneration, setDispatchedGeneration] = useState(-1);
   const observe = useDispatchObservation(generation, setDispatchedGeneration);
-  const ready = dispatchedGeneration === generation;
   const output = () => {
     return use(Compute, {
       immediate: true,
@@ -149,7 +165,7 @@ export const CoordinateKernel: LC<CoordinateKernelProps> = (
         upstream,
         source,
         generation,
-        ready,
+        dispatched: dispatchedGeneration,
         children,
       }),
   });
