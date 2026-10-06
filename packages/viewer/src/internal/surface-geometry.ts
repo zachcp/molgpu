@@ -20,6 +20,9 @@ import { count } from "./instrumentation.ts";
 export interface SurfaceParams {
   readonly indices: Uint32Array;
   readonly probeRadius?: number;
+  /** Å added to every atom radius (the accessible surface grows atoms by the
+   * solvent probe). Defaults to 0. */
+  readonly inflate?: number;
   readonly resolution?: number;
   readonly maxBytes?: number;
 }
@@ -29,7 +32,11 @@ export type SurfaceGeometry = MarchingCubesMesh & {
 };
 type GatheredAtoms = SurfaceFieldAtoms & { readonly maxRadius: number };
 
-function gatherAtoms(data: StructureData, indices: Uint32Array): GatheredAtoms {
+function gatherAtoms(
+  data: StructureData,
+  indices: Uint32Array,
+  inflate = 0,
+): GatheredAtoms {
   count("gathers", "surface:atoms");
   const n = indices.length;
   const x = new Float32Array(n),
@@ -43,8 +50,8 @@ function gatherAtoms(data: StructureData, indices: Uint32Array): GatheredAtoms {
     x[k] = data.positions[i * 3];
     y[k] = data.positions[i * 3 + 1];
     z[k] = data.positions[i * 3 + 2];
-    radius[k] = R[i];
-    if (R[i] > maxRadius) maxRadius = R[i];
+    radius[k] = R[i] + inflate;
+    if (radius[k] > maxRadius) maxRadius = radius[k];
   }
   return { x, y, z, radius, count: n, maxRadius };
 }
@@ -86,11 +93,17 @@ export async function buildSurfaceGeometry(
   resource: StructureResource,
   params: SurfaceParams,
 ): Promise<SurfaceGeometry | null> {
-  const { indices, probeRadius = 1.4, resolution = 0.5, maxBytes } = params;
+  const {
+    indices,
+    probeRadius = 1.4,
+    inflate = 0,
+    resolution = 0.5,
+    maxBytes,
+  } = params;
   const { data } = resource;
   if (!indices.length) return null;
   count("geometryBuilds", "surface:mesh");
-  const atoms = gatherAtoms(data, indices);
+  const atoms = gatherAtoms(data, indices, inflate);
   assertGridBudget(
     predictGridDims(atoms, resolution),
     maxBytes !== undefined ? { maxBytes } : {},

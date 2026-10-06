@@ -150,6 +150,39 @@ Deno.test("surface vertices lie on the atom spheres for an asymmetric grid (fiel
   );
 });
 
+Deno.test("inflate grows each atom by the solvent probe: the accessible surface sits at r + 1.4", async () => {
+  // <Surface kind="accessible"> builds with inflate = probeRadius and a 0.25 Å
+  // smoothing probe. Far apart, every vertex then sits ~1.7 + 1.4 Å from its
+  // nearest atom, where the excluded surface above sits at 1.7 Å.
+  const xyz = [0, 0, 0, 14, 1, 3];
+  const data = carbons(xyz);
+  const mesh = await buildSurfaceGeometry(resourceOf(data), {
+    indices: Uint32Array.of(0, 1),
+    probeRadius: 0.25,
+    inflate: 1.4,
+    resolution: 0.5,
+  });
+  assert(mesh && mesh.vertexCount > 100);
+  let off = 0;
+  for (let v = 0; v < mesh.vertexCount; v++) {
+    const [px, py, pz] = [
+      mesh.positions[v * 3],
+      mesh.positions[v * 3 + 1],
+      mesh.positions[v * 3 + 2],
+    ];
+    const d = Math.min(
+      Math.hypot(px - xyz[0], py - xyz[1], pz - xyz[2]),
+      Math.hypot(px - xyz[3], py - xyz[4], pz - xyz[5]),
+    );
+    if (Math.abs(d - 3.1) > 0.5 * 0.75) off++;
+  }
+  assertStrictEquals(
+    off,
+    0,
+    `${off}/${mesh.vertexCount} vertices off the grown spheres`,
+  );
+});
+
 Deno.test("builds a real mesh with finite geometry and in-range source attribution", async () => {
   const data = smallCluster();
   const indices = Uint32Array.from({ length: 5 }, (_, i) => i);
