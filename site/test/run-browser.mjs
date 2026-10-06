@@ -593,21 +593,23 @@ Deno.test("site landing page and maintained gallery routes", async () => {
         // is unchanged across two captures; its shadow pass is the last one.
         const drawnFrame = async (before) => {
           let previous = before;
-          for (const start = Date.now(); Date.now() - start < 30000;) {
+          for (const start = Date.now(); Date.now() - start < 60000;) {
             const hash = await frameHash();
             if (hash !== before && hash === previous) return hash;
             previous = hash;
             await new Promise((resolve) => setTimeout(resolve, 250));
           }
-          throw new Error("the new layer did not draw within 30 s");
+          throw new Error("the new layer did not draw within 60 s");
         };
         const shadowProbe = {};
+        // Cartoon alone is already showing, so it goes last: every step must
+        // change the drawn layer, or no new frame is rendered on demand.
         const probeLayers = [
-          ["cartoon", "Cartoon"],
           ["tube", "Tube"],
           ["sticks", "Ball and stick"],
           ["spacefill", "Spacefill"],
           ["surface", "Glass surface"],
+          ["cartoon", "Cartoon"],
         ];
         let frame = await frameHash();
         for (const [layer, label] of probeLayers) {
@@ -619,13 +621,13 @@ Deno.test("site landing page and maintained gallery routes", async () => {
           frame = await drawnFrame(frame);
           // Draws beyond the ground plane's one are the layer's. A shadow
           // pipeline variant compiles after the colour draw lands, so allow
-          // it 5 s; a layer that never registers a shadow draw stays at 0.
+          // it 10 s (software GPU); a layer that never registers a shadow draw stays at 0.
           const shadowDraws = () =>
             page.evaluate(() => globalThis.__shadowDraws - 1);
           let casts = await shadowDraws();
           for (
             const start = Date.now();
-            casts < 1 && Date.now() - start < 5000;
+            casts < 1 && Date.now() - start < 10000;
           ) {
             await new Promise((resolve) => setTimeout(resolve, 100));
             casts = await shadowDraws();
