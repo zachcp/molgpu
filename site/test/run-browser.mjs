@@ -486,6 +486,157 @@ Deno.test("site landing page and maintained gallery routes", async () => {
         );
         await page.getByRole("button", { name: "Clear" }).click();
         await dataIs("measureRows", "");
+
+        // Figure mode: ground plane, SSAO and a shadow-mapped key light. It
+        // and orbiting are pass, light and camera changes: no molecular
+        // geometry build, gather, allocation or upload.
+        await page.getByLabel("Measure (click atoms)").uncheck();
+        await page.getByLabel("Cartoon").check();
+        await dataIs("layers", "cartoon");
+        await waitForVisibleCanvas(page);
+        await page.evaluate(async (url) => {
+          const counters = await import(url);
+          counters.enableInstrumentation();
+          counters.resetCounters();
+          globalThis.__figureCounters = counters;
+        }, `/@fs${instrumentationPath}`);
+        await page.getByLabel("Figure mode").check();
+        await dataIs("figure", "shadows");
+        await waitForVisibleCanvas(page);
+        const canvasBounds = await page.locator("#molecule-canvas canvas")
+          .boundingBox();
+        await page.mouse.move(
+          canvasBounds.x + canvasBounds.width / 2,
+          canvasBounds.y + canvasBounds.height / 2,
+        );
+        await page.mouse.down();
+        await page.mouse.move(
+          canvasBounds.x + canvasBounds.width / 2 + 60,
+          canvasBounds.y + canvasBounds.height / 2,
+          { steps: 6 },
+        );
+        await page.mouse.up();
+        await dataIs("orbit", "dragging");
+        const figureWork = await page.evaluate(() => {
+          const counters = globalThis.__figureCounters;
+          const s = counters.snapshotCounters();
+          counters.disableInstrumentation();
+          return {
+            geometryBuilds: s.geometryBuilds,
+            gathers: s.gathers,
+            allocations: s.allocations,
+            uploadBytes: s.uploadBytes,
+          };
+        });
+        assertEquals(
+          figureWork,
+          { geometryBuilds: 0, gathers: 0, allocations: 0, uploadBytes: 0 },
+          "figure mode and orbiting rebuild and upload nothing",
+        );
+
+        // Shadow probe (molgpu-sept-jcc). A representation casts iff it draws
+        // into use.gpu's depth-only shadow-map pass (labelled "<ShadowPass>
+        // Atlas #n" in workbench 0.20.0). Wrapping beginRenderPass records
+        // the draws in the last such pass; the ground plane is one of them.
+        await page.evaluate(() => {
+          const begin = GPUCommandEncoder.prototype.beginRenderPass;
+          GPUCommandEncoder.prototype.beginRenderPass = function (descriptor) {
+            const pass = begin.call(this, descriptor);
+            if (!descriptor.label?.startsWith("<ShadowPass>")) return pass;
+            let draws = 0;
+            for (const name of ["draw", "drawIndexed", "drawIndirect"]) {
+              const call = pass[name].bind(pass);
+              pass[name] = (...args) => {
+                draws++;
+                return call(...args);
+              };
+            }
+            const end = pass.end.bind(pass);
+            pass.end = () => {
+              globalThis.__shadowDraws = draws;
+              globalThis.__shadowPasses = (globalThis.__shadowPasses ?? 0) + 1;
+              return end();
+            };
+            return pass;
+          };
+        });
+        const frameHash = () =>
+          page.evaluate(async () => {
+            const canvas = document.querySelector("#molecule-canvas canvas");
+            const bitmap = await createImageBitmap(
+              await new Promise((resolve) => canvas.toBlob(resolve)),
+            );
+            const snapshot = new OffscreenCanvas(bitmap.width, bitmap.height);
+            const context = snapshot.getContext("2d");
+            context.drawImage(bitmap, 0, 0);
+            const { data } = context.getImageData(
+              0,
+              0,
+              bitmap.width,
+              bitmap.height,
+            );
+            bitmap.close();
+            let hash = 0;
+            for (let i = 0; i < data.length; i += 4) {
+              hash = (hash * 31 + data[i] + data[i + 1] + data[i + 2]) | 0;
+            }
+            return hash;
+          });
+        // The displayed frame differs from `before` (the new layer drew) and
+        // is unchanged across two captures; its shadow pass is the last one.
+        const drawnFrame = async (before) => {
+          let previous = before;
+          for (const start = Date.now(); Date.now() - start < 30000;) {
+            const hash = await frameHash();
+            if (hash !== before && hash === previous) return hash;
+            previous = hash;
+            await new Promise((resolve) => setTimeout(resolve, 250));
+          }
+          throw new Error("the new layer did not draw within 30 s");
+        };
+        const shadowProbe = {};
+        const probeLayers = [
+          ["cartoon", "Cartoon"],
+          ["tube", "Tube"],
+          ["sticks", "Ball and stick"],
+          ["spacefill", "Spacefill"],
+          ["surface", "Glass surface"],
+        ];
+        let frame = await frameHash();
+        for (const [layer, label] of probeLayers) {
+          for (const [other, otherLabel] of probeLayers) {
+            if (other !== layer) await page.getByLabel(otherLabel).uncheck();
+          }
+          await page.getByLabel(label).check();
+          await dataIs("layers", layer);
+          frame = await drawnFrame(frame);
+          // Draws beyond the ground plane's one are the layer's. A shadow
+          // pipeline variant compiles after the colour draw lands, so allow
+          // it 5 s; a layer that never registers a shadow draw stays at 0.
+          const shadowDraws = () =>
+            page.evaluate(() => globalThis.__shadowDraws - 1);
+          let casts = await shadowDraws();
+          for (
+            const start = Date.now();
+            casts < 1 && Date.now() - start < 5000;
+          ) {
+            await new Promise((resolve) => setTimeout(resolve, 100));
+            casts = await shadowDraws();
+          }
+          shadowProbe[layer] = casts;
+          frame = await frameHash();
+        }
+        console.log(
+          "shadow probe (draws in shadow pass)",
+          JSON.stringify(shadowProbe),
+        );
+        assertEquals(
+          shadowProbe,
+          { cartoon: 1, tube: 0, sticks: 0, spacefill: 0, surface: 0 },
+          "only the cartoon's shaded faces cast; tube lines, ball-and-stick, spacefill points and the transparent surface do not",
+        );
+        await page.getByLabel("Figure mode").uncheck();
+        await dataIs("figure", "");
       }
       if (id === "select") {
         const before = Number(await host.getAttribute("data-selected-count"));
