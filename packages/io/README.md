@@ -20,14 +20,14 @@ deno add jsr:@molgpu/io jsr:@molgpu/table
 | Package         | Range               | Kind       | Notes                                                                                                                                                                                                                                               |
 | --------------- | ------------------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `@molgpu/table` | caret, same release | dependency | Provides `StructureData`; compatible JSR caret ranges resolve one shared table copy.                                                                                                                                                                |
-| `molstar`       | `5.12.0`            | dependency | Loaded dynamically for BCIF, molecular surfaces, CCP4/MRC, text selections and XTC frame decoding. Bundlers can place these imports in lazy chunks; callers using other formats need not load them. Loader failures are reported through `IoError`. |
+| `molstar`       | `5.13.0`            | dependency | Loaded dynamically for BCIF, molecular surfaces, CCP4/MRC, text selections and XTC frame decoding. Bundlers can place these imports in lazy chunks; callers using other formats need not load them. Loader failures are reported through `IoError`. |
 
 Keep all `@molgpu/*` packages on compatible versions so the application resolves
 one shared `@molgpu/table`; see
 [one shared table copy](https://jsr.io/@molgpu/table#one-shared-table-copy).
 
 Mol* is a regular npm dependency, loaded lazily. IO pins the tested version
-`5.12.0` exactly; upgrades require parser and scientific-oracle validation
+`5.13.0` exactly; upgrades require parser and scientific-oracle validation
 before changing the published pin.
 
 ## Example
