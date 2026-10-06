@@ -15,6 +15,8 @@ import {
   AmbientLight,
   DeviceContext,
   DirectionalLight,
+  Environment,
+  LinearRGB,
   OrbitCamera,
   Pass,
   Queue,
@@ -41,6 +43,10 @@ type ViewerOptions = {
   coordinates?: boolean;
   lightFigure?: boolean;
   picking?: boolean;
+  /** use.gpu environment preset; "none" keeps the slot so switching is a shader change. */
+  environment?: "none" | "park" | "pisa" | "road" | "field";
+  /** Render into a linear RGB target and tone map to the canvas. */
+  tonemap?: "linear" | "aces" | "hable" | "reinhard";
 };
 
 type ViewerState = {
@@ -54,6 +60,8 @@ type ViewerState = {
 const clamp = (value: number, lower: number, upper: number) =>
   Math.max(lower, Math.min(upper, value));
 const ALL_ATOMS = all("atom");
+const srgbToLinear = (c: number) =>
+  c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
 
 /** Controlled camera state driven by AutoCanvas's mouse, wheel, and touch events. */
 const OrbitControls = (
@@ -233,7 +241,7 @@ const ViewerRoot = (initial: ViewerState) => {
       children: [
         use(GpuReady, { host, started }),
         (() => {
-          const pass = (insideStructure: boolean) =>
+          const scenePass = (insideStructure: boolean) =>
             use(Pass, {
               lights: true,
               oit: options.oit,
@@ -266,15 +274,39 @@ const ViewerRoot = (initial: ViewerState) => {
                     ? 1.55
                     : 1.25,
                 }),
-                use(TimelineProvider, {
-                  time: options.time ?? 0,
-                  children: insideStructure ? scene(data) : use(Structure, {
-                    data,
-                    children: scene(data),
-                  }),
-                }),
+                (() => {
+                  const content = use(TimelineProvider, {
+                    time: options.time ?? 0,
+                    children: insideStructure ? scene(data) : use(Structure, {
+                      data,
+                      children: scene(data),
+                    }),
+                  });
+                  return options.environment
+                    ? use(Environment, {
+                      preset: options.environment,
+                      children: content,
+                    })
+                    : content;
+                })(),
               ],
             });
+          const background = options.lightFigure
+            ? [0.22, 0.28, 0.36, 1]
+            : [0.035, 0.055, 0.09, 1];
+          // A tone-mapped view renders the pass into a linear RGB target first.
+          const pass = (insideStructure: boolean) =>
+            options.tonemap
+              ? use(LinearRGB, {
+                tonemap: options.tonemap,
+                samples: 4,
+                // The target is linear; the canvas clear colour is sRGB.
+                backgroundColor: background.map((c, i) =>
+                  i < 3 ? srgbToLinear(c) : c
+                ),
+                children: scenePass(insideStructure),
+              })
+              : scenePass(insideStructure);
           const controls = {
             host,
             ...camera,

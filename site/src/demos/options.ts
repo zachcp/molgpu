@@ -8,6 +8,9 @@ import type {
 export type SurfaceMode = "opaque" | "glass" | "pumice";
 export type SurfaceColorMode = "neutral" | "element";
 export type MaterialMode = "matte" | "metal" | "basic" | "normal";
+/** use.gpu's built-in spherical-harmonic environment presets. */
+export type EnvironmentPreset = "none" | "park" | "pisa" | "road" | "field";
+export type Tonemap = "linear" | "aces" | "hable" | "reinhard";
 export type SelectionMode =
   | "site"
   | "cysteine"
@@ -35,6 +38,13 @@ export interface SceneOptions {
   readonly isoSigma: number;
   /** Surface clip depth from the viewer's side: 0 off, 0.5 halfway, 1 all. */
   readonly clipDepth: number;
+  /** PBR roughness for matte, metal, glass and pumice (0–1). */
+  readonly roughness: number;
+  /** Glass uses use.gpu's FresnelMaterialEffect (PBR materials only). */
+  readonly fresnel: boolean;
+  /** Pumice normal-perturbation amplitude (0 off) and noise frequency per Å. */
+  readonly bump: number;
+  readonly bumpScale: number;
   /** Compose measure layer: picked atom rows and the page's pick handler. */
   readonly measure?: {
     readonly picks: readonly number[];
