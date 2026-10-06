@@ -1,6 +1,7 @@
 import { coordinateBounds, type StructureData } from "@molgpu/table";
 import { comp, resolve, toAtoms } from "@molgpu/select";
 import { cameraFor } from "./data.ts";
+import type { FigureStage } from "./figure.ts";
 
 export type DemoId = "compose" | "select" | "surface" | "motion" | "volume";
 export type StructureId = "1crn" | "1tqn" | "1a4y";
@@ -66,7 +67,7 @@ export interface DemoOptions {
   time?: number;
   postprocess?: boolean;
   coordinates?: boolean;
-  lightFigure?: boolean;
+  figure?: FigureStage;
   picking?: boolean;
   environment?: "none" | "park" | "pisa" | "road" | "field";
   tonemap?: "linear" | "aces" | "hable" | "reinhard";
@@ -143,7 +144,7 @@ export const legacyDemos: Readonly<
   ribbon: { id: "compose", preset: { layers: ["cartoon"] } },
   figure: {
     id: "compose",
-    preset: { layers: ["cartoon", "surface", "sulfur"] },
+    preset: { layers: ["cartoon", "surface", "sulfur"], figure: true },
   },
   charge: {
     id: "select",
@@ -160,6 +161,8 @@ export const legacyDemos: Readonly<
 
 export interface DemoPreset {
   layers?: readonly ComposeLayer[];
+  /** Compose figure mode (ground plane, shadows, SSAO). */
+  figure?: boolean;
   selectionMode?: "site" | "cysteine" | "sulfur" | "all";
   fieldMode?: "element" | "charge";
   worldLight?: boolean;
@@ -176,10 +179,12 @@ export const demoOptions = (
     worldLight: boolean;
     layers?: readonly ComposeLayer[];
     environment?: DemoOptions["environment"];
+    figure?: DemoOptions["figure"];
     tonemap?: DemoOptions["tonemap"];
   },
 ): DemoOptions => ({
   ...demo.options,
+  ...(demo.id === "compose" && state.figure ? { figure: state.figure } : {}),
   ...(demo.id === "compose" && state.layers?.includes("measure")
     ? { picking: true }
     : {}),

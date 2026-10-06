@@ -32,6 +32,12 @@ import {
   type ViewerElement,
 } from "@molgpu/viewer";
 import { WobbleCoordinates } from "./coordinates.ts";
+import {
+  figureLight,
+  type FigureStage,
+  GroundPlane,
+  KEY_DIRECTION,
+} from "./figure.ts";
 
 export type Scene = (data: StructureData) => ViewerElement;
 
@@ -41,7 +47,8 @@ type ViewerOptions = {
   time?: number;
   postprocess?: boolean;
   coordinates?: boolean;
-  lightFigure?: boolean;
+  /** Figure mode: ground plane, SSAO and (optionally) a shadow-mapped key light. */
+  figure?: FigureStage;
   picking?: boolean;
   /** use.gpu environment preset; "none" keeps the slot so switching is a shader change. */
   environment?: "none" | "park" | "pisa" | "road" | "field";
@@ -83,6 +90,8 @@ const OrbitControls = (
 ) => {
   const [bearing, setBearing] = useState(initialBearing);
   const [pitch, setPitch] = useState(initialPitch);
+  // A new initial pitch (figure mode looks down at its ground) resets the orbit.
+  useResource(() => setPitch(initialPitch), [initialPitch]);
   const [zoom, setZoom] = useState(1);
   const mouse = useMouseState();
   const wheel = useWheelState();
@@ -235,7 +244,7 @@ const ViewerRoot = (initial: ViewerState) => {
     children: use(AutoCanvas, {
       selector: host,
       samples: 4,
-      backgroundColor: options.lightFigure
+      backgroundColor: options.figure
         ? [0.22, 0.28, 0.36, 1]
         : [0.035, 0.055, 0.09, 1],
       children: [
@@ -246,9 +255,12 @@ const ViewerRoot = (initial: ViewerState) => {
               lights: true,
               oit: options.oit,
               picking: options.picking,
+              ...(options.figure
+                ? { shadows: options.figure.shadows, ssao: 0.35 }
+                : {}),
               ...(options.postprocess
                 ? {
-                  ssao: options.lightFigure ? 0.12 : 0.35,
+                  ssao: 0.35,
                   outline: {
                     outer: 1.5,
                     inner: 0,
@@ -261,18 +273,19 @@ const ViewerRoot = (initial: ViewerState) => {
                   color: [0.7, 0.8, 1],
                   intensity: options.worldLight
                     ? 0.1
-                    : options.lightFigure
-                    ? 0.7
+                    : options.figure
+                    ? 0.55
                     : 0.35,
                 }),
                 use(DirectionalLight, {
-                  direction: [-1, -2, -1.5],
+                  direction: KEY_DIRECTION,
                   color: [1, 0.95, 0.88],
                   intensity: options.worldLight
                     ? 1.8
-                    : options.lightFigure
+                    : options.figure
                     ? 1.55
                     : 1.25,
+                  ...(options.figure ? figureLight(options.figure) : {}),
                 }),
                 (() => {
                   const content = use(TimelineProvider, {
@@ -289,9 +302,10 @@ const ViewerRoot = (initial: ViewerState) => {
                     })
                     : content;
                 })(),
+                options.figure ? use(GroundPlane, options.figure) : null,
               ],
             });
-          const background = options.lightFigure
+          const background = options.figure
             ? [0.22, 0.28, 0.36, 1]
             : [0.035, 0.055, 0.09, 1];
           // A tone-mapped view renders the pass into a linear RGB target first.
@@ -310,8 +324,10 @@ const ViewerRoot = (initial: ViewerState) => {
           const controls = {
             host,
             ...camera,
+            // Figure mode steps back to frame the ground and its shadow.
+            radius: options.figure ? camera.radius * 1.35 : camera.radius,
             bearing: 0.6,
-            pitch: 0.28,
+            pitch: options.figure ? 0.9 : 0.28,
           };
           return options.coordinates
             ? use(Structure, {

@@ -45,6 +45,7 @@ import {
   type TrajectoryMode,
 } from "../demos/scenes.tsx";
 import { disposeViewer, mountViewer } from "../demos/viewer.tsx";
+import { figureStage } from "../demos/figure.ts";
 import { addPick, formatMeasurement, measure } from "../demos/measurements.ts";
 
 const SCRUB_DURATION = 4;
@@ -193,6 +194,8 @@ export const DemosPage = () => {
     defaultRoughness(initial.preset?.materialMode ?? "matte"),
   );
   const [fresnel, setFresnel] = useState(true);
+  const [figure, setFigure] = useState(initial.preset?.figure ?? false);
+  const [shadows, setShadows] = useState(true);
   const [bump, setBump] = useState(0.6);
   const [bumpScale, setBumpScale] = useState(1.2);
   const [environment, setEnvironment] = useState<EnvironmentPreset>("none");
@@ -226,6 +229,7 @@ export const DemosPage = () => {
   const applyPreset = (preset?: DemoPreset) => {
     if (!preset) return;
     if (preset.layers) setLayers(preset.layers);
+    if (preset.figure !== undefined) setFigure(preset.figure);
     if (preset.selectionMode) setSelectionMode(preset.selectionMode);
     if (preset.fieldMode) setFieldMode(preset.fieldMode);
     if (preset.worldLight !== undefined) setWorldLight(preset.worldLight);
@@ -303,6 +307,9 @@ export const DemosPage = () => {
           host.dataset.motion = demo.id === "motion" ? effectiveMotion : "";
           host.dataset.volume = demo.id === "volume" ? effectiveVolume : "";
           host.dataset.layers = demo.id === "compose" ? layers.join(",") : "";
+          host.dataset.figure = demo.id === "compose" && figure
+            ? (shadows ? "shadows" : "plane")
+            : "";
           if (demo.id === "select") {
             host.dataset.selectedCount = String(
               selectionFor(data, selectionMode, structure.id).indices.length,
@@ -370,6 +377,7 @@ export const DemosPage = () => {
           layers,
           environment,
           tonemap,
+          figure: figure ? figureStage(data, shadows) : undefined,
         });
         if (host && demo.id === "compose" && layers.includes("measure")) {
           const result = measure(data.positions, picks);
@@ -419,6 +427,8 @@ export const DemosPage = () => {
     bumpScale,
     environment,
     tonemap,
+    figure,
+    shadows,
     picks,
     materialMode,
     selectionMode,
@@ -481,6 +491,30 @@ export const DemosPage = () => {
               </label>
             ))}
           </fieldset>
+        )}
+        {demo.id === "compose" && (
+          <>
+            <label className="timeline-control">
+              <input
+                type="checkbox"
+                aria-label="Figure mode"
+                checked={figure}
+                onChange={(event) => setFigure(event.currentTarget.checked)}
+              />{" "}
+              Figure mode (ground plane, SSAO)
+            </label>
+            {figure && (
+              <label className="timeline-control">
+                <input
+                  type="checkbox"
+                  aria-label="Cast shadows"
+                  checked={shadows}
+                  onChange={(event) => setShadows(event.currentTarget.checked)}
+                />{" "}
+                Key-light shadows
+              </label>
+            )}
+          </>
         )}
         {demo.id === "compose" && layers.includes("measure") && (
           <div
