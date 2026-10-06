@@ -4,7 +4,7 @@ import { cameraFor } from "./data.ts";
 import type { FigureStage } from "./figure.ts";
 
 export type DemoId = "compose" | "select" | "surface" | "motion" | "volume";
-export type StructureId = "1crn" | "1tqn" | "1a4y";
+export type StructureId = "1crn" | "1tqn" | "1a4y" | "1c3w";
 
 export interface StructureDefinition {
   readonly id: StructureId;
@@ -43,6 +43,15 @@ export const structures: readonly StructureDefinition[] = [
     description:
       "Ribonuclease inhibitor bound to angiogenin; two copies in the unit.",
     site: "Inhibitor at the angiogenin interface",
+    charges: false,
+    trajectory: false,
+  },
+  {
+    id: "1c3w",
+    title: "Bacteriorhodopsin (1C3W)",
+    description:
+      "Light-driven proton pump: seven transmembrane helices around retinal, with resolved archaeal membrane lipids.",
+    site: "Membrane lipids and the retinal pocket",
     charges: false,
     trajectory: false,
   },

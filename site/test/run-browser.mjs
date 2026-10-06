@@ -14,6 +14,13 @@ import { demos } from "../src/demos/registry.ts";
 import { dihedralAngle } from "@molgpu/table";
 import { structureFromBcif } from "@molgpu/io";
 
+// The membrane example, read independently of the page.
+const bacteriorhodopsin = await structureFromBcif(
+  await Deno.readFile(
+    new URL("../../packages/io/test/fixtures/1c3w.bcif", import.meta.url),
+  ),
+);
+
 // The viewer's dev counters, imported in the page through Vite's /@fs route.
 const instrumentationPath = fromFileUrl(
   new URL(
@@ -666,7 +673,11 @@ Deno.test("site landing page and maintained gallery routes", async () => {
         // without shipped charges fall back to element colour.
         await page.getByLabel("Selection query").selectOption("site");
         for (
-          const [structure, atoms] of [["1tqn", "3999"], ["1a4y", "8939"]]
+          const [structure, atoms] of [
+            ["1tqn", "3999"],
+            ["1a4y", "8939"],
+            ["1c3w", "2073"],
+          ]
         ) {
           await page.getByLabel("Example structure").selectOption(structure);
           await dataIs("fixture", structure);
@@ -675,6 +686,23 @@ Deno.test("site landing page and maintained gallery routes", async () => {
             Number(await host.getAttribute("data-selected-count")) > 0,
             `${structure} site preset selects atoms`,
           );
+          if (structure === "1c3w") {
+            // The membrane preset holds every lipid and squalene atom.
+            const { atoms: rows, residues } = bacteriorhodopsin.topology;
+            let lipid = 0;
+            for (let i = 0; i < rows.count; i++) {
+              if (["LI1", "SQU"].includes(residues.comp[rows.residue[i]])) {
+                lipid++;
+              }
+            }
+            const selected = Number(
+              await host.getAttribute("data-selected-count"),
+            );
+            assert(
+              lipid > 100 && selected > lipid,
+              `1C3W preset covers its ${lipid} lipid atoms and the retinal pocket (${selected})`,
+            );
+          }
           assertStrictEquals(
             await page.getByLabel("Color field").inputValue(),
             "element",
