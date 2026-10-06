@@ -22,7 +22,11 @@ export type EncodePasses = (
 
 /**
  * A coordinate provider built from raw compute stages (reductions, graph
- * traversals) that one linked kernel cannot express. It owns one packed
+ * traversals). Ordered use.gpu `Kernel` stages can express `<Superpose>`, but
+ * measured no faster and cost a split provider mechanism, f32 parameters and a
+ * status copy outside the pass; `<Unwrap>` has a data-dependent dispatch count
+ * and clears buffers between stages. Both stay raw for those reasons
+ * (docs/findings/2026-10-04-superpose-ordered-kernels.md). It owns one packed
  * output. Once per content generation, during render, it encodes every stage
  * into one command buffer and submits it. The submit lands after the upstream
  * provider's dispatch and before any descendant's, so all stages read the same
