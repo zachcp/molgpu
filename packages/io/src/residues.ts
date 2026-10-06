@@ -5,6 +5,10 @@ type PolymerKind = "protein" | "rna" | "dna" | "other";
 // mol-model/structure/model/types.js (AminoAcidNamesL/D, RnaBaseNames,
 // DnaBaseNames), used to classify each residue by its `comp` (label_comp_id)
 // so trace/cartoon consumers can pick guide atoms without re-deriving this.
+// Still identical to Mol* 5.13.0. The copy is kept on purpose: importing these
+// sets from Mol* would put the classifier behind the lazy Mol* load. Mol* 6.0
+// is expected to publish ESM classes that tree-shake, so revisit then: import
+// these names (and any other ported tables) from Mol* and remove the copies.
 export const AMINO_ACID_NAMES = new Set([
   "HIS",
   "ARG",
