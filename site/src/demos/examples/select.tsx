@@ -14,7 +14,12 @@ import {
   toAtoms,
   within,
 } from "@molgpu/select";
-import { BallAndStick, Spacefill } from "@molgpu/viewer";
+import {
+  BallAndStick,
+  PickingProvider,
+  Spacefill,
+  usePicking,
+} from "@molgpu/viewer";
 import type { SceneOptions, SelectionMode } from "../options.ts";
 import type { StructureId } from "../registry.ts";
 
@@ -39,15 +44,38 @@ export const selectionFor = (
     ? resolve(all("atom"), data)
     : resolve(element(16), data);
 
+/** Report the atom row under each left press to the page. */
+const FocusListener = ({ onPick }: { onPick: (row: number) => void }) => {
+  usePicking({ onPick: (hit) => hit && onPick(hit.atom) });
+  return null;
+};
+
 /** Select + color: a resolved query drawn over a dimmed context. */
 export const selectScene = (data: StructureData, options: SceneOptions) => {
   const everything = options.selectionMode === "all";
   const color = options.fieldMode === "charge"
     ? byCharge({ domain: [-0.8, 0.8] })
     : byElement();
+  const focus = options.onFocusPick;
+  // Translucent context, so a buried site (a heme pocket) stays visible. With
+  // click-to-focus it is also what a click picks.
+  const context = (
+    <Spacefill
+      scale={0.35}
+      color={[0.3, 0.33, 0.4, 1]}
+      opacity={0.18}
+      pickable={!!focus}
+    />
+  );
   return [
-    // Translucent context, so a buried site (a heme pocket) stays visible.
-    <Spacefill scale={0.35} color={[0.3, 0.33, 0.4, 1]} opacity={0.18} />,
+    focus
+      ? (
+        <PickingProvider>
+          {context}
+          <FocusListener onPick={focus} />
+        </PickingProvider>
+      )
+      : context,
     everything ? <Spacefill scale={0.6} color={color} /> : (
       <BallAndStick
         select={selectionFor(data, options.selectionMode, options.structure)}
