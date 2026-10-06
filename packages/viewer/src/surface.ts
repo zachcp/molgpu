@@ -115,8 +115,12 @@ const FieldFaces: LC<{
   return attributes.ready ? render(colors) : null;
 };
 
+/** Rolling probe (Å) that smooths the accessible surface's sphere seams. */
+const ACCESSIBLE_SMOOTHING = 0.25;
+
 /**
- * A molecular (solvent-excluded) surface: Mol*'s scalar-field kernel lifted
+ * A molecular (solvent-excluded, or with `kind: "accessible"` solvent-
+ * accessible) surface: Mol*'s scalar-field kernel lifted
  * through @molgpu/io, extracted with @molgpu/geo's marching-cubes port, and
  * drawn via FaceLayer. `select` (a @molgpu/select atom Selection) restricts
  * which atoms build the surface; without one, the active model/primary-
@@ -145,12 +149,18 @@ const FieldFaces: LC<{
  * it, and the last finished mesh stays drawn meanwhile, so under playback the
  * mesh can lag the colour by a build. A probe radius below two resolution
  * steps, or an atom with an unusually dense neighbourhood, keeps the CPU build
- * from coordinate snapshots (4 Hz and on pause) instead.
+ * from coordinate snapshots (4 Hz and on pause) instead; so does the
+ * accessible kind, whose smoothing probe is below that bound.
  */
 const SurfaceResolved: ViewerComponent<
   {
     /** A molecular query or exact atom selection. Defaults to first-model/primary-altloc atoms. */
     select?: Selection | null;
+    /** "excluded" (default): the solvent-excluded surface a `probeRadius`
+     * sphere rolls out. "accessible": the solvent-accessible surface, the
+     * union of atoms grown by `probeRadius`, which closes channels the probe
+     * fits through. */
+    kind?: "excluded" | "accessible";
     /** Ångström probe radius; defaults to 1.4 (water). */
     probeRadius?: number;
     /** Grid spacing in Ångströms; defaults to 0.5. Smaller is finer and slower. */
@@ -169,6 +179,7 @@ const SurfaceResolved: ViewerComponent<
 > = (
   {
     select,
+    kind = "excluded",
     probeRadius = 1.4,
     resolution = 0.5,
     maxBytes,
@@ -205,24 +216,39 @@ const SurfaceResolved: ViewerComponent<
   const live = !!coordinates &&
     (coordinates.source !== root?.sources?.positions ||
       coordinates.generation !== resource.positionsRevision);
-  const radii = useMemo(() => atomRadii(resource.data), [
-    resource.data.topology,
-  ]);
+  if (kind !== "excluded" && kind !== "accessible") {
+    throw new TypeError("Surface kind must be 'excluded' or 'accessible'");
+  }
+  // The accessible surface is the excluded surface of atoms grown by the
+  // probe, rolled by a small smoothing probe instead of the solvent one.
+  const accessible = kind === "accessible";
+  const fieldProbe = accessible ? ACCESSIBLE_SMOOTHING : probeRadius;
+  const inflate = accessible ? probeRadius : 0;
+  const radii = useMemo(() => {
+    const base = atomRadii(resource.data);
+    return inflate ? base.map((r) => r + inflate) : base;
+  }, [resource.data.topology, inflate]);
   const request = useMemo(
-    () => ({ rows: indices, radii, probeRadius, resolution, maxBytes }),
-    [indices, radii, probeRadius, resolution, maxBytes],
+    () => ({
+      rows: indices,
+      radii,
+      probeRadius: fieldProbe,
+      resolution,
+      maxBytes,
+    }),
+    [indices, radii, fieldProbe, resolution, maxBytes],
   );
   const gpu = useGpuSurface(
     coordinates,
     request,
-    live && indices.length > 0 && probeRadius >= 2 * resolution,
+    live && indices.length > 0 && fieldProbe >= 2 * resolution,
   );
   const onGpu = live && indices.length > 0 &&
-    probeRadius >= 2 * resolution && !gpu.unsupported;
+    fieldProbe >= 2 * resolution && !gpu.unsupported;
   const snapshot = useCoordinateSnapshot({ enabled: !onGpu });
   const params = useMemo(
-    () => ({ indices, probeRadius, resolution, maxBytes }),
-    [indices, probeRadius, resolution, maxBytes],
+    () => ({ indices, probeRadius: fieldProbe, inflate, resolution, maxBytes }),
+    [indices, fieldProbe, inflate, resolution, maxBytes],
   );
   const [cpuMesh, cpuFailure, cpuPending] = useGeometryJob(
     onGpu ? null : snapshot?.resource ?? null,
@@ -321,13 +347,19 @@ const SurfaceResolved: ViewerComponent<
   });
 };
 
-/** Draw a solvent-excluded molecular surface around the selected atoms.
+/** Draw a solvent-excluded (or, with `kind="accessible"`, solvent-accessible)
+ * molecular surface around the selected atoms.
  * Supported moving grids update GPU geometry; other cases use CPU snapshots.
  * Resolution and probeRadius control geometry; color and opacity style it. */
 export const Surface: ViewerComponent<
   & {
     /** A molecular query or exact atom selection. Defaults to first-model/primary-altloc atoms. */
     select?: SelectionInput;
+    /** "excluded" (default): the solvent-excluded surface a `probeRadius`
+     * sphere rolls out. "accessible": the solvent-accessible surface, the
+     * union of atoms grown by `probeRadius`, which closes channels the probe
+     * fits through. */
+    kind?: "excluded" | "accessible";
     /** Ångström probe radius; defaults to 1.4 (water). */
     probeRadius?: number;
     /** Grid spacing in Ångströms; defaults to 0.5. Smaller is finer and slower. */
