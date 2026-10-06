@@ -289,3 +289,34 @@ fieldset.timeline-control {
     min-height: 400px;
   }
 }
+
+/* Two range inputs drawn as one track: the left thumb cuts the front, the
+   right thumb the back. Only the thumbs take pointer input. */
+.dual-range {
+  position: relative;
+  display: inline-block;
+  width: 9rem;
+  height: 1.2rem;
+  vertical-align: middle;
+}
+
+.dual-range input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  margin: 0;
+  background: none;
+  pointer-events: none;
+}
+
+.dual-range input::-webkit-slider-thumb {
+  pointer-events: auto;
+}
+
+.dual-range input::-moz-range-thumb {
+  pointer-events: auto;
+}
+
+.dual-range input + input::-webkit-slider-runnable-track {
+  background: transparent;
+}

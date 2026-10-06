@@ -45,7 +45,6 @@ import {
 export type Scene = (data: StructureData) => ViewerElement;
 
 type ViewerOptions = {
-  worldLight?: boolean;
   oit?: boolean;
   time?: number;
   postprocess?: boolean;
@@ -325,20 +324,12 @@ const ViewerRoot = (initial: ViewerState) => {
               children: [
                 use(AmbientLight, {
                   color: [0.7, 0.8, 1],
-                  intensity: options.worldLight
-                    ? 0.1
-                    : options.figure
-                    ? 0.55
-                    : 0.35,
+                  intensity: options.figure ? 0.55 : 0.35,
                 }),
                 use(DirectionalLight, {
                   direction: KEY_DIRECTION,
                   color: [1, 0.95, 0.88],
-                  intensity: options.worldLight
-                    ? 1.8
-                    : options.figure
-                    ? 1.55
-                    : 1.25,
+                  intensity: options.figure ? 1.55 : 1.25,
                   ...(options.figure ? figureLight(options.figure) : {}),
                 }),
                 (() => {

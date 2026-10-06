@@ -7,6 +7,8 @@ import type {
 
 export type SurfaceMode = "opaque" | "glass" | "pumice";
 export type SurfaceColorMode = "neutral" | "element";
+/** Solvent-accessible (atoms grown by the probe) or solvent-excluded. */
+export type SurfaceKind = "accessible" | "excluded";
 export type MaterialMode = "matte" | "metal" | "basic" | "normal";
 /** use.gpu's built-in spherical-harmonic environment presets. */
 export type EnvironmentPreset = "none" | "park" | "pisa" | "road" | "field";
@@ -23,11 +25,14 @@ export interface SceneOptions {
   readonly layers: readonly ComposeLayer[];
   readonly surfaceMode: SurfaceMode;
   readonly surfaceColorMode: SurfaceColorMode;
+  readonly surfaceKind: SurfaceKind;
   readonly materialMode: MaterialMode;
   readonly selectionMode: SelectionMode;
   readonly fieldMode: FieldMode;
   readonly motionMode: MotionMode;
   readonly trajectoryMode: TrajectoryMode;
+  /** Motion trajectory: draw the live Ramachandran inset. */
+  readonly ramachandran: boolean;
   readonly volumeMode: VolumeMode;
   readonly efieldSpacing: number;
   readonly seedSpacing: number;
@@ -36,8 +41,8 @@ export interface SceneOptions {
   readonly sliceIndex: number;
   /** Isosurface level in sigma above the map mean. */
   readonly isoSigma: number;
-  /** Surface clip depth from the viewer's side: 0 off, 0.5 halfway, 1 all. */
-  readonly clipDepth: number;
+  /** Kept slab as view-depth fractions [front, back]: [0, 1] keeps all. */
+  readonly clip: readonly [number, number];
   /** PBR roughness for matte, metal, glass and pumice (0–1). */
   readonly roughness: number;
   /** Glass uses use.gpu's FresnelMaterialEffect (PBR materials only). */

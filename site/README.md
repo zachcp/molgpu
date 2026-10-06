@@ -5,14 +5,17 @@ TSX; `index.html` is only Vite's document shell.
 
 The gallery has five capability examples, each with a few controls:
 
-- Compose: layer cartoon, tube, sticks, spacefill, glass surface and a sulfur
-  highlight; click to measure; figure mode adds a ground plane, SSAO and
-  key-light shadows.
-- Select and color: queries coloured by element or partial charge; click an atom
-  to fly to its residue.
-- Surface and material: opaque, Fresnel glass or bump-mapped pumice, with
-  roughness, use.gpu environment presets and tone mapping.
-- Motion: XTC trajectory, GPU wobble, elastic-network dynamics, camera move.
+- Compose: starts with the backbone tube; layer cartoon, sticks, spacefill, a
+  glass surface and a sulfur highlight; click to measure; figure mode adds a
+  ground plane, SSAO and key-light shadows.
+- Select and color: starts with sulfur atoms coloured by element; other queries
+  and partial-charge colour; click an atom to fly to its residue.
+- Surface and material: a solvent-accessible (default) or solvent-excluded
+  surface, opaque, Fresnel glass or bump-mapped pumice, with a two-handle clip
+  slab (front and back cuts), roughness, use.gpu environment presets and tone
+  mapping.
+- Motion: XTC trajectory (with an optional Ramachandran inset), GPU wobble,
+  elastic-network dynamics, camera move.
 - Volumes: density map, electrostatic potential.
 
 Hashes from the former 16-demo gallery redirect to the matching settings.

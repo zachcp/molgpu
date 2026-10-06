@@ -20,8 +20,8 @@ const materialFor = (mode: MaterialMode, roughness: number) =>
 
 const isPbr = (mode: MaterialMode) => mode === "matte" || mode === "metal";
 
-// Faces the viewer's initial orbit (bearing 0.6, level): the slab removes the
-// near side of the molecule. It is fixed in world space, so orbiting shows the
+// Faces the viewer's initial orbit (bearing 0.6, level): the slab's front cut
+// removes the near side of the molecule and its back cut the far side. It is fixed in world space, so orbiting shows the
 // cut from other angles.
 const CLIP_NORMAL = [Math.sin(0.6), 0, -Math.cos(0.6)] as const;
 
@@ -31,7 +31,7 @@ const surfaceLayer = (options: SceneOptions) => {
   if (options.surfaceMode === "pumice") {
     return (
       <Surface
-        probeRadius={0.5}
+        kind={options.surfaceKind}
         resolution={0.4}
         color={color([0.52, 0.5, 0.47, 1])}
         material={pumiceMaterial({
@@ -47,6 +47,7 @@ const surfaceLayer = (options: SceneOptions) => {
     const fresnel = isPbr(options.materialMode);
     return (
       <Surface
+        kind={options.surfaceKind}
         resolution={0.55}
         color={color([0.55, 0.72, 0.98, 1])}
         opacity={fresnel && options.fresnel ? 0.8 : 0.3}
@@ -62,6 +63,7 @@ const surfaceLayer = (options: SceneOptions) => {
   }
   return (
     <Surface
+      kind={options.surfaceKind}
       resolution={0.55}
       color={color([0.75, 0.78, 0.86, 1])}
       material={materialFor(options.materialMode, options.roughness)}
@@ -69,7 +71,7 @@ const surfaceLayer = (options: SceneOptions) => {
   );
 };
 
-/** Clip depth (0 none, 0.5 through the centre, 1 everything) to slab start in Å. */
+/** View-depth fraction (0 the near side, 1 the far side) to Å along the clip normal. */
 export const clipFrom = (data: StructureData, depth: number) => {
   const { min, max, center } = coordinateBounds(data)!;
   const radius = Math.hypot(max[0] - min[0], max[1] - min[1], max[2] - min[2]) /
@@ -79,11 +81,12 @@ export const clipFrom = (data: StructureData, depth: number) => {
   return middle - radius + 2 * radius * depth;
 };
 
-/** Surface + material: one SES surface with a choice of look and a clip slab. */
+/** Surface + material: one surface with a choice of look and a clip slab. */
 export const surfaceScene = (data: StructureData, options: SceneOptions) => {
   const surface = surfaceLayer(options);
-  const clipped = options.clipDepth > 0;
-  // Atoms show through glass, and through the opening a clip cuts.
+  const [front, back] = options.clip;
+  const clipped = front > 0 || back < 1;
+  // Atoms show through glass, and through the openings a clip cuts.
   const atoms = options.surfaceMode === "glass" || clipped
     ? <BallAndStick ball={0.22} stick={0.16} color={byElement()} />
     : null;
@@ -93,7 +96,8 @@ export const surfaceScene = (data: StructureData, options: SceneOptions) => {
       ? (
         <ClipSlab
           normal={CLIP_NORMAL}
-          from={clipFrom(data, options.clipDepth)}
+          from={clipFrom(data, front)}
+          to={clipFrom(data, back)}
         >
           {surface}
         </ClipSlab>
