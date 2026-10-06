@@ -37,8 +37,8 @@ const NONE: readonly StorageSource[] = [];
  * Pass `ready`, or `dispatched` (the latest generation whose dispatch was
  * encoded). With `dispatched`, `ready` means this buffer has been written at
  * least once: a later generation's dispatch is submitted before the frame's
- * draws, so drawing stays on (molgpu-sept-icj.7: per-generation readiness hid
- * every live consumer for a render on each trajectory frame). The CPU snapshot
+ * draws, so drawing stays on (per-generation readiness hid every live
+ * consumer for a render on each trajectory frame). The CPU snapshot
  * still waits until the published generation itself was dispatched, so a
  * readback is never labelled with a generation the buffer does not hold. */
 export const Published: LC<{
