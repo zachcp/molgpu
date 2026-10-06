@@ -362,10 +362,13 @@ Deno.test("site landing page and maintained gallery routes", async () => {
       const scrubTo = (seconds) =>
         page.getByLabel("Timeline time in seconds").fill(String(seconds));
       if (id === "compose") {
-        assertStrictEquals(
-          await host.getAttribute("data-layers"),
-          "cartoon,sulfur",
-        );
+        // Compose starts with the backbone tube alone.
+        assertStrictEquals(await host.getAttribute("data-layers"), "tube");
+        await page.getByLabel("Tube", { exact: true }).uncheck();
+        await page.getByLabel("Cartoon").check();
+        await page.getByLabel("Sulfur atoms").check();
+        await dataIs("layers", "cartoon,sulfur");
+        await waitForVisibleCanvas(page);
         assert(
           Number(await host.getAttribute("data-bond-count")) > 0,
           "the imported structure yields a bond topology for sticks",
@@ -648,12 +651,21 @@ Deno.test("site landing page and maintained gallery routes", async () => {
         await dataIs("figure", "");
       }
       if (id === "select") {
-        const before = Number(await host.getAttribute("data-selected-count"));
-        assert(
-          before > 0,
-          "the neighbourhood query resolves real CYS residues",
+        // Select starts with sulfur atoms coloured by element.
+        assertStrictEquals(
+          await page.getByLabel("Selection query").inputValue(),
+          "sulfur",
         );
-        await page.getByLabel("Selection query").selectOption("sulfur");
+        assertStrictEquals(
+          await page.getByLabel("Color field").inputValue(),
+          "element",
+        );
+        const sulfur = Array.from(crambin.topology.atoms.element).filter((e) =>
+          e === 16
+        ).length;
+        await dataIs("selectedCount", String(sulfur));
+        const before = sulfur;
+        await page.getByLabel("Selection query").selectOption("site");
         await page.waitForFunction(
           (count) =>
             Number(
@@ -661,7 +673,10 @@ Deno.test("site landing page and maintained gallery routes", async () => {
             ) !== count,
           before,
         );
-        assert(Number(await host.getAttribute("data-selected-count")) > 0);
+        assert(
+          Number(await host.getAttribute("data-selected-count")) > 0,
+          "the neighbourhood query resolves real CYS residues",
+        );
         await page.getByLabel("Color field").selectOption("charge");
         assertStrictEquals(
           await host.getAttribute("data-charge-provenance"),
@@ -857,9 +872,15 @@ Deno.test("site landing page and maintained gallery routes", async () => {
             }
             return red;
           });
+        // The default is the solvent-accessible surface.
+        assertStrictEquals(
+          await host.getAttribute("data-surface-kind"),
+          "accessible",
+        );
+        await waitForVisibleCanvas(page);
         const before = await redPixels();
-        await page.getByLabel("Surface clip depth").fill("0.55");
-        await dataIs("clipDepth", "0.55");
+        await page.getByLabel("Clip front").fill("0.55");
+        await dataIs("clip", "0.55,1");
         // Poll from Deno: Playwright treats an async predicate's promise as
         // truthy, so waitForFunction would not wait for the pixels.
         let after = before;
@@ -873,20 +894,61 @@ Deno.test("site landing page and maintained gallery routes", async () => {
           after > before + 20,
           `clipping reveals the atoms inside (${before} -> ${after})`,
         );
-        await page.getByLabel("Surface clip depth").fill("0");
-        await dataIs("clipDepth", "0");
+        // The back handle cuts the far side on the same slider: through a thin
+        // slab the background shows where the far half of the surface was.
+        const backgroundPixels = () =>
+          page.evaluate(async () => {
+            const canvas = document.querySelector("#molecule-canvas canvas");
+            const bitmap = await createImageBitmap(
+              await new Promise((resolve) => canvas.toBlob(resolve)),
+            );
+            const snapshot = new OffscreenCanvas(bitmap.width, bitmap.height);
+            const context = snapshot.getContext("2d");
+            context.drawImage(bitmap, 0, 0);
+            const { data } = context.getImageData(
+              0,
+              0,
+              bitmap.width,
+              bitmap.height,
+            );
+            bitmap.close();
+            const [r, g, b] = data;
+            let background = 0;
+            for (let i = 0; i < data.length; i += 4) {
+              if (
+                Math.abs(data[i] - r) + Math.abs(data[i + 1] - g) +
+                    Math.abs(data[i + 2] - b) <= 6
+              ) background++;
+            }
+            return background;
+          });
+        const open = await backgroundPixels();
+        await page.getByLabel("Clip back").fill("0.6");
+        await dataIs("clip", "0.55,0.6");
+        let slab = open;
+        for (const start = Date.now(); Date.now() - start < 30000;) {
+          slab = await backgroundPixels();
+          if (slab > open + 1000) break;
+          await new Promise((resolve) => setTimeout(resolve, 200));
+        }
+        console.log("clip slab background pixels", open, slab);
+        assert(
+          slab > open + 1000,
+          `the back cut removes the far side (${open} -> ${slab})`,
+        );
+        await page.getByLabel("Clip front").fill("0");
+        await page.getByLabel("Clip back").fill("1");
+        await dataIs("clip", "0,1");
+        await page.getByLabel("Surface type").selectOption("excluded");
+        await dataIs("surfaceKind", "excluded");
+        await page.getByLabel("Surface type").selectOption("accessible");
+        await dataIs("surfaceKind", "accessible");
         await page.getByLabel("Surface color field").selectOption("element");
         await page.getByLabel("Material model").selectOption("normal");
         assertStrictEquals(
           await page.getByLabel("Material model").inputValue(),
           "normal",
         );
-        assertStrictEquals(
-          await host.getAttribute("data-world-light"),
-          "false",
-        );
-        await page.getByLabel("World-fixed light").check();
-        await dataIs("worldLight", "true");
         // Look controls are uniform or shader changes: the viewer's dev
         // counters (the same module instance the page runs) must show no SES
         // rebuild, gather, allocation or upload while they change.
@@ -984,39 +1046,63 @@ Deno.test("site landing page and maintained gallery routes", async () => {
         // only in the bottom-right corner of the canvas.
         await dataIs("ramaCount", "44");
         const insetFirst = await host.getAttribute("data-rama-first");
-        const corners = await page.evaluate(async () => {
-          const canvas = document.querySelector("#molecule-canvas canvas");
-          const bitmap = await createImageBitmap(
-            await new Promise((resolve) => canvas.toBlob(resolve)),
-          );
-          const snapshot = new OffscreenCanvas(bitmap.width, bitmap.height);
-          const context = snapshot.getContext("2d");
-          context.drawImage(bitmap, 0, 0);
-          const scale = bitmap.width / canvas.getBoundingClientRect().width;
-          const box = Math.round(216 * scale), gap = Math.round(16 * scale);
-          const lit = (x0, y0) => {
-            const { data } = context.getImageData(x0, y0, box - gap, box - gap);
-            let count = 0;
-            for (let i = 0; i < data.length; i += 4) {
-              if (data[i] + data[i + 1] + data[i + 2] > 300) count++;
-            }
-            return count;
-          };
-          const result = {
-            inset: lit(bitmap.width - box, bitmap.height - box),
-            opposite: lit(gap, gap),
-          };
-          bitmap.close();
-          return result;
-        });
+        const cornerLight = () =>
+          page.evaluate(async () => {
+            const canvas = document.querySelector("#molecule-canvas canvas");
+            const bitmap = await createImageBitmap(
+              await new Promise((resolve) => canvas.toBlob(resolve)),
+            );
+            const snapshot = new OffscreenCanvas(bitmap.width, bitmap.height);
+            const context = snapshot.getContext("2d");
+            context.drawImage(bitmap, 0, 0);
+            const scale = bitmap.width / canvas.getBoundingClientRect().width;
+            const box = Math.round(216 * scale), gap = Math.round(16 * scale);
+            const lit = (x0, y0) => {
+              const { data } = context.getImageData(
+                x0,
+                y0,
+                box - gap,
+                box - gap,
+              );
+              let count = 0;
+              for (let i = 0; i < data.length; i += 4) {
+                if (data[i] + data[i + 1] + data[i + 2] > 300) count++;
+              }
+              return count;
+            };
+            const result = {
+              inset: lit(bitmap.width - box, bitmap.height - box),
+              opposite: lit(gap, gap),
+            };
+            bitmap.close();
+            return result;
+          });
+        const corners = await cornerLight();
         console.log("ramachandran inset", JSON.stringify(corners));
         assert(
           corners.inset > 200 && corners.opposite === 0,
           `the inset draws in its corner only: ${JSON.stringify(corners)}`,
         );
+        // The inset is a toggle.
+        await page.getByLabel("Ramachandran plot").uncheck();
+        await dataIs("rama", "false");
+        let hidden = corners;
+        for (const start = Date.now(); Date.now() - start < 30000;) {
+          hidden = await cornerLight();
+          if (hidden.inset < corners.inset * 0.3) break;
+          await new Promise((resolve) => setTimeout(resolve, 200));
+        }
+        assert(
+          hidden.inset < corners.inset * 0.3,
+          `turning the plot off removes the inset: ${JSON.stringify(hidden)}`,
+        );
+        await page.getByLabel("Ramachandran plot").check();
+        await dataIs("rama", "true");
         // Scrubbing seeks: frames stream in and the displayed frame follows
-        // the looping 15 fps curve (2 s → frame 30, 3.5 s → frame 52.5).
-        for (const [seconds, frame] of [[2, 30], [3.5, 52.5], [0.5, 7.5]]) {
+        // the looping curve: 59 frame steps over 4 s (2 s → frame 29.5).
+        for (
+          const [seconds, frame] of [[2, 29.5], [3.5, 51.625], [0.5, 7.375]]
+        ) {
           await scrubTo(seconds);
           await page.waitForFunction(
             (want) =>
@@ -1044,6 +1130,47 @@ Deno.test("site landing page and maintained gallery routes", async () => {
           await page.getByLabel("Timeline time in seconds").inputValue(),
           "0.5",
           "switching representation preserves trajectory time",
+        );
+        // Flicker regression (molgpu-sept-icj.7): each new trajectory frame
+        // must keep live consumers drawn. Per-generation readiness hid them
+        // for a render, so ball-and-stick dropped its bonds and re-created
+        // their buffers on every frame.
+        await waitForVisibleCanvas(page);
+        await page.evaluate(async (url) => {
+          const counters = await import(url);
+          counters.enableInstrumentation();
+          counters.resetCounters();
+          globalThis.__playCounters = counters;
+        }, `/@fs${instrumentationPath}`);
+        for (
+          const [seconds, frame] of [[1, 14.75], [1.25, 18.438], [1.5, 22.125]]
+        ) {
+          await scrubTo(seconds);
+          await page.waitForFunction(
+            (want) =>
+              Math.abs(
+                Number(
+                  document.querySelector("#molecule-canvas")?.dataset.frame,
+                ) - want,
+              ) < 1e-2,
+            frame,
+            { timeout: 15000 },
+          );
+        }
+        const playWork = await page.evaluate(() => {
+          const counters = globalThis.__playCounters;
+          const { detail } = counters.snapshotCounters();
+          counters.disableInstrumentation();
+          return {
+            endpoints: detail["allocations:endpoints"] ?? 0,
+            segments: detail["allocations:segments"] ?? 0,
+            positions: detail["allocations:positions"] ?? 0,
+          };
+        });
+        assertEquals(
+          playWork,
+          { endpoints: 0, segments: 0, positions: 0 },
+          "new trajectory frames keep ball-and-stick drawn (no bond or atom rebuild)",
         );
 
         // Camera move: the scrub also moves the camera toward the cysteines.

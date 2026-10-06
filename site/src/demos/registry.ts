@@ -71,7 +71,6 @@ export type ComposeLayer =
   | "measure";
 
 export interface DemoOptions {
-  worldLight?: boolean;
   oit?: boolean;
   time?: number;
   postprocess?: boolean;
@@ -116,7 +115,7 @@ export const demos: readonly DemoDefinition[] = [
     id: "surface",
     title: "Surface + material",
     summary:
-      "A marching-cubes solvent-excluded surface: choose opaque, glass or pumice, colour by atom element, compare shading models and fix the key light to the world.",
+      "A marching-cubes molecular surface, solvent-accessible or solvent-excluded: choose opaque, glass or pumice, colour by atom element, clip a slab through it and compare materials and lighting.",
     fixture: "1crn",
     assertion:
       "surface geometry is computed from the structure's atom radii and the material reaches the shaded representation",
@@ -159,7 +158,7 @@ export const legacyDemos: Readonly<
     id: "select",
     preset: { selectionMode: "all", fieldMode: "charge" },
   },
-  lighting: { id: "surface", preset: { worldLight: true } },
+  lighting: { id: "surface" },
   materials: { id: "surface", preset: { materialMode: "metal" } },
   timeline: { id: "motion", preset: { motionMode: "camera" } },
   coordinates: { id: "motion", preset: { motionMode: "wobble" } },
@@ -174,7 +173,6 @@ export interface DemoPreset {
   figure?: boolean;
   selectionMode?: "site" | "cysteine" | "sulfur" | "all";
   fieldMode?: "element" | "charge";
-  worldLight?: boolean;
   materialMode?: "matte" | "metal" | "basic" | "normal";
   motionMode?: MotionMode;
   volumeMode?: VolumeMode;
@@ -185,7 +183,6 @@ export const demoOptions = (
   demo: DemoDefinition,
   state: {
     motionMode: MotionMode;
-    worldLight: boolean;
     layers?: readonly ComposeLayer[];
     environment?: DemoOptions["environment"];
     figure?: DemoOptions["figure"];
@@ -199,7 +196,6 @@ export const demoOptions = (
     : {}),
   ...(demo.id === "surface"
     ? {
-      worldLight: state.worldLight,
       environment: state.environment ?? "none",
       tonemap: state.tonemap ?? "linear",
     }

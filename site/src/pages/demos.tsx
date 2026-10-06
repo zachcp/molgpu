@@ -41,6 +41,7 @@ import {
   selectionFor,
   type SelectionMode,
   type SurfaceColorMode,
+  type SurfaceKind,
   type SurfaceMode,
   type Tonemap,
   type TrajectoryMode,
@@ -175,10 +176,12 @@ export const DemosPage = () => {
   const [structureId, setStructureId] = useState<StructureId>("1crn");
   const structure = structureById(structureId);
   const [layers, setLayers] = useState<readonly ComposeLayer[]>(
-    initial.preset?.layers ?? ["cartoon", "sulfur"],
+    initial.preset?.layers ?? ["tube"],
   );
   const [surfaceMode, setSurfaceMode] = useState<SurfaceMode>("opaque");
-  const [clipDepth, setClipDepth] = useState(0);
+  // Kept slab in view-depth fractions: [front cut, back cut].
+  const [clip, setClip] = useState<readonly [number, number]>([0, 1]);
+  const [surfaceKind, setSurfaceKind] = useState<SurfaceKind>("accessible");
   const [picks, setPicks] = useState<readonly number[]>([]);
   const [readout, setReadout] = useState<readonly string[]>([]);
   const onPick = useCallback(
@@ -227,9 +230,6 @@ export const DemosPage = () => {
   const [materialMode, setMaterialMode] = useState<MaterialMode>(
     initial.preset?.materialMode ?? "matte",
   );
-  const [worldLight, setWorldLight] = useState(
-    initial.preset?.worldLight ?? false,
-  );
   const [roughness, setRoughness] = useState(
     defaultRoughness(initial.preset?.materialMode ?? "matte"),
   );
@@ -241,7 +241,7 @@ export const DemosPage = () => {
   const [environment, setEnvironment] = useState<EnvironmentPreset>("none");
   const [tonemap, setTonemap] = useState<Tonemap>("linear");
   const [selectionMode, setSelectionMode] = useState<SelectionMode>(
-    initial.preset?.selectionMode ?? "site",
+    initial.preset?.selectionMode ?? "sulfur",
   );
   const [fieldMode, setFieldMode] = useState<FieldMode>(
     initial.preset?.fieldMode ?? "element",
@@ -250,6 +250,7 @@ export const DemosPage = () => {
     initial.preset?.motionMode ?? "trajectory",
   );
   const [trajectoryMode, setTrajectoryMode] = useState<TrajectoryMode>("tube");
+  const [ramachandran, setRamachandran] = useState(true);
   const [volumeMode, setVolumeMode] = useState<VolumeMode>(
     initial.preset?.volumeMode ?? "density",
   );
@@ -272,7 +273,6 @@ export const DemosPage = () => {
     if (preset.figure !== undefined) setFigure(preset.figure);
     if (preset.selectionMode) setSelectionMode(preset.selectionMode);
     if (preset.fieldMode) setFieldMode(preset.fieldMode);
-    if (preset.worldLight !== undefined) setWorldLight(preset.worldLight);
     if (preset.materialMode) {
       setMaterialMode(preset.materialMode);
       setRoughness(defaultRoughness(preset.materialMode));
@@ -335,10 +335,8 @@ export const DemosPage = () => {
           host.dataset.orbit = "enabled";
           host.dataset.atomCount = String(data.topology.atoms.count);
           host.dataset.residueCount = String(data.topology.residues.count);
-          host.dataset.worldLight = String(demo.id === "surface" && worldLight);
-          host.dataset.clipDepth = demo.id === "surface"
-            ? String(clipDepth)
-            : "";
+          host.dataset.clip = demo.id === "surface" ? clip.join(",") : "";
+          host.dataset.surfaceKind = demo.id === "surface" ? surfaceKind : "";
           const surface = demo.id === "surface";
           host.dataset.environment = surface ? environment : "";
           host.dataset.tonemap = surface ? tonemap : "";
@@ -346,6 +344,7 @@ export const DemosPage = () => {
           host.dataset.fresnel = surface ? String(fresnel) : "";
           host.dataset.bump = surface ? `${bump},${bumpScale}` : "";
           host.dataset.motion = demo.id === "motion" ? effectiveMotion : "";
+          host.dataset.rama = demo.id === "motion" ? String(ramachandran) : "";
           host.dataset.volume = demo.id === "volume" ? effectiveVolume : "";
           host.dataset.layers = demo.id === "compose" ? layers.join(",") : "";
           host.dataset.figure = demo.id === "compose" && figure
@@ -383,7 +382,8 @@ export const DemosPage = () => {
             volumeMode: effectiveVolume,
             surfaceMode,
             surfaceColorMode,
-            clipDepth,
+            clip,
+            surfaceKind,
             roughness,
             fresnel,
             bump,
@@ -395,6 +395,7 @@ export const DemosPage = () => {
             materialMode,
             selectionMode,
             trajectoryMode,
+            ramachandran,
             efieldSpacing,
             seedSpacing,
             lineDistance,
@@ -417,7 +418,6 @@ export const DemosPage = () => {
         }
         const options = demoOptions(demo, {
           motionMode: effectiveMotion,
-          worldLight,
           layers,
           environment,
           tonemap,
@@ -479,10 +479,10 @@ export const DemosPage = () => {
     effectiveField,
     effectiveMotion,
     effectiveVolume,
-    worldLight,
     surfaceMode,
     surfaceColorMode,
-    clipDepth,
+    clip,
+    surfaceKind,
     roughness,
     fresnel,
     bump,
@@ -498,6 +498,7 @@ export const DemosPage = () => {
     materialMode,
     selectionMode,
     trajectoryMode,
+    ramachandran,
     efieldSpacing,
     seedSpacing,
     lineDistance,
@@ -661,19 +662,53 @@ export const DemosPage = () => {
               </select>
             </label>
             <label className="timeline-control">
-              Clip{" "}
-              <input
-                aria-label="Surface clip depth"
-                type="range"
-                min="0"
-                max="1"
-                step="0.01"
-                value={clipDepth}
+              Type{" "}
+              <select
+                aria-label="Surface type"
+                value={surfaceKind}
                 onChange={(event) =>
-                  setClipDepth(Number(event.currentTarget.value))}
-              />{" "}
-              <output>{Math.round(clipDepth * 100)}%</output>
+                  setSurfaceKind(event.currentTarget.value as SurfaceKind)}
+              >
+                <option value="accessible">Solvent-accessible</option>
+                <option value="excluded">Solvent-excluded</option>
+              </select>
             </label>
+            <div className="timeline-control">
+              Clip{" "}
+              <span className="dual-range">
+                <input
+                  aria-label="Clip front"
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  value={clip[0]}
+                  onChange={(event) => {
+                    const front = Number(event.currentTarget.value);
+                    setClip(([, back]) => [Math.min(front, back - 0.02), back]);
+                  }}
+                />
+                <input
+                  aria-label="Clip back"
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  value={clip[1]}
+                  onChange={(event) => {
+                    const back = Number(event.currentTarget.value);
+                    setClip(([front]) => [front, Math.max(back, front + 0.02)]);
+                  }}
+                />
+              </span>{" "}
+              <output>
+                {clip[0] === 0 && clip[1] === 1
+                  ? "off"
+                  : `${Math.round(clip[0] * 100)}–${
+                    Math.round(clip[1] * 100)
+                  }%`}
+              </output>
+            </div>
             <label className="timeline-control">
               Color{" "}
               <select
@@ -705,15 +740,6 @@ export const DemosPage = () => {
                 <option value="basic">Basic</option>
                 <option value="normal">Normal debug</option>
               </select>
-            </label>
-            <label className="timeline-control">
-              <input
-                type="checkbox"
-                aria-label="World-fixed light"
-                checked={worldLight}
-                onChange={(event) => setWorldLight(event.currentTarget.checked)}
-              />{" "}
-              World-fixed light
             </label>
             <label className="timeline-control">
               Roughness{" "}
@@ -865,6 +891,18 @@ export const DemosPage = () => {
                   <option value="tube">Backbone tube</option>
                   <option value="ball-and-stick">Ball and stick</option>
                 </select>
+              </label>
+            )}
+            {effectiveMotion === "trajectory" && (
+              <label className="timeline-control">
+                <input
+                  type="checkbox"
+                  aria-label="Ramachandran plot"
+                  checked={ramachandran}
+                  onChange={(event) =>
+                    setRamachandran(event.currentTarget.checked)}
+                />{" "}
+                Ramachandran plot
               </label>
             )}
           </>
