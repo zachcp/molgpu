@@ -26,7 +26,7 @@ import {
   enableInstrumentation,
   snapshotCounters,
 } from "../../src/internal/instrumentation.ts";
-import { elasticTesting } from "../../src/elastic-network.ts";
+import { elasticTesting } from "../../src/coordinates/elastic-network.ts";
 
 void React;
 

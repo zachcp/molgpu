@@ -7,7 +7,7 @@ import {
 } from "@std/assert";
 import { createStructure, type StructureData } from "@molgpu/table";
 import { structureFromBcif } from "@molgpu/io";
-import { buildSurfaceGeometry } from "../src/internal/surface-geometry.ts";
+import { buildSurfaceGeometry } from "../src/representations/surface/surface-geometry.ts";
 import type { StructureResource } from "../src/types.ts";
 
 // buildSurfaceGeometry reads only `resource.data`.

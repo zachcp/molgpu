@@ -6,7 +6,7 @@ import {
   traceTable,
 } from "@molgpu/table";
 import { structureFromBcif } from "@molgpu/io";
-import { buildRibbonGeometry } from "../src/internal/ribbon-geometry.ts";
+import { buildRibbonGeometry } from "../src/representations/ribbon/ribbon-geometry.ts";
 
 async function loadFixture(id: string) {
   const bytes = new Uint8Array(

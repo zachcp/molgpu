@@ -1,7 +1,7 @@
 import { type LC, type LiveElement, use } from "@use-gpu/live";
 import { wgsl } from "@use-gpu/shader/wgsl";
-import { useCoordinates } from "../../src/coordinates-context.ts";
-import { CoordinateKernel } from "../../src/internal/coordinate-kernel.ts";
+import { useCoordinates } from "../../src/coordinates/coordinates-context.ts";
+import { CoordinateKernel } from "../../src/coordinates/coordinate-kernel.ts";
 
 const OFFSET = wgsl`
 @link fn getSize() -> vec2<u32>;

@@ -8,7 +8,7 @@ import {
 import {
   materialTypes,
   resolveMaterial,
-} from "../src/internal/material-spec.ts";
+} from "../src/rendering/material-spec.ts";
 import type { ViewerElement } from "../src/types.ts";
 
 const materialOf = (spec: Parameters<typeof resolveMaterial>[0]) => {

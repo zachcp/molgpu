@@ -171,12 +171,13 @@ custom `where` predicates, declare dependencies such as positions or attributes
 so membership updates when those inputs change.
 
 Queries that read GPU results evaluate CPU snapshots, published on demand at **4
-Hz and on pause**. Membership can lag live atoms and bonds; combined
-coordinate/attribute queries can use snapshots from different frames.
-`useCoordinateFocus` uses this membership with GPU bounds and returns null while
-membership or bounds are unavailable. `useCameraCurve` instead reads the CPU
-resource passed to it. See [Coordinate consumers](#coordinate-consumers) for
-which representations use live positions or snapshots.
+Hz by default**, with the final revision scheduled within that interval.
+Membership can lag live atoms and bonds; combined coordinate/attribute queries
+can use snapshots from different frames. `useCoordinateFocus` uses this
+membership with GPU bounds and returns null while membership or bounds are
+unavailable. `useCameraCurve` instead reads the CPU resource passed to it. See
+[Coordinate consumers](#coordinate-consumers) for which representations use live
+positions or snapshots.
 
 Use `onSelectionStatus` to handle `pending`, `ready` or `error`. A ready report
 includes the atom `count` (zero is valid) and `updating`, which indicates that a
@@ -251,8 +252,9 @@ model, primary conformers) as a screen-locked inset in a canvas corner. It draws
 inside the scene's own pass: the vertex shader maps inset pixels through the
 camera's inverse projection-view matrix, so it needs no extra pass or camera and
 orbiting uploads nothing. Points follow live coordinates at the
-coordinate-snapshot cadence (`snapshotHz`, default 4 Hz and on pause), so a
-trajectory or coordinate provider moves them. Grid lines mark 0 and ±90°.
+coordinate-snapshot cadence (`snapshotHz`, default 4 Hz; final revisions stay
+scheduled), so a trajectory or coordinate provider moves them. Grid lines mark 0
+and ±90°.
 
 ```tsx
 <Structure data={data}>
@@ -563,7 +565,7 @@ rounded profiles and cyclic polymers.
 | Consumer                       | Coordinate input                                                                                |
 | ------------------------------ | ----------------------------------------------------------------------------------------------- |
 | Spacefill, Bonds, BallAndStick | Nearest GPU coordinates on every draw.                                                          |
-| Ribbon, Tube, Label, Distance  | Shared CPU snapshots, normally 4 Hz during motion and once more on pause.                       |
+| Ribbon, Tube, Label, Distance  | Shared CPU snapshots, normally 4 Hz; the final revision stays scheduled.                        |
 | Surface                        | GPU geometry updates for supported moving grids; CPU snapshots for static or unsupported cases. |
 | useCoordinateFocus             | GPU bounds with selection membership from published inputs.                                     |
 | useCameraCurve                 | CPU data from the resource explicitly passed to the hook.                                       |
@@ -602,14 +604,61 @@ write a GPU coordinate transform. Give it the upstream coordinates
 (`useCoordinates()`), a WGSL compute module and its `args`, and a `parameterKey`
 that changes whenever the args change the output. It owns one packed output
 buffer (destroyed on unmount). Its generation identifies requested content;
-`ready` becomes true after the first dispatch into that buffer submits and stays
-true during later generations so live drawing remains continuous. CPU snapshots
-copy only a dispatched generation, at the requested cadence and again on pause.
-Dependent work follows queue order, while snapshots appear after a mapped copy.
-The kernel links `getSize()`, one getter per arg, one per extra `sources` entry,
-then `getInput(i) -> vec3<f32>`, and writes `output[i * 3u + k]`.
+`ready` becomes true after the first dispatch into that buffer is encoded and
+stays true during later generations so live drawing remains continuous. It is
+not a GPU completion signal. CPU snapshots copy only a dispatched generation, at
+the shared requested cadence; the final revision remains scheduled within that
+interval. Snapshot hooks retain `onPause` for compatibility; it currently does
+not change scheduling. Dependent work follows queue order, while snapshots
+appear after a mapped copy. The kernel links `getSize()`, one getter per arg,
+one per extra `sources` entry, then `getInput(i) -> vec3<f32>`, and writes
+`output[i * 3u + k]`.
 [coordinate provider example](https://github.com/zachcp/molgpu/blob/main/site/src/demos/coordinates.ts)
 is a complete example.
+
+## Source organization
+
+The public entries remain `@molgpu/viewer` and `@molgpu/viewer/advanced`. The
+folders below group implementation by responsibility; they are not strict
+dependency layers. A declaration is public only when an entry exports it.
+Applications should continue using the public entries rather than source paths.
+
+| Folder                        | What to look for                                                                                                         |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `src/structure/`              | Structure loading, the provider that resets molecular scopes, the resource and immutable-column ownership.               |
+| `src/trajectory/`             | Trajectory loading/playback, displayed-frame metadata, frame cache, GPU window and teardown.                             |
+| `src/coordinates/`            | Nearest coordinates, publication/snapshots, bounds and selection hooks, transforms and stateful dynamics.                |
+| `src/attributes/`             | GPU attribute producers, snapshots and DSSP adaptation.                                                                  |
+| `src/volume/`                 | Loaded Volume and computed EField scopes, grids and shared sample buffers.                                               |
+| `src/volume/representations/` | VolumeSlice, Isosurface, FieldLines and FieldArrows, with their geometry/sampling helpers.                               |
+| `src/representations/`        | Molecular visuals and annotations; `surface/`, `ribbon/` and `bonds/` group each feature's owned implementation.         |
+| `src/selection/`              | Query resolution, active views, pending/error presentation and diagnostics.                                              |
+| `src/field-binding/`          | Viewer-side planning and GPU binding of renderer-free `@molgpu/fields` values.                                           |
+| `src/rendering/`              | Column uploads, material binding, sizing/opacity and assembly-copy expansion.                                            |
+| `src/interaction/`            | Picking, pointer projection and camera/focus integration.                                                                |
+| `src/internal/`               | Shared requests, dispatch observation, readback identity/retirement, compute inputs, job scheduling and instrumentation. |
+
+Structure establishes topology and the initial coordinate stream. Trajectory
+plays over that fixed row layout; Transform, Superpose, Unwrap, NormalMode and
+ElasticNetwork also consume nearest coordinates without necessarily requiring a
+trajectory. Molecular representations consume those coordinates directly or
+through snapshots. Attribute producers overlay values without replacing
+topology. EField consumes molecular coordinates/charges and publishes the same
+volume contract as loaded Volume; its descendants read the nearest volume.
+Timeline time remains independent of these dataset scopes.
+
+For trajectory changes, start with `trajectory/trajectory.ts` (source opening,
+orchestration and metadata), then `trajectory-player.ts` (GPU ownership and
+teardown), `frame-cache.ts` (reads/cancellation) and `frame-window.ts`
+(scheduling). Shared source requests live in `internal/source-request.ts` and
+coordinate publication in `coordinates/coordinate-kernel.ts`.
+
+General providers and shared mechanics do not import visual implementations. The
+hardening check enforces this narrow direction rule, with the public entries
+exempt. It covers molecular and volume representation folders. It does not
+impose import walls between the other topic folders. The mixed
+`rendering/representation.ts` helper remains intact; separating its selection,
+field and column responsibilities is a distinct cleanup.
 
 ## Dependencies
 

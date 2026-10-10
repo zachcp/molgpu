@@ -1,0 +1,3520 @@
+{
+  "decision": "molgpu-sept-9fw",
+  "source_baseline": "d54ace66a27cb0fa7f9f591f3643838c86da8460",
+  "layout": "owner-selected corrected hybrid",
+  "files": [
+    {
+      "original": "advanced.ts",
+      "selected": "advanced.ts",
+      "original_sha256": "8a66b5c4683ddbcb98ead5cbc3c73af1f63b83f4e7fa318310e3c297a0533f51",
+      "selected_sha256": "86a248223b02d39c29ca06e3da1d891deeb4417b7703e7fe85a0331f4da4bdde"
+    },
+    {
+      "original": "annotations.ts",
+      "selected": "representations/annotations.ts",
+      "original_sha256": "a4163921d07475c5ddd23ba3d41069351ece92e12b46d15c8aaf26bdb616503c",
+      "selected_sha256": "8ef68e0ac0867d11aa6d496c767e649210d0c119b8ad807cc9968695163d4d98"
+    },
+    {
+      "original": "attribute-producer.ts",
+      "selected": "attributes/attribute-producer.ts",
+      "original_sha256": "83b599ad85d10919577e83de9f8457d4582eec6c7d47b49f5f36c50fc1de1e1f",
+      "selected_sha256": "967f600b84bf96bddeb13c90381df7989304814865112afe0900922ac0bc1c7b"
+    },
+    {
+      "original": "attribute-snapshot-context.ts",
+      "selected": "attributes/attribute-snapshot-context.ts",
+      "original_sha256": "d55c6f514c5aa86cb8b2474968e415e281be304e0edd2bde82cf062b1c64dae0",
+      "selected_sha256": "e522b34c74aaa21b9bf6ad6450123945d55ffe8f1cb227adec758e27f8b338ff"
+    },
+    {
+      "original": "attribute-snapshot.ts",
+      "selected": "attributes/attribute-snapshot.ts",
+      "original_sha256": "cc999e2d88714d126ea094694c06e9607b18252aa6d5debae8a8a2c2df69d131",
+      "selected_sha256": "e29ba813ec8b6b2528a64f11f0b5414799011c0580c85c205484bcb23c51db1b"
+    },
+    {
+      "original": "attributes-context.ts",
+      "selected": "attributes/attributes-context.ts",
+      "original_sha256": "9a9aae58785beddd92b4eacfcb8ab751953c0f90526a622de7e402431cf24fb6",
+      "selected_sha256": "9a9aae58785beddd92b4eacfcb8ab751953c0f90526a622de7e402431cf24fb6"
+    },
+    {
+      "original": "ball-and-stick.ts",
+      "selected": "representations/ball-and-stick.ts",
+      "original_sha256": "1e967de75c269d24ec9224e28f23b797657417199bcf7d71c2a8599bbf269c0b",
+      "selected_sha256": "2fb27fd14e37ba46782720bbe4f8a77ecdc5def7b6b1c5e88e9462f8fc8f0fef"
+    },
+    {
+      "original": "bonds.ts",
+      "selected": "representations/bonds/bonds.ts",
+      "original_sha256": "aad2de85d1a09364a99856f5310c8b325bb8aa684841be47564772a460c3d46b",
+      "selected_sha256": "ccadb142c548f5343ed4b3e16cfcfdc9572d58ee426f186f25a272bed934c5a9"
+    },
+    {
+      "original": "camera-curve.ts",
+      "selected": "interaction/camera-curve.ts",
+      "original_sha256": "1ef68187b148291478ed4f403e05fcb6c0f6b048e2876ca88b6608342e3d7d9e",
+      "selected_sha256": "5c17d16627c6abc23dd39e1342f2df103ed08be07f4636f8c00a2878662c94b7"
+    },
+    {
+      "original": "coordinate-snapshot.ts",
+      "selected": "coordinates/coordinate-snapshot.ts",
+      "original_sha256": "dd96ae534e068fd029203e3decd1a6133f88ddb3a0074504ed2fd9fdf2289a42",
+      "selected_sha256": "f9e23894fe68e15f4e53c4f78db6c71269ba2baa08a09eb318cd17fb8a5c751b"
+    },
+    {
+      "original": "coordinates-context.ts",
+      "selected": "coordinates/coordinates-context.ts",
+      "original_sha256": "1904e7cb073a3f21cecb8b7ebcee06ee90961bffc358adb69d41a0e3735c8f4f",
+      "selected_sha256": "0e3b6f1aa176b9485049e4aa5a5021f5cbf8a29471af56e857dadf1ed3653994"
+    },
+    {
+      "original": "efield.ts",
+      "selected": "volume/efield.ts",
+      "original_sha256": "f733defe43e1f718fd3e58602ec74daecdb7eaca231f0b61b25530b176bfb329",
+      "selected_sha256": "54139e24085966be255f12131204e8f1c218ff389d2df0360f48ae64d1530b29"
+    },
+    {
+      "original": "elastic-network.ts",
+      "selected": "coordinates/elastic-network.ts",
+      "original_sha256": "9ed1b0e4b1ccfea37fbc903d4234e9a337842baeb3e549a9af96674d61c6916c",
+      "selected_sha256": "eb9dc277c9e519d2fee40d458c93fa5a7dbf622bb76b9d566dc710e5bd8e0977"
+    },
+    {
+      "original": "field-arrows.ts",
+      "selected": "volume/representations/field-arrows.ts",
+      "original_sha256": "afb9ba26f23ac56657185d9d7d312ead79aeb7b42c5f350bbc0a40400a8b3b21",
+      "selected_sha256": "31d15c995235c85094959b998739e5f922cd472c5a663db702d6c3b7cc4048b0"
+    },
+    {
+      "original": "field-lines.ts",
+      "selected": "volume/representations/field-lines.ts",
+      "original_sha256": "7d4f44edfd473102dcd8f6531fc58155c061f647537fcdb9ead89c7d49f19962",
+      "selected_sha256": "8090f513e1239b2c4be2e0f595b5531229d0d840e6e182487a052ee0ad893f44"
+    },
+    {
+      "original": "gpu-dssp-provider.ts",
+      "selected": "attributes/gpu-dssp-provider.ts",
+      "original_sha256": "f380e555f84f7121b3b2e1aace672981df9bc06a3644ba08c94002f31c535e9c",
+      "selected_sha256": "3b51a97925165333e5534e66eceae52f2ff98d19fe0f5a9df912121ddae4b59a"
+    },
+    {
+      "original": "gpu-dssp.ts",
+      "selected": "attributes/gpu-dssp.ts",
+      "original_sha256": "f06a392355a2c93c4103d248738e4c318894b953b35b4853e3bad203fd1c7b00",
+      "selected_sha256": "561642e0a58ae7f227cbface9d3ad5b315cd48693a12a583bf309647db564d0d"
+    },
+    {
+      "original": "index.ts",
+      "selected": "index.ts",
+      "original_sha256": "37f7a1597682541ee2f8db2e1513942850623c38d9377598527ec0122acfec76",
+      "selected_sha256": "757a913b5065100b5bee089097183d41673eadc58bf646974e7fd4dc57d6cefe"
+    },
+    {
+      "original": "internal/attribute-sources.ts",
+      "selected": "field-binding/attribute-sources.ts",
+      "original_sha256": "535ed828fb64d44d9b26599b970f0b80f3aa7802f283b276e3760804ae68d8b6",
+      "selected_sha256": "c30162e1342c97276862c0c7563b426757ce7a44cbeb3f5fe85d5244981027bd"
+    },
+    {
+      "original": "internal/attribute-values.ts",
+      "selected": "attributes/attribute-values.ts",
+      "original_sha256": "5cba4497d8ae1681592667022ae66bb9115c4838d38cd279dc25c350d1fd632e",
+      "selected_sha256": "5cba4497d8ae1681592667022ae66bb9115c4838d38cd279dc25c350d1fd632e"
+    },
+    {
+      "original": "internal/attribution-gpu.ts",
+      "selected": "representations/surface/attribution-gpu.ts",
+      "original_sha256": "26a01830a1ec9a5b3392245a450b28ef734e08e73c703cf0d6680cc42fdf210c",
+      "selected_sha256": "15b98a6c9c8351fdc22fbdd6df7ac92ec2de22c01c04a5009ede683ff9e2c6fc"
+    },
+    {
+      "original": "internal/bond-columns.ts",
+      "selected": "representations/bonds/bond-columns.ts",
+      "original_sha256": "1f7b3fc542e8354a3709a9b21893b392ec6a407bdbd93fbda5775c797ab8168c",
+      "selected_sha256": "657cf216f66fa46297fcce48718a51a376813e10f902a6bbeb29458701efde56"
+    },
+    {
+      "original": "internal/bond-positions.ts",
+      "selected": "representations/bonds/bond-positions.ts",
+      "original_sha256": "906de0db310a3cbf681e236e49b03f69f72fe16c321575b3edf430aaad8d6dd9",
+      "selected_sha256": "906de0db310a3cbf681e236e49b03f69f72fe16c321575b3edf430aaad8d6dd9"
+    },
+    {
+      "original": "internal/cartoon-geometry.ts",
+      "selected": "representations/ribbon/cartoon-geometry.ts",
+      "original_sha256": "9fd54f31e32e237db71139614f180a2a24222e2e56f4be909c9dc0608dd23a28",
+      "selected_sha256": "1834a3eb8ef073ba4024053b07194fe8e4c60c0d008959fe8ee02d5e2e7335f0"
+    },
+    {
+      "original": "internal/centroid.ts",
+      "selected": "representations/centroid.ts",
+      "original_sha256": "f5386bc7b90ec1c1a4041757c2513df85034f668272158dde6990e0c71f8b62a",
+      "selected_sha256": "f5386bc7b90ec1c1a4041757c2513df85034f668272158dde6990e0c71f8b62a"
+    },
+    {
+      "original": "internal/color-ramp.ts",
+      "selected": "volume/representations/color-ramp.ts",
+      "original_sha256": "c01d438e5cf263981627e839ce85696bea9429acc1f33e48605359fe3ef6667f",
+      "selected_sha256": "6d3562e539c59750248dd2738247e29e6abf4f4c46ff1c52a803da5d877c5025"
+    },
+    {
+      "original": "internal/column-source.ts",
+      "selected": "rendering/column-source.ts",
+      "original_sha256": "7855ae69b20afbc87fa0010a60698ce82e23dfd271d0a497a62107da20141525",
+      "selected_sha256": "69d7d10aed7cbd58a4e4d9e28a2b4fc85c8f549c9e25f247fa5d497f76c18dfc"
+    },
+    {
+      "original": "internal/columns.ts",
+      "selected": "rendering/columns.ts",
+      "original_sha256": "e3683fafdf75e2cff5dbd11bb82d3ed3d5afab2df2462f57502652e790372a63",
+      "selected_sha256": "e3683fafdf75e2cff5dbd11bb82d3ed3d5afab2df2462f57502652e790372a63"
+    },
+    {
+      "original": "internal/compute-buffers.ts",
+      "selected": "internal/compute-buffers.ts",
+      "original_sha256": "2dd96520c81b549887bde97042e7242e8fc75f0ae35a5c989fb442519b2de709",
+      "selected_sha256": "2dd96520c81b549887bde97042e7242e8fc75f0ae35a5c989fb442519b2de709"
+    },
+    {
+      "original": "internal/coordinate-kernel.ts",
+      "selected": "coordinates/coordinate-kernel.ts",
+      "original_sha256": "8b5a9ede97437d657e5718f6d3677210d8eefdaf4878e126bf83b6a0c1ec2f97",
+      "selected_sha256": "e1c3d4062812ac2f6dcae3edab7926785558376c5d7c9c65b41a4378cc728e3c"
+    },
+    {
+      "original": "internal/coordinate-passes.ts",
+      "selected": "coordinates/coordinate-passes.ts",
+      "original_sha256": "db276273d3bf444b7b684cfcd9a116d939fa70e6c2b259997b943273850dd919",
+      "selected_sha256": "4bad362ca1c446a847397ff6deac381e0662252362df1758b0d36ab5bf60b9c8"
+    },
+    {
+      "original": "internal/copy-positions-wgsl.ts",
+      "selected": "internal/copy-positions-wgsl.ts",
+      "original_sha256": "835fda047ccec0a66bfd29d6449802e31688b35132dfecfd41f2474c79913651",
+      "selected_sha256": "835fda047ccec0a66bfd29d6449802e31688b35132dfecfd41f2474c79913651"
+    },
+    {
+      "original": "internal/dispatch-observation.ts",
+      "selected": "internal/dispatch-observation.ts",
+      "original_sha256": "9674b00b0d43a9d069495f14386a635ffa5f3e833f67c266b9256ea24238ddfe",
+      "selected_sha256": "9674b00b0d43a9d069495f14386a635ffa5f3e833f67c266b9256ea24238ddfe"
+    },
+    {
+      "original": "internal/efield-grid.ts",
+      "selected": "volume/efield-grid.ts",
+      "original_sha256": "6b7f72ec1f0ed6b7061bc0429f14b7148110cb5da7f321f9708f291add2c4475",
+      "selected_sha256": "2ee9e88a2ec0e817ff5163d763221cc9057c04736037099a39d5f0442878b23f"
+    },
+    {
+      "original": "internal/elastic-bindings.ts",
+      "selected": "coordinates/elastic-bindings.ts",
+      "original_sha256": "840d95fbe57daf28b04ceedfdfda8afbf186a90669d4f70f1f3cae2ec422dc20",
+      "selected_sha256": "840d95fbe57daf28b04ceedfdfda8afbf186a90669d4f70f1f3cae2ec422dc20"
+    },
+    {
+      "original": "internal/field-line-geometry.ts",
+      "selected": "volume/representations/field-line-geometry.ts",
+      "original_sha256": "cf37748e17ad471ba80bcd4460565e6cb69b1b383bbc09913e6ee8c447f4d182",
+      "selected_sha256": "cf37748e17ad471ba80bcd4460565e6cb69b1b383bbc09913e6ee8c447f4d182"
+    },
+    {
+      "original": "internal/field-plan.ts",
+      "selected": "field-binding/field-plan.ts",
+      "original_sha256": "f5c0ed67abc5230879b45cc4d25f3b4a55b1e79129675a24bfd61280d646c967",
+      "selected_sha256": "c9325c10a43f8dc55368de14bad2c8e3c23774e055985708feb0b53227bf59f7"
+    },
+    {
+      "original": "internal/frame-cache.ts",
+      "selected": "trajectory/frame-cache.ts",
+      "original_sha256": "54c61b4229d7b4a305b4974007015392f5cfbbcdce4539eeb111dcf196980eb9",
+      "selected_sha256": "54c61b4229d7b4a305b4974007015392f5cfbbcdce4539eeb111dcf196980eb9"
+    },
+    {
+      "original": "internal/frame-window.ts",
+      "selected": "trajectory/frame-window.ts",
+      "original_sha256": "fbd996edc6294bf1d2d6822bc316525f8a6fe8edab8538f53274bb375144ac80",
+      "selected_sha256": "790ff0e22ea61669bd7a390e1cdc0fe852bd60a803c6224847c21dc79e01db2f"
+    },
+    {
+      "original": "internal/geometry-job.ts",
+      "selected": "internal/geometry-job.ts",
+      "original_sha256": "6446254f85d842795ab491e5a1535eb0196083fe5a529f8a6aa84f2160d94dc0",
+      "selected_sha256": "6446254f85d842795ab491e5a1535eb0196083fe5a529f8a6aa84f2160d94dc0"
+    },
+    {
+      "original": "internal/gpu-scan.ts",
+      "selected": "internal/gpu-scan.ts",
+      "original_sha256": "b5441e535593864237bf9bbeb7f47cd9c231b1cbc12f4d9235a2fb0574e44f24",
+      "selected_sha256": "b5441e535593864237bf9bbeb7f47cd9c231b1cbc12f4d9235a2fb0574e44f24"
+    },
+    {
+      "original": "internal/immutable-attribute-cache.ts",
+      "selected": "structure/immutable-attribute-cache.ts",
+      "original_sha256": "e6311f3fce1e7e9c4cb698c09a8349a5bb0ad901f98ffbe2cb412c3356c12554",
+      "selected_sha256": "77c4abec0698286b7cb8060a3dd6ab647ff04808008fca328883bc54dfbd12f4"
+    },
+    {
+      "original": "internal/indexed.ts",
+      "selected": "rendering/indexed.ts",
+      "original_sha256": "8a2a688a4bc1fc42868c5ab00ac4642dbc95968824148ddf91d8e79afbde2062",
+      "selected_sha256": "8a2a688a4bc1fc42868c5ab00ac4642dbc95968824148ddf91d8e79afbde2062"
+    },
+    {
+      "original": "internal/instance-context.ts",
+      "selected": "rendering/instance-context.ts",
+      "original_sha256": "867fa71fe5f8d7089d120e762d45acb9883d157b9d4c946106519b2388be5070",
+      "selected_sha256": "867fa71fe5f8d7089d120e762d45acb9883d157b9d4c946106519b2388be5070"
+    },
+    {
+      "original": "internal/instance-copies.ts",
+      "selected": "rendering/instance-copies.ts",
+      "original_sha256": "ac7668322dd72fbaa08bf9cad122ebc9a338c485d5394d0d95df10c3651b0429",
+      "selected_sha256": "b024ba4399ad2b7a132546463e669ca0035c333f1c7eaedad48566aa0cd2233c"
+    },
+    {
+      "original": "internal/instance-plan.ts",
+      "selected": "rendering/instance-plan.ts",
+      "original_sha256": "a0abf1bafe4390588c315aa2c37f43326e9e488212ad7deffe1d740b8d2cbe1f",
+      "selected_sha256": "a0abf1bafe4390588c315aa2c37f43326e9e488212ad7deffe1d740b8d2cbe1f"
+    },
+    {
+      "original": "internal/instrumentation.ts",
+      "selected": "internal/instrumentation.ts",
+      "original_sha256": "0629e95566301f0c835584c797dfc4d4e61b9842a9c871a2b589bd2832da4e4c",
+      "selected_sha256": "0629e95566301f0c835584c797dfc4d4e61b9842a9c871a2b589bd2832da4e4c"
+    },
+    {
+      "original": "internal/isosurface-geometry.ts",
+      "selected": "volume/representations/isosurface-geometry.ts",
+      "original_sha256": "7b050365216881dfe4f0b217e4c7536e0b391630fc8207cbdd947948047aeae9",
+      "selected_sha256": "4481a1eafc5d0719df4caf421ee75537e1fac9036907ddebf8250e60235c103a"
+    },
+    {
+      "original": "internal/line-size.ts",
+      "selected": "rendering/line-size.ts",
+      "original_sha256": "0092a0024d8302fda513f68c0508f9803794005e09ac51d08061fe0a351b2e69",
+      "selected_sha256": "0092a0024d8302fda513f68c0508f9803794005e09ac51d08061fe0a351b2e69"
+    },
+    {
+      "original": "internal/marching-cubes-gpu.ts",
+      "selected": "representations/surface/marching-cubes-gpu.ts",
+      "original_sha256": "538d178f8f37a060aaba9937ebbbcef2cd550864f2f329781bc0526d4996a282",
+      "selected_sha256": "5a3c86f1c0e5b26971698b0f433093be88262758292ae08c126eb4cabb903028"
+    },
+    {
+      "original": "internal/material-spec.ts",
+      "selected": "rendering/material-spec.ts",
+      "original_sha256": "b6881f836af8841e611b83bf816348c230333c72ce3732cdb8a005a5fe225486",
+      "selected_sha256": "b6881f836af8841e611b83bf816348c230333c72ce3732cdb8a005a5fe225486"
+    },
+    {
+      "original": "internal/mesh-builder.ts",
+      "selected": "representations/mesh-builder.ts",
+      "original_sha256": "59da496ea49f3e1c77f9964e19e4c078f6e44879dd7896d9a11d2ce52fedab43",
+      "selected_sha256": "59da496ea49f3e1c77f9964e19e4c078f6e44879dd7896d9a11d2ce52fedab43"
+    },
+    {
+      "original": "internal/opacity.ts",
+      "selected": "rendering/opacity.ts",
+      "original_sha256": "268de76124c9805b37c81c47f400228fd0b88d4b91cfdc0737f1019875ef51fe",
+      "selected_sha256": "268de76124c9805b37c81c47f400228fd0b88d4b91cfdc0737f1019875ef51fe"
+    },
+    {
+      "original": "internal/pick-resolve.ts",
+      "selected": "interaction/pick-resolve.ts",
+      "original_sha256": "f1954ba8d2519ff9f8f6c4c3f9c1e8d284392801af676a01129d9cae9f21d625",
+      "selected_sha256": "f1954ba8d2519ff9f8f6c4c3f9c1e8d284392801af676a01129d9cae9f21d625"
+    },
+    {
+      "original": "internal/point-size.ts",
+      "selected": "rendering/point-size.ts",
+      "original_sha256": "153d1b77522c9db85fd4241f23b94fb9e50fdff9028a28c02585afd5b92b01b2",
+      "selected_sha256": "153d1b77522c9db85fd4241f23b94fb9e50fdff9028a28c02585afd5b92b01b2"
+    },
+    {
+      "original": "internal/ramachandran-points.ts",
+      "selected": "representations/ramachandran-points.ts",
+      "original_sha256": "bd9bcebe04452d854a3468943f59bae7a70acf304a619d7e5b064080cd771221",
+      "selected_sha256": "bd9bcebe04452d854a3468943f59bae7a70acf304a619d7e5b064080cd771221"
+    },
+    {
+      "original": "internal/readback-token.ts",
+      "selected": "internal/readback-token.ts",
+      "original_sha256": "776c81bff2f8795a8dadd496a391ee46d27dd0fe129a7c2edff6d66778b39ad2",
+      "selected_sha256": "776c81bff2f8795a8dadd496a391ee46d27dd0fe129a7c2edff6d66778b39ad2"
+    },
+    {
+      "original": "internal/representation.ts",
+      "selected": "rendering/representation.ts",
+      "original_sha256": "20b418c75ca595b6d14142ce4574d8065b943ec390a49a785f6691fb93b20655",
+      "selected_sha256": "963e05329ea7951122ef61c90d7094d0dcf498f8a44bb488ebe5477e044cb0a4"
+    },
+    {
+      "original": "internal/ribbon-dssp.ts",
+      "selected": "representations/ribbon/ribbon-dssp.ts",
+      "original_sha256": "4284de82dd10c615db70b8b539f2c74671d80e1f1207f1b26c8ab7358d6cee87",
+      "selected_sha256": "4284de82dd10c615db70b8b539f2c74671d80e1f1207f1b26c8ab7358d6cee87"
+    },
+    {
+      "original": "internal/ribbon-geometry.ts",
+      "selected": "representations/ribbon/ribbon-geometry.ts",
+      "original_sha256": "20477691dd2761b93e508030b1b6e31670bb3e2f3a26938ae319d0c460680165",
+      "selected_sha256": "498a2845bf0ef3a955e865692775089d94d8caff5dfb5c92ab581b6ae73d8764"
+    },
+    {
+      "original": "internal/selection-consumer.ts",
+      "selected": "selection/selection-consumer.ts",
+      "original_sha256": "6a9b0d0c4610f615924c2d3dd38d9b1158bdc51d3a34c51d4e9b589f788a8292",
+      "selected_sha256": "6a9b0d0c4610f615924c2d3dd38d9b1158bdc51d3a34c51d4e9b589f788a8292"
+    },
+    {
+      "original": "internal/selection-diagnostics.ts",
+      "selected": "selection/selection-diagnostics.ts",
+      "original_sha256": "7c00b318226603ed66163d371ba6f9493610d8a8ebd5952f2d2a89e9e9b6d59b",
+      "selected_sha256": "7c00b318226603ed66163d371ba6f9493610d8a8ebd5952f2d2a89e9e9b6d59b"
+    },
+    {
+      "original": "internal/selection-resolution.ts",
+      "selected": "selection/selection-resolution.ts",
+      "original_sha256": "5042d487159e9624bc331f13c9441f4755cb48c280c6ee5b6e51b1206d38f0f7",
+      "selected_sha256": "5042d487159e9624bc331f13c9441f4755cb48c280c6ee5b6e51b1206d38f0f7"
+    },
+    {
+      "original": "internal/ses-field.ts",
+      "selected": "representations/surface/ses-field.ts",
+      "original_sha256": "5915465505f2809ff4cc9c6333a976dffb4edd9e02700a28c41a0926dc1e6c52",
+      "selected_sha256": "118de2ded90222dde799b4f6c7f5fd69f292f82a86eb136e049d93e07a3d195a"
+    },
+    {
+      "original": "internal/slice-plane.ts",
+      "selected": "volume/representations/slice-plane.ts",
+      "original_sha256": "ae41106d4df248c552b3b534c36ca5a4b548100bf0e3003660f8198e03cbf01c",
+      "selected_sha256": "ae41106d4df248c552b3b534c36ca5a4b548100bf0e3003660f8198e03cbf01c"
+    },
+    {
+      "original": "internal/source-request.ts",
+      "selected": "internal/source-request.ts",
+      "original_sha256": "b39278a5a5fb184c830a87cac23b47bbc0e6400adc86c57400528cbf44ddd565",
+      "selected_sha256": "b39278a5a5fb184c830a87cac23b47bbc0e6400adc86c57400528cbf44ddd565"
+    },
+    {
+      "original": "internal/status-delivery.ts",
+      "selected": "internal/status-delivery.ts",
+      "original_sha256": "64681f2a1dd55dfc1864e697e88995e542f4434ecfe1d258ef6398ae0f1e3eda",
+      "selected_sha256": "64681f2a1dd55dfc1864e697e88995e542f4434ecfe1d258ef6398ae0f1e3eda"
+    },
+    {
+      "original": "internal/status-readback.ts",
+      "selected": "internal/status-readback.ts",
+      "original_sha256": "38cfbde72fb32f2c9e39322d4a1841e0e9bc2312abb7f8b0e0aed5bbe895cb9d",
+      "selected_sha256": "38cfbde72fb32f2c9e39322d4a1841e0e9bc2312abb7f8b0e0aed5bbe895cb9d"
+    },
+    {
+      "original": "internal/structure-resource.ts",
+      "selected": "structure/structure-resource.ts",
+      "original_sha256": "73bdd4ed9346f6d83cf902cbeae7239e3e6806633e242c94b09b7828284bcf97",
+      "selected_sha256": "73bdd4ed9346f6d83cf902cbeae7239e3e6806633e242c94b09b7828284bcf97"
+    },
+    {
+      "original": "internal/surface-geometry.ts",
+      "selected": "representations/surface/surface-geometry.ts",
+      "original_sha256": "c5bcdcef5bc43f4adcf089693f6e2d111bca526391034c1a4e52cec9029155df",
+      "selected_sha256": "82a92bd9734e5fc1f4776cba5cbc677770a1a530d6f4bbd371608cd2df66a77c"
+    },
+    {
+      "original": "internal/surface-gpu.ts",
+      "selected": "representations/surface/surface-gpu.ts",
+      "original_sha256": "286568fe6ab2bebf86e7ca5e7eecfb26fe0524b80e3806ace17b599e957bb813",
+      "selected_sha256": "286568fe6ab2bebf86e7ca5e7eecfb26fe0524b80e3806ace17b599e957bb813"
+    },
+    {
+      "original": "internal/throttled-readback.ts",
+      "selected": "internal/throttled-readback.ts",
+      "original_sha256": "e3bb5a3aa31818848f4fe15cf471023c53a7b87c8454e55901ebbf6e8f3d2160",
+      "selected_sha256": "e3bb5a3aa31818848f4fe15cf471023c53a7b87c8454e55901ebbf6e8f3d2160"
+    },
+    {
+      "original": "internal/trajectory-player.ts",
+      "selected": "trajectory/trajectory-player.ts",
+      "original_sha256": "238c5d3b18a3a700c075703fbd28a17a6d44f479c77b5d6477be764c61bcf698",
+      "selected_sha256": "44ac26a3b31d24220211c1025446ef625e46b533915763c0a852fd758e7a0b3a"
+    },
+    {
+      "original": "internal/tube-geometry.ts",
+      "selected": "representations/tube-geometry.ts",
+      "original_sha256": "b509a9d776a91fd99cb6bb36a69b0ab11246ab78e060e621976be5682a392166",
+      "selected_sha256": "d36c874f0a7c07038d42731e83830083a178ed70af180591c3fc3c266fe051d3"
+    },
+    {
+      "original": "internal/use-binding-probe.ts",
+      "selected": "internal/use-binding-probe.ts",
+      "original_sha256": "798f1500acf29f1edb445fe6dd0c67099dd6bfd69c15ad95309524eb8a95475b",
+      "selected_sha256": "798f1500acf29f1edb445fe6dd0c67099dd6bfd69c15ad95309524eb8a95475b"
+    },
+    {
+      "original": "internal/use-field-plan.ts",
+      "selected": "field-binding/use-field-plan.ts",
+      "original_sha256": "b78643696950f9f9226ea85bf4597acaf068c261435e7a1a3b5d165ea72524d1",
+      "selected_sha256": "accb864932e56ebbbee02c4f99beedced69bd3c05c8b8486eaa5817124469d00"
+    },
+    {
+      "original": "internal/use-gpu-surface.ts",
+      "selected": "representations/surface/use-gpu-surface.ts",
+      "original_sha256": "66f7296d35edfafe5469f46fd007c8a81ec9deb8357423dbe5fb9f45caeadb21",
+      "selected_sha256": "0a39d932ee16ccbc31b72157755dcb0b68e32d8b19777ad87d8c5ae217304c53"
+    },
+    {
+      "original": "internal/use-opacity-colors.ts",
+      "selected": "rendering/use-opacity-colors.ts",
+      "original_sha256": "63e8a7760a138ca2369878bb8adb168a90098e98891df58c4aa95428874ba833",
+      "selected_sha256": "63e8a7760a138ca2369878bb8adb168a90098e98891df58c4aa95428874ba833"
+    },
+    {
+      "original": "internal/use-repaint.ts",
+      "selected": "internal/use-repaint.ts",
+      "original_sha256": "1b6ca5ba17d0116285719e6fba4355ce5e0aed0e4f7f7bb2aab80adcaf9bbc61",
+      "selected_sha256": "1b6ca5ba17d0116285719e6fba4355ce5e0aed0e4f7f7bb2aab80adcaf9bbc61"
+    },
+    {
+      "original": "internal/use-selection-input.ts",
+      "selected": "selection/use-selection-input.ts",
+      "original_sha256": "7d135d20ad28638598c2ac5b8da1d2b8c9e87a8f4959dea738828e8593460d19",
+      "selected_sha256": "1e7ff6b682c563e8178692966d5c613744461e9128b41feb1966e0535cd5a8be"
+    },
+    {
+      "original": "internal/vertex-field-colors.ts",
+      "selected": "field-binding/vertex-field-colors.ts",
+      "original_sha256": "25e527e3530f75f5861d2591e52de25f29a31408444e884fd06716a4c3138cfc",
+      "selected_sha256": "125c33d4667b04f00a66dc8ee4ff5410a8dad8a1a928f14555a561e847814d34"
+    },
+    {
+      "original": "internal/view-rows.ts",
+      "selected": "selection/view-rows.ts",
+      "original_sha256": "1bac630fdc740a6b32a90a1f754a528f8ce67a1d2939145f77f614bb164f660f",
+      "selected_sha256": "1bac630fdc740a6b32a90a1f754a528f8ce67a1d2939145f77f614bb164f660f"
+    },
+    {
+      "original": "internal/volume-buffers.ts",
+      "selected": "volume/volume-buffers.ts",
+      "original_sha256": "38647dcbb4eeaecbc27142ee4fcc74157d4c70b51027c512d1425c9f826183f0",
+      "selected_sha256": "ece0deea1c767ee8d4762ec15d427675475b9876512950982d8159707d93d407"
+    },
+    {
+      "original": "internal/with-material.ts",
+      "selected": "rendering/with-material.ts",
+      "original_sha256": "2aca6119a489e01363867024fe0021b1a53df67a73fb1e640cc5b711a8b4addd",
+      "selected_sha256": "2aca6119a489e01363867024fe0021b1a53df67a73fb1e640cc5b711a8b4addd"
+    },
+    {
+      "original": "isosurface.ts",
+      "selected": "volume/representations/isosurface.ts",
+      "original_sha256": "e9e19e2403efe8269c5fe9304904f6222831421f9b23f477017f48ee7ba52e4c",
+      "selected_sha256": "3c72a2260e48b6196ce09ee9e991ab1c1d7716ea51c59b16ba6f55ed2151f028"
+    },
+    {
+      "original": "normal-mode.ts",
+      "selected": "coordinates/normal-mode.ts",
+      "original_sha256": "df40e40067c31e474c5758985a56c19b4c8f1976da798b751dfe7170f9f79e2f",
+      "selected_sha256": "6ce3b9e8244a2189b230035eb447b3e55da675e4437d5cf44aa79751d41002b0"
+    },
+    {
+      "original": "picking.ts",
+      "selected": "interaction/picking.ts",
+      "original_sha256": "b286217eebac1bd24fdc0ac900881ec63dbea8cbbcd78a74a77fcdb6af073541",
+      "selected_sha256": "f059661cec13b2f4ab5a0a02f60f056bafd40875facbb27277a3f981c50cf30c"
+    },
+    {
+      "original": "pointer-plane.ts",
+      "selected": "interaction/pointer-plane.ts",
+      "original_sha256": "fe6aeafcdb74c4949f3c06fe3d8db1babd38603ee94c296aa1b03107a85aa40b",
+      "selected_sha256": "fe6aeafcdb74c4949f3c06fe3d8db1babd38603ee94c296aa1b03107a85aa40b"
+    },
+    {
+      "original": "ramachandran.ts",
+      "selected": "representations/ramachandran.ts",
+      "original_sha256": "99e60675374e75887fdca5cdf398578e2d10c52b057474e9951a4cedfeeff8d0",
+      "selected_sha256": "9bb6e7b85a894dc6cbcc3688a1b3e581936ac58f5ce5e0b2acab61bd6cd054c7"
+    },
+    {
+      "original": "ribbon.ts",
+      "selected": "representations/ribbon/ribbon.ts",
+      "original_sha256": "7fd6b6996914551f1346a5bddb93cc236c0cac6731c0f92da75042644efcc76c",
+      "selected_sha256": "cf83b575c7105ca38d6133ef09a484f9b69f427f077d159ad6e463470d490c8c"
+    },
+    {
+      "original": "spacefill.ts",
+      "selected": "representations/spacefill.ts",
+      "original_sha256": "ff01bd5d3bf691d485a0a2c292c9f0162eb204ccc6d7f47038aa30294bda305f",
+      "selected_sha256": "74fbcda360ecb157f457c17184ec61122753af13b21e077fbfb6a2dd43a578ad"
+    },
+    {
+      "original": "structure-context.ts",
+      "selected": "structure/structure-context.ts",
+      "original_sha256": "18dc998f012606fbd7e62113fc3f3dc89296fb4e2695c8ed6548d5c8c8f658a3",
+      "selected_sha256": "6914981f34f894d74954ae6855dcee4b3810d7c0fe35eb24754337ddfbfd95fd"
+    },
+    {
+      "original": "structure.ts",
+      "selected": "structure/structure.ts",
+      "original_sha256": "8917d76ff2796a5c05207b2048406547aa1aac2c0a01cda3932df6b0bdf37934",
+      "selected_sha256": "578a44351cffd10c81322b5849346a83574b790826abab124eb2c051ff0fff05"
+    },
+    {
+      "original": "superpose.ts",
+      "selected": "coordinates/superpose.ts",
+      "original_sha256": "f718f50f52998deb6bbff5fcc31499adb449aac9ac8d1ffa1175f8d10f984f25",
+      "selected_sha256": "bbde0b0ce0534ae30df6bf7f462ff19975d1c9e18e9a9e1b16829a3377c83a4c"
+    },
+    {
+      "original": "surface.ts",
+      "selected": "representations/surface/surface.ts",
+      "original_sha256": "836c29500238822798cb9f40c779d963e31a8015ce0786d3a07d70cffed719f0",
+      "selected_sha256": "5c3a2ec08c1b8e7f2860bb65d3a675b97673816be20f6ef168f14983b7c2fc91"
+    },
+    {
+      "original": "timeline-context.ts",
+      "selected": "timeline-context.ts",
+      "original_sha256": "4160ae054b60a8e53c1bab100d7f093f5b6a918334eb76f94f8ddae1c65111cc",
+      "selected_sha256": "4160ae054b60a8e53c1bab100d7f093f5b6a918334eb76f94f8ddae1c65111cc"
+    },
+    {
+      "original": "trajectory-context.ts",
+      "selected": "trajectory/trajectory-context.ts",
+      "original_sha256": "6352b5227424d8f2a6e76aa61f07c350274b95b682d155902a4fed017b5fc403",
+      "selected_sha256": "930252334ba3e7c183656e85295e9066537ea4e098f4a7cdb2e3d417eb2e1083"
+    },
+    {
+      "original": "trajectory.ts",
+      "selected": "trajectory/trajectory.ts",
+      "original_sha256": "8217a18aaf4ab916940a12f51f28a5bc3fc318b4fc6083684668b639decf9112",
+      "selected_sha256": "ba542ae262a92699e814f9be06111187f1c6a60dddafb230b83aa72d7b5d44b5"
+    },
+    {
+      "original": "transform.ts",
+      "selected": "coordinates/transform.ts",
+      "original_sha256": "6b6a0c4c00981ff8a8a5d62bed2f295a57270669621f60f6186216ffabdbce72",
+      "selected_sha256": "e3729173f01dfa053302820e8981d40e519c32f0fd7f507d48440e567a32514e"
+    },
+    {
+      "original": "tube.ts",
+      "selected": "representations/tube.ts",
+      "original_sha256": "6cdedab5763b8a454a100a4c71964061df071a05a738d56efeb65cc781c86c03",
+      "selected_sha256": "d7e5f95c7509c78613343a9894881489d59b1a8e373a70668266e0370e66115c"
+    },
+    {
+      "original": "types.ts",
+      "selected": "types.ts",
+      "original_sha256": "205af958c1e33752d72430488e1f3bf9d596a30432761b179eaab8fec73e74eb",
+      "selected_sha256": "205af958c1e33752d72430488e1f3bf9d596a30432761b179eaab8fec73e74eb"
+    },
+    {
+      "original": "unit-cell.ts",
+      "selected": "representations/unit-cell.ts",
+      "original_sha256": "a417b44f281412d07090ac7d398ff45465ce44c1fe1d0ece66011cad6a97d2fd",
+      "selected_sha256": "fff766293c12cb9a6c60e2362d1868fe7ddf6c70666eacdfb74f66d09c571bec"
+    },
+    {
+      "original": "unwrap.ts",
+      "selected": "coordinates/unwrap.ts",
+      "original_sha256": "24cc9358b3c815936773ff0dd17c0c249d0d7f738928f2a5b4d102c4a73c0f04",
+      "selected_sha256": "72cf67bbc707794639eacfbceece7e3e7130949da7bf33b780c9ab84156d8638"
+    },
+    {
+      "original": "use-camera-curve.ts",
+      "selected": "interaction/use-camera-curve.ts",
+      "original_sha256": "df0b32ad8a9ffd0bc5bbb7be82be59bf52f0080aa63f932ce1baf65ce9881c3f",
+      "selected_sha256": "7333f44a5396c515488f9645449dd6cd4a62d327fa4a543ad4319556485c5a81"
+    },
+    {
+      "original": "use-coordinate-bounds.ts",
+      "selected": "coordinates/use-coordinate-bounds.ts",
+      "original_sha256": "12bb54e141cfeccfe9cb9289b87636ee7294375374849f4223db33b867ca56e9",
+      "selected_sha256": "cccd8a4009bae1e0ac80ac921e622746e3189eccb737e0ee3d136f5badcfd6f5"
+    },
+    {
+      "original": "use-coordinate-focus.ts",
+      "selected": "interaction/use-coordinate-focus.ts",
+      "original_sha256": "fd8973a2021892f55d0394807bc83ba00d6b53dfeaa078ae133ee89cacf31957",
+      "selected_sha256": "d863810821aed89a40b7e6984f88085e1a6c9cc34b1c4f22fd3d3d52b3918bce"
+    },
+    {
+      "original": "use-coordinate-selection.ts",
+      "selected": "coordinates/use-coordinate-selection.ts",
+      "original_sha256": "ee459cddb21ebfa49a1008898e0851cc94c7b65321559fc757e4331687aedf57",
+      "selected_sha256": "b0afbd84d684914f34c82ec8ef0166025bdc2645ea47093ec43e9ad01c38ce72"
+    },
+    {
+      "original": "use-field.ts",
+      "selected": "field-binding/use-field.ts",
+      "original_sha256": "efada19aa0270accc31882f1894aaa2fa520cc948615b58e64e07ddf3cf5ffed",
+      "selected_sha256": "d7be0d66e698a26b82b7cbfbd1b09808dd6d9f7e43c1eb6e9c9cbbd5137aeb2f"
+    },
+    {
+      "original": "use-geometry-job.ts",
+      "selected": "internal/use-geometry-job.ts",
+      "original_sha256": "7705df27eab2d4bcc32c83f9ba4bf1ad99301c6d5286a14f5daecc972729b1cb",
+      "selected_sha256": "0bb31a9f4176431bf18c61fab6f7fe42bfe20a1e768ebe5b8329527126449301"
+    },
+    {
+      "original": "use-trajectory-frame.ts",
+      "selected": "trajectory/use-trajectory-frame.ts",
+      "original_sha256": "c3cf46ad49f6c6b54dce9f1ec2ba34da824e81081095772d0d8de2859e65a04a",
+      "selected_sha256": "fbb9b7efa7d67b796372f2e2744e9769f8b127c0ceac629598b1ded972c968d7"
+    },
+    {
+      "original": "volume-context.ts",
+      "selected": "volume/volume-context.ts",
+      "original_sha256": "7ed0d5d744853184cca98775f402c70337a6fd1164cfbf9ae8fe4d725126e235",
+      "selected_sha256": "7ed0d5d744853184cca98775f402c70337a6fd1164cfbf9ae8fe4d725126e235"
+    },
+    {
+      "original": "volume-slice.ts",
+      "selected": "volume/representations/volume-slice.ts",
+      "original_sha256": "d8bd0dbc7d0a557c897e5d6dc59ac128748d3a8b8e29061d7900f1ca73853090",
+      "selected_sha256": "d03aa61c21ce4548c449fe95e04d4cffe5b7c026608c0e7415ee5c0ffe3b3a43"
+    },
+    {
+      "original": "volume.ts",
+      "selected": "volume/volume.ts",
+      "original_sha256": "cf389f648f0eceac06f29051432aae61feef41725180951ebea62ac15d2bdf37",
+      "selected_sha256": "c8816354948b2dbee100ee1c773c64696f28b6de73550a115bff1cd581208301"
+    },
+    {
+      "original": "world-space-points.ts",
+      "selected": "representations/world-space-points.ts",
+      "original_sha256": "2d28ee02e10ee9bee0a697fb1760dbd048f3499cfab54b0fa5a80462193db446",
+      "selected_sha256": "a97ff7901c733ceca868d2c32268d04265ce8e9af04980959c633af234251d5b"
+    }
+  ],
+  "source_files": 114,
+  "renamed_files": 97,
+  "folder_counts": {
+    ".": 4,
+    "attributes": 7,
+    "coordinates": 12,
+    "field-binding": 5,
+    "interaction": 6,
+    "internal": 14,
+    "rendering": 13,
+    "representations": 11,
+    "representations/bonds": 3,
+    "representations/ribbon": 4,
+    "representations/surface": 7,
+    "selection": 5,
+    "structure": 4,
+    "trajectory": 6,
+    "volume": 5,
+    "volume/representations": 8
+  },
+  "external_code_consumers": [
+    "docs/findings/evidence/2026-10-04-field-alpha-probe.ts",
+    "packages/viewer/test/annotations-page.mjs",
+    "packages/viewer/test/assembly-instances.test.ts",
+    "packages/viewer/test/attribute-values.test.ts",
+    "packages/viewer/test/bond-columns.test.ts",
+    "packages/viewer/test/camera-curve.test.ts",
+    "packages/viewer/test/cartoon-geometry.test.ts",
+    "packages/viewer/test/centroid.test.ts",
+    "packages/viewer/test/color-ramp.test.ts",
+    "packages/viewer/test/columns.test.ts",
+    "packages/viewer/test/efield.test.ts",
+    "packages/viewer/test/efield/efield.tsx",
+    "packages/viewer/test/elastic-network.test.ts",
+    "packages/viewer/test/elastic/elastic.tsx",
+    "packages/viewer/test/field-plan.test.ts",
+    "packages/viewer/test/fixtures/identity-coordinates.ts",
+    "packages/viewer/test/fixtures/wobble-coordinates.ts",
+    "packages/viewer/test/frame-window.test.ts",
+    "packages/viewer/test/geometry-job.test.ts",
+    "packages/viewer/test/gpu-dssp/fixture.ts",
+    "packages/viewer/test/instance-copies.test.ts",
+    "packages/viewer/test/invalidation-page.mjs",
+    "packages/viewer/test/invalidation.test.ts",
+    "packages/viewer/test/isosurface-geometry.test.ts",
+    "packages/viewer/test/line-size.test.ts",
+    "packages/viewer/test/material-spec.test.ts",
+    "packages/viewer/test/opacity.test.ts",
+    "packages/viewer/test/pick-resolve.test.ts",
+    "packages/viewer/test/point-size.test.ts",
+    "packages/viewer/test/pointer-plane.test.ts",
+    "packages/viewer/test/ramachandran.test.ts",
+    "packages/viewer/test/ribbon-corpus.test.ts",
+    "packages/viewer/test/ribbon-dssp.test.ts",
+    "packages/viewer/test/ribbon-geometry.test.ts",
+    "packages/viewer/test/run-gate2.mjs",
+    "packages/viewer/test/run-trajectory.mjs",
+    "packages/viewer/test/scene.mjs",
+    "packages/viewer/test/selection-resolution.test.ts",
+    "packages/viewer/test/selection/selection.tsx",
+    "packages/viewer/test/ses-field/fixture.ts",
+    "packages/viewer/test/size-field-page.mjs",
+    "packages/viewer/test/slice-plane.test.ts",
+    "packages/viewer/test/structure-resource.test.ts",
+    "packages/viewer/test/surface-bench.ts",
+    "packages/viewer/test/surface-geometry.test.ts",
+    "packages/viewer/test/tsx/bond-vertex-probe.ts",
+    "packages/viewer/test/tsx/offset-coordinates.ts",
+    "packages/viewer/test/tube-geometry.test.ts",
+    "packages/viewer/test/view-rows.test.ts",
+    "test/spikes/gpu-readiness/probe.tsx"
+  ],
+  "path_changes": [
+    {
+      "batch": "pilot",
+      "consumer": "packages/viewer/src/index.ts",
+      "from": "./trajectory.ts",
+      "to": "./trajectory/trajectory.ts"
+    },
+    {
+      "batch": "pilot",
+      "consumer": "packages/viewer/src/index.ts",
+      "from": "./use-trajectory-frame.ts",
+      "to": "./trajectory/use-trajectory-frame.ts"
+    },
+    {
+      "batch": "pilot",
+      "consumer": "packages/viewer/src/internal/frame-window.ts",
+      "from": "./instrumentation.ts",
+      "to": "../internal/instrumentation.ts"
+    },
+    {
+      "batch": "pilot",
+      "consumer": "packages/viewer/src/internal/trajectory-player.ts",
+      "from": "./instrumentation.ts",
+      "to": "../internal/instrumentation.ts"
+    },
+    {
+      "batch": "pilot",
+      "consumer": "packages/viewer/src/internal/trajectory-player.ts",
+      "from": "./compute-buffers.ts",
+      "to": "../internal/compute-buffers.ts"
+    },
+    {
+      "batch": "pilot",
+      "consumer": "packages/viewer/src/structure-context.ts",
+      "from": "./trajectory-context.ts",
+      "to": "./trajectory/trajectory-context.ts"
+    },
+    {
+      "batch": "pilot",
+      "consumer": "packages/viewer/src/superpose.ts",
+      "from": "./trajectory-context.ts",
+      "to": "./trajectory/trajectory-context.ts"
+    },
+    {
+      "batch": "pilot",
+      "consumer": "packages/viewer/src/trajectory-context.ts",
+      "from": "./types.ts",
+      "to": "../types.ts"
+    },
+    {
+      "batch": "pilot",
+      "consumer": "packages/viewer/src/trajectory.ts",
+      "from": "./types.ts",
+      "to": "../types.ts"
+    },
+    {
+      "batch": "pilot",
+      "consumer": "packages/viewer/src/trajectory.ts",
+      "from": "./coordinates-context.ts",
+      "to": "../coordinates-context.ts"
+    },
+    {
+      "batch": "pilot",
+      "consumer": "packages/viewer/src/trajectory.ts",
+      "from": "./timeline-context.ts",
+      "to": "../timeline-context.ts"
+    },
+    {
+      "batch": "pilot",
+      "consumer": "packages/viewer/src/trajectory.ts",
+      "from": "./internal/coordinate-kernel.ts",
+      "to": "../internal/coordinate-kernel.ts"
+    },
+    {
+      "batch": "pilot",
+      "consumer": "packages/viewer/src/trajectory.ts",
+      "from": "./internal/source-request.ts",
+      "to": "../internal/source-request.ts"
+    },
+    {
+      "batch": "pilot",
+      "consumer": "packages/viewer/src/trajectory.ts",
+      "from": "./internal/status-delivery.ts",
+      "to": "../internal/status-delivery.ts"
+    },
+    {
+      "batch": "pilot",
+      "consumer": "packages/viewer/src/trajectory.ts",
+      "from": "./internal/trajectory-player.ts",
+      "to": "./trajectory-player.ts"
+    },
+    {
+      "batch": "pilot",
+      "consumer": "packages/viewer/src/unit-cell.ts",
+      "from": "./use-trajectory-frame.ts",
+      "to": "./trajectory/use-trajectory-frame.ts"
+    },
+    {
+      "batch": "pilot",
+      "consumer": "packages/viewer/src/unwrap.ts",
+      "from": "./use-trajectory-frame.ts",
+      "to": "./trajectory/use-trajectory-frame.ts"
+    },
+    {
+      "batch": "pilot",
+      "consumer": "packages/viewer/src/use-trajectory-frame.ts",
+      "from": "./structure-context.ts",
+      "to": "../structure-context.ts"
+    },
+    {
+      "batch": "pilot",
+      "consumer": "packages/viewer/src/use-trajectory-frame.ts",
+      "from": "./types.ts",
+      "to": "../types.ts"
+    },
+    {
+      "batch": "pilot",
+      "consumer": "packages/viewer/test/frame-window.test.ts",
+      "from": "../src/internal/frame-window.ts",
+      "to": "../src/trajectory/frame-window.ts"
+    },
+    {
+      "batch": "pilot",
+      "consumer": "packages/viewer/test/frame-window.test.ts",
+      "from": "../src/internal/frame-cache.ts",
+      "to": "../src/trajectory/frame-cache.ts"
+    },
+    {
+      "batch": "pilot",
+      "consumer": "packages/viewer/test/run-trajectory.mjs",
+      "from": "../src/internal/frame-window.ts",
+      "to": "../src/trajectory/frame-window.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "docs/findings/evidence/2026-10-04-field-alpha-probe.ts",
+      "from": "../../../packages/viewer/src/internal/opacity.ts",
+      "to": "../../../packages/viewer/src/rendering/opacity.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/advanced.ts",
+      "from": "./world-space-points.ts",
+      "to": "./representations/world-space-points.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/advanced.ts",
+      "from": "./attribute-producer.ts",
+      "to": "./attributes/attribute-producer.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/advanced.ts",
+      "from": "./attribute-snapshot.ts",
+      "to": "./attributes/attribute-snapshot.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/advanced.ts",
+      "from": "./attribute-snapshot-context.ts",
+      "to": "./attributes/attribute-snapshot-context.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/advanced.ts",
+      "from": "./use-field.ts",
+      "to": "./field-binding/use-field.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/advanced.ts",
+      "from": "./internal/structure-resource.ts",
+      "to": "./structure/structure-resource.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/advanced.ts",
+      "from": "./structure-context.ts",
+      "to": "./structure/structure-context.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/advanced.ts",
+      "from": "./coordinate-snapshot.ts",
+      "to": "./coordinates/coordinate-snapshot.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/advanced.ts",
+      "from": "./coordinate-snapshot.ts",
+      "to": "./coordinates/coordinate-snapshot.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/advanced.ts",
+      "from": "./use-coordinate-selection.ts",
+      "to": "./coordinates/use-coordinate-selection.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/advanced.ts",
+      "from": "./use-coordinate-bounds.ts",
+      "to": "./coordinates/use-coordinate-bounds.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/advanced.ts",
+      "from": "./use-coordinate-bounds.ts",
+      "to": "./coordinates/use-coordinate-bounds.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/advanced.ts",
+      "from": "./volume-context.ts",
+      "to": "./volume/volume-context.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/advanced.ts",
+      "from": "./internal/coordinate-kernel.ts",
+      "to": "./coordinates/coordinate-kernel.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/advanced.ts",
+      "from": "./internal/coordinate-kernel.ts",
+      "to": "./coordinates/coordinate-kernel.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/advanced.ts",
+      "from": "./coordinates-context.ts",
+      "to": "./coordinates/coordinates-context.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/advanced.ts",
+      "from": "./coordinates-context.ts",
+      "to": "./coordinates/coordinates-context.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/advanced.ts",
+      "from": "./structure-context.ts",
+      "to": "./structure/structure-context.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/advanced.ts",
+      "from": "./structure-context.ts",
+      "to": "./structure/structure-context.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/advanced.ts",
+      "from": "./volume-context.ts",
+      "to": "./volume/volume-context.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/advanced.ts",
+      "from": "./volume-context.ts",
+      "to": "./volume/volume-context.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/annotations.ts",
+      "from": "./internal/use-selection-input.ts",
+      "to": "../selection/use-selection-input.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/annotations.ts",
+      "from": "./types.ts",
+      "to": "../types.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/annotations.ts",
+      "from": "./internal/selection-consumer.ts",
+      "to": "../selection/selection-consumer.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/annotations.ts",
+      "from": "./types.ts",
+      "to": "../types.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/annotations.ts",
+      "from": "./structure-context.ts",
+      "to": "../structure/structure-context.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/annotations.ts",
+      "from": "./coordinate-snapshot.ts",
+      "to": "../coordinates/coordinate-snapshot.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/annotations.ts",
+      "from": "./internal/instance-context.ts",
+      "to": "../rendering/instance-context.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/annotations.ts",
+      "from": "./internal/instance-plan.ts",
+      "to": "../rendering/instance-plan.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/annotations.ts",
+      "from": "./internal/instance-copies.ts",
+      "to": "../rendering/instance-copies.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/annotations.ts",
+      "from": "./internal/representation.ts",
+      "to": "../rendering/representation.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/annotations.ts",
+      "from": "./internal/opacity.ts",
+      "to": "../rendering/opacity.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/annotations.ts",
+      "from": "./internal/centroid.ts",
+      "to": "./centroid.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/annotations.ts",
+      "from": "./internal/use-repaint.ts",
+      "to": "../internal/use-repaint.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/annotations.ts",
+      "from": "./internal/instrumentation.ts",
+      "to": "../internal/instrumentation.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/annotations.ts",
+      "from": "./internal/use-binding-probe.ts",
+      "to": "../internal/use-binding-probe.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/attribute-producer.ts",
+      "from": "./internal/dispatch-observation.ts",
+      "to": "../internal/dispatch-observation.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/attribute-producer.ts",
+      "from": "./coordinates-context.ts",
+      "to": "../coordinates/coordinates-context.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/attribute-producer.ts",
+      "from": "./structure-context.ts",
+      "to": "../structure/structure-context.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/attribute-producer.ts",
+      "from": "./internal/instrumentation.ts",
+      "to": "../internal/instrumentation.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/attribute-snapshot-context.ts",
+      "from": "./internal/readback-token.ts",
+      "to": "../internal/readback-token.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/attribute-snapshot.ts",
+      "from": "./structure-context.ts",
+      "to": "../structure/structure-context.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/attribute-snapshot.ts",
+      "from": "./internal/throttled-readback.ts",
+      "to": "../internal/throttled-readback.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/attribute-snapshot.ts",
+      "from": "./internal/readback-token.ts",
+      "to": "../internal/readback-token.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/attribute-snapshot.ts",
+      "from": "./internal/attribute-values.ts",
+      "to": "./attribute-values.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/ball-and-stick.ts",
+      "from": "./types.ts",
+      "to": "../types.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/ball-and-stick.ts",
+      "from": "./internal/selection-consumer.ts",
+      "to": "../selection/selection-consumer.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/ball-and-stick.ts",
+      "from": "./types.ts",
+      "to": "../types.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/ball-and-stick.ts",
+      "from": "./bonds.ts",
+      "to": "./bonds/bonds.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/bonds.ts",
+      "from": "./types.ts",
+      "to": "../../types.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/bonds.ts",
+      "from": "./internal/selection-consumer.ts",
+      "to": "../../selection/selection-consumer.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/bonds.ts",
+      "from": "./types.ts",
+      "to": "../../types.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/bonds.ts",
+      "from": "./structure-context.ts",
+      "to": "../../structure/structure-context.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/bonds.ts",
+      "from": "./use-field.ts",
+      "to": "../../field-binding/use-field.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/bonds.ts",
+      "from": "./internal/representation.ts",
+      "to": "../../rendering/representation.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/bonds.ts",
+      "from": "./internal/view-rows.ts",
+      "to": "../../selection/view-rows.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/bonds.ts",
+      "from": "./internal/use-field-plan.ts",
+      "to": "../../field-binding/use-field-plan.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/bonds.ts",
+      "from": "./internal/attribute-sources.ts",
+      "to": "../../field-binding/attribute-sources.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/bonds.ts",
+      "from": "./coordinates-context.ts",
+      "to": "../../coordinates/coordinates-context.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/bonds.ts",
+      "from": "./internal/instance-copies.ts",
+      "to": "../../rendering/instance-copies.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/bonds.ts",
+      "from": "./internal/bond-positions.ts",
+      "to": "./bond-positions.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/bonds.ts",
+      "from": "./internal/opacity.ts",
+      "to": "../../rendering/opacity.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/bonds.ts",
+      "from": "./internal/use-opacity-colors.ts",
+      "to": "../../rendering/use-opacity-colors.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/bonds.ts",
+      "from": "./internal/with-material.ts",
+      "to": "../../rendering/with-material.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/bonds.ts",
+      "from": "./internal/bond-columns.ts",
+      "to": "./bond-columns.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/bonds.ts",
+      "from": "./internal/use-repaint.ts",
+      "to": "../../internal/use-repaint.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/bonds.ts",
+      "from": "./internal/use-binding-probe.ts",
+      "to": "../../internal/use-binding-probe.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/camera-curve.ts",
+      "from": "./internal/instance-plan.ts",
+      "to": "../rendering/instance-plan.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/camera-curve.ts",
+      "from": "./internal/selection-diagnostics.ts",
+      "to": "../selection/selection-diagnostics.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/camera-curve.ts",
+      "from": "./internal/selection-resolution.ts",
+      "to": "../selection/selection-resolution.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/camera-curve.ts",
+      "from": "./internal/instrumentation.ts",
+      "to": "../internal/instrumentation.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/camera-curve.ts",
+      "from": "./internal/view-rows.ts",
+      "to": "../selection/view-rows.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/camera-curve.ts",
+      "from": "./types.ts",
+      "to": "../types.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/coordinate-snapshot.ts",
+      "from": "./types.ts",
+      "to": "../types.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/coordinate-snapshot.ts",
+      "from": "./internal/structure-resource.ts",
+      "to": "../structure/structure-resource.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/coordinate-snapshot.ts",
+      "from": "./internal/throttled-readback.ts",
+      "to": "../internal/throttled-readback.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/coordinate-snapshot.ts",
+      "from": "./internal/readback-token.ts",
+      "to": "../internal/readback-token.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/coordinates-context.ts",
+      "from": "./types.ts",
+      "to": "../types.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/efield.ts",
+      "from": "./internal/selection-consumer.ts",
+      "to": "../selection/selection-consumer.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/efield.ts",
+      "from": "./coordinates-context.ts",
+      "to": "../coordinates/coordinates-context.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/efield.ts",
+      "from": "./attributes-context.ts",
+      "to": "../attributes/attributes-context.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/efield.ts",
+      "from": "./internal/efield-grid.ts",
+      "to": "./efield-grid.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/efield.ts",
+      "from": "./internal/attribute-sources.ts",
+      "to": "../field-binding/attribute-sources.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/efield.ts",
+      "from": "./internal/representation.ts",
+      "to": "../rendering/representation.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/efield.ts",
+      "from": "./internal/view-rows.ts",
+      "to": "../selection/view-rows.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/efield.ts",
+      "from": "./internal/throttled-readback.ts",
+      "to": "../internal/throttled-readback.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/efield.ts",
+      "from": "./internal/readback-token.ts",
+      "to": "../internal/readback-token.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/efield.ts",
+      "from": "./internal/instrumentation.ts",
+      "to": "../internal/instrumentation.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/efield.ts",
+      "from": "./types.ts",
+      "to": "../types.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/elastic-network.ts",
+      "from": "./internal/elastic-bindings.ts",
+      "to": "./elastic-bindings.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/elastic-network.ts",
+      "from": "./internal/coordinate-kernel.ts",
+      "to": "./coordinate-kernel.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/elastic-network.ts",
+      "from": "./internal/instrumentation.ts",
+      "to": "../internal/instrumentation.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/elastic-network.ts",
+      "from": "./timeline-context.ts",
+      "to": "../timeline-context.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/elastic-network.ts",
+      "from": "./types.ts",
+      "to": "../types.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/field-arrows.ts",
+      "from": "./types.ts",
+      "to": "../../types.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/field-arrows.ts",
+      "from": "./volume-context.ts",
+      "to": "../volume-context.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/field-arrows.ts",
+      "from": "./internal/opacity.ts",
+      "to": "../../rendering/opacity.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/field-arrows.ts",
+      "from": "./internal/slice-plane.ts",
+      "to": "./slice-plane.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/field-arrows.ts",
+      "from": "./internal/instrumentation.ts",
+      "to": "../../internal/instrumentation.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/field-arrows.ts",
+      "from": "./internal/use-repaint.ts",
+      "to": "../../internal/use-repaint.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/field-arrows.ts",
+      "from": "./internal/use-binding-probe.ts",
+      "to": "../../internal/use-binding-probe.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/field-arrows.ts",
+      "from": "./internal/color-ramp.ts",
+      "to": "./color-ramp.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/field-lines.ts",
+      "from": "./internal/dispatch-observation.ts",
+      "to": "../../internal/dispatch-observation.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/field-lines.ts",
+      "from": "./internal/field-line-geometry.ts",
+      "to": "./field-line-geometry.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/field-lines.ts",
+      "from": "./types.ts",
+      "to": "../../types.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/field-lines.ts",
+      "from": "./volume-context.ts",
+      "to": "../volume-context.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/field-lines.ts",
+      "from": "./internal/representation.ts",
+      "to": "../../rendering/representation.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/field-lines.ts",
+      "from": "./internal/opacity.ts",
+      "to": "../../rendering/opacity.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/field-lines.ts",
+      "from": "./internal/instrumentation.ts",
+      "to": "../../internal/instrumentation.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/field-lines.ts",
+      "from": "./internal/use-repaint.ts",
+      "to": "../../internal/use-repaint.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/field-lines.ts",
+      "from": "./internal/use-binding-probe.ts",
+      "to": "../../internal/use-binding-probe.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/field-lines.ts",
+      "from": "./internal/color-ramp.ts",
+      "to": "./color-ramp.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/gpu-dssp-provider.ts",
+      "from": "./coordinates-context.ts",
+      "to": "../coordinates/coordinates-context.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/gpu-dssp-provider.ts",
+      "from": "./structure-context.ts",
+      "to": "../structure/structure-context.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/gpu-dssp-provider.ts",
+      "from": "./internal/instrumentation.ts",
+      "to": "../internal/instrumentation.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/gpu-dssp-provider.ts",
+      "from": "./types.ts",
+      "to": "../types.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/gpu-dssp.ts",
+      "from": "./internal/copy-positions-wgsl.ts",
+      "to": "../internal/copy-positions-wgsl.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/gpu-dssp.ts",
+      "from": "./internal/gpu-scan.ts",
+      "to": "../internal/gpu-scan.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/index.ts",
+      "from": "./structure.ts",
+      "to": "./structure/structure.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/index.ts",
+      "from": "./spacefill.ts",
+      "to": "./representations/spacefill.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/index.ts",
+      "from": "./bonds.ts",
+      "to": "./representations/bonds/bonds.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/index.ts",
+      "from": "./ball-and-stick.ts",
+      "to": "./representations/ball-and-stick.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/index.ts",
+      "from": "./tube.ts",
+      "to": "./representations/tube.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/index.ts",
+      "from": "./ribbon.ts",
+      "to": "./representations/ribbon/ribbon.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/index.ts",
+      "from": "./ribbon.ts",
+      "to": "./representations/ribbon/ribbon.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/index.ts",
+      "from": "./surface.ts",
+      "to": "./representations/surface/surface.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/index.ts",
+      "from": "./unit-cell.ts",
+      "to": "./representations/unit-cell.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/index.ts",
+      "from": "./ramachandran.ts",
+      "to": "./representations/ramachandran.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/index.ts",
+      "from": "./internal/ramachandran-points.ts",
+      "to": "./representations/ramachandran-points.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/index.ts",
+      "from": "./internal/ramachandran-points.ts",
+      "to": "./representations/ramachandran-points.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/index.ts",
+      "from": "./annotations.ts",
+      "to": "./representations/annotations.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/index.ts",
+      "from": "./volume.ts",
+      "to": "./volume/volume.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/index.ts",
+      "from": "./isosurface.ts",
+      "to": "./volume/representations/isosurface.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/index.ts",
+      "from": "./volume-slice.ts",
+      "to": "./volume/representations/volume-slice.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/index.ts",
+      "from": "./volume-slice.ts",
+      "to": "./volume/representations/volume-slice.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/index.ts",
+      "from": "./efield.ts",
+      "to": "./volume/efield.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/index.ts",
+      "from": "./field-lines.ts",
+      "to": "./volume/representations/field-lines.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/index.ts",
+      "from": "./field-arrows.ts",
+      "to": "./volume/representations/field-arrows.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/index.ts",
+      "from": "./transform.ts",
+      "to": "./coordinates/transform.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/index.ts",
+      "from": "./superpose.ts",
+      "to": "./coordinates/superpose.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/index.ts",
+      "from": "./unwrap.ts",
+      "to": "./coordinates/unwrap.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/index.ts",
+      "from": "./normal-mode.ts",
+      "to": "./coordinates/normal-mode.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/index.ts",
+      "from": "./elastic-network.ts",
+      "to": "./coordinates/elastic-network.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/index.ts",
+      "from": "./pointer-plane.ts",
+      "to": "./interaction/pointer-plane.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/index.ts",
+      "from": "./gpu-dssp-provider.ts",
+      "to": "./attributes/gpu-dssp-provider.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/index.ts",
+      "from": "./gpu-dssp-provider.ts",
+      "to": "./attributes/gpu-dssp-provider.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/index.ts",
+      "from": "./gpu-dssp.ts",
+      "to": "./attributes/gpu-dssp.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/index.ts",
+      "from": "./use-coordinate-focus.ts",
+      "to": "./interaction/use-coordinate-focus.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/index.ts",
+      "from": "./use-camera-curve.ts",
+      "to": "./interaction/use-camera-curve.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/index.ts",
+      "from": "./picking.ts",
+      "to": "./interaction/picking.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/internal/attribute-sources.ts",
+      "from": "../attributes-context.ts",
+      "to": "../attributes/attributes-context.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/internal/attribute-sources.ts",
+      "from": "../structure-context.ts",
+      "to": "../structure/structure-context.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/internal/attribute-sources.ts",
+      "from": "./immutable-attribute-cache.ts",
+      "to": "../structure/immutable-attribute-cache.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/internal/attribution-gpu.ts",
+      "from": "./gpu-scan.ts",
+      "to": "../../internal/gpu-scan.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/internal/bond-columns.ts",
+      "from": "./instrumentation.ts",
+      "to": "../../internal/instrumentation.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/internal/cartoon-geometry.ts",
+      "from": "./instrumentation.ts",
+      "to": "../../internal/instrumentation.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/internal/cartoon-geometry.ts",
+      "from": "./mesh-builder.ts",
+      "to": "../mesh-builder.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/internal/color-ramp.ts",
+      "from": "../types.ts",
+      "to": "../../types.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/internal/column-source.ts",
+      "from": "./instrumentation.ts",
+      "to": "../internal/instrumentation.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/internal/coordinate-kernel.ts",
+      "from": "./dispatch-observation.ts",
+      "to": "../internal/dispatch-observation.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/internal/coordinate-kernel.ts",
+      "from": "../coordinates-context.ts",
+      "to": "./coordinates-context.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/internal/coordinate-kernel.ts",
+      "from": "../coordinate-snapshot.ts",
+      "to": "./coordinate-snapshot.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/internal/coordinate-kernel.ts",
+      "from": "./instrumentation.ts",
+      "to": "../internal/instrumentation.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/internal/coordinate-passes.ts",
+      "from": "../coordinates-context.ts",
+      "to": "./coordinates-context.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/internal/coordinate-passes.ts",
+      "from": "./instrumentation.ts",
+      "to": "../internal/instrumentation.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/internal/efield-grid.ts",
+      "from": "../attributes-context.ts",
+      "to": "../attributes/attributes-context.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/internal/field-plan.ts",
+      "from": "./representation.ts",
+      "to": "../rendering/representation.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/internal/immutable-attribute-cache.ts",
+      "from": "./instrumentation.ts",
+      "to": "../internal/instrumentation.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/internal/instance-copies.ts",
+      "from": "../coordinates-context.ts",
+      "to": "../coordinates/coordinates-context.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/internal/instance-copies.ts",
+      "from": "../structure-context.ts",
+      "to": "../structure/structure-context.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/internal/instance-copies.ts",
+      "from": "./coordinate-kernel.ts",
+      "to": "../coordinates/coordinate-kernel.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/internal/isosurface-geometry.ts",
+      "from": "./instrumentation.ts",
+      "to": "../../internal/instrumentation.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/internal/marching-cubes-gpu.ts",
+      "from": "./gpu-scan.ts",
+      "to": "../../internal/gpu-scan.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/internal/representation.ts",
+      "from": "./view-rows.ts",
+      "to": "../selection/view-rows.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/internal/representation.ts",
+      "from": "./instrumentation.ts",
+      "to": "../internal/instrumentation.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/internal/ribbon-geometry.ts",
+      "from": "./instrumentation.ts",
+      "to": "../../internal/instrumentation.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/internal/ribbon-geometry.ts",
+      "from": "./mesh-builder.ts",
+      "to": "../mesh-builder.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/internal/ses-field.ts",
+      "from": "./geometry-job.ts",
+      "to": "../../internal/geometry-job.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/internal/ses-field.ts",
+      "from": "./copy-positions-wgsl.ts",
+      "to": "../../internal/copy-positions-wgsl.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/internal/ses-field.ts",
+      "from": "./gpu-scan.ts",
+      "to": "../../internal/gpu-scan.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/internal/surface-geometry.ts",
+      "from": "../types.ts",
+      "to": "../../types.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/internal/surface-geometry.ts",
+      "from": "./geometry-job.ts",
+      "to": "../../internal/geometry-job.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/internal/surface-geometry.ts",
+      "from": "./instrumentation.ts",
+      "to": "../../internal/instrumentation.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/internal/tube-geometry.ts",
+      "from": "./instrumentation.ts",
+      "to": "../internal/instrumentation.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/internal/use-field-plan.ts",
+      "from": "../volume-context.ts",
+      "to": "../volume/volume-context.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/internal/use-field-plan.ts",
+      "from": "./indexed.ts",
+      "to": "../rendering/indexed.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/internal/use-gpu-surface.ts",
+      "from": "../coordinates-context.ts",
+      "to": "../../coordinates/coordinates-context.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/internal/use-gpu-surface.ts",
+      "from": "./instrumentation.ts",
+      "to": "../../internal/instrumentation.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/internal/use-selection-input.ts",
+      "from": "../structure-context.ts",
+      "to": "../structure/structure-context.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/internal/use-selection-input.ts",
+      "from": "../coordinate-snapshot.ts",
+      "to": "../coordinates/coordinate-snapshot.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/internal/use-selection-input.ts",
+      "from": "../attribute-snapshot-context.ts",
+      "to": "../attributes/attribute-snapshot-context.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/internal/use-selection-input.ts",
+      "from": "../attributes-context.ts",
+      "to": "../attributes/attributes-context.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/internal/vertex-field-colors.ts",
+      "from": "../use-field.ts",
+      "to": "./use-field.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/internal/vertex-field-colors.ts",
+      "from": "./use-opacity-colors.ts",
+      "to": "../rendering/use-opacity-colors.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/internal/volume-buffers.ts",
+      "from": "./instrumentation.ts",
+      "to": "../internal/instrumentation.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/isosurface.ts",
+      "from": "./types.ts",
+      "to": "../../types.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/isosurface.ts",
+      "from": "./volume-context.ts",
+      "to": "../volume-context.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/isosurface.ts",
+      "from": "./internal/representation.ts",
+      "to": "../../rendering/representation.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/isosurface.ts",
+      "from": "./internal/opacity.ts",
+      "to": "../../rendering/opacity.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/isosurface.ts",
+      "from": "./internal/with-material.ts",
+      "to": "../../rendering/with-material.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/isosurface.ts",
+      "from": "./internal/geometry-job.ts",
+      "to": "../../internal/geometry-job.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/isosurface.ts",
+      "from": "./internal/isosurface-geometry.ts",
+      "to": "./isosurface-geometry.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/isosurface.ts",
+      "from": "./internal/use-repaint.ts",
+      "to": "../../internal/use-repaint.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/isosurface.ts",
+      "from": "./internal/use-binding-probe.ts",
+      "to": "../../internal/use-binding-probe.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/normal-mode.ts",
+      "from": "./internal/coordinate-kernel.ts",
+      "to": "./coordinate-kernel.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/normal-mode.ts",
+      "from": "./internal/compute-buffers.ts",
+      "to": "../internal/compute-buffers.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/normal-mode.ts",
+      "from": "./timeline-context.ts",
+      "to": "../timeline-context.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/normal-mode.ts",
+      "from": "./types.ts",
+      "to": "../types.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/picking.ts",
+      "from": "./types.ts",
+      "to": "../types.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/picking.ts",
+      "from": "./internal/pick-resolve.ts",
+      "to": "./pick-resolve.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/picking.ts",
+      "from": "./internal/instance-context.ts",
+      "to": "../rendering/instance-context.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/ramachandran.ts",
+      "from": "./coordinate-snapshot.ts",
+      "to": "../coordinates/coordinate-snapshot.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/ramachandran.ts",
+      "from": "./internal/ramachandran-points.ts",
+      "to": "./ramachandran-points.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/ramachandran.ts",
+      "from": "./types.ts",
+      "to": "../types.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/ramachandran.ts",
+      "from": "./internal/representation.ts",
+      "to": "../rendering/representation.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/ribbon.ts",
+      "from": "./types.ts",
+      "to": "../../types.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/ribbon.ts",
+      "from": "./internal/selection-consumer.ts",
+      "to": "../../selection/selection-consumer.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/ribbon.ts",
+      "from": "./types.ts",
+      "to": "../../types.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/ribbon.ts",
+      "from": "./structure-context.ts",
+      "to": "../../structure/structure-context.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/ribbon.ts",
+      "from": "./coordinate-snapshot.ts",
+      "to": "../../coordinates/coordinate-snapshot.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/ribbon.ts",
+      "from": "./attribute-snapshot.ts",
+      "to": "../../attributes/attribute-snapshot.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/ribbon.ts",
+      "from": "./internal/representation.ts",
+      "to": "../../rendering/representation.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/ribbon.ts",
+      "from": "./internal/use-field-plan.ts",
+      "to": "../../field-binding/use-field-plan.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/ribbon.ts",
+      "from": "./internal/vertex-field-colors.ts",
+      "to": "../../field-binding/vertex-field-colors.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/ribbon.ts",
+      "from": "./internal/opacity.ts",
+      "to": "../../rendering/opacity.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/ribbon.ts",
+      "from": "./internal/with-material.ts",
+      "to": "../../rendering/with-material.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/ribbon.ts",
+      "from": "./internal/instance-copies.ts",
+      "to": "../../rendering/instance-copies.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/ribbon.ts",
+      "from": "./internal/ribbon-geometry.ts",
+      "to": "./ribbon-geometry.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/ribbon.ts",
+      "from": "./internal/cartoon-geometry.ts",
+      "to": "./cartoon-geometry.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/ribbon.ts",
+      "from": "./internal/mesh-builder.ts",
+      "to": "../mesh-builder.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/ribbon.ts",
+      "from": "./internal/ribbon-dssp.ts",
+      "to": "./ribbon-dssp.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/ribbon.ts",
+      "from": "./internal/use-repaint.ts",
+      "to": "../../internal/use-repaint.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/ribbon.ts",
+      "from": "./internal/instrumentation.ts",
+      "to": "../../internal/instrumentation.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/ribbon.ts",
+      "from": "./internal/use-binding-probe.ts",
+      "to": "../../internal/use-binding-probe.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/spacefill.ts",
+      "from": "./types.ts",
+      "to": "../types.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/spacefill.ts",
+      "from": "./internal/use-selection-input.ts",
+      "to": "../selection/use-selection-input.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/spacefill.ts",
+      "from": "./types.ts",
+      "to": "../types.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/spacefill.ts",
+      "from": "./structure-context.ts",
+      "to": "../structure/structure-context.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/spacefill.ts",
+      "from": "./coordinates-context.ts",
+      "to": "../coordinates/coordinates-context.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/spacefill.ts",
+      "from": "./internal/instance-copies.ts",
+      "to": "../rendering/instance-copies.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/spacefill.ts",
+      "from": "./use-field.ts",
+      "to": "../field-binding/use-field.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/spacefill.ts",
+      "from": "./internal/indexed.ts",
+      "to": "../rendering/indexed.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/spacefill.ts",
+      "from": "./internal/attribute-sources.ts",
+      "to": "../field-binding/attribute-sources.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/spacefill.ts",
+      "from": "./internal/representation.ts",
+      "to": "../rendering/representation.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/spacefill.ts",
+      "from": "./internal/view-rows.ts",
+      "to": "../selection/view-rows.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/spacefill.ts",
+      "from": "./internal/use-field-plan.ts",
+      "to": "../field-binding/use-field-plan.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/spacefill.ts",
+      "from": "./internal/opacity.ts",
+      "to": "../rendering/opacity.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/spacefill.ts",
+      "from": "./internal/use-opacity-colors.ts",
+      "to": "../rendering/use-opacity-colors.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/spacefill.ts",
+      "from": "./internal/with-material.ts",
+      "to": "../rendering/with-material.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/spacefill.ts",
+      "from": "./picking.ts",
+      "to": "../interaction/picking.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/spacefill.ts",
+      "from": "./internal/use-repaint.ts",
+      "to": "../internal/use-repaint.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/spacefill.ts",
+      "from": "./internal/use-binding-probe.ts",
+      "to": "../internal/use-binding-probe.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/structure-context.ts",
+      "from": "./types.ts",
+      "to": "../types.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/structure-context.ts",
+      "from": "./internal/structure-resource.ts",
+      "to": "./structure-resource.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/structure-context.ts",
+      "from": "./internal/immutable-attribute-cache.ts",
+      "to": "./immutable-attribute-cache.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/structure-context.ts",
+      "from": "./internal/column-source.ts",
+      "to": "../rendering/column-source.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/structure-context.ts",
+      "from": "./coordinates-context.ts",
+      "to": "../coordinates/coordinates-context.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/structure-context.ts",
+      "from": "./attributes-context.ts",
+      "to": "../attributes/attributes-context.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/structure-context.ts",
+      "from": "./attribute-snapshot-context.ts",
+      "to": "../attributes/attribute-snapshot-context.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/structure-context.ts",
+      "from": "./coordinate-snapshot.ts",
+      "to": "../coordinates/coordinate-snapshot.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/structure-context.ts",
+      "from": "./trajectory/trajectory-context.ts",
+      "to": "../trajectory/trajectory-context.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/structure.ts",
+      "from": "./internal/source-request.ts",
+      "to": "../internal/source-request.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/structure.ts",
+      "from": "./types.ts",
+      "to": "../types.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/superpose.ts",
+      "from": "./internal/coordinate-passes.ts",
+      "to": "./coordinate-passes.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/superpose.ts",
+      "from": "./internal/compute-buffers.ts",
+      "to": "../internal/compute-buffers.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/superpose.ts",
+      "from": "./internal/status-readback.ts",
+      "to": "../internal/status-readback.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/superpose.ts",
+      "from": "./internal/source-request.ts",
+      "to": "../internal/source-request.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/superpose.ts",
+      "from": "./internal/status-delivery.ts",
+      "to": "../internal/status-delivery.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/superpose.ts",
+      "from": "./trajectory/trajectory-context.ts",
+      "to": "../trajectory/trajectory-context.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/superpose.ts",
+      "from": "./types.ts",
+      "to": "../types.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/superpose.ts",
+      "from": "./internal/use-selection-input.ts",
+      "to": "../selection/use-selection-input.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/superpose.ts",
+      "from": "./types.ts",
+      "to": "../types.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/surface.ts",
+      "from": "./types.ts",
+      "to": "../../types.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/surface.ts",
+      "from": "./internal/selection-consumer.ts",
+      "to": "../../selection/selection-consumer.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/surface.ts",
+      "from": "./types.ts",
+      "to": "../../types.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/surface.ts",
+      "from": "./structure-context.ts",
+      "to": "../../structure/structure-context.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/surface.ts",
+      "from": "./coordinates-context.ts",
+      "to": "../../coordinates/coordinates-context.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/surface.ts",
+      "from": "./internal/use-gpu-surface.ts",
+      "to": "./use-gpu-surface.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/surface.ts",
+      "from": "./coordinate-snapshot.ts",
+      "to": "../../coordinates/coordinate-snapshot.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/surface.ts",
+      "from": "./internal/representation.ts",
+      "to": "../../rendering/representation.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/surface.ts",
+      "from": "./use-field.ts",
+      "to": "../../field-binding/use-field.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/surface.ts",
+      "from": "./internal/use-opacity-colors.ts",
+      "to": "../../rendering/use-opacity-colors.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/surface.ts",
+      "from": "./internal/opacity.ts",
+      "to": "../../rendering/opacity.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/surface.ts",
+      "from": "./internal/with-material.ts",
+      "to": "../../rendering/with-material.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/surface.ts",
+      "from": "./internal/instance-copies.ts",
+      "to": "../../rendering/instance-copies.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/surface.ts",
+      "from": "./use-geometry-job.ts",
+      "to": "../../internal/use-geometry-job.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/surface.ts",
+      "from": "./internal/surface-geometry.ts",
+      "to": "./surface-geometry.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/surface.ts",
+      "from": "./internal/use-repaint.ts",
+      "to": "../../internal/use-repaint.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/surface.ts",
+      "from": "./internal/use-binding-probe.ts",
+      "to": "../../internal/use-binding-probe.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/surface.ts",
+      "from": "./internal/attribute-sources.ts",
+      "to": "../../field-binding/attribute-sources.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/surface.ts",
+      "from": "./internal/use-field-plan.ts",
+      "to": "../../field-binding/use-field-plan.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/trajectory/trajectory.ts",
+      "from": "../coordinates-context.ts",
+      "to": "../coordinates/coordinates-context.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/trajectory/trajectory.ts",
+      "from": "../internal/coordinate-kernel.ts",
+      "to": "../coordinates/coordinate-kernel.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/trajectory/use-trajectory-frame.ts",
+      "from": "../structure-context.ts",
+      "to": "../structure/structure-context.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/transform.ts",
+      "from": "./internal/coordinate-kernel.ts",
+      "to": "./coordinate-kernel.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/transform.ts",
+      "from": "./internal/compute-buffers.ts",
+      "to": "../internal/compute-buffers.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/transform.ts",
+      "from": "./timeline-context.ts",
+      "to": "../timeline-context.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/transform.ts",
+      "from": "./types.ts",
+      "to": "../types.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/transform.ts",
+      "from": "./internal/use-selection-input.ts",
+      "to": "../selection/use-selection-input.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/tube.ts",
+      "from": "./types.ts",
+      "to": "../types.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/tube.ts",
+      "from": "./internal/selection-consumer.ts",
+      "to": "../selection/selection-consumer.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/tube.ts",
+      "from": "./types.ts",
+      "to": "../types.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/tube.ts",
+      "from": "./structure-context.ts",
+      "to": "../structure/structure-context.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/tube.ts",
+      "from": "./coordinate-snapshot.ts",
+      "to": "../coordinates/coordinate-snapshot.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/tube.ts",
+      "from": "./internal/representation.ts",
+      "to": "../rendering/representation.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/tube.ts",
+      "from": "./internal/use-field-plan.ts",
+      "to": "../field-binding/use-field-plan.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/tube.ts",
+      "from": "./internal/vertex-field-colors.ts",
+      "to": "../field-binding/vertex-field-colors.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/tube.ts",
+      "from": "./internal/opacity.ts",
+      "to": "../rendering/opacity.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/tube.ts",
+      "from": "./internal/with-material.ts",
+      "to": "../rendering/with-material.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/tube.ts",
+      "from": "./internal/instance-copies.ts",
+      "to": "../rendering/instance-copies.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/tube.ts",
+      "from": "./internal/tube-geometry.ts",
+      "to": "./tube-geometry.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/tube.ts",
+      "from": "./internal/line-size.ts",
+      "to": "../rendering/line-size.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/tube.ts",
+      "from": "./internal/use-repaint.ts",
+      "to": "../internal/use-repaint.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/tube.ts",
+      "from": "./internal/instrumentation.ts",
+      "to": "../internal/instrumentation.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/tube.ts",
+      "from": "./internal/use-binding-probe.ts",
+      "to": "../internal/use-binding-probe.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/unit-cell.ts",
+      "from": "./types.ts",
+      "to": "../types.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/unit-cell.ts",
+      "from": "./trajectory/use-trajectory-frame.ts",
+      "to": "../trajectory/use-trajectory-frame.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/unit-cell.ts",
+      "from": "./internal/representation.ts",
+      "to": "../rendering/representation.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/unit-cell.ts",
+      "from": "./internal/opacity.ts",
+      "to": "../rendering/opacity.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/unwrap.ts",
+      "from": "./internal/coordinate-passes.ts",
+      "to": "./coordinate-passes.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/unwrap.ts",
+      "from": "./internal/compute-buffers.ts",
+      "to": "../internal/compute-buffers.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/unwrap.ts",
+      "from": "./internal/status-readback.ts",
+      "to": "../internal/status-readback.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/unwrap.ts",
+      "from": "./trajectory/use-trajectory-frame.ts",
+      "to": "../trajectory/use-trajectory-frame.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/unwrap.ts",
+      "from": "./types.ts",
+      "to": "../types.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/unwrap.ts",
+      "from": "./internal/use-selection-input.ts",
+      "to": "../selection/use-selection-input.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/unwrap.ts",
+      "from": "./types.ts",
+      "to": "../types.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/use-camera-curve.ts",
+      "from": "./timeline-context.ts",
+      "to": "../timeline-context.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/use-camera-curve.ts",
+      "from": "./types.ts",
+      "to": "../types.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/use-coordinate-bounds.ts",
+      "from": "./internal/instrumentation.ts",
+      "to": "../internal/instrumentation.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/use-coordinate-focus.ts",
+      "from": "./internal/instance-plan.ts",
+      "to": "../rendering/instance-plan.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/use-coordinate-focus.ts",
+      "from": "./structure-context.ts",
+      "to": "../structure/structure-context.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/use-coordinate-focus.ts",
+      "from": "./use-coordinate-bounds.ts",
+      "to": "../coordinates/use-coordinate-bounds.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/use-coordinate-focus.ts",
+      "from": "./internal/use-selection-input.ts",
+      "to": "../selection/use-selection-input.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/use-coordinate-focus.ts",
+      "from": "./types.ts",
+      "to": "../types.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/use-coordinate-selection.ts",
+      "from": "./structure-context.ts",
+      "to": "../structure/structure-context.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/use-field.ts",
+      "from": "./timeline-context.ts",
+      "to": "../timeline-context.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/use-field.ts",
+      "from": "./internal/use-binding-probe.ts",
+      "to": "../internal/use-binding-probe.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/use-field.ts",
+      "from": "./internal/volume-buffers.ts",
+      "to": "../volume/volume-buffers.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/use-field.ts",
+      "from": "./volume-context.ts",
+      "to": "../volume/volume-context.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/use-geometry-job.ts",
+      "from": "./types.ts",
+      "to": "../types.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/use-geometry-job.ts",
+      "from": "./internal/geometry-job.ts",
+      "to": "./geometry-job.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/volume-slice.ts",
+      "from": "./types.ts",
+      "to": "../../types.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/volume-slice.ts",
+      "from": "./volume-context.ts",
+      "to": "../volume-context.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/volume-slice.ts",
+      "from": "./internal/representation.ts",
+      "to": "../../rendering/representation.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/volume-slice.ts",
+      "from": "./internal/opacity.ts",
+      "to": "../../rendering/opacity.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/volume-slice.ts",
+      "from": "./internal/slice-plane.ts",
+      "to": "./slice-plane.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/volume-slice.ts",
+      "from": "./internal/use-repaint.ts",
+      "to": "../../internal/use-repaint.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/volume-slice.ts",
+      "from": "./internal/use-binding-probe.ts",
+      "to": "../../internal/use-binding-probe.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/volume-slice.ts",
+      "from": "./internal/instrumentation.ts",
+      "to": "../../internal/instrumentation.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/volume-slice.ts",
+      "from": "./internal/color-ramp.ts",
+      "to": "./color-ramp.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/volume-slice.ts",
+      "from": "./internal/slice-plane.ts",
+      "to": "./slice-plane.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/volume.ts",
+      "from": "./internal/source-request.ts",
+      "to": "../internal/source-request.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/volume.ts",
+      "from": "./types.ts",
+      "to": "../types.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/volume.ts",
+      "from": "./internal/volume-buffers.ts",
+      "to": "./volume-buffers.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/world-space-points.ts",
+      "from": "./internal/point-size.ts",
+      "to": "../rendering/point-size.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/src/world-space-points.ts",
+      "from": "./internal/use-repaint.ts",
+      "to": "../internal/use-repaint.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/annotations-page.mjs",
+      "from": "../src/internal/centroid.ts",
+      "to": "../src/representations/centroid.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/assembly-instances.test.ts",
+      "from": "../src/internal/structure-resource.ts",
+      "to": "../src/structure/structure-resource.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/assembly-instances.test.ts",
+      "from": "../src/camera-curve.ts",
+      "to": "../src/interaction/camera-curve.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/attribute-values.test.ts",
+      "from": "../src/internal/attribute-values.ts",
+      "to": "../src/attributes/attribute-values.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/bond-columns.test.ts",
+      "from": "../src/internal/bond-columns.ts",
+      "to": "../src/representations/bonds/bond-columns.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/camera-curve.test.ts",
+      "from": "../src/internal/structure-resource.ts",
+      "to": "../src/structure/structure-resource.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/camera-curve.test.ts",
+      "from": "../src/camera-curve.ts",
+      "to": "../src/interaction/camera-curve.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/cartoon-geometry.test.ts",
+      "from": "../src/internal/cartoon-geometry.ts",
+      "to": "../src/representations/ribbon/cartoon-geometry.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/centroid.test.ts",
+      "from": "../src/internal/centroid.ts",
+      "to": "../src/representations/centroid.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/color-ramp.test.ts",
+      "from": "../src/internal/color-ramp.ts",
+      "to": "../src/volume/representations/color-ramp.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/columns.test.ts",
+      "from": "../src/internal/columns.ts",
+      "to": "../src/rendering/columns.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/efield.test.ts",
+      "from": "../src/internal/efield-grid.ts",
+      "to": "../src/volume/efield-grid.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/efield.test.ts",
+      "from": "../src/internal/field-line-geometry.ts",
+      "to": "../src/volume/representations/field-line-geometry.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/efield/efield.tsx",
+      "from": "../../src/internal/surface-geometry.ts",
+      "to": "../../src/representations/surface/surface-geometry.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/efield/efield.tsx",
+      "from": "../../src/efield.ts",
+      "to": "../../src/volume/efield.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/efield/efield.tsx",
+      "from": "../../src/field-lines.ts",
+      "to": "../../src/volume/representations/field-lines.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/efield/efield.tsx",
+      "from": "../../src/field-arrows.ts",
+      "to": "../../src/volume/representations/field-arrows.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/efield/efield.tsx",
+      "from": "../../src/internal/slice-plane.ts",
+      "to": "../../src/volume/representations/slice-plane.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/elastic-network.test.ts",
+      "from": "../src/internal/elastic-bindings.ts",
+      "to": "../src/coordinates/elastic-bindings.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/elastic/elastic.tsx",
+      "from": "../../src/elastic-network.ts",
+      "to": "../../src/coordinates/elastic-network.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/field-plan.test.ts",
+      "from": "../src/internal/field-plan.ts",
+      "to": "../src/field-binding/field-plan.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/fixtures/identity-coordinates.ts",
+      "from": "../../src/coordinates-context.ts",
+      "to": "../../src/coordinates/coordinates-context.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/fixtures/wobble-coordinates.ts",
+      "from": "../../src/coordinates-context.ts",
+      "to": "../../src/coordinates/coordinates-context.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/fixtures/wobble-coordinates.ts",
+      "from": "../../src/internal/coordinate-kernel.ts",
+      "to": "../../src/coordinates/coordinate-kernel.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/geometry-job.test.ts",
+      "from": "../src/internal/structure-resource.ts",
+      "to": "../src/structure/structure-resource.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/gpu-dssp/fixture.ts",
+      "from": "../../src/gpu-dssp.ts",
+      "to": "../../src/attributes/gpu-dssp.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/gpu-dssp/fixture.ts",
+      "from": "../../src/gpu-dssp-provider.ts",
+      "to": "../../src/attributes/gpu-dssp-provider.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/instance-copies.test.ts",
+      "from": "../src/internal/instance-plan.ts",
+      "to": "../src/rendering/instance-plan.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/invalidation-page.mjs",
+      "from": "../src/structure.ts",
+      "to": "../src/structure/structure.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/invalidation-page.mjs",
+      "from": "../src/spacefill.ts",
+      "to": "../src/representations/spacefill.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/invalidation-page.mjs",
+      "from": "../src/bonds.ts",
+      "to": "../src/representations/bonds/bonds.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/invalidation-page.mjs",
+      "from": "../src/ball-and-stick.ts",
+      "to": "../src/representations/ball-and-stick.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/invalidation-page.mjs",
+      "from": "../src/tube.ts",
+      "to": "../src/representations/tube.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/invalidation-page.mjs",
+      "from": "../src/ribbon.ts",
+      "to": "../src/representations/ribbon/ribbon.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/invalidation-page.mjs",
+      "from": "../src/surface.ts",
+      "to": "../src/representations/surface/surface.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/invalidation-page.mjs",
+      "from": "../src/annotations.ts",
+      "to": "../src/representations/annotations.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/invalidation.test.ts",
+      "from": "../src/internal/structure-resource.ts",
+      "to": "../src/structure/structure-resource.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/invalidation.test.ts",
+      "from": "../src/internal/bond-columns.ts",
+      "to": "../src/representations/bonds/bond-columns.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/invalidation.test.ts",
+      "from": "../src/camera-curve.ts",
+      "to": "../src/interaction/camera-curve.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/isosurface-geometry.test.ts",
+      "from": "../src/internal/isosurface-geometry.ts",
+      "to": "../src/volume/representations/isosurface-geometry.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/line-size.test.ts",
+      "from": "../src/internal/line-size.ts",
+      "to": "../src/rendering/line-size.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/material-spec.test.ts",
+      "from": "../src/internal/material-spec.ts",
+      "to": "../src/rendering/material-spec.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/opacity.test.ts",
+      "from": "../src/internal/opacity.ts",
+      "to": "../src/rendering/opacity.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/pick-resolve.test.ts",
+      "from": "../src/internal/pick-resolve.ts",
+      "to": "../src/interaction/pick-resolve.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/point-size.test.ts",
+      "from": "../src/internal/point-size.ts",
+      "to": "../src/rendering/point-size.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/pointer-plane.test.ts",
+      "from": "../src/pointer-plane.ts",
+      "to": "../src/interaction/pointer-plane.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/ramachandran.test.ts",
+      "from": "../src/internal/ramachandran-points.ts",
+      "to": "../src/representations/ramachandran-points.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/ribbon-corpus.test.ts",
+      "from": "../src/internal/ribbon-geometry.ts",
+      "to": "../src/representations/ribbon/ribbon-geometry.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/ribbon-dssp.test.ts",
+      "from": "../src/internal/ribbon-dssp.ts",
+      "to": "../src/representations/ribbon/ribbon-dssp.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/ribbon-geometry.test.ts",
+      "from": "../src/internal/ribbon-geometry.ts",
+      "to": "../src/representations/ribbon/ribbon-geometry.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/run-gate2.mjs",
+      "from": "../src/internal/immutable-attribute-cache.ts",
+      "to": "../src/structure/immutable-attribute-cache.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/scene.mjs",
+      "from": "../src/internal/column-source.ts",
+      "to": "../src/rendering/column-source.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/selection-resolution.test.ts",
+      "from": "../src/internal/selection-resolution.ts",
+      "to": "../src/selection/selection-resolution.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/selection/selection.tsx",
+      "from": "../../src/attributes-context.ts",
+      "to": "../../src/attributes/attributes-context.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/selection/selection.tsx",
+      "from": "../../src/attribute-snapshot-context.ts",
+      "to": "../../src/attributes/attribute-snapshot-context.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/selection/selection.tsx",
+      "from": "../../src/coordinate-snapshot.ts",
+      "to": "../../src/coordinates/coordinate-snapshot.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/selection/selection.tsx",
+      "from": "../../src/internal/use-selection-input.ts",
+      "to": "../../src/selection/use-selection-input.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/ses-field/fixture.ts",
+      "from": "../../src/internal/ses-field.ts",
+      "to": "../../src/representations/surface/ses-field.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/ses-field/fixture.ts",
+      "from": "../../src/internal/marching-cubes-gpu.ts",
+      "to": "../../src/representations/surface/marching-cubes-gpu.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/ses-field/fixture.ts",
+      "from": "../../src/internal/attribution-gpu.ts",
+      "to": "../../src/representations/surface/attribution-gpu.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/size-field-page.mjs",
+      "from": "../src/internal/column-source.ts",
+      "to": "../src/rendering/column-source.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/size-field-page.mjs",
+      "from": "../src/world-space-points.ts",
+      "to": "../src/representations/world-space-points.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/size-field-page.mjs",
+      "from": "../src/use-field.ts",
+      "to": "../src/field-binding/use-field.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/slice-plane.test.ts",
+      "from": "../src/internal/slice-plane.ts",
+      "to": "../src/volume/representations/slice-plane.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/structure-resource.test.ts",
+      "from": "../src/internal/structure-resource.ts",
+      "to": "../src/structure/structure-resource.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/surface-bench.ts",
+      "from": "../src/internal/surface-geometry.ts",
+      "to": "../src/representations/surface/surface-geometry.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/surface-bench.ts",
+      "from": "../src/internal/surface-gpu.ts",
+      "to": "../src/representations/surface/surface-gpu.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/surface-geometry.test.ts",
+      "from": "../src/internal/surface-geometry.ts",
+      "to": "../src/representations/surface/surface-geometry.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/tsx/bond-vertex-probe.ts",
+      "from": "../../src/coordinates-context.ts",
+      "to": "../../src/coordinates/coordinates-context.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/tsx/bond-vertex-probe.ts",
+      "from": "../../src/internal/bond-columns.ts",
+      "to": "../../src/representations/bonds/bond-columns.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/tsx/bond-vertex-probe.ts",
+      "from": "../../src/internal/bond-positions.ts",
+      "to": "../../src/representations/bonds/bond-positions.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/tsx/bond-vertex-probe.ts",
+      "from": "../../src/internal/column-source.ts",
+      "to": "../../src/rendering/column-source.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/tsx/offset-coordinates.ts",
+      "from": "../../src/coordinates-context.ts",
+      "to": "../../src/coordinates/coordinates-context.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/tsx/offset-coordinates.ts",
+      "from": "../../src/internal/coordinate-kernel.ts",
+      "to": "../../src/coordinates/coordinate-kernel.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/tube-geometry.test.ts",
+      "from": "../src/internal/tube-geometry.ts",
+      "to": "../src/representations/tube-geometry.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/view-rows.test.ts",
+      "from": "../src/internal/view-rows.ts",
+      "to": "../src/selection/view-rows.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/view-rows.test.ts",
+      "from": "../src/internal/bond-columns.ts",
+      "to": "../src/representations/bonds/bond-columns.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/view-rows.test.ts",
+      "from": "../src/camera-curve.ts",
+      "to": "../src/interaction/camera-curve.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "packages/viewer/test/view-rows.test.ts",
+      "from": "../src/internal/structure-resource.ts",
+      "to": "../src/structure/structure-resource.ts"
+    },
+    {
+      "batch": "remaining",
+      "consumer": "test/spikes/gpu-readiness/probe.tsx",
+      "from": "../../../packages/viewer/src/attributes-context.ts",
+      "to": "../../../packages/viewer/src/attributes/attributes-context.ts"
+    }
+  ],
+  "verification": "All 114 TypeScript token streams match after canonicalizing relative module paths, ignoring comments and formatting/trailing import commas. No behavioral source edits."
+}

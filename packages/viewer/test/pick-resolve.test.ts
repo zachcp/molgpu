@@ -1,5 +1,8 @@
 import { assertEquals, assertStrictEquals } from "@std/assert";
-import { type PickEntry, resolvePick } from "../src/internal/pick-resolve.ts";
+import {
+  type PickEntry,
+  resolvePick,
+} from "../src/interaction/pick-resolve.ts";
 import type { StructureResource } from "../src/types.ts";
 
 // The live picking hook and the GPU readback are exercised in the browser

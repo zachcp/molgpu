@@ -2,7 +2,7 @@ import { assert, assertStrictEquals, assertThrows } from "@std/assert";
 import {
   lineRadiusForWidth,
   lineWidthForRadius,
-} from "../src/internal/line-size.ts";
+} from "../src/rendering/line-size.ts";
 
 Deno.test("shaded LineLayer depth:-1 makes width an absolute world-space diameter", () => {
   assertStrictEquals(

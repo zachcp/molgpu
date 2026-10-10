@@ -128,6 +128,7 @@ export interface StructureResource {
   dispose(): void;
 }
 
+/** Orbit-camera target and radius in world units, with bearing and pitch in radians. */
 export interface CameraPose {
   readonly target: readonly number[];
   readonly radius: number;
@@ -427,7 +428,7 @@ export interface TrajectoryFrameState {
 
 /**
  * `<EField>` props. Physics defaults follow `electrostatics()` in
- * @molgpu/dynamics: ε = 4r, 1 Å distance clamp, output in kT/e at 298.15 K.
+ * `@molgpu/dynamics`: ε = 4r, 1 Å distance clamp, output in kT/e at 298.15 K.
  */
 export interface EFieldProps extends SelectionDiagnostics {
   children?: ViewerElement;

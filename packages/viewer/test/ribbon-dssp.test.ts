@@ -8,7 +8,7 @@ import {
   withSecondaryStructure,
 } from "@molgpu/table";
 import { structureFromBcif } from "@molgpu/io";
-import { ribbonDsspRows } from "../src/internal/ribbon-dssp.ts";
+import { ribbonDsspRows } from "../src/representations/ribbon/ribbon-dssp.ts";
 
 // 2k39: an NMR ensemble, so every model has its own coordinates.
 const DATA = await structureFromBcif(

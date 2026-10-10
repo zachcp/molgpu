@@ -7,6 +7,14 @@ for the procedure.
 
 ## [Unreleased]
 
+- Organize viewer source around dataset scopes, coordinate/attribute pipelines,
+  visual features and named shared mechanics. Public imports and behavior are
+  unchanged; add a source reading guide and a visual-import hardening guard.
+
+- Correct public JSDoc for scope composition, dispatch readiness and shared
+  snapshot scheduling. Restore full Isosurface/EFieldProps descriptions in
+  generated docs and add missing summaries for four public exports.
+
 - Coordinate snapshots retain their readback staging buffers and rate limit
   across dispatch readiness changes, keeping snapshot geometry at its requested
   cadence during playback.

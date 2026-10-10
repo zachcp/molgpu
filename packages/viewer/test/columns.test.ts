@@ -1,5 +1,5 @@
 import { assertEquals, assertStrictEquals, assertThrows } from "@std/assert";
-import { type ColumnFormat, prepareColumn } from "../src/internal/columns.ts";
+import { type ColumnFormat, prepareColumn } from "../src/rendering/columns.ts";
 
 Deno.test("offset vec3 view counts its own rows and is passed through uncopied", () => {
   const backing = Float32Array.from([99, 1, 2, 3, 4, 5, 6, 88]);

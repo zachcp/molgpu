@@ -1,5 +1,8 @@
 import { assert, assertThrows } from "@std/assert";
-import { pointerToPlane, projectToPointer } from "../src/pointer-plane.ts";
+import {
+  pointerToPlane,
+  projectToPointer,
+} from "../src/interaction/pointer-plane.ts";
 
 /** Column-major perspective · lookAt, as a camera would build them. */
 function camera(eye: number[], target: number[]): number[] {

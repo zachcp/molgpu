@@ -11,7 +11,7 @@ import {
   within,
 } from "@molgpu/select";
 import { createStructure, traceTable, withPositions } from "@molgpu/table";
-import { resolveSelectionInput } from "../src/internal/selection-resolution.ts";
+import { resolveSelectionInput } from "../src/selection/selection-resolution.ts";
 import { selectionData } from "./fixtures/selection-data.ts";
 
 Deno.test("viewer query defaults and explicit view axes preserve source rows", () => {

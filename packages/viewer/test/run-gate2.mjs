@@ -273,7 +273,7 @@ Deno.test("viewer gate 2", async () => {
     // columns. Browser-native GPU memory is opaque to WebGPU.
     const retention = await heldPage.evaluate(async () => {
       const { immutableAttributeSource, releaseImmutableAttributes } =
-        await import("../src/internal/immutable-attribute-cache.ts");
+        await import("../src/structure/immutable-attribute-cache.ts");
       const values = new Float32Array(50_000);
       const column = { name: "bfactor", values };
       const beforeAllocations = globalThis.__probe.storage.length;

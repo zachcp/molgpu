@@ -12,6 +12,7 @@ import { dirname, fromFileUrl, join, relative, resolve } from "@std/path";
 import ts from "typescript";
 import { startRegistry } from "../test/spikes/jsr-consumer/registry.ts";
 import { checkPublishedImports } from "./published-imports.mjs";
+import { violatesViewerRepresentationBoundary } from "./viewer-import-policy.mjs";
 
 /** True if `path` exists (file or directory), without the TOCTOU race of a
  * separate stat-then-read; callers still just want a boolean here. */
@@ -690,6 +691,18 @@ function checkPackage(
     const rel = relative(dir, file);
     const internal = rel.startsWith(join("src", "internal"));
     for (const spec of specifiers(file)) {
+      if (
+        isViewer && spec.startsWith(".") &&
+        violatesViewerRepresentationBoundary(
+          relative(join(dir, "src"), file),
+          relative(join(dir, "src"), resolve(dirname(file), spec)),
+        )
+      ) {
+        fail(
+          "H4",
+          `${rel} imports visual implementation "${spec}"; providers and shared mechanics must not depend on representations`,
+        );
+      }
       if (!isBare(spec)) continue;
       if (isDynamics && spec.startsWith("@use-gpu/")) {
         fail("H4", `${rel} imports "${spec}"; dynamics must be renderer-free`);

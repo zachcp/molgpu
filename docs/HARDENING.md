@@ -46,6 +46,11 @@ remain excluded.
   dependencies.
 - The only package that imports `@use-gpu/live`, `@use-gpu/workbench` or
   `@use-gpu/shader` is `viewer`.
+- Viewer providers and shared mechanics do not import modules under a
+  `representations/` folder, including `volume/representations/`. Its ordinary
+  and advanced entries may export those modules; representation implementations
+  may share visual helpers. This is a narrow direction rule, not a dependency
+  wall between the other viewer topic folders.
 - A lower package (`geo`, `timeline`) may import `@use-gpu/core` only from
   `src/internal/`. It must re-export what it needs under its own name, not pass
   the upstream binding straight through.

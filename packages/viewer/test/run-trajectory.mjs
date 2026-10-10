@@ -26,7 +26,7 @@ import { fitKabsch } from "@molgpu/dynamics";
 import { unwrapFrame } from "../../dynamics/src/pbc.ts";
 import { writeXtc } from "../../io/test/trajectory-fixture.ts";
 import { structureFromBcif } from "@molgpu/io";
-import { interpolatePositions } from "../src/internal/frame-window.ts";
+import { interpolatePositions } from "../src/trajectory/frame-window.ts";
 import { captureErrors, launchWebGpuBrowser } from "./harness.mjs";
 
 async function runGpuCellList(page, positions, cutoff) {

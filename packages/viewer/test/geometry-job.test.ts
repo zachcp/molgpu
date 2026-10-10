@@ -8,7 +8,7 @@ import {
   fail,
 } from "@std/assert";
 import { createStructure } from "@molgpu/table";
-import { createStructureResource } from "../src/internal/structure-resource.ts";
+import { createStructureResource } from "../src/structure/structure-resource.ts";
 import {
   assertGridBudget,
   geometryDeps,

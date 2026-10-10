@@ -2,7 +2,7 @@ import { assert, assertThrows } from "@std/assert";
 import {
   pointSizeForCameraRadius,
   pointSizeForRadius,
-} from "../src/internal/point-size.ts";
+} from "../src/rendering/point-size.ts";
 
 const close = (actual: number, expected: number) =>
   assert(Math.abs(actual - expected) < 1e-5, `${actual} !== ${expected}`);

@@ -6,8 +6,11 @@ import {
 } from "@std/assert";
 import { createStructure, withPositions } from "@molgpu/table";
 import { all, resolve, where } from "@molgpu/select";
-import { createStructureResource } from "../src/internal/structure-resource.ts";
-import { focusSelection, sampleCamera } from "../src/camera-curve.ts";
+import { createStructureResource } from "../src/structure/structure-resource.ts";
+import {
+  focusSelection,
+  sampleCamera,
+} from "../src/interaction/camera-curve.ts";
 import type { CameraCurve } from "../src/types.ts";
 
 const identity = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];

@@ -9,10 +9,10 @@ import type { StorageSource, StorageTarget } from "@use-gpu/core";
 import { wgsl } from "@use-gpu/shader/wgsl";
 import { Compute, ComputeBuffer, Kernel } from "@use-gpu/workbench";
 import type { StructureData } from "@molgpu/table";
-import { useCoordinates } from "../../src/coordinates-context.ts";
-import { buildBondRows } from "../../src/internal/bond-columns.ts";
-import { useBondPositions } from "../../src/internal/bond-positions.ts";
-import { ColumnSource } from "../../src/internal/column-source.ts";
+import { useCoordinates } from "../../src/coordinates/coordinates-context.ts";
+import { buildBondRows } from "../../src/representations/bonds/bond-columns.ts";
+import { useBondPositions } from "../../src/representations/bonds/bond-positions.ts";
+import { ColumnSource } from "../../src/rendering/column-source.ts";
 import { probe } from "./diagnostics.ts";
 
 const COPY_VERTICES = wgsl`

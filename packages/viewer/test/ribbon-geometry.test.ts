@@ -4,7 +4,7 @@ import {
   assertStrictEquals,
   assertThrows,
 } from "@std/assert";
-import { buildRibbonGeometry } from "../src/internal/ribbon-geometry.ts";
+import { buildRibbonGeometry } from "../src/representations/ribbon/ribbon-geometry.ts";
 
 type Kind = "helix" | "sheet" | "coil";
 const RADIAL = 16;

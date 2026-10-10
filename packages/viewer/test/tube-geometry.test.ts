@@ -4,7 +4,7 @@ import {
   assertStrictEquals,
   assertThrows,
 } from "@std/assert";
-import { buildTubeGeometry } from "../src/internal/tube-geometry.ts";
+import { buildTubeGeometry } from "../src/representations/tube-geometry.ts";
 
 /** A trace with: a 4-point run, a 1-point run (undrawable), and a 2-point run. */
 function trace() {

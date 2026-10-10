@@ -5,7 +5,7 @@ import {
   buildNucleotideRingGeometry,
   buildPolymerGapGeometry,
   polymerGaps,
-} from "../src/internal/cartoon-geometry.ts";
+} from "../src/representations/ribbon/cartoon-geometry.ts";
 
 async function load(id: string) {
   const data = await structureFromBcif(

@@ -5,7 +5,7 @@ import {
   assertThrows,
 } from "@std/assert";
 import { createStructure, withPositions } from "@molgpu/table";
-import { createStructureResource } from "../src/internal/structure-resource.ts";
+import { createStructureResource } from "../src/structure/structure-resource.ts";
 
 const structure = () =>
   createStructure({

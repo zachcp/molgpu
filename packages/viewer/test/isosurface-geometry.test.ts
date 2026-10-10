@@ -1,6 +1,6 @@
 import { assert, assertEquals, assertStrictEquals } from "@std/assert";
 import { createVolume, volumeLevel } from "@molgpu/table";
-import { buildIsosurface } from "../src/internal/isosurface-geometry.ts";
+import { buildIsosurface } from "../src/volume/representations/isosurface-geometry.ts";
 import {
   enableInstrumentation,
   resetAllInstrumentation,
