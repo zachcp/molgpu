@@ -43,7 +43,14 @@ jobs:
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
-      - run: deno run -A npm:playwright@1.62.1 install --with-deps chrome
+      - name: Install Chrome
+        run: |
+          for attempt in 1 2 3; do
+            deno run -A npm:playwright@1.62.1 install --with-deps chrome && exit 0
+            echo "Chrome install failed (attempt $attempt), retrying"
+            sleep $((attempt * 10))
+          done
+          exit 1
       - name: WebGPU browser suites
         env:
           SUITE_GROUP: ${{ matrix.group }}
