@@ -3,7 +3,7 @@ import type {
   StructureResource,
   TrajectoryFrameState,
   TrajectoryStatus,
-} from "./types.ts";
+} from "../types.ts";
 
 /** A nearest trajectory scope belongs to one structure, including while opening. */
 export interface OwnedTrajectoryFrame {

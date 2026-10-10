@@ -26,7 +26,7 @@ import {
   CoordinateSnapshotContext,
   rootSnapshot,
 } from "./coordinate-snapshot.ts";
-import { TrajectoryContext } from "./trajectory-context.ts";
+import { TrajectoryContext } from "./trajectory/trajectory-context.ts";
 
 /** GPU columns allocated once per structure and shared by representations. */
 export interface StructureSources {

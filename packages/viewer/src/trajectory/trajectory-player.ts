@@ -14,8 +14,8 @@ import {
   TrajectoryImageBoxLimitError,
   WINDOW_SLOTS,
 } from "./frame-window.ts";
-import { count, gauge } from "./instrumentation.ts";
-import { ComputeBuffers } from "./compute-buffers.ts";
+import { count, gauge } from "../internal/instrumentation.ts";
+import { ComputeBuffers } from "../internal/compute-buffers.ts";
 
 const STORAGE = 0x0080;
 const COPY_DST = 0x0008;

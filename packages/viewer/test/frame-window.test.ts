@@ -13,8 +13,8 @@ import {
   resolveDisplay,
   SlotTable,
   TrajectoryImageBoxLimitError,
-} from "../src/internal/frame-window.ts";
-import { FrameCache } from "../src/internal/frame-cache.ts";
+} from "../src/trajectory/frame-window.ts";
+import { FrameCache } from "../src/trajectory/frame-cache.ts";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 

@@ -3,7 +3,7 @@
 // reference for the interpolation kernel. See the trajectory plan, section 3.
 import type { TrajectoryFrame } from "@molgpu/table";
 import { minimumImage, type PeriodicBox, periodicBox } from "@molgpu/dynamics";
-import { gauge } from "./instrumentation.ts";
+import { gauge } from "../internal/instrumentation.ts";
 
 /** Frames interpolated on screen: `a + t * (b - a)` per atom. */
 export interface FramePair {

@@ -23,17 +23,13 @@ import type {
   TrajectoryProps,
   TrajectoryStatus,
   ViewerComponent,
-} from "./types.ts";
-import { useCoordinates } from "./coordinates-context.ts";
-import { TimelineContext } from "./timeline-context.ts";
-import { CoordinateKernel } from "./internal/coordinate-kernel.ts";
-import { ioLoader, useSourceRequest } from "./internal/source-request.ts";
-import { useStatusDelivery } from "./internal/status-delivery.ts";
-import {
-  COPY_UPSTREAM,
-  playbackKernel,
-  Player,
-} from "./internal/trajectory-player.ts";
+} from "../types.ts";
+import { useCoordinates } from "../coordinates-context.ts";
+import { TimelineContext } from "../timeline-context.ts";
+import { CoordinateKernel } from "../internal/coordinate-kernel.ts";
+import { ioLoader, useSourceRequest } from "../internal/source-request.ts";
+import { useStatusDelivery } from "../internal/status-delivery.ts";
+import { COPY_UPSTREAM, playbackKernel, Player } from "./trajectory-player.ts";
 
 import { TrajectoryContext } from "./trajectory-context.ts";
 

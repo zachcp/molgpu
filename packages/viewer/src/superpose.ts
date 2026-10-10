@@ -20,7 +20,7 @@ import { useComputeBuffers } from "./internal/compute-buffers.ts";
 import { useStatusReadback } from "./internal/status-readback.ts";
 import { useSourceRequest } from "./internal/source-request.ts";
 import { useStatusDelivery } from "./internal/status-delivery.ts";
-import { TrajectoryContext } from "./trajectory-context.ts";
+import { TrajectoryContext } from "./trajectory/trajectory-context.ts";
 import type {
   SuperposeProps,
   SuperposeStatus,

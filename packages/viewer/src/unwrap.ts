@@ -25,7 +25,7 @@ import { CoordinatePasses } from "./internal/coordinate-passes.ts";
 import { useComputeBuffers } from "./internal/compute-buffers.ts";
 
 import { useStatusReadback } from "./internal/status-readback.ts";
-import { useTrajectoryFrame } from "./use-trajectory-frame.ts";
+import { useTrajectoryFrame } from "./trajectory/use-trajectory-frame.ts";
 import type { UnwrapProps, UnwrapStatus, ViewerComponent } from "./types.ts";
 import { useSelectionInput } from "./internal/use-selection-input.ts";
 import { type Selection, where } from "@molgpu/select";
