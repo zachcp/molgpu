@@ -1,0 +1,1283 @@
+{
+  "baseline": "d54ace66a27cb0fa7f9f591f3643838c86da8460",
+  "scope": "static source organization inventory; import scan includes type dependencies, not bundle costs",
+  "source_files": 114,
+  "top_level_files": 48,
+  "internal_files": 66,
+  "proposed_folder_counts": {
+    ".": 4,
+    "attributes": 10,
+    "coordinates": 13,
+    "fields": 5,
+    "interaction": 6,
+    "internal": 12,
+    "rendering": 10,
+    "representations": 24,
+    "selection": 5,
+    "structure": 6,
+    "trajectory": 6,
+    "volume": 13
+  },
+  "files": [
+    {
+      "current": "advanced.ts",
+      "proposed": "advanced.ts",
+      "lines": 34,
+      "relative_dependencies": [
+        "attribute-producer.ts",
+        "attribute-snapshot-context.ts",
+        "attribute-snapshot.ts",
+        "coordinate-snapshot.ts",
+        "coordinates-context.ts",
+        "internal/coordinate-kernel.ts",
+        "internal/structure-resource.ts",
+        "structure-context.ts",
+        "timeline-context.ts",
+        "types.ts",
+        "use-coordinate-bounds.ts",
+        "use-coordinate-selection.ts",
+        "use-field.ts",
+        "volume-context.ts",
+        "world-space-points.ts"
+      ]
+    },
+    {
+      "current": "annotations.ts",
+      "proposed": "representations/annotations.ts",
+      "lines": 308,
+      "relative_dependencies": [
+        "coordinate-snapshot.ts",
+        "internal/centroid.ts",
+        "internal/instance-context.ts",
+        "internal/instance-copies.ts",
+        "internal/instance-plan.ts",
+        "internal/instrumentation.ts",
+        "internal/opacity.ts",
+        "internal/representation.ts",
+        "internal/selection-consumer.ts",
+        "internal/use-binding-probe.ts",
+        "internal/use-repaint.ts",
+        "internal/use-selection-input.ts",
+        "structure-context.ts",
+        "types.ts"
+      ]
+    },
+    {
+      "current": "attribute-producer.ts",
+      "proposed": "attributes/attribute-producer.ts",
+      "lines": 169,
+      "relative_dependencies": [
+        "attribute-snapshot.ts",
+        "attributes-context.ts",
+        "coordinates-context.ts",
+        "internal/dispatch-observation.ts",
+        "internal/instrumentation.ts",
+        "structure-context.ts"
+      ]
+    },
+    {
+      "current": "attribute-snapshot-context.ts",
+      "proposed": "attributes/attribute-snapshot-context.ts",
+      "lines": 20,
+      "relative_dependencies": [
+        "internal/readback-token.ts"
+      ]
+    },
+    {
+      "current": "attribute-snapshot.ts",
+      "proposed": "attributes/attribute-snapshot.ts",
+      "lines": 170,
+      "relative_dependencies": [
+        "attribute-snapshot-context.ts",
+        "attributes-context.ts",
+        "internal/attribute-values.ts",
+        "internal/readback-token.ts",
+        "internal/throttled-readback.ts",
+        "structure-context.ts"
+      ]
+    },
+    {
+      "current": "attributes-context.ts",
+      "proposed": "attributes/attributes-context.ts",
+      "lines": 17,
+      "relative_dependencies": []
+    },
+    {
+      "current": "ball-and-stick.ts",
+      "proposed": "representations/ball-and-stick.ts",
+      "lines": 97,
+      "relative_dependencies": [
+        "bonds.ts",
+        "internal/selection-consumer.ts",
+        "spacefill.ts",
+        "types.ts"
+      ]
+    },
+    {
+      "current": "bonds.ts",
+      "proposed": "representations/bonds.ts",
+      "lines": 388,
+      "relative_dependencies": [
+        "coordinates-context.ts",
+        "internal/attribute-sources.ts",
+        "internal/bond-columns.ts",
+        "internal/bond-positions.ts",
+        "internal/instance-copies.ts",
+        "internal/opacity.ts",
+        "internal/representation.ts",
+        "internal/selection-consumer.ts",
+        "internal/use-binding-probe.ts",
+        "internal/use-field-plan.ts",
+        "internal/use-opacity-colors.ts",
+        "internal/use-repaint.ts",
+        "internal/view-rows.ts",
+        "internal/with-material.ts",
+        "structure-context.ts",
+        "types.ts",
+        "use-field.ts"
+      ]
+    },
+    {
+      "current": "camera-curve.ts",
+      "proposed": "interaction/camera-curve.ts",
+      "lines": 358,
+      "relative_dependencies": [
+        "internal/instance-plan.ts",
+        "internal/instrumentation.ts",
+        "internal/selection-diagnostics.ts",
+        "internal/selection-resolution.ts",
+        "internal/view-rows.ts",
+        "types.ts"
+      ]
+    },
+    {
+      "current": "coordinate-snapshot.ts",
+      "proposed": "coordinates/coordinate-snapshot.ts",
+      "lines": 187,
+      "relative_dependencies": [
+        "coordinates-context.ts",
+        "internal/readback-token.ts",
+        "internal/structure-resource.ts",
+        "internal/throttled-readback.ts",
+        "types.ts"
+      ]
+    },
+    {
+      "current": "coordinates-context.ts",
+      "proposed": "coordinates/coordinates-context.ts",
+      "lines": 26,
+      "relative_dependencies": [
+        "types.ts"
+      ]
+    },
+    {
+      "current": "efield.ts",
+      "proposed": "volume/efield.ts",
+      "lines": 676,
+      "relative_dependencies": [
+        "attributes-context.ts",
+        "coordinates-context.ts",
+        "internal/attribute-sources.ts",
+        "internal/efield-grid.ts",
+        "internal/instrumentation.ts",
+        "internal/readback-token.ts",
+        "internal/representation.ts",
+        "internal/selection-consumer.ts",
+        "internal/throttled-readback.ts",
+        "internal/view-rows.ts",
+        "types.ts",
+        "volume-context.ts"
+      ]
+    },
+    {
+      "current": "elastic-network.ts",
+      "proposed": "coordinates/elastic-network.ts",
+      "lines": 569,
+      "relative_dependencies": [
+        "coordinates-context.ts",
+        "internal/coordinate-kernel.ts",
+        "internal/elastic-bindings.ts",
+        "internal/instrumentation.ts",
+        "timeline-context.ts",
+        "types.ts"
+      ]
+    },
+    {
+      "current": "field-arrows.ts",
+      "proposed": "volume/field-arrows.ts",
+      "lines": 213,
+      "relative_dependencies": [
+        "internal/color-ramp.ts",
+        "internal/instrumentation.ts",
+        "internal/opacity.ts",
+        "internal/slice-plane.ts",
+        "internal/use-binding-probe.ts",
+        "internal/use-repaint.ts",
+        "types.ts",
+        "volume-context.ts",
+        "volume-slice.ts"
+      ]
+    },
+    {
+      "current": "field-lines.ts",
+      "proposed": "volume/field-lines.ts",
+      "lines": 372,
+      "relative_dependencies": [
+        "internal/color-ramp.ts",
+        "internal/dispatch-observation.ts",
+        "internal/field-line-geometry.ts",
+        "internal/instrumentation.ts",
+        "internal/opacity.ts",
+        "internal/representation.ts",
+        "internal/use-binding-probe.ts",
+        "internal/use-repaint.ts",
+        "types.ts",
+        "volume-context.ts",
+        "volume-slice.ts"
+      ]
+    },
+    {
+      "current": "gpu-dssp-provider.ts",
+      "proposed": "attributes/gpu-dssp-provider.ts",
+      "lines": 351,
+      "relative_dependencies": [
+        "attribute-snapshot-context.ts",
+        "attributes-context.ts",
+        "coordinates-context.ts",
+        "gpu-dssp.ts",
+        "internal/instrumentation.ts",
+        "structure-context.ts",
+        "types.ts"
+      ]
+    },
+    {
+      "current": "gpu-dssp.ts",
+      "proposed": "attributes/gpu-dssp.ts",
+      "lines": 519,
+      "relative_dependencies": [
+        "internal/copy-positions-wgsl.ts",
+        "internal/gpu-scan.ts"
+      ]
+    },
+    {
+      "current": "index.ts",
+      "proposed": "index.ts",
+      "lines": 86,
+      "relative_dependencies": [
+        "annotations.ts",
+        "ball-and-stick.ts",
+        "bonds.ts",
+        "efield.ts",
+        "elastic-network.ts",
+        "field-arrows.ts",
+        "field-lines.ts",
+        "gpu-dssp-provider.ts",
+        "gpu-dssp.ts",
+        "internal/ramachandran-points.ts",
+        "isosurface.ts",
+        "normal-mode.ts",
+        "picking.ts",
+        "pointer-plane.ts",
+        "ramachandran.ts",
+        "ribbon.ts",
+        "spacefill.ts",
+        "structure.ts",
+        "superpose.ts",
+        "surface.ts",
+        "timeline-context.ts",
+        "trajectory.ts",
+        "transform.ts",
+        "tube.ts",
+        "types.ts",
+        "unit-cell.ts",
+        "unwrap.ts",
+        "use-camera-curve.ts",
+        "use-coordinate-focus.ts",
+        "use-trajectory-frame.ts",
+        "volume-slice.ts",
+        "volume.ts"
+      ]
+    },
+    {
+      "current": "internal/attribute-sources.ts",
+      "proposed": "fields/attribute-sources.ts",
+      "lines": 50,
+      "relative_dependencies": [
+        "attributes-context.ts",
+        "internal/immutable-attribute-cache.ts",
+        "structure-context.ts"
+      ]
+    },
+    {
+      "current": "internal/attribute-values.ts",
+      "proposed": "attributes/attribute-values.ts",
+      "lines": 39,
+      "relative_dependencies": []
+    },
+    {
+      "current": "internal/attribution-gpu.ts",
+      "proposed": "representations/attribution-gpu.ts",
+      "lines": 157,
+      "relative_dependencies": [
+        "internal/gpu-scan.ts",
+        "internal/ses-field.ts"
+      ]
+    },
+    {
+      "current": "internal/bond-columns.ts",
+      "proposed": "representations/bond-columns.ts",
+      "lines": 104,
+      "relative_dependencies": [
+        "internal/instrumentation.ts"
+      ]
+    },
+    {
+      "current": "internal/bond-positions.ts",
+      "proposed": "representations/bond-positions.ts",
+      "lines": 35,
+      "relative_dependencies": []
+    },
+    {
+      "current": "internal/cartoon-geometry.ts",
+      "proposed": "representations/cartoon-geometry.ts",
+      "lines": 307,
+      "relative_dependencies": [
+        "internal/instrumentation.ts",
+        "internal/mesh-builder.ts",
+        "internal/ribbon-geometry.ts"
+      ]
+    },
+    {
+      "current": "internal/centroid.ts",
+      "proposed": "representations/centroid.ts",
+      "lines": 44,
+      "relative_dependencies": []
+    },
+    {
+      "current": "internal/color-ramp.ts",
+      "proposed": "volume/color-ramp.ts",
+      "lines": 27,
+      "relative_dependencies": [
+        "types.ts"
+      ]
+    },
+    {
+      "current": "internal/column-source.ts",
+      "proposed": "rendering/column-source.ts",
+      "lines": 58,
+      "relative_dependencies": [
+        "internal/columns.ts",
+        "internal/instrumentation.ts"
+      ]
+    },
+    {
+      "current": "internal/columns.ts",
+      "proposed": "rendering/columns.ts",
+      "lines": 46,
+      "relative_dependencies": []
+    },
+    {
+      "current": "internal/compute-buffers.ts",
+      "proposed": "internal/compute-buffers.ts",
+      "lines": 92,
+      "relative_dependencies": [
+        "internal/instrumentation.ts"
+      ]
+    },
+    {
+      "current": "internal/coordinate-kernel.ts",
+      "proposed": "coordinates/coordinate-kernel.ts",
+      "lines": 172,
+      "relative_dependencies": [
+        "coordinate-snapshot.ts",
+        "coordinates-context.ts",
+        "internal/dispatch-observation.ts",
+        "internal/instrumentation.ts"
+      ]
+    },
+    {
+      "current": "internal/coordinate-passes.ts",
+      "proposed": "coordinates/coordinate-passes.ts",
+      "lines": 87,
+      "relative_dependencies": [
+        "coordinates-context.ts",
+        "internal/coordinate-kernel.ts",
+        "internal/instrumentation.ts"
+      ]
+    },
+    {
+      "current": "internal/copy-positions-wgsl.ts",
+      "proposed": "coordinates/copy-positions-wgsl.ts",
+      "lines": 18,
+      "relative_dependencies": []
+    },
+    {
+      "current": "internal/dispatch-observation.ts",
+      "proposed": "internal/dispatch-observation.ts",
+      "lines": 58,
+      "relative_dependencies": []
+    },
+    {
+      "current": "internal/efield-grid.ts",
+      "proposed": "volume/efield-grid.ts",
+      "lines": 202,
+      "relative_dependencies": [
+        "attributes-context.ts"
+      ]
+    },
+    {
+      "current": "internal/elastic-bindings.ts",
+      "proposed": "coordinates/elastic-bindings.ts",
+      "lines": 57,
+      "relative_dependencies": []
+    },
+    {
+      "current": "internal/field-line-geometry.ts",
+      "proposed": "volume/field-line-geometry.ts",
+      "lines": 122,
+      "relative_dependencies": []
+    },
+    {
+      "current": "internal/field-plan.ts",
+      "proposed": "fields/field-plan.ts",
+      "lines": 60,
+      "relative_dependencies": [
+        "internal/representation.ts"
+      ]
+    },
+    {
+      "current": "internal/frame-cache.ts",
+      "proposed": "trajectory/frame-cache.ts",
+      "lines": 168,
+      "relative_dependencies": []
+    },
+    {
+      "current": "internal/frame-window.ts",
+      "proposed": "trajectory/frame-window.ts",
+      "lines": 284,
+      "relative_dependencies": [
+        "internal/instrumentation.ts"
+      ]
+    },
+    {
+      "current": "internal/geometry-job.ts",
+      "proposed": "internal/geometry-job.ts",
+      "lines": 95,
+      "relative_dependencies": [
+        "types.ts"
+      ]
+    },
+    {
+      "current": "internal/gpu-scan.ts",
+      "proposed": "attributes/gpu-scan.ts",
+      "lines": 174,
+      "relative_dependencies": []
+    },
+    {
+      "current": "internal/immutable-attribute-cache.ts",
+      "proposed": "attributes/immutable-attribute-cache.ts",
+      "lines": 96,
+      "relative_dependencies": [
+        "internal/instrumentation.ts"
+      ]
+    },
+    {
+      "current": "internal/indexed.ts",
+      "proposed": "rendering/indexed.ts",
+      "lines": 33,
+      "relative_dependencies": []
+    },
+    {
+      "current": "internal/instance-context.ts",
+      "proposed": "structure/instance-context.ts",
+      "lines": 15,
+      "relative_dependencies": [
+        "internal/instance-plan.ts"
+      ]
+    },
+    {
+      "current": "internal/instance-copies.ts",
+      "proposed": "structure/instance-copies.ts",
+      "lines": 197,
+      "relative_dependencies": [
+        "coordinates-context.ts",
+        "internal/coordinate-kernel.ts",
+        "internal/instance-context.ts",
+        "internal/instance-plan.ts",
+        "structure-context.ts",
+        "types.ts"
+      ]
+    },
+    {
+      "current": "internal/instance-plan.ts",
+      "proposed": "structure/instance-plan.ts",
+      "lines": 120,
+      "relative_dependencies": []
+    },
+    {
+      "current": "internal/instrumentation.ts",
+      "proposed": "internal/instrumentation.ts",
+      "lines": 284,
+      "relative_dependencies": []
+    },
+    {
+      "current": "internal/isosurface-geometry.ts",
+      "proposed": "volume/isosurface-geometry.ts",
+      "lines": 26,
+      "relative_dependencies": [
+        "internal/instrumentation.ts"
+      ]
+    },
+    {
+      "current": "internal/line-size.ts",
+      "proposed": "rendering/line-size.ts",
+      "lines": 60,
+      "relative_dependencies": []
+    },
+    {
+      "current": "internal/marching-cubes-gpu.ts",
+      "proposed": "representations/marching-cubes-gpu.ts",
+      "lines": 399,
+      "relative_dependencies": [
+        "internal/gpu-scan.ts"
+      ]
+    },
+    {
+      "current": "internal/material-spec.ts",
+      "proposed": "rendering/material-spec.ts",
+      "lines": 53,
+      "relative_dependencies": [
+        "types.ts"
+      ]
+    },
+    {
+      "current": "internal/mesh-builder.ts",
+      "proposed": "representations/mesh-builder.ts",
+      "lines": 71,
+      "relative_dependencies": []
+    },
+    {
+      "current": "internal/opacity.ts",
+      "proposed": "rendering/opacity.ts",
+      "lines": 45,
+      "relative_dependencies": [
+        "types.ts"
+      ]
+    },
+    {
+      "current": "internal/pick-resolve.ts",
+      "proposed": "interaction/pick-resolve.ts",
+      "lines": 48,
+      "relative_dependencies": [
+        "types.ts"
+      ]
+    },
+    {
+      "current": "internal/point-size.ts",
+      "proposed": "rendering/point-size.ts",
+      "lines": 57,
+      "relative_dependencies": []
+    },
+    {
+      "current": "internal/ramachandran-points.ts",
+      "proposed": "representations/ramachandran-points.ts",
+      "lines": 85,
+      "relative_dependencies": [
+        "types.ts"
+      ]
+    },
+    {
+      "current": "internal/readback-token.ts",
+      "proposed": "internal/readback-token.ts",
+      "lines": 25,
+      "relative_dependencies": []
+    },
+    {
+      "current": "internal/representation.ts",
+      "proposed": "rendering/representation.ts",
+      "lines": 106,
+      "relative_dependencies": [
+        "internal/column-source.ts",
+        "internal/columns.ts",
+        "internal/instance-context.ts",
+        "internal/instance-plan.ts",
+        "internal/instrumentation.ts",
+        "internal/view-rows.ts",
+        "types.ts"
+      ]
+    },
+    {
+      "current": "internal/ribbon-dssp.ts",
+      "proposed": "attributes/ribbon-dssp.ts",
+      "lines": 21,
+      "relative_dependencies": []
+    },
+    {
+      "current": "internal/ribbon-geometry.ts",
+      "proposed": "representations/ribbon-geometry.ts",
+      "lines": 518,
+      "relative_dependencies": [
+        "internal/instrumentation.ts",
+        "internal/mesh-builder.ts"
+      ]
+    },
+    {
+      "current": "internal/selection-consumer.ts",
+      "proposed": "selection/selection-consumer.ts",
+      "lines": 18,
+      "relative_dependencies": [
+        "internal/use-selection-input.ts",
+        "types.ts"
+      ]
+    },
+    {
+      "current": "internal/selection-diagnostics.ts",
+      "proposed": "selection/selection-diagnostics.ts",
+      "lines": 24,
+      "relative_dependencies": [
+        "types.ts"
+      ]
+    },
+    {
+      "current": "internal/selection-resolution.ts",
+      "proposed": "selection/selection-resolution.ts",
+      "lines": 61,
+      "relative_dependencies": [
+        "types.ts"
+      ]
+    },
+    {
+      "current": "internal/ses-field.ts",
+      "proposed": "representations/ses-field.ts",
+      "lines": 868,
+      "relative_dependencies": [
+        "internal/copy-positions-wgsl.ts",
+        "internal/geometry-job.ts",
+        "internal/gpu-scan.ts"
+      ]
+    },
+    {
+      "current": "internal/slice-plane.ts",
+      "proposed": "volume/slice-plane.ts",
+      "lines": 122,
+      "relative_dependencies": []
+    },
+    {
+      "current": "internal/source-request.ts",
+      "proposed": "internal/source-request.ts",
+      "lines": 75,
+      "relative_dependencies": []
+    },
+    {
+      "current": "internal/status-delivery.ts",
+      "proposed": "internal/status-delivery.ts",
+      "lines": 20,
+      "relative_dependencies": []
+    },
+    {
+      "current": "internal/status-readback.ts",
+      "proposed": "internal/status-readback.ts",
+      "lines": 85,
+      "relative_dependencies": [
+        "internal/instrumentation.ts"
+      ]
+    },
+    {
+      "current": "internal/structure-resource.ts",
+      "proposed": "structure/structure-resource.ts",
+      "lines": 41,
+      "relative_dependencies": [
+        "types.ts"
+      ]
+    },
+    {
+      "current": "internal/surface-geometry.ts",
+      "proposed": "representations/surface-geometry.ts",
+      "lines": 139,
+      "relative_dependencies": [
+        "internal/geometry-job.ts",
+        "internal/instrumentation.ts",
+        "types.ts"
+      ]
+    },
+    {
+      "current": "internal/surface-gpu.ts",
+      "proposed": "representations/surface-gpu.ts",
+      "lines": 102,
+      "relative_dependencies": [
+        "internal/attribution-gpu.ts",
+        "internal/marching-cubes-gpu.ts",
+        "internal/ses-field.ts"
+      ]
+    },
+    {
+      "current": "internal/throttled-readback.ts",
+      "proposed": "internal/throttled-readback.ts",
+      "lines": 137,
+      "relative_dependencies": [
+        "internal/instrumentation.ts",
+        "internal/readback-token.ts"
+      ]
+    },
+    {
+      "current": "internal/trajectory-player.ts",
+      "proposed": "trajectory/trajectory-player.ts",
+      "lines": 291,
+      "relative_dependencies": [
+        "internal/compute-buffers.ts",
+        "internal/frame-cache.ts",
+        "internal/frame-window.ts",
+        "internal/instrumentation.ts"
+      ]
+    },
+    {
+      "current": "internal/tube-geometry.ts",
+      "proposed": "representations/tube-geometry.ts",
+      "lines": 134,
+      "relative_dependencies": [
+        "internal/instrumentation.ts"
+      ]
+    },
+    {
+      "current": "internal/use-binding-probe.ts",
+      "proposed": "internal/use-binding-probe.ts",
+      "lines": 11,
+      "relative_dependencies": [
+        "internal/instrumentation.ts"
+      ]
+    },
+    {
+      "current": "internal/use-field-plan.ts",
+      "proposed": "fields/use-field-plan.ts",
+      "lines": 56,
+      "relative_dependencies": [
+        "internal/field-plan.ts",
+        "internal/indexed.ts",
+        "types.ts",
+        "volume-context.ts"
+      ]
+    },
+    {
+      "current": "internal/use-gpu-surface.ts",
+      "proposed": "representations/use-gpu-surface.ts",
+      "lines": 209,
+      "relative_dependencies": [
+        "coordinates-context.ts",
+        "internal/instrumentation.ts",
+        "internal/surface-gpu.ts"
+      ]
+    },
+    {
+      "current": "internal/use-opacity-colors.ts",
+      "proposed": "rendering/use-opacity-colors.ts",
+      "lines": 24,
+      "relative_dependencies": []
+    },
+    {
+      "current": "internal/use-repaint.ts",
+      "proposed": "internal/use-repaint.ts",
+      "lines": 8,
+      "relative_dependencies": []
+    },
+    {
+      "current": "internal/use-selection-input.ts",
+      "proposed": "selection/use-selection-input.ts",
+      "lines": 258,
+      "relative_dependencies": [
+        "attribute-snapshot-context.ts",
+        "attributes-context.ts",
+        "coordinate-snapshot.ts",
+        "internal/selection-diagnostics.ts",
+        "internal/selection-resolution.ts",
+        "structure-context.ts",
+        "types.ts"
+      ]
+    },
+    {
+      "current": "internal/vertex-field-colors.ts",
+      "proposed": "fields/vertex-field-colors.ts",
+      "lines": 64,
+      "relative_dependencies": [
+        "internal/attribute-sources.ts",
+        "internal/use-field-plan.ts",
+        "internal/use-opacity-colors.ts",
+        "use-field.ts"
+      ]
+    },
+    {
+      "current": "internal/view-rows.ts",
+      "proposed": "selection/view-rows.ts",
+      "lines": 28,
+      "relative_dependencies": []
+    },
+    {
+      "current": "internal/volume-buffers.ts",
+      "proposed": "volume/volume-buffers.ts",
+      "lines": 110,
+      "relative_dependencies": [
+        "internal/instrumentation.ts"
+      ]
+    },
+    {
+      "current": "internal/with-material.ts",
+      "proposed": "rendering/with-material.ts",
+      "lines": 38,
+      "relative_dependencies": [
+        "internal/material-spec.ts",
+        "types.ts"
+      ]
+    },
+    {
+      "current": "isosurface.ts",
+      "proposed": "volume/isosurface.ts",
+      "lines": 103,
+      "relative_dependencies": [
+        "internal/geometry-job.ts",
+        "internal/isosurface-geometry.ts",
+        "internal/opacity.ts",
+        "internal/representation.ts",
+        "internal/use-binding-probe.ts",
+        "internal/use-repaint.ts",
+        "internal/with-material.ts",
+        "types.ts",
+        "volume-context.ts"
+      ]
+    },
+    {
+      "current": "normal-mode.ts",
+      "proposed": "coordinates/normal-mode.ts",
+      "lines": 90,
+      "relative_dependencies": [
+        "coordinates-context.ts",
+        "internal/compute-buffers.ts",
+        "internal/coordinate-kernel.ts",
+        "timeline-context.ts",
+        "types.ts"
+      ]
+    },
+    {
+      "current": "picking.ts",
+      "proposed": "interaction/picking.ts",
+      "lines": 144,
+      "relative_dependencies": [
+        "internal/instance-context.ts",
+        "internal/pick-resolve.ts",
+        "types.ts"
+      ]
+    },
+    {
+      "current": "pointer-plane.ts",
+      "proposed": "interaction/pointer-plane.ts",
+      "lines": 91,
+      "relative_dependencies": []
+    },
+    {
+      "current": "ramachandran.ts",
+      "proposed": "representations/ramachandran.ts",
+      "lines": 224,
+      "relative_dependencies": [
+        "coordinate-snapshot.ts",
+        "internal/ramachandran-points.ts",
+        "internal/representation.ts",
+        "types.ts"
+      ]
+    },
+    {
+      "current": "ribbon.ts",
+      "proposed": "representations/ribbon.ts",
+      "lines": 371,
+      "relative_dependencies": [
+        "attribute-snapshot.ts",
+        "coordinate-snapshot.ts",
+        "internal/cartoon-geometry.ts",
+        "internal/instance-copies.ts",
+        "internal/instrumentation.ts",
+        "internal/mesh-builder.ts",
+        "internal/opacity.ts",
+        "internal/representation.ts",
+        "internal/ribbon-dssp.ts",
+        "internal/ribbon-geometry.ts",
+        "internal/selection-consumer.ts",
+        "internal/use-binding-probe.ts",
+        "internal/use-field-plan.ts",
+        "internal/use-repaint.ts",
+        "internal/vertex-field-colors.ts",
+        "internal/with-material.ts",
+        "structure-context.ts",
+        "types.ts"
+      ]
+    },
+    {
+      "current": "spacefill.ts",
+      "proposed": "representations/spacefill.ts",
+      "lines": 317,
+      "relative_dependencies": [
+        "coordinates-context.ts",
+        "internal/attribute-sources.ts",
+        "internal/indexed.ts",
+        "internal/instance-copies.ts",
+        "internal/opacity.ts",
+        "internal/representation.ts",
+        "internal/use-binding-probe.ts",
+        "internal/use-field-plan.ts",
+        "internal/use-opacity-colors.ts",
+        "internal/use-repaint.ts",
+        "internal/use-selection-input.ts",
+        "internal/view-rows.ts",
+        "internal/with-material.ts",
+        "picking.ts",
+        "structure-context.ts",
+        "types.ts",
+        "use-field.ts",
+        "world-space-points.ts"
+      ]
+    },
+    {
+      "current": "structure-context.ts",
+      "proposed": "structure/structure-context.ts",
+      "lines": 228,
+      "relative_dependencies": [
+        "attribute-snapshot-context.ts",
+        "attributes-context.ts",
+        "coordinate-snapshot.ts",
+        "coordinates-context.ts",
+        "internal/column-source.ts",
+        "internal/immutable-attribute-cache.ts",
+        "internal/structure-resource.ts",
+        "trajectory-context.ts",
+        "types.ts"
+      ]
+    },
+    {
+      "current": "structure.ts",
+      "proposed": "structure/structure.ts",
+      "lines": 67,
+      "relative_dependencies": [
+        "internal/source-request.ts",
+        "structure-context.ts",
+        "types.ts"
+      ]
+    },
+    {
+      "current": "superpose.ts",
+      "proposed": "coordinates/superpose.ts",
+      "lines": 407,
+      "relative_dependencies": [
+        "coordinates-context.ts",
+        "internal/compute-buffers.ts",
+        "internal/coordinate-passes.ts",
+        "internal/source-request.ts",
+        "internal/status-delivery.ts",
+        "internal/status-readback.ts",
+        "internal/use-selection-input.ts",
+        "trajectory-context.ts",
+        "types.ts"
+      ]
+    },
+    {
+      "current": "surface.ts",
+      "proposed": "representations/surface.ts",
+      "lines": 395,
+      "relative_dependencies": [
+        "coordinate-snapshot.ts",
+        "coordinates-context.ts",
+        "internal/attribute-sources.ts",
+        "internal/instance-copies.ts",
+        "internal/opacity.ts",
+        "internal/representation.ts",
+        "internal/selection-consumer.ts",
+        "internal/surface-geometry.ts",
+        "internal/use-binding-probe.ts",
+        "internal/use-field-plan.ts",
+        "internal/use-gpu-surface.ts",
+        "internal/use-opacity-colors.ts",
+        "internal/use-repaint.ts",
+        "internal/with-material.ts",
+        "structure-context.ts",
+        "types.ts",
+        "use-field.ts",
+        "use-geometry-job.ts"
+      ]
+    },
+    {
+      "current": "timeline-context.ts",
+      "proposed": "timeline-context.ts",
+      "lines": 31,
+      "relative_dependencies": [
+        "types.ts"
+      ]
+    },
+    {
+      "current": "trajectory-context.ts",
+      "proposed": "trajectory/trajectory-context.ts",
+      "lines": 19,
+      "relative_dependencies": [
+        "types.ts"
+      ]
+    },
+    {
+      "current": "trajectory.ts",
+      "proposed": "trajectory/trajectory.ts",
+      "lines": 279,
+      "relative_dependencies": [
+        "coordinates-context.ts",
+        "internal/coordinate-kernel.ts",
+        "internal/source-request.ts",
+        "internal/status-delivery.ts",
+        "internal/trajectory-player.ts",
+        "timeline-context.ts",
+        "trajectory-context.ts",
+        "types.ts"
+      ]
+    },
+    {
+      "current": "transform.ts",
+      "proposed": "coordinates/transform.ts",
+      "lines": 105,
+      "relative_dependencies": [
+        "coordinates-context.ts",
+        "internal/compute-buffers.ts",
+        "internal/coordinate-kernel.ts",
+        "internal/use-selection-input.ts",
+        "timeline-context.ts",
+        "types.ts"
+      ]
+    },
+    {
+      "current": "tube.ts",
+      "proposed": "representations/tube.ts",
+      "lines": 228,
+      "relative_dependencies": [
+        "coordinate-snapshot.ts",
+        "internal/instance-copies.ts",
+        "internal/instrumentation.ts",
+        "internal/line-size.ts",
+        "internal/opacity.ts",
+        "internal/representation.ts",
+        "internal/selection-consumer.ts",
+        "internal/tube-geometry.ts",
+        "internal/use-binding-probe.ts",
+        "internal/use-field-plan.ts",
+        "internal/use-repaint.ts",
+        "internal/vertex-field-colors.ts",
+        "internal/with-material.ts",
+        "structure-context.ts",
+        "types.ts"
+      ]
+    },
+    {
+      "current": "types.ts",
+      "proposed": "types.ts",
+      "lines": 559,
+      "relative_dependencies": []
+    },
+    {
+      "current": "unit-cell.ts",
+      "proposed": "representations/unit-cell.ts",
+      "lines": 73,
+      "relative_dependencies": [
+        "internal/opacity.ts",
+        "internal/representation.ts",
+        "types.ts",
+        "use-trajectory-frame.ts"
+      ]
+    },
+    {
+      "current": "unwrap.ts",
+      "proposed": "coordinates/unwrap.ts",
+      "lines": 446,
+      "relative_dependencies": [
+        "coordinates-context.ts",
+        "internal/compute-buffers.ts",
+        "internal/coordinate-passes.ts",
+        "internal/status-readback.ts",
+        "internal/use-selection-input.ts",
+        "types.ts",
+        "use-trajectory-frame.ts"
+      ]
+    },
+    {
+      "current": "use-camera-curve.ts",
+      "proposed": "interaction/use-camera-curve.ts",
+      "lines": 17,
+      "relative_dependencies": [
+        "camera-curve.ts",
+        "timeline-context.ts",
+        "types.ts"
+      ]
+    },
+    {
+      "current": "use-coordinate-bounds.ts",
+      "proposed": "coordinates/use-coordinate-bounds.ts",
+      "lines": 277,
+      "relative_dependencies": [
+        "coordinates-context.ts",
+        "internal/instrumentation.ts"
+      ]
+    },
+    {
+      "current": "use-coordinate-focus.ts",
+      "proposed": "interaction/use-coordinate-focus.ts",
+      "lines": 119,
+      "relative_dependencies": [
+        "internal/instance-plan.ts",
+        "internal/use-selection-input.ts",
+        "structure-context.ts",
+        "types.ts",
+        "use-coordinate-bounds.ts"
+      ]
+    },
+    {
+      "current": "use-coordinate-selection.ts",
+      "proposed": "coordinates/use-coordinate-selection.ts",
+      "lines": 21,
+      "relative_dependencies": [
+        "coordinate-snapshot.ts",
+        "structure-context.ts"
+      ]
+    },
+    {
+      "current": "use-field.ts",
+      "proposed": "fields/use-field.ts",
+      "lines": 64,
+      "relative_dependencies": [
+        "internal/use-binding-probe.ts",
+        "internal/volume-buffers.ts",
+        "timeline-context.ts",
+        "volume-context.ts"
+      ]
+    },
+    {
+      "current": "use-geometry-job.ts",
+      "proposed": "internal/use-geometry-job.ts",
+      "lines": 32,
+      "relative_dependencies": [
+        "internal/geometry-job.ts",
+        "types.ts"
+      ]
+    },
+    {
+      "current": "use-trajectory-frame.ts",
+      "proposed": "trajectory/use-trajectory-frame.ts",
+      "lines": 11,
+      "relative_dependencies": [
+        "structure-context.ts",
+        "trajectory-context.ts",
+        "types.ts"
+      ]
+    },
+    {
+      "current": "volume-context.ts",
+      "proposed": "volume/volume-context.ts",
+      "lines": 92,
+      "relative_dependencies": []
+    },
+    {
+      "current": "volume-slice.ts",
+      "proposed": "volume/volume-slice.ts",
+      "lines": 162,
+      "relative_dependencies": [
+        "internal/color-ramp.ts",
+        "internal/instrumentation.ts",
+        "internal/opacity.ts",
+        "internal/representation.ts",
+        "internal/slice-plane.ts",
+        "internal/use-binding-probe.ts",
+        "internal/use-repaint.ts",
+        "types.ts",
+        "volume-context.ts"
+      ]
+    },
+    {
+      "current": "volume.ts",
+      "proposed": "volume/volume.ts",
+      "lines": 94,
+      "relative_dependencies": [
+        "internal/source-request.ts",
+        "internal/volume-buffers.ts",
+        "types.ts",
+        "volume-context.ts"
+      ]
+    },
+    {
+      "current": "world-space-points.ts",
+      "proposed": "representations/world-space-points.ts",
+      "lines": 60,
+      "relative_dependencies": [
+        "internal/point-size.ts",
+        "internal/use-repaint.ts"
+      ]
+    }
+  ],
+  "candidate_path_sensitive_consumers": [
+    "packages/viewer/test/annotations-page.mjs",
+    "packages/viewer/test/assembly-instances.test.ts",
+    "packages/viewer/test/attribute-values.test.ts",
+    "packages/viewer/test/bond-columns.test.ts",
+    "packages/viewer/test/camera-curve.test.ts",
+    "packages/viewer/test/cartoon-geometry.test.ts",
+    "packages/viewer/test/centroid.test.ts",
+    "packages/viewer/test/color-ramp.test.ts",
+    "packages/viewer/test/columns.test.ts",
+    "packages/viewer/test/efield.test.ts",
+    "packages/viewer/test/efield/efield.tsx",
+    "packages/viewer/test/elastic-network.test.ts",
+    "packages/viewer/test/elastic/elastic.tsx",
+    "packages/viewer/test/field-plan.test.ts",
+    "packages/viewer/test/fixtures/identity-coordinates.ts",
+    "packages/viewer/test/fixtures/wobble-coordinates.ts",
+    "packages/viewer/test/frame-window.test.ts",
+    "packages/viewer/test/geometry-job.test.ts",
+    "packages/viewer/test/gpu-dssp/fixture.ts",
+    "packages/viewer/test/harness.mjs",
+    "packages/viewer/test/instance-copies.test.ts",
+    "packages/viewer/test/invalidation-page.mjs",
+    "packages/viewer/test/invalidation.test.ts",
+    "packages/viewer/test/isosurface-geometry.test.ts",
+    "packages/viewer/test/line-size.test.ts",
+    "packages/viewer/test/material-spec.test.ts",
+    "packages/viewer/test/opacity.test.ts",
+    "packages/viewer/test/pick-resolve.test.ts",
+    "packages/viewer/test/point-size.test.ts",
+    "packages/viewer/test/pointer-plane.test.ts",
+    "packages/viewer/test/postprocess-page.mjs",
+    "packages/viewer/test/ramachandran.test.ts",
+    "packages/viewer/test/readback-identity/probe.tsx",
+    "packages/viewer/test/ribbon-corpus.test.ts",
+    "packages/viewer/test/ribbon-dssp.test.ts",
+    "packages/viewer/test/ribbon-geometry.test.ts",
+    "packages/viewer/test/ribbon-page.mjs",
+    "packages/viewer/test/run-components.mjs",
+    "packages/viewer/test/run-efield.mjs",
+    "packages/viewer/test/run-gate2.mjs",
+    "packages/viewer/test/run-invalidation.mjs",
+    "packages/viewer/test/run-trajectory.mjs",
+    "packages/viewer/test/scene.mjs",
+    "packages/viewer/test/selection-resolution.test.ts",
+    "packages/viewer/test/selection/selection.tsx",
+    "packages/viewer/test/ses-field/fixture.ts",
+    "packages/viewer/test/size-field-page.mjs",
+    "packages/viewer/test/slice-plane.test.ts",
+    "packages/viewer/test/structure-resource.test.ts",
+    "packages/viewer/test/surface-bench.ts",
+    "packages/viewer/test/surface-geometry.test.ts",
+    "packages/viewer/test/trajectory/trajectory.tsx",
+    "packages/viewer/test/tsx/bond-vertex-probe.ts",
+    "packages/viewer/test/tsx/diagnostics.ts",
+    "packages/viewer/test/tsx/offset-coordinates.ts",
+    "packages/viewer/test/tube-geometry.test.ts",
+    "packages/viewer/test/view-rows.test.ts",
+    "packages/viewer/test/volume/volume.tsx",
+    "scripts/check-hardening.mjs",
+    "scripts/published-imports.mjs",
+    "site/README.md",
+    "site/index.html",
+    "site/test/run-browser.mjs",
+    "test/hardening/fixture/deno.json",
+    "test/hardening/public-examples.test.ts",
+    "test/hardening/published-imports.test.ts",
+    "test/spikes/gpu-readiness/probe.tsx",
+    "test/spikes/gpu-retirement/readbacks-probe.tsx",
+    "test/spikes/gpu-retirement/status-probe.tsx"
+  ]
+}
