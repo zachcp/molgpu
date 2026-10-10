@@ -7,6 +7,10 @@ for the procedure.
 
 ## [Unreleased]
 
+- Organize viewer source around dataset scopes, coordinate/attribute pipelines,
+  visual features and named shared mechanics. Public imports and behavior are
+  unchanged; add a source reading guide and a visual-import hardening guard.
+
 - Coordinate snapshots retain their readback staging buffers and rate limit
   across dispatch readiness changes, keeping snapshot geometry at its requested
   cadence during playback.

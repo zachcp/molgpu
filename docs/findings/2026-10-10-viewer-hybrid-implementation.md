@@ -74,7 +74,45 @@ some contract files also contain provider implementations.
 
 ## Final validation
 
-Final-tree validation is recorded here after completion. Checks distinguish the
-unchanged API/publish contents, static source equivalence, path-sensitive
-browser execution and hosted acceptance. No publication or deployment is part of
-this migration.
+Final static acceptance:
+
+- Viewer units and the new import guard: 163 passed. Public-example,
+  published-reference and import-wall unit checks: six passed.
+- Workspace/component/site type checking and the public JSX invariance example
+  passed. Viewer `api.txt` is byte-identical to the baseline.
+- The publish dry run includes the same 118 viewer files after the authoritative
+  path map. The README guide and changelog are declared documentation changes;
+  source content changes are module paths and formatting only.
+- The map covers exactly 114 source files, with 97 renames and 50 enumerated
+  external code consumers. All 114 source token streams preserve the baseline
+  after path normalization and harmless formatting/trailing-import commas.
+- Repository formatting (642 files), repository lint (423 files) and scoped
+  hardening-tool lint passed. R1 and advisory R2 have zero violations.
+
+Final execution acceptance:
+
+- Complete workspace unit run: 567 passed, zero failed.
+- Final H1–H6: all eight packages passed, including the new viewer direction
+  guard. The independent local JSR consumer passed.
+- Nineteen final-tree browser runners passed across two invocations. Components,
+  trajectory, nearest-source recovery, volume and DSSP passed first. The
+  remaining fourteen runners passed 94 tests and 15 ElasticNetwork steps, with
+  28 inapplicable cases ignored. These cover EField, ElasticNetwork, readback
+  identity, Gate 2, postprocess, invalidation, materials, picking, annotations,
+  tube, ribbon, surface, SES field and size fields, including their error
+  checks.
+- The first invocation was interrupted during EField's standalone throughput
+  work; the remaining runners were restarted with CI's `MOLGPU_SKIP_TIMING=1`.
+  Numerical/rendering/lifetime checks remained enabled. No new throughput or
+  complete memory-retirement benchmark claim follows from this refactor.
+- Draft PR #92 is pushed. On its initial implementation head `533d439`, hosted
+  static/unit checks, Site build and the site/retirement/electric-field/
+  invalidation WebGPU groups passed; the viewer group was still running when
+  this record was written. Hosted checks must reflect the final documentation
+  commit before merge.
+
+Historical surface clipping acceptance is passing in the hosted site group on
+this implementation. No production clipping change was included. The prior
+bounded investigation remains independent of this layout.
+
+No public-registry publication, merge or deployment is part of this migration.
