@@ -104,7 +104,9 @@ change.
 - Motion and Compose site routes pass independently.
 - The postprocess alpha scene passes every Field/mode/opacity/material case.
   Opacity and material-alpha changes build no geometry and upload no molecular
-  buffers. Materials and Gate 2 browser suites also pass.
+  buffers. Materials and Gate 2 browser suites also pass. The final combined
+  postprocess/Gate 2/invalidation run passes 83 tests, with 28 inapplicable
+  cases ignored.
 - Held readback retirement passes for successful and rejected maps under source
   replacement and unmount;
   [dated evidence](evidence/2026-10-10-readback-retirement.json).
