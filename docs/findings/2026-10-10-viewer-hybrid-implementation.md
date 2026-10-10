@@ -79,10 +79,13 @@ Final static acceptance:
 - Viewer units and the new import guard: 163 passed. Public-example,
   published-reference and import-wall unit checks: six passed.
 - Workspace/component/site type checking and the public JSX invariance example
-  passed. Viewer `api.txt` is byte-identical to the baseline.
+  passed. The mechanical migration kept viewer `api.txt` byte-identical; the
+  subsequent JSDoc audit changes only comments in two interface declarations.
+  Public API signatures remain identical after stripping comments.
 - The publish dry run includes the same 118 viewer files after the authoritative
   path map. The README guide and changelog are declared documentation changes;
-  source content changes are module paths and formatting only.
+  the mechanical commits change source module paths and formatting only. The
+  subsequent documentation commit explicitly corrects public comments.
 - The map covers exactly 114 source files, with 97 renames and 50 enumerated
   external code consumers. All 114 source token streams preserve the baseline
   after path normalization and harmless formatting/trailing-import commas.
@@ -116,3 +119,39 @@ this implementation. No production clipping change was included. The prior
 bounded investigation remains independent of this layout.
 
 No public-registry publication, merge or deployment is part of this migration.
+
+## JSR documentation audit and Bead reconciliation
+
+The ordinary and advanced entry docs now distinguish Structure topology,
+Trajectory/coordinate providers and Volume/EField consumers. Coordinates.ready
+means an output buffer has had its first dispatch encoded, not completion of its
+latest generation. Snapshot docs explain source-local generations, pending and
+lagged results, highest-rate shared subscriptions and the final revision
+remaining scheduled within the rate interval. The compatibility onPause option
+currently does not change scheduling; this audit changes no runtime behavior.
+
+Generated Deno documentation exposes 80 ordinary and 25 advanced symbols, all
+with summaries. Four missing export summaries were added. Two descriptions
+starting a line with @molgpu were incorrectly parsed as unsupported JSDoc tags,
+truncating Isosurface and EFieldProps documentation; inline code restores the
+full text. Generated module docs and those restored descriptions were inspected.
+The reviewed api.txt diff changes only Coordinates and NearestVolume member
+comments, not their declarations or signatures.
+
+Documentation generation succeeds with warnings from the pinned upstream use.gpu
+declaration package. The optional deno doc --lint audit reports member JSDoc,
+private-type-reference and explicit-return-annotation diagnostics; it is not a
+clean documentation-lint gate. A tracked-source baseline comparison reports 172
+diagnostics before this audit and 167 after it (89 missing member comments, 55
+private type references and 23 return annotations); none are newly introduced.
+The repository's actual hardening/type/JSR checks pass. No dependency pin or
+component typing convention was changed to silence those diagnostics.
+
+PR #91 merged as e4d566c after its final hosted checks passed. Its five
+remaining implementation Beads (e9d, ahc.11, a70, 0vs.8, s5o.21) were closed
+with merge evidence; all children of 0vs and s5o are closed, so those epics were
+closed too. Orientation 634 and decision 9fw now reflect the current state. The
+local surface-clipping acceptance investigation icj.3 was narrowed to
+asynchronous readiness evidence; hosted clipping passes do not erase its earlier
+local failure. Future scientific/feature work and deferred references remain
+open. 9fw remains in progress until PR #92 is merged.

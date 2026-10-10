@@ -1,8 +1,11 @@
 /**
  * Molecular scene components for a caller-owned use.gpu WebGPU scene.
- * Put representations beneath Structure; the application supplies its canvas,
- * device, camera, lights and render pass. Selection props accept reusable queries
- * or exact atom selections. Advanced GPU and snapshot APIs use the /advanced entry.
+ * Structure supplies molecular topology; Trajectory and coordinate transforms
+ * supply positions to its descendants. Molecular representations read these
+ * nearest scopes. Volume and EField supply scalar grids to volume visuals.
+ * The application supplies its canvas, device, camera, lights and render pass.
+ * Selection props accept reusable queries or exact atom selections. Extension
+ * hooks and CPU snapshot APIs use the /advanced entry.
  *
  * @module
  */

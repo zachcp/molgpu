@@ -12,17 +12,6 @@ import { use } from "@use-gpu/live";
 import { Spacefill } from "./spacefill.ts";
 import { Bonds } from "./bonds/bonds.ts";
 
-/**
- * A composite representation that owns no drawing of its own: <Spacefill> balls
- * at a small radius plus <Bonds> sticks, both scoped to the SAME selection and
- * coloured by the SAME `color` (a flat colour or a @molgpu/fields Field). This
- * is the third Gate-2 consumer, and the payoff of the <Structure> intermediary —
- * composing representations needs no data plumbing.
- *
- * `ball` scales the van der Waals radius; `stick` is the world-space stick width.
- * A `material` (in `...props`) forwards to both halves, so balls and sticks
- * share one shading model, and `opacity`/`mode` (also in `...props`) fade both.
- */
 const BallAndStickResolved: ViewerComponent<
   {
     select?: Selection | null;
@@ -63,6 +52,12 @@ const BallAndStickResolved: ViewerComponent<
   ];
 };
 
+/**
+ * Compose Spacefill balls and Bonds sticks using the nearest live coordinates
+ * and one selection. `ball` scales van der Waals radii; `stick` is the width in
+ * world units. Color, material and opacity apply to both halves. `shadow`
+ * enables stick shadows under a shadow-enabled Pass; balls do not cast.
+ */
 export const BallAndStick: ViewerComponent<
   & {
     select?: SelectionInput;

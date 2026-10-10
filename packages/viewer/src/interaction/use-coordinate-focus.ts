@@ -8,7 +8,7 @@ import { useSelectionInput } from "../selection/use-selection-input.ts";
 import type { FocusOptions, FocusResult, SelectionInput } from "../types.ts";
 
 /** Nonblocking focus for nearest coordinates and molecular membership.
- * Queries use 4 Hz/on-pause snapshots with latest-published consistency;
+ * Queries use shared CPU snapshots (normally 4 Hz) with latest-published consistency;
  * pending/error membership or unavailable bounds returns null without root fallback.
  */
 export function useCoordinateFocus(

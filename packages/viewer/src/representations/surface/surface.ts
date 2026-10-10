@@ -155,7 +155,7 @@ const ACCESSIBLE_SMOOTHING = 0.25;
  * it, and the last finished mesh stays drawn meanwhile, so under playback the
  * mesh can lag the colour by a build. A probe radius below two resolution
  * steps, or an atom with an unusually dense neighbourhood, keeps the CPU build
- * from coordinate snapshots (4 Hz and on pause) instead; so does the
+ * from coordinate snapshots (normally 4 Hz, including the final revision) instead; so does the
  * accessible kind, whose smoothing probe is below that bound.
  */
 const SurfaceResolved: ViewerComponent<

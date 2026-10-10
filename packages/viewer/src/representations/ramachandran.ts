@@ -110,9 +110,9 @@ const InsetLayers = (
  * screen-locked in a corner of the canvas. It draws inside the scene's pass
  * (positions are mapped through the inverse camera in the vertex shader), so
  * it needs no separate pass or camera and orbiting never re-uploads it.
- * Live: it reads published coordinate snapshots (`snapshotHz`, default 4 Hz
- * and on pause), so points follow trajectories and coordinate providers at
- * that cadence. Grid lines mark 0 and ±90°. Mount it beneath a <Structure>.
+ * Snapshot-based: it reads published coordinates (`snapshotHz`, default 4 Hz),
+ * so points can lag trajectories and coordinate providers. The final revision
+ * remains scheduled within that rate interval. Grid lines mark 0 and ±90°. Mount it beneath a <Structure>.
  */
 export const Ramachandran: ViewerComponent<{
   corner?: RamachandranCorner;

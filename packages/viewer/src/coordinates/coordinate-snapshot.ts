@@ -59,7 +59,19 @@ export function rootSnapshot(
   };
 }
 
-/** Latest published CPU positions for a snapshot consumer. */
+/**
+ * Read the nearest provider's published CPU positions, preserving topology rows.
+ * Root Structure coordinates are available immediately. Computed coordinates
+ * return null before the first matching readback or after source replacement;
+ * subsequent snapshots can lag live rendering. `generation` is local to the
+ * provider, not a global frame number.
+ *
+ * `maxHz` requests a positive readback rate (default 4). Subscribers share one
+ * readback at the highest requested rate. `enabled: false` returns null and
+ * releases this subscription. The latest eligible revision remains scheduled
+ * after motion stops, within the rate interval. `onPause` is retained for API
+ * compatibility; it currently does not alter that scheduling.
+ */
 export function useCoordinateSnapshot(
   options: { maxHz?: number; onPause?: boolean; enabled?: boolean } = {},
 ): CoordinateSnapshot | null {

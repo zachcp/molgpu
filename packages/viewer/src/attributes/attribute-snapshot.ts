@@ -31,7 +31,18 @@ interface Request {
   onPause: boolean;
 }
 
-/** Latest CPU copy of a column; a GPU-only column returns null until read back. */
+/**
+ * Read the nearest published CPU copy of a named attribute. Root CPU columns
+ * are available immediately; a GPU producer shadows them and returns null until
+ * its first matching readback. Published copies may lag live rendering, and
+ * generations are local to each attribute source. Missing columns or
+ * `enabled: false` return null; readback failures throw.
+ *
+ * `maxHz` requests a positive rate (default 4); subscribers to the same producer
+ * share the highest requested rate. The last eligible revision remains
+ * scheduled after changes stop. `onPause` is retained for compatibility and
+ * currently does not change that scheduling.
+ */
 export function useAttributeSnapshot(
   name: string,
   options: { maxHz?: number; onPause?: boolean; enabled?: boolean } = {},

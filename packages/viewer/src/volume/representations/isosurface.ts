@@ -27,12 +27,13 @@ import { useBindingProbe } from "../../internal/use-binding-probe.ts";
 
 /**
  * An isosurface of the nearest `<Volume>` or `<EField>`, extracted on the CPU with
- * @molgpu/geo's marching cubes and placed through the volume's full
+ * marching cubes from `@molgpu/geo` and placed through the volume's full
  * index-to-world affine (sheared and rotated grids included). `level` is an
  * absolute isovalue, or `{ sigma: k }` for `mean + k * sigma` of the volume's
  * statistics; it defaults to `{ sigma: 1 }`. Only the volume and the resolved
  * level schedule a remesh (cancellable, latest wins); under a computed volume
- * that is each CPU snapshot (4 Hz and once after it stops changing); `color`, `opacity` and
+ * that is each CPU snapshot (normally 4 Hz, including the final revision);
+ * `color`, `opacity` and
  * `material` are layer bindings and never do. Samples below the level are
  * inside, so normals face decreasing values.
  */

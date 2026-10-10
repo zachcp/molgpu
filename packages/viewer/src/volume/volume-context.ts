@@ -17,7 +17,7 @@ export interface NearestVolume {
   readonly grid: VolumeGrid;
   /** Scalar samples, x-fastest, as a live f32 storage source. */
   readonly source: StorageSource;
-  /** Bumps whenever `source` holds new samples; 1 for a loaded volume. */
+  /** Revision local to this volume provider; 1 for a loaded volume. */
   readonly generation: number;
   /** Default display interval (a slice's colour range). */
   readonly range: readonly [number, number];
@@ -25,7 +25,7 @@ export interface NearestVolume {
   readonly volume: VolumeData | null;
   /** Latest published CPU snapshot (the volume itself for `<Volume>`). */
   readonly snapshot: VolumeData | null;
-  /** Request snapshots at up to `maxHz`; returns the release. */
+  /** Subscribe to shared readback demand at `maxHz`; returns the release. */
   readonly subscribe: (maxHz: number, onPause: boolean) => () => void;
 }
 
@@ -46,11 +46,13 @@ export function useVolume(): NearestVolume {
 /**
  * The nearest volume's samples on the CPU, for consumers that cannot read the
  * GPU copy (marching cubes, statistics). A loaded `<Volume>` returns its data
- * at once. A computed volume reads back on demand: at most `maxHz` times a
- * second (default 4), and once more after it stops changing when `onPause`
- * (default true); null until the first copy lands. The snapshot may lag the
- * live samples; its `generation` is not exposed because consumers remesh per
- * published `VolumeData`.
+ * at once. A computed volume returns null until its first matching readback;
+ * later snapshots can lag live samples. `maxHz` requests a positive rate
+ * (default 4); subscribers share the highest requested rate. The last eligible
+ * revision stays scheduled after changes stop, within that rate interval.
+ * `onPause` is retained for compatibility and currently does not change this
+ * scheduling. Consumers remesh per published `VolumeData`; a source-local
+ * generation is not exposed on the snapshot.
  */
 export function useVolumeSnapshot(
   options: { maxHz?: number; onPause?: boolean } = {},

@@ -6,8 +6,13 @@ import type { StructureResource } from "../types.ts";
 export interface Coordinates {
   readonly source: StorageSource;
   readonly count: number;
+  /** Revision local to this provider; compare only within the same source. */
   readonly generation: number;
-  /** False until the requested content revision has been submitted. */
+  /**
+   * False until the first dispatch into this output buffer is encoded. Later
+   * pending generations retain readiness for drawing; this is not a GPU
+   * completion signal. Root CPU uploads may omit it.
+   */
   readonly ready?: boolean;
   readonly resource: StructureResource;
 }

@@ -118,8 +118,10 @@ export interface CoordinateKernelProps {
  * Write a GPU coordinate transform: run `shader` over the upstream positions
  * into one packed buffer this component owns (destroyed on unmount) and publish
  * it as the nearest coordinates for `children`, with a generation that advances
- * per dispatch and CPU snapshots below it. Until the first dispatch into its
- * output lands, descendants see `ready: false`; later generations keep it true.
+ * when the upstream source or transform inputs change, and CPU snapshots below
+ * it. Until the first dispatch into its output is encoded, descendants see
+ * `ready: false`; later generations keep it true. Readiness does not mean GPU
+ * completion; snapshots publish only after a matching readback completes.
  */
 export const CoordinateKernel: LC<CoordinateKernelProps> = (
   { upstream, shader, args = [], sources = NONE, parameterKey, children },

@@ -42,6 +42,7 @@ export interface StructureSources {
   readonly radii: ShaderSource;
 }
 
+/** Nearest Structure topology/resource and its shared root GPU columns. */
 export interface NearestStructure {
   readonly resource: StructureResource;
   /** Null for an empty structure, which owns no GPU source. */
