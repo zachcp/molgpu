@@ -14,12 +14,16 @@ type Vec3 = readonly [number, number, number];
 const ClipPlane = (
   { normal, offset, children }: {
     normal: Vec3;
-    offset: number;
+    offset?: number;
     children?: ViewerElement;
   },
 ) => {
   const length = Math.hypot(...normal);
-  const plane = [...normal.map((v) => v / length), offset / length];
+  // A disabled side is a constant positive half-space. Keep the provider
+  // mounted so turning a cut on/off cannot remount and rebuild its surface.
+  const plane = offset === undefined
+    ? [0, 0, 0, 1]
+    : [...normal.map((v) => v / length), offset / length];
   // channel -1: the plane writes the axis its normal leans on most.
   const bound = useShader(
     getScissorPlane,
@@ -29,7 +33,8 @@ const ClipPlane = (
 };
 
 /**
- * Keep world points with `from <= n·p <= to` (Å along `normal`); omit `to` for
+ * Keep world points with `from <= n·p <= to` (Å along `normal`); omit a side
+ * to disable it while keeping the provider mounted. Omit `to` for
  * a single cut. use.gpu's scissor plane (ScissorPlane in @use-gpu/plot, minus
  * the matrix handling the site does not need) discards per fragment in every
  * primitive and in the picking, depth and shadow passes. Moving the slab only
@@ -38,14 +43,17 @@ const ClipPlane = (
 export const ClipSlab = (
   { normal, from, to, children }: {
     normal: Vec3;
-    from: number;
+    from?: number;
     to?: number;
     children?: ViewerElement;
   },
 ) => {
   const near = (inner?: ViewerElement) =>
-    use(ClipPlane, { normal, offset: -from, children: inner });
-  if (to === undefined) return near(children);
+    use(ClipPlane, {
+      normal,
+      offset: from === undefined ? undefined : -from,
+      children: inner,
+    });
   const back: Vec3 = [-normal[0], -normal[1], -normal[2]];
   return near(use(ClipPlane, { normal: back, offset: to, children }));
 };

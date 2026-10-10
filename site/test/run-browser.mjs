@@ -190,6 +190,56 @@ Deno.test("site landing page and maintained gallery routes", async () => {
       if (message.type() === "error") errors.push(message.text());
     });
 
+    // Observe actual FaceLayer draws, not generic canvas/device readiness.
+    // Surface is the only face primitive on this route. Delay its first
+    // pipeline deliberately to exercise the atoms-before-surface race.
+    await page.addInitScript(() => {
+      if (!globalThis.GPUDevice) return;
+      const modules = new WeakSet();
+      const pipelines = new WeakSet();
+      const passes = new WeakSet();
+      globalThis.__surfaceDraws = 0;
+      const request = GPUAdapter.prototype.requestDevice;
+      GPUAdapter.prototype.requestDevice = async function (...args) {
+        const device = await request.apply(this, args);
+        globalThis.__surfaceDrain = () => device.queue.onSubmittedWorkDone();
+        return device;
+      };
+      const shader = GPUDevice.prototype.createShaderModule;
+      GPUDevice.prototype.createShaderModule = function (descriptor) {
+        const module = shader.call(this, descriptor);
+        if (descriptor.code.includes("getFaceVertex")) modules.add(module);
+        return module;
+      };
+      const pipeline = GPUDevice.prototype.createRenderPipelineAsync;
+      GPUDevice.prototype.createRenderPipelineAsync = async function (
+        descriptor,
+      ) {
+        const face = modules.has(descriptor.vertex.module);
+        const result = await pipeline.call(this, descriptor);
+        if (face) {
+          if (location.hash === "#demos/surface") {
+            await new Promise((resolve) => setTimeout(resolve, 1500));
+          }
+          pipelines.add(result);
+        }
+        return result;
+      };
+      const setPipeline = GPURenderPassEncoder.prototype.setPipeline;
+      GPURenderPassEncoder.prototype.setPipeline = function (pipeline) {
+        if (pipelines.has(pipeline)) passes.add(this);
+        else passes.delete(this);
+        return setPipeline.call(this, pipeline);
+      };
+      const draw = GPURenderPassEncoder.prototype.draw;
+      GPURenderPassEncoder.prototype.draw = function (...args) {
+        if (passes.has(this) && args[0] > 0 && args[1] > 0) {
+          globalThis.__surfaceDraws++;
+        }
+        return draw.apply(this, args);
+      };
+    });
+
     await page.goto("http://127.0.0.1:5190/");
     await page.waitForSelector("#hero-title");
     assertMatch(
@@ -882,11 +932,29 @@ Deno.test("site landing page and maintained gallery routes", async () => {
           "accessible",
         );
         await waitForVisibleCanvas(page);
+        await page.waitForFunction(() => globalThis.__surfaceDraws > 0);
+        // A neutral opaque surface must actually cover the molecule before
+        // taking the baseline; red atom pixels alone do not establish readiness.
+        await page.evaluate(() => globalThis.__surfaceDrain());
         const before = await redPixels();
+        await page.evaluate(async (url) => {
+          const counters = await import(url);
+          counters.enableInstrumentation();
+          counters.resetCounters();
+          globalThis.__surfaceCounters = counters;
+        }, `/@fs${instrumentationPath}`);
+        const initialDraws = await page.evaluate(() =>
+          globalThis.__surfaceDraws
+        );
         await page.getByLabel("Clip front").fill("0.55");
         await dataIs("clip", "0.55,1");
-        // Poll from Deno: Playwright treats an async predicate's promise as
-        // truthy, so waitForFunction would not wait for the pixels.
+        await page.waitForFunction(
+          (draws) => globalThis.__surfaceDraws > draws,
+          initialDraws,
+        );
+        await page.evaluate(() => globalThis.__surfaceDrain());
+        // Poll decoded pixels from the runner using the same capture path
+        // for the baseline and clipped views.
         let after = before;
         for (const start = Date.now(); Date.now() - start < 30000;) {
           after = await redPixels();
@@ -897,6 +965,19 @@ Deno.test("site landing page and maintained gallery routes", async () => {
         assert(
           after > before + 20,
           `clipping reveals the atoms inside (${before} -> ${after})`,
+        );
+        const firstClipWork = await page.evaluate(() => {
+          const { detail } = globalThis.__surfaceCounters.snapshotCounters();
+          return {
+            meshBuilds: detail["geometryBuilds:surface:mesh"] ?? 0,
+            coordinateBytes: detail["uploadBytes:structure:positions"] ?? 0,
+          };
+        });
+        console.log("first clip work", firstClipWork);
+        assertEquals(
+          firstClipWork,
+          { meshBuilds: 0, coordinateBytes: 0 },
+          "the first cut retains the surface mesh and root coordinates",
         );
         // The back handle cuts the far side on the same slider: through a thin
         // slab the background shows where the far half of the surface was.
@@ -926,9 +1007,25 @@ Deno.test("site landing page and maintained gallery routes", async () => {
             }
             return background;
           });
+        assert(
+          await page.evaluate(() => globalThis.__surfaceDraws) > initialDraws,
+          "front clipping reached a surface draw",
+        );
         const open = await backgroundPixels();
+        await page.evaluate(async (url) => {
+          const counters = await import(url);
+          counters.enableInstrumentation();
+          counters.resetCounters();
+          globalThis.__surfaceCounters = counters;
+        }, `/@fs${instrumentationPath}`);
+        const frontDraws = await page.evaluate(() => globalThis.__surfaceDraws);
         await page.getByLabel("Clip back").fill("0.6");
         await dataIs("clip", "0.55,0.6");
+        await page.waitForFunction(
+          (draws) => globalThis.__surfaceDraws > draws,
+          frontDraws,
+        );
+        await page.evaluate(() => globalThis.__surfaceDrain());
         let slab = open;
         for (const start = Date.now(); Date.now() - start < 30000;) {
           slab = await backgroundPixels();
@@ -936,6 +1033,21 @@ Deno.test("site landing page and maintained gallery routes", async () => {
           await new Promise((resolve) => setTimeout(resolve, 200));
         }
         console.log("clip slab background pixels", open, slab);
+        const clipWork = await page.evaluate(() => {
+          const s = globalThis.__surfaceCounters.snapshotCounters();
+          return {
+            geometryBuilds: s.geometryBuilds,
+            uploadBytes: s.uploadBytes,
+          };
+        });
+        assertEquals(
+          clipWork,
+          { geometryBuilds: 0, uploadBytes: 0 },
+          "moving an existing slab rebuilds no mesh and uploads no coordinates",
+        );
+        await page.evaluate(() =>
+          globalThis.__surfaceCounters.disableInstrumentation()
+        );
         assert(
           slab > open + 1000,
           `the back cut removes the far side (${open} -> ${slab})`,

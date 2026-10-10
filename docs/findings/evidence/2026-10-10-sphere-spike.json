@@ -1,0 +1,30 @@
+{
+  "browser": "154.0.8037.98",
+  "depth": {
+    "current": {
+      "lit": 20428,
+      "meanChannelError": 2.251223810456242,
+      "differentFraction": 0.014979439984335227
+    },
+    "candidate": {
+      "lit": 20428,
+      "meanChannelError": 2.251240127928992,
+      "differentFraction": 0.014979439984335227
+    }
+  },
+  "shadow": {
+    "mesh": 24717972,
+    "current": 23274864,
+    "candidate": 23274864
+  },
+  "timings": {
+    "current": {
+      "medianMs": 17.52783400000044,
+      "p95Ms": 30.85908400000335
+    },
+    "candidate": {
+      "medianMs": 17.016417000006186,
+      "p95Ms": 19.33299999999872
+    }
+  }
+}

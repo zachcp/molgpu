@@ -1,0 +1,22 @@
+[
+  {
+    "protocol": "http",
+    "firstVisibleMs": 4182,
+    "acceptanceMs": 4681,
+    "requests": 792,
+    "wasm": [
+      "https://esm.sh/@esm.sh/tsx@1.5.3/pkg/tsx_bg.wasm"
+    ],
+    "fonts": [],
+    "browser": "154.0.8037.98"
+  },
+  {
+    "protocol": "file",
+    "firstVisibleMs": 6357,
+    "acceptanceMs": 7122,
+    "requests": 791,
+    "wasm": [],
+    "fonts": [],
+    "browser": "154.0.8037.98"
+  }
+]

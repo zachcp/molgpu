@@ -1,5 +1,5 @@
 /** @jsx LiveReact.createElement */
-import { React as LiveReact } from "@use-gpu/live";
+import { keyed, React as LiveReact } from "@use-gpu/live";
 import { coordinateBounds, type StructureData } from "@molgpu/table";
 import { byElement } from "@molgpu/fields";
 import { BallAndStick, Surface } from "@molgpu/viewer";
@@ -92,16 +92,11 @@ export const surfaceScene = (data: StructureData, options: SceneOptions) => {
     : null;
   return [
     atoms,
-    clipped
-      ? (
-        <ClipSlab
-          normal={CLIP_NORMAL}
-          from={clipFrom(data, front)}
-          to={clipFrom(data, back)}
-        >
-          {surface}
-        </ClipSlab>
-      )
-      : surface,
+    keyed(ClipSlab, "surface", {
+      normal: CLIP_NORMAL,
+      from: front > 0 ? clipFrom(data, front) : undefined,
+      to: back < 1 ? clipFrom(data, back) : undefined,
+      children: surface,
+    }),
   ].filter(Boolean);
 };

@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>molgpu · Crambin</title>
+    <style>
+    :root {
+      color-scheme: dark;
+      font: 15px system-ui, sans-serif;
+    }
+    body {
+      margin: 0;
+      background: #080d16;
+      color: #e6edf7;
+    }
+    main {
+      height: 100dvh;
+      display: grid;
+      grid-template-rows: auto 1fr;
+    }
+    header {
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+    h1 {
+      margin: 0;
+      font-size: 20px;
+    }
+    button {
+      margin-left: auto;
+      padding: 8px 14px;
+      cursor: pointer;
+    }
+    #viewer {
+      min-height: 0;
+      position: relative;
+    }
+    canvas {
+      display: block;
+      touch-action: none;
+    }
+    #status {
+      position: absolute;
+      top: 16px;
+      left: 24px;
+      z-index: 1;
+      white-space: pre-wrap;
+    }
+    #status[data-error] {
+      color: #ffb8af;
+    }
+    </style>
+    <!-- molgpu 0.2.0: published JSR release used by this example.
+         esm.sh converts JSR TypeScript to ESM; use.gpu stays at 0.20.0. -->
+    <script type="importmap">
+    {
+      "imports": {
+        "@esm.sh/tsx": "https://esm.sh/tsx",
+        "@molgpu/viewer": "https://esm.sh/jsr/@molgpu/viewer@0.2.0?target=es2022",
+        "@molgpu/io": "https://esm.sh/jsr/@molgpu/io@0.2.0?target=es2022",
+        "@molgpu/fields": "https://esm.sh/jsr/@molgpu/fields@0.2.0?target=es2022",
+        "@use-gpu/live": "https://esm.sh/@use-gpu/live@0.20.0?target=es2022",
+        "@use-gpu/webgpu": "https://esm.sh/@use-gpu/webgpu@0.20.0?target=es2022",
+        "@use-gpu/workbench": "https://esm.sh/@use-gpu/workbench@0.20.0?target=es2022"
+      }
+    }
+    </script>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Crambin / 1CRN</h1>
+        <span>Drag to rotate · Scroll to zoom</span>
+        <button id="reset" type="button" disabled>Reset view</button>
+      </header>
+      <div id="viewer" aria-label="Interactive molecular structure">
+        <div id="status" role="status" aria-live="polite">Loading…</div>
+      </div>
+    </main>
+    <script type="module">
+    // Report errors even if the JSX loader or its imports fail.
+    globalThis.showError = (error) => {
+      console.error(error);
+      const status = document.querySelector("#status");
+      status.dataset.error = "true";
+      status.textContent = `Unable to display the molecule: ${
+        error?.message ?? error
+      }`;
+    };
+    globalThis.addEventListener(
+      "error",
+      (event) => showError(event.error ?? event.message),
+    );
+    globalThis.addEventListener(
+      "unhandledrejection",
+      (event) => showError(event.reason),
+    );
+    if (!navigator.gpu) {
+      showError(
+        new Error(
+          "WebGPU is unavailable. Use a WebGPU-capable browser on HTTPS or localhost.",
+        ),
+      );
+    }
+    // Mol*'s CDN parser requires this scheduling shim.
+    globalThis.setImmediate ??= (callback, ...args) =>
+      setTimeout(callback, 0, ...args);
+    globalThis.clearImmediate ??= clearTimeout;
+    </script>
+    <script type="text/jsx">
+      /** @jsxRuntime classic */
+      /** @jsx React.createElement */
+      import { React, render, unmount, useState, useResource } from "@use-gpu/live";
+      import { WebGPU, AutoCanvas } from "@use-gpu/webgpu";
+      import {
+        OrbitCamera, Pass, AmbientLight, DirectionalLight,
+        useMouseState, useWheelState,
+      } from "@use-gpu/workbench";
+      import { Structure, Spacefill } from "@molgpu/viewer";
+      import { structureFromBcif } from "@molgpu/io";
+      import { byElement } from "@molgpu/fields";
+
+      const initialView = { bearing: 0.4, pitch: 0.2, radius: 40 };
+      const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+
+      function Camera({ children }) {
+        const [view, setView] = useState(initialView);
+        const mouse = useMouseState();
+        const wheel = useWheelState();
+        useResource(() => {
+          if (mouse.buttons.left) setView((view) => ({
+            ...view,
+            bearing: view.bearing - mouse.moveX * 0.01,
+            pitch: clamp(view.pitch - mouse.moveY * 0.01, -1.5, 1.5),
+          }));
+        }, [mouse]);
+        useResource(() => {
+          if (wheel.moveY) setView((view) => ({
+            ...view,
+            radius: clamp(view.radius * Math.exp(wheel.moveY * 0.002), 8, 200),
+          }));
+        }, [wheel]);
+        useResource((dispose) => {
+          const button = document.querySelector("#reset");
+          const reset = () => setView(initialView);
+          button.disabled = false;
+          button.addEventListener("click", reset);
+          dispose(() => button.removeEventListener("click", reset));
+        }, []);
+        return <OrbitCamera {...view} target={[10.6, 10.2, 6.1]}>{children}</OrbitCamera>;
+      }
+
+      try {
+        if (navigator.gpu) {
+          const data = await structureFromBcif("https://models.rcsb.org/1crn.bcif");
+          const root = render(
+            <WebGPU onError={showError} fallback={(error) => { showError(error); return null; }}>
+              <AutoCanvas selector="#viewer" samples={4} backgroundColor={[0.015, 0.025, 0.05, 1]}>
+                <Camera>
+                  <Pass lights>
+                    <AmbientLight intensity={0.35} />
+                    <DirectionalLight direction={[-1, -2, -1.5]} intensity={1.2} />
+                    <Structure data={data}>
+                      <Spacefill color={byElement()} material={{ type: "pbr", roughness: 0.45 }} />
+                    </Structure>
+                  </Pass>
+                </Camera>
+              </AutoCanvas>
+            </WebGPU>,
+          );
+          const status = document.querySelector("#status");
+          if (!status.dataset.error) status.textContent = `${data.topology.atoms.count} atoms · Colored by element`;
+          globalThis.addEventListener("pagehide", () => unmount(root), { once: true });
+        }
+      } catch (error) { showError(error); }
+    </script>
+    <!-- Transforms the inline JSX in the browser, with no local build step. -->
+    <script type="module">
+    import "@esm.sh/tsx";
+    </script>
+  </body>
+</html>

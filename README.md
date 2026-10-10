@@ -50,6 +50,7 @@ README.
 
 ## Contributor docs and examples
 
+- [Single-file no-build viewer](examples/README.md).
 - [Project site](site/README.md): the landing page and maintained WebGPU
   demonstrations.
 - [Current architecture and reading guide](docs/ARCHITECTURE.md).
