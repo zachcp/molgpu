@@ -265,6 +265,10 @@ Deno.test("site landing page and maintained gallery routes", async () => {
     /** WebGPU device acquisition per demo route, in ms (flake evidence). */
     const deviceMs = {};
     for (const { id, title, fixture } of demos) {
+      if (
+        Deno.env.get("MOLGPU_SITE_DEMO") &&
+        Deno.env.get("MOLGPU_SITE_DEMO") !== id
+      ) continue;
       route = `#demos/${id}`;
       await page.goto(`http://127.0.0.1:5190/#demos/${id}`);
       await page.waitForSelector(`#molecule-canvas[data-demo="${id}"]`);
@@ -644,8 +648,8 @@ Deno.test("site landing page and maintained gallery routes", async () => {
         );
         assertEquals(
           shadowProbe,
-          { cartoon: 1, tube: 0, sticks: 0, spacefill: 0, surface: 0 },
-          "only the cartoon's shaded faces cast; tube lines, ball-and-stick, spacefill points and the transparent surface do not",
+          { cartoon: 1, tube: 1, sticks: 1, spacefill: 0, surface: 0 },
+          "cartoon, opted-in tube and bond sticks cast; atom billboards and transparent surfaces do not",
         );
         await page.getByLabel("Figure mode").uncheck();
         await dataIs("figure", "");
@@ -1034,6 +1038,51 @@ Deno.test("site landing page and maintained gallery routes", async () => {
         );
       }
       if (id === "motion") {
+        const snapshotBudget = async (representation) => {
+          await page.evaluate(async (url) => {
+            const counters = await import(url);
+            counters.enableInstrumentation();
+            counters.resetCounters();
+            globalThis.__snapshotCounters = counters;
+          }, `/@fs${instrumentationPath}`);
+          await page.getByLabel("Play looping playback").click();
+          // Measure work over continuous animation; this interval is a rate
+          // budget, not an assumption that a dispatch or readback completed.
+          const elapsed = await page.evaluate(async () => {
+            const start = performance.now();
+            while (performance.now() - start < 1600) {
+              await new Promise(requestAnimationFrame);
+            }
+            return performance.now() - start;
+          });
+          await page.getByLabel("Pause looping playback").click();
+          const work = await page.evaluate(() => {
+            const counters = globalThis.__snapshotCounters;
+            const { detail } = counters.snapshotCounters();
+            counters.disableInstrumentation();
+            return detail;
+          });
+          const limit = Math.ceil(elapsed / 1000 * 4) + 2;
+          const builds = work[`geometryBuilds:${representation}:trace`] ?? 0;
+          const copies = work["gathers:coords:snapshot:dispatch"] ?? 0;
+          assert(builds > 0, `${representation} follows moving snapshots`);
+          assert(
+            builds <= limit && copies <= limit,
+            `${representation} respects 4 Hz: ${
+              JSON.stringify({ elapsed, builds, copies, limit })
+            }`,
+          );
+          assertEquals(
+            work["allocations:coords:snapshot"] ?? 0,
+            0,
+            "new coordinate generations reuse the readback staging buffers",
+          );
+          console.log(
+            "snapshot playback budget",
+            representation,
+            JSON.stringify({ elapsed, builds, copies, limit }),
+          );
+        };
         assertStrictEquals(
           await host.getAttribute("data-motion"),
           "trajectory",
@@ -1123,6 +1172,8 @@ Deno.test("site landing page and maintained gallery routes", async () => {
           insetFirst,
           { timeout: 15000 },
         );
+        await snapshotBudget("tube");
+        await scrubTo(0.5);
         await page.getByLabel("Trajectory representation").selectOption(
           "ball-and-stick",
         );
@@ -1199,6 +1250,7 @@ Deno.test("site landing page and maintained gallery routes", async () => {
           await page.locator(".timeline-control output").first().textContent(),
           /2\.00 s/,
         );
+        await snapshotBudget("ribbon");
 
         // Elastic network: the timeline sets the integrator step, a tug
         // perturbs the run and scrubbing back restores a checkpoint.

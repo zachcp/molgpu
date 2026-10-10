@@ -306,7 +306,11 @@ const Integrator: LC<
   const paramsKey = `${temperature}:${gamma}:${dt}:${tugKey}`;
   const gpu = useMemo(() => createGpu(device, network), [device, network]);
   useResource((dispose) => {
-    dispose(() => gpu.made.forEach(releaseOwnedBuffer));
+    dispose(() => {
+      gpu.made.forEach(releaseOwnedBuffer);
+      // The test hook must not keep a retired state buffer reachable.
+      if (elasticTesting.last?.state === gpu.state) elasticTesting.last = null;
+    });
   }, [gpu]);
   const ring = useMemo(
     () =>

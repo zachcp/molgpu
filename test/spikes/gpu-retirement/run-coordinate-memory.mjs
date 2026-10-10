@@ -1,4 +1,4 @@
-// Native-memory proxy for repeated EField and FieldLines mount/unmount.
+// Native-memory proxy for repeated coordinate-provider replacement and unmount.
 import { assert, assertEquals } from "@std/assert";
 import { chromium } from "playwright";
 import { createServer } from "vite";
@@ -61,7 +61,9 @@ try {
 
   const results = [];
   for (const atomCount of [25000, 100000]) {
-    for (const owner of ["trajectory", "normal", "superpose", "unwrap"]) {
+    for (
+      const owner of ["trajectory", "normal", "superpose", "unwrap", "elastic"]
+    ) {
       const page = await browser.newPage();
       const errors = [];
       page.on("pageerror", (e) => errors.push(String(e)));
@@ -128,7 +130,7 @@ try {
             }, cycle);
           }
           await page.waitForFunction(
-            (n) => globalThis.__scene.readyEpoch === n,
+            (n) => globalThis.__scene?.readyEpoch === n,
             cycle,
             { timeout: 60000 },
           );

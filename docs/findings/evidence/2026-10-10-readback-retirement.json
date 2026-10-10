@@ -1,0 +1,1568 @@
+{
+  "browser": "154.0.8037.98",
+  "results": [
+    {
+      "phase": "before-map",
+      "kind": "status",
+      "action": "replace",
+      "destroyedWhilePending": false,
+      "pending": {
+        "events": [
+          {
+            "type": "map",
+            "id": 0,
+            "label": "molgpu:readback-probe"
+          },
+          {
+            "type": "retire"
+          },
+          {
+            "type": "destroy",
+            "id": 1,
+            "label": "molgpu:readback-probe:source"
+          },
+          {
+            "type": "destroy",
+            "id": 2,
+            "label": "molgpu:readback-probe"
+          },
+          {
+            "type": "map",
+            "id": 3,
+            "label": "molgpu:readback-probe"
+          }
+        ],
+        "published": 0
+      },
+      "after": {
+        "events": [
+          {
+            "type": "map",
+            "id": 0,
+            "label": "molgpu:readback-probe"
+          },
+          {
+            "type": "retire"
+          },
+          {
+            "type": "destroy",
+            "id": 1,
+            "label": "molgpu:readback-probe:source"
+          },
+          {
+            "type": "destroy",
+            "id": 2,
+            "label": "molgpu:readback-probe"
+          },
+          {
+            "type": "map",
+            "id": 3,
+            "label": "molgpu:readback-probe"
+          },
+          {
+            "type": "release",
+            "id": 0
+          },
+          {
+            "type": "destroy",
+            "id": 0,
+            "label": "molgpu:readback-probe"
+          },
+          {
+            "type": "destroy",
+            "id": 4,
+            "label": "molgpu:readback-probe"
+          },
+          {
+            "type": "destroy",
+            "id": 5,
+            "label": "molgpu:readback-probe:source"
+          },
+          {
+            "type": "release",
+            "id": 3
+          },
+          {
+            "type": "destroy",
+            "id": 3,
+            "label": "molgpu:readback-probe"
+          }
+        ],
+        "published": 0
+      },
+      "errors": []
+    },
+    {
+      "phase": "before-map",
+      "kind": "status",
+      "action": "unmount",
+      "destroyedWhilePending": false,
+      "pending": {
+        "events": [
+          {
+            "type": "map",
+            "id": 0,
+            "label": "molgpu:readback-probe"
+          },
+          {
+            "type": "retire"
+          },
+          {
+            "type": "destroy",
+            "id": 1,
+            "label": "molgpu:readback-probe"
+          },
+          {
+            "type": "destroy",
+            "id": 2,
+            "label": "molgpu:readback-probe:source"
+          }
+        ],
+        "published": 0
+      },
+      "after": {
+        "events": [
+          {
+            "type": "map",
+            "id": 0,
+            "label": "molgpu:readback-probe"
+          },
+          {
+            "type": "retire"
+          },
+          {
+            "type": "destroy",
+            "id": 1,
+            "label": "molgpu:readback-probe"
+          },
+          {
+            "type": "destroy",
+            "id": 2,
+            "label": "molgpu:readback-probe:source"
+          },
+          {
+            "type": "release",
+            "id": 0
+          },
+          {
+            "type": "destroy",
+            "id": 0,
+            "label": "molgpu:readback-probe"
+          }
+        ],
+        "published": 0
+      },
+      "errors": []
+    },
+    {
+      "phase": "before-map",
+      "kind": "bounds",
+      "action": "replace",
+      "destroyedWhilePending": false,
+      "pending": {
+        "events": [
+          {
+            "type": "map",
+            "id": 0,
+            "label": "molgpu:coords:bounds:staging"
+          },
+          {
+            "type": "retire"
+          },
+          {
+            "type": "destroy",
+            "id": 1,
+            "label": "molgpu:coords:bounds:rows"
+          },
+          {
+            "type": "destroy",
+            "id": 2,
+            "label": "molgpu:coords:bounds:params"
+          },
+          {
+            "type": "destroy",
+            "id": 3,
+            "label": "molgpu:coords:bounds:output"
+          },
+          {
+            "type": "destroy",
+            "id": 4,
+            "label": "molgpu:coords:bounds:staging"
+          }
+        ],
+        "published": 0
+      },
+      "after": {
+        "events": [
+          {
+            "type": "map",
+            "id": 0,
+            "label": "molgpu:coords:bounds:staging"
+          },
+          {
+            "type": "retire"
+          },
+          {
+            "type": "destroy",
+            "id": 1,
+            "label": "molgpu:coords:bounds:rows"
+          },
+          {
+            "type": "destroy",
+            "id": 2,
+            "label": "molgpu:coords:bounds:params"
+          },
+          {
+            "type": "destroy",
+            "id": 3,
+            "label": "molgpu:coords:bounds:output"
+          },
+          {
+            "type": "destroy",
+            "id": 4,
+            "label": "molgpu:coords:bounds:staging"
+          },
+          {
+            "type": "release",
+            "id": 0
+          },
+          {
+            "type": "destroy",
+            "id": 0,
+            "label": "molgpu:coords:bounds:staging"
+          },
+          {
+            "type": "map",
+            "id": 5,
+            "label": "molgpu:coords:bounds:staging"
+          },
+          {
+            "type": "destroy",
+            "id": 6,
+            "label": "molgpu:coords:bounds:rows"
+          },
+          {
+            "type": "destroy",
+            "id": 7,
+            "label": "molgpu:coords:bounds:params"
+          },
+          {
+            "type": "destroy",
+            "id": 8,
+            "label": "molgpu:coords:bounds:output"
+          },
+          {
+            "type": "destroy",
+            "id": 9,
+            "label": "molgpu:coords:bounds:staging"
+          },
+          {
+            "type": "release",
+            "id": 5
+          },
+          {
+            "type": "destroy",
+            "id": 5,
+            "label": "molgpu:coords:bounds:staging"
+          }
+        ],
+        "published": 0
+      },
+      "errors": []
+    },
+    {
+      "phase": "before-map",
+      "kind": "bounds",
+      "action": "unmount",
+      "destroyedWhilePending": false,
+      "pending": {
+        "events": [
+          {
+            "type": "map",
+            "id": 0,
+            "label": "molgpu:coords:bounds:staging"
+          },
+          {
+            "type": "retire"
+          },
+          {
+            "type": "destroy",
+            "id": 1,
+            "label": "molgpu:coords:bounds:rows"
+          },
+          {
+            "type": "destroy",
+            "id": 2,
+            "label": "molgpu:coords:bounds:params"
+          },
+          {
+            "type": "destroy",
+            "id": 3,
+            "label": "molgpu:coords:bounds:output"
+          },
+          {
+            "type": "destroy",
+            "id": 4,
+            "label": "molgpu:coords:bounds:staging"
+          }
+        ],
+        "published": 0
+      },
+      "after": {
+        "events": [
+          {
+            "type": "map",
+            "id": 0,
+            "label": "molgpu:coords:bounds:staging"
+          },
+          {
+            "type": "retire"
+          },
+          {
+            "type": "destroy",
+            "id": 1,
+            "label": "molgpu:coords:bounds:rows"
+          },
+          {
+            "type": "destroy",
+            "id": 2,
+            "label": "molgpu:coords:bounds:params"
+          },
+          {
+            "type": "destroy",
+            "id": 3,
+            "label": "molgpu:coords:bounds:output"
+          },
+          {
+            "type": "destroy",
+            "id": 4,
+            "label": "molgpu:coords:bounds:staging"
+          },
+          {
+            "type": "release",
+            "id": 0
+          },
+          {
+            "type": "destroy",
+            "id": 0,
+            "label": "molgpu:coords:bounds:staging"
+          }
+        ],
+        "published": 0
+      },
+      "errors": []
+    },
+    {
+      "phase": "before-map",
+      "kind": "snapshot",
+      "action": "replace",
+      "destroyedWhilePending": false,
+      "pending": {
+        "events": [
+          {
+            "type": "map",
+            "id": 0,
+            "label": "molgpu:readback-probe"
+          },
+          {
+            "type": "retire"
+          },
+          {
+            "type": "destroy",
+            "id": 1,
+            "label": "molgpu:readback-probe:source"
+          },
+          {
+            "type": "destroy",
+            "id": 2,
+            "label": "molgpu:readback-probe"
+          }
+        ],
+        "published": 0
+      },
+      "after": {
+        "events": [
+          {
+            "type": "map",
+            "id": 0,
+            "label": "molgpu:readback-probe"
+          },
+          {
+            "type": "retire"
+          },
+          {
+            "type": "destroy",
+            "id": 1,
+            "label": "molgpu:readback-probe:source"
+          },
+          {
+            "type": "destroy",
+            "id": 2,
+            "label": "molgpu:readback-probe"
+          },
+          {
+            "type": "release",
+            "id": 0
+          },
+          {
+            "type": "destroy",
+            "id": 0,
+            "label": "molgpu:readback-probe"
+          },
+          {
+            "type": "map",
+            "id": 3,
+            "label": "molgpu:readback-probe"
+          },
+          {
+            "type": "destroy",
+            "id": 4,
+            "label": "molgpu:readback-probe"
+          },
+          {
+            "type": "destroy",
+            "id": 5,
+            "label": "molgpu:readback-probe:source"
+          },
+          {
+            "type": "release",
+            "id": 3
+          },
+          {
+            "type": "destroy",
+            "id": 3,
+            "label": "molgpu:readback-probe"
+          }
+        ],
+        "published": 0
+      },
+      "errors": []
+    },
+    {
+      "phase": "before-map",
+      "kind": "snapshot",
+      "action": "unmount",
+      "destroyedWhilePending": false,
+      "pending": {
+        "events": [
+          {
+            "type": "map",
+            "id": 0,
+            "label": "molgpu:readback-probe"
+          },
+          {
+            "type": "retire"
+          },
+          {
+            "type": "destroy",
+            "id": 1,
+            "label": "molgpu:readback-probe"
+          },
+          {
+            "type": "destroy",
+            "id": 2,
+            "label": "molgpu:readback-probe:source"
+          }
+        ],
+        "published": 0
+      },
+      "after": {
+        "events": [
+          {
+            "type": "map",
+            "id": 0,
+            "label": "molgpu:readback-probe"
+          },
+          {
+            "type": "retire"
+          },
+          {
+            "type": "destroy",
+            "id": 1,
+            "label": "molgpu:readback-probe"
+          },
+          {
+            "type": "destroy",
+            "id": 2,
+            "label": "molgpu:readback-probe:source"
+          },
+          {
+            "type": "release",
+            "id": 0
+          },
+          {
+            "type": "destroy",
+            "id": 0,
+            "label": "molgpu:readback-probe"
+          }
+        ],
+        "published": 0
+      },
+      "errors": []
+    },
+    {
+      "phase": "mapped-completion",
+      "kind": "status",
+      "action": "replace",
+      "destroyedWhilePending": false,
+      "pending": {
+        "events": [
+          {
+            "type": "map",
+            "id": 0,
+            "label": "molgpu:readback-probe"
+          },
+          {
+            "type": "native-mapped",
+            "id": 0
+          },
+          {
+            "type": "retire"
+          },
+          {
+            "type": "destroy",
+            "id": 1,
+            "label": "molgpu:readback-probe:source"
+          },
+          {
+            "type": "destroy",
+            "id": 2,
+            "label": "molgpu:readback-probe"
+          },
+          {
+            "type": "map",
+            "id": 3,
+            "label": "molgpu:readback-probe"
+          },
+          {
+            "type": "native-mapped",
+            "id": 3
+          }
+        ],
+        "published": 0
+      },
+      "after": {
+        "events": [
+          {
+            "type": "map",
+            "id": 0,
+            "label": "molgpu:readback-probe"
+          },
+          {
+            "type": "native-mapped",
+            "id": 0
+          },
+          {
+            "type": "retire"
+          },
+          {
+            "type": "destroy",
+            "id": 1,
+            "label": "molgpu:readback-probe:source"
+          },
+          {
+            "type": "destroy",
+            "id": 2,
+            "label": "molgpu:readback-probe"
+          },
+          {
+            "type": "map",
+            "id": 3,
+            "label": "molgpu:readback-probe"
+          },
+          {
+            "type": "native-mapped",
+            "id": 3
+          },
+          {
+            "type": "release",
+            "id": 0
+          },
+          {
+            "type": "destroy",
+            "id": 0,
+            "label": "molgpu:readback-probe"
+          },
+          {
+            "type": "destroy",
+            "id": 4,
+            "label": "molgpu:readback-probe"
+          },
+          {
+            "type": "destroy",
+            "id": 5,
+            "label": "molgpu:readback-probe:source"
+          },
+          {
+            "type": "release",
+            "id": 3
+          },
+          {
+            "type": "destroy",
+            "id": 3,
+            "label": "molgpu:readback-probe"
+          }
+        ],
+        "published": 0
+      },
+      "errors": []
+    },
+    {
+      "phase": "mapped-completion",
+      "kind": "status",
+      "action": "unmount",
+      "destroyedWhilePending": false,
+      "pending": {
+        "events": [
+          {
+            "type": "map",
+            "id": 0,
+            "label": "molgpu:readback-probe"
+          },
+          {
+            "type": "native-mapped",
+            "id": 0
+          },
+          {
+            "type": "retire"
+          },
+          {
+            "type": "destroy",
+            "id": 1,
+            "label": "molgpu:readback-probe"
+          },
+          {
+            "type": "destroy",
+            "id": 2,
+            "label": "molgpu:readback-probe:source"
+          }
+        ],
+        "published": 0
+      },
+      "after": {
+        "events": [
+          {
+            "type": "map",
+            "id": 0,
+            "label": "molgpu:readback-probe"
+          },
+          {
+            "type": "native-mapped",
+            "id": 0
+          },
+          {
+            "type": "retire"
+          },
+          {
+            "type": "destroy",
+            "id": 1,
+            "label": "molgpu:readback-probe"
+          },
+          {
+            "type": "destroy",
+            "id": 2,
+            "label": "molgpu:readback-probe:source"
+          },
+          {
+            "type": "release",
+            "id": 0
+          },
+          {
+            "type": "destroy",
+            "id": 0,
+            "label": "molgpu:readback-probe"
+          }
+        ],
+        "published": 0
+      },
+      "errors": []
+    },
+    {
+      "phase": "mapped-completion",
+      "kind": "bounds",
+      "action": "replace",
+      "destroyedWhilePending": false,
+      "pending": {
+        "events": [
+          {
+            "type": "map",
+            "id": 0,
+            "label": "molgpu:coords:bounds:staging"
+          },
+          {
+            "type": "native-mapped",
+            "id": 0
+          },
+          {
+            "type": "retire"
+          },
+          {
+            "type": "destroy",
+            "id": 1,
+            "label": "molgpu:coords:bounds:rows"
+          },
+          {
+            "type": "destroy",
+            "id": 2,
+            "label": "molgpu:coords:bounds:params"
+          },
+          {
+            "type": "destroy",
+            "id": 3,
+            "label": "molgpu:coords:bounds:output"
+          },
+          {
+            "type": "destroy",
+            "id": 4,
+            "label": "molgpu:coords:bounds:staging"
+          }
+        ],
+        "published": 0
+      },
+      "after": {
+        "events": [
+          {
+            "type": "map",
+            "id": 0,
+            "label": "molgpu:coords:bounds:staging"
+          },
+          {
+            "type": "native-mapped",
+            "id": 0
+          },
+          {
+            "type": "retire"
+          },
+          {
+            "type": "destroy",
+            "id": 1,
+            "label": "molgpu:coords:bounds:rows"
+          },
+          {
+            "type": "destroy",
+            "id": 2,
+            "label": "molgpu:coords:bounds:params"
+          },
+          {
+            "type": "destroy",
+            "id": 3,
+            "label": "molgpu:coords:bounds:output"
+          },
+          {
+            "type": "destroy",
+            "id": 4,
+            "label": "molgpu:coords:bounds:staging"
+          },
+          {
+            "type": "release",
+            "id": 0
+          },
+          {
+            "type": "destroy",
+            "id": 0,
+            "label": "molgpu:coords:bounds:staging"
+          },
+          {
+            "type": "map",
+            "id": 5,
+            "label": "molgpu:coords:bounds:staging"
+          },
+          {
+            "type": "native-mapped",
+            "id": 5
+          },
+          {
+            "type": "destroy",
+            "id": 6,
+            "label": "molgpu:coords:bounds:rows"
+          },
+          {
+            "type": "destroy",
+            "id": 7,
+            "label": "molgpu:coords:bounds:params"
+          },
+          {
+            "type": "destroy",
+            "id": 8,
+            "label": "molgpu:coords:bounds:output"
+          },
+          {
+            "type": "destroy",
+            "id": 9,
+            "label": "molgpu:coords:bounds:staging"
+          },
+          {
+            "type": "release",
+            "id": 5
+          },
+          {
+            "type": "destroy",
+            "id": 5,
+            "label": "molgpu:coords:bounds:staging"
+          }
+        ],
+        "published": 0
+      },
+      "errors": []
+    },
+    {
+      "phase": "mapped-completion",
+      "kind": "bounds",
+      "action": "unmount",
+      "destroyedWhilePending": false,
+      "pending": {
+        "events": [
+          {
+            "type": "map",
+            "id": 0,
+            "label": "molgpu:coords:bounds:staging"
+          },
+          {
+            "type": "native-mapped",
+            "id": 0
+          },
+          {
+            "type": "retire"
+          },
+          {
+            "type": "destroy",
+            "id": 1,
+            "label": "molgpu:coords:bounds:rows"
+          },
+          {
+            "type": "destroy",
+            "id": 2,
+            "label": "molgpu:coords:bounds:params"
+          },
+          {
+            "type": "destroy",
+            "id": 3,
+            "label": "molgpu:coords:bounds:output"
+          },
+          {
+            "type": "destroy",
+            "id": 4,
+            "label": "molgpu:coords:bounds:staging"
+          }
+        ],
+        "published": 0
+      },
+      "after": {
+        "events": [
+          {
+            "type": "map",
+            "id": 0,
+            "label": "molgpu:coords:bounds:staging"
+          },
+          {
+            "type": "native-mapped",
+            "id": 0
+          },
+          {
+            "type": "retire"
+          },
+          {
+            "type": "destroy",
+            "id": 1,
+            "label": "molgpu:coords:bounds:rows"
+          },
+          {
+            "type": "destroy",
+            "id": 2,
+            "label": "molgpu:coords:bounds:params"
+          },
+          {
+            "type": "destroy",
+            "id": 3,
+            "label": "molgpu:coords:bounds:output"
+          },
+          {
+            "type": "destroy",
+            "id": 4,
+            "label": "molgpu:coords:bounds:staging"
+          },
+          {
+            "type": "release",
+            "id": 0
+          },
+          {
+            "type": "destroy",
+            "id": 0,
+            "label": "molgpu:coords:bounds:staging"
+          }
+        ],
+        "published": 0
+      },
+      "errors": []
+    },
+    {
+      "phase": "mapped-completion",
+      "kind": "snapshot",
+      "action": "replace",
+      "destroyedWhilePending": false,
+      "pending": {
+        "events": [
+          {
+            "type": "map",
+            "id": 0,
+            "label": "molgpu:readback-probe"
+          },
+          {
+            "type": "native-mapped",
+            "id": 0
+          },
+          {
+            "type": "retire"
+          },
+          {
+            "type": "destroy",
+            "id": 1,
+            "label": "molgpu:readback-probe:source"
+          },
+          {
+            "type": "destroy",
+            "id": 2,
+            "label": "molgpu:readback-probe"
+          }
+        ],
+        "published": 0
+      },
+      "after": {
+        "events": [
+          {
+            "type": "map",
+            "id": 0,
+            "label": "molgpu:readback-probe"
+          },
+          {
+            "type": "native-mapped",
+            "id": 0
+          },
+          {
+            "type": "retire"
+          },
+          {
+            "type": "destroy",
+            "id": 1,
+            "label": "molgpu:readback-probe:source"
+          },
+          {
+            "type": "destroy",
+            "id": 2,
+            "label": "molgpu:readback-probe"
+          },
+          {
+            "type": "release",
+            "id": 0
+          },
+          {
+            "type": "destroy",
+            "id": 0,
+            "label": "molgpu:readback-probe"
+          },
+          {
+            "type": "map",
+            "id": 3,
+            "label": "molgpu:readback-probe"
+          },
+          {
+            "type": "native-mapped",
+            "id": 3
+          },
+          {
+            "type": "destroy",
+            "id": 4,
+            "label": "molgpu:readback-probe"
+          },
+          {
+            "type": "destroy",
+            "id": 5,
+            "label": "molgpu:readback-probe:source"
+          },
+          {
+            "type": "release",
+            "id": 3
+          },
+          {
+            "type": "destroy",
+            "id": 3,
+            "label": "molgpu:readback-probe"
+          }
+        ],
+        "published": 0
+      },
+      "errors": []
+    },
+    {
+      "phase": "mapped-completion",
+      "kind": "snapshot",
+      "action": "unmount",
+      "destroyedWhilePending": false,
+      "pending": {
+        "events": [
+          {
+            "type": "map",
+            "id": 0,
+            "label": "molgpu:readback-probe"
+          },
+          {
+            "type": "native-mapped",
+            "id": 0
+          },
+          {
+            "type": "retire"
+          },
+          {
+            "type": "destroy",
+            "id": 1,
+            "label": "molgpu:readback-probe"
+          },
+          {
+            "type": "destroy",
+            "id": 2,
+            "label": "molgpu:readback-probe:source"
+          }
+        ],
+        "published": 0
+      },
+      "after": {
+        "events": [
+          {
+            "type": "map",
+            "id": 0,
+            "label": "molgpu:readback-probe"
+          },
+          {
+            "type": "native-mapped",
+            "id": 0
+          },
+          {
+            "type": "retire"
+          },
+          {
+            "type": "destroy",
+            "id": 1,
+            "label": "molgpu:readback-probe"
+          },
+          {
+            "type": "destroy",
+            "id": 2,
+            "label": "molgpu:readback-probe:source"
+          },
+          {
+            "type": "release",
+            "id": 0
+          },
+          {
+            "type": "destroy",
+            "id": 0,
+            "label": "molgpu:readback-probe"
+          }
+        ],
+        "published": 0
+      },
+      "errors": []
+    },
+    {
+      "phase": "rejected-map",
+      "kind": "status",
+      "action": "replace",
+      "destroyedWhilePending": false,
+      "pending": {
+        "events": [
+          {
+            "type": "map",
+            "id": 0,
+            "label": "molgpu:readback-probe"
+          },
+          {
+            "type": "retire"
+          },
+          {
+            "type": "destroy",
+            "id": 1,
+            "label": "molgpu:readback-probe:source"
+          },
+          {
+            "type": "destroy",
+            "id": 2,
+            "label": "molgpu:readback-probe"
+          },
+          {
+            "type": "map",
+            "id": 3,
+            "label": "molgpu:readback-probe"
+          }
+        ],
+        "published": 0
+      },
+      "after": {
+        "events": [
+          {
+            "type": "map",
+            "id": 0,
+            "label": "molgpu:readback-probe"
+          },
+          {
+            "type": "retire"
+          },
+          {
+            "type": "destroy",
+            "id": 1,
+            "label": "molgpu:readback-probe:source"
+          },
+          {
+            "type": "destroy",
+            "id": 2,
+            "label": "molgpu:readback-probe"
+          },
+          {
+            "type": "map",
+            "id": 3,
+            "label": "molgpu:readback-probe"
+          },
+          {
+            "type": "release",
+            "id": 0
+          },
+          {
+            "type": "destroy",
+            "id": 0,
+            "label": "molgpu:readback-probe"
+          },
+          {
+            "type": "destroy",
+            "id": 4,
+            "label": "molgpu:readback-probe"
+          },
+          {
+            "type": "destroy",
+            "id": 5,
+            "label": "molgpu:readback-probe:source"
+          },
+          {
+            "type": "release",
+            "id": 3
+          },
+          {
+            "type": "destroy",
+            "id": 3,
+            "label": "molgpu:readback-probe"
+          }
+        ],
+        "published": 0
+      },
+      "errors": []
+    },
+    {
+      "phase": "rejected-map",
+      "kind": "status",
+      "action": "unmount",
+      "destroyedWhilePending": false,
+      "pending": {
+        "events": [
+          {
+            "type": "map",
+            "id": 0,
+            "label": "molgpu:readback-probe"
+          },
+          {
+            "type": "retire"
+          },
+          {
+            "type": "destroy",
+            "id": 1,
+            "label": "molgpu:readback-probe"
+          },
+          {
+            "type": "destroy",
+            "id": 2,
+            "label": "molgpu:readback-probe:source"
+          }
+        ],
+        "published": 0
+      },
+      "after": {
+        "events": [
+          {
+            "type": "map",
+            "id": 0,
+            "label": "molgpu:readback-probe"
+          },
+          {
+            "type": "retire"
+          },
+          {
+            "type": "destroy",
+            "id": 1,
+            "label": "molgpu:readback-probe"
+          },
+          {
+            "type": "destroy",
+            "id": 2,
+            "label": "molgpu:readback-probe:source"
+          },
+          {
+            "type": "release",
+            "id": 0
+          },
+          {
+            "type": "destroy",
+            "id": 0,
+            "label": "molgpu:readback-probe"
+          }
+        ],
+        "published": 0
+      },
+      "errors": []
+    },
+    {
+      "phase": "rejected-map",
+      "kind": "bounds",
+      "action": "replace",
+      "destroyedWhilePending": false,
+      "pending": {
+        "events": [
+          {
+            "type": "map",
+            "id": 0,
+            "label": "molgpu:coords:bounds:staging"
+          },
+          {
+            "type": "retire"
+          },
+          {
+            "type": "destroy",
+            "id": 1,
+            "label": "molgpu:coords:bounds:rows"
+          },
+          {
+            "type": "destroy",
+            "id": 2,
+            "label": "molgpu:coords:bounds:params"
+          },
+          {
+            "type": "destroy",
+            "id": 3,
+            "label": "molgpu:coords:bounds:output"
+          },
+          {
+            "type": "destroy",
+            "id": 4,
+            "label": "molgpu:coords:bounds:staging"
+          }
+        ],
+        "published": 0
+      },
+      "after": {
+        "events": [
+          {
+            "type": "map",
+            "id": 0,
+            "label": "molgpu:coords:bounds:staging"
+          },
+          {
+            "type": "retire"
+          },
+          {
+            "type": "destroy",
+            "id": 1,
+            "label": "molgpu:coords:bounds:rows"
+          },
+          {
+            "type": "destroy",
+            "id": 2,
+            "label": "molgpu:coords:bounds:params"
+          },
+          {
+            "type": "destroy",
+            "id": 3,
+            "label": "molgpu:coords:bounds:output"
+          },
+          {
+            "type": "destroy",
+            "id": 4,
+            "label": "molgpu:coords:bounds:staging"
+          },
+          {
+            "type": "release",
+            "id": 0
+          },
+          {
+            "type": "destroy",
+            "id": 0,
+            "label": "molgpu:coords:bounds:staging"
+          },
+          {
+            "type": "map",
+            "id": 5,
+            "label": "molgpu:coords:bounds:staging"
+          },
+          {
+            "type": "destroy",
+            "id": 6,
+            "label": "molgpu:coords:bounds:rows"
+          },
+          {
+            "type": "destroy",
+            "id": 7,
+            "label": "molgpu:coords:bounds:params"
+          },
+          {
+            "type": "destroy",
+            "id": 8,
+            "label": "molgpu:coords:bounds:output"
+          },
+          {
+            "type": "destroy",
+            "id": 9,
+            "label": "molgpu:coords:bounds:staging"
+          },
+          {
+            "type": "release",
+            "id": 5
+          },
+          {
+            "type": "destroy",
+            "id": 5,
+            "label": "molgpu:coords:bounds:staging"
+          }
+        ],
+        "published": 0
+      },
+      "errors": []
+    },
+    {
+      "phase": "rejected-map",
+      "kind": "bounds",
+      "action": "unmount",
+      "destroyedWhilePending": false,
+      "pending": {
+        "events": [
+          {
+            "type": "map",
+            "id": 0,
+            "label": "molgpu:coords:bounds:staging"
+          },
+          {
+            "type": "retire"
+          },
+          {
+            "type": "destroy",
+            "id": 1,
+            "label": "molgpu:coords:bounds:rows"
+          },
+          {
+            "type": "destroy",
+            "id": 2,
+            "label": "molgpu:coords:bounds:params"
+          },
+          {
+            "type": "destroy",
+            "id": 3,
+            "label": "molgpu:coords:bounds:output"
+          },
+          {
+            "type": "destroy",
+            "id": 4,
+            "label": "molgpu:coords:bounds:staging"
+          }
+        ],
+        "published": 0
+      },
+      "after": {
+        "events": [
+          {
+            "type": "map",
+            "id": 0,
+            "label": "molgpu:coords:bounds:staging"
+          },
+          {
+            "type": "retire"
+          },
+          {
+            "type": "destroy",
+            "id": 1,
+            "label": "molgpu:coords:bounds:rows"
+          },
+          {
+            "type": "destroy",
+            "id": 2,
+            "label": "molgpu:coords:bounds:params"
+          },
+          {
+            "type": "destroy",
+            "id": 3,
+            "label": "molgpu:coords:bounds:output"
+          },
+          {
+            "type": "destroy",
+            "id": 4,
+            "label": "molgpu:coords:bounds:staging"
+          },
+          {
+            "type": "release",
+            "id": 0
+          },
+          {
+            "type": "destroy",
+            "id": 0,
+            "label": "molgpu:coords:bounds:staging"
+          }
+        ],
+        "published": 0
+      },
+      "errors": []
+    },
+    {
+      "phase": "rejected-map",
+      "kind": "snapshot",
+      "action": "replace",
+      "destroyedWhilePending": false,
+      "pending": {
+        "events": [
+          {
+            "type": "map",
+            "id": 0,
+            "label": "molgpu:readback-probe"
+          },
+          {
+            "type": "retire"
+          },
+          {
+            "type": "destroy",
+            "id": 1,
+            "label": "molgpu:readback-probe:source"
+          },
+          {
+            "type": "destroy",
+            "id": 2,
+            "label": "molgpu:readback-probe"
+          }
+        ],
+        "published": 0
+      },
+      "after": {
+        "events": [
+          {
+            "type": "map",
+            "id": 0,
+            "label": "molgpu:readback-probe"
+          },
+          {
+            "type": "retire"
+          },
+          {
+            "type": "destroy",
+            "id": 1,
+            "label": "molgpu:readback-probe:source"
+          },
+          {
+            "type": "destroy",
+            "id": 2,
+            "label": "molgpu:readback-probe"
+          },
+          {
+            "type": "release",
+            "id": 0
+          },
+          {
+            "type": "destroy",
+            "id": 0,
+            "label": "molgpu:readback-probe"
+          },
+          {
+            "type": "map",
+            "id": 3,
+            "label": "molgpu:readback-probe"
+          },
+          {
+            "type": "destroy",
+            "id": 4,
+            "label": "molgpu:readback-probe"
+          },
+          {
+            "type": "destroy",
+            "id": 5,
+            "label": "molgpu:readback-probe:source"
+          },
+          {
+            "type": "release",
+            "id": 3
+          },
+          {
+            "type": "destroy",
+            "id": 3,
+            "label": "molgpu:readback-probe"
+          }
+        ],
+        "published": 0
+      },
+      "errors": []
+    },
+    {
+      "phase": "rejected-map",
+      "kind": "snapshot",
+      "action": "unmount",
+      "destroyedWhilePending": false,
+      "pending": {
+        "events": [
+          {
+            "type": "map",
+            "id": 0,
+            "label": "molgpu:readback-probe"
+          },
+          {
+            "type": "retire"
+          },
+          {
+            "type": "destroy",
+            "id": 1,
+            "label": "molgpu:readback-probe"
+          },
+          {
+            "type": "destroy",
+            "id": 2,
+            "label": "molgpu:readback-probe:source"
+          }
+        ],
+        "published": 0
+      },
+      "after": {
+        "events": [
+          {
+            "type": "map",
+            "id": 0,
+            "label": "molgpu:readback-probe"
+          },
+          {
+            "type": "retire"
+          },
+          {
+            "type": "destroy",
+            "id": 1,
+            "label": "molgpu:readback-probe"
+          },
+          {
+            "type": "destroy",
+            "id": 2,
+            "label": "molgpu:readback-probe:source"
+          },
+          {
+            "type": "release",
+            "id": 0
+          },
+          {
+            "type": "destroy",
+            "id": 0,
+            "label": "molgpu:readback-probe"
+          }
+        ],
+        "published": 0
+      },
+      "errors": []
+    }
+  ],
+  "date": "2026-10-10",
+  "baseline": "6e40283"
+}

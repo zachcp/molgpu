@@ -7,6 +7,12 @@ for the procedure.
 
 ## [Unreleased]
 
+- Coordinate snapshots retain their readback staging buffers and rate limit
+  across dispatch readiness changes, keeping snapshot geometry at its requested
+  cadence during playback.
+- Tube, Bonds and BallAndStick accept `shadow`; BallAndStick casts stick shadows
+  only. ElasticNetwork is covered by the coordinate retirement memory matrix.
+
 - Clarify published documentation, correct public-entry examples and add JSR
   module summaries. Documentation changes only.
 

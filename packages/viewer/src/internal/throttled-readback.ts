@@ -16,15 +16,17 @@ const COPY_DST = 0x0008;
 /** Copy the latest eligible revision, retaining rate limiting and final-on-pause. */
 export const ThrottledReadback: LC<{
   token: ReadbackToken;
+  /** The source holds this token's generation; retain scheduling while pending. */
+  ready?: boolean;
   maxHz: number;
   onPause: boolean;
   label: string;
   publish: (data: Float32Array, token: ReadbackToken) => boolean;
   fail?: (error: unknown, token: ReadbackToken) => void;
-}> = ({ token, maxHz, onPause, label, publish, fail }) => {
+}> = ({ token, ready = true, maxHz, onPause, label, publish, fail }) => {
   const device = useDeviceContext();
-  const latest = useRef({ token, publish, fail, maxHz, onPause });
-  latest.current = { token, publish, fail, maxHz, onPause };
+  const latest = useRef({ token, ready, publish, fail, maxHz, onPause });
+  latest.current = { token, ready, publish, fail, maxHz, onPause };
   const inFlight = useRef(false);
   const mapping = useRef<GPUBuffer | null>(null);
   const retired = useRef(new Set<GPUBuffer>());
@@ -66,7 +68,7 @@ export const ThrottledReadback: LC<{
     let alive = true;
     let timer: ReturnType<typeof setTimeout> | undefined;
     const schedule = () => {
-      if (!alive || inFlight.current) return;
+      if (!alive || inFlight.current || !latest.current.ready) return;
       const { token: current, maxHz: rate, onPause: pause } = latest.current;
       if (sameReadbackToken(published.current, current)) return;
       const remaining = 1000 / rate -
@@ -76,7 +78,7 @@ export const ThrottledReadback: LC<{
         ? Math.min(Math.max(0, remaining), 34)
         : Math.max(0, remaining);
       timer = setTimeout(async () => {
-        if (!alive || inFlight.current) return;
+        if (!alive || inFlight.current || !latest.current.ready) return;
         const target = latest.current.token;
         const into = staging[nextBuffer.current++ % staging.length];
         inFlight.current = true;
@@ -91,7 +93,10 @@ export const ThrottledReadback: LC<{
           const values = new Float32Array(into.getMappedRange().slice(0));
           into.unmap();
           if (!mounted.current) return;
-          if (sameReadbackToken(target, latest.current.token)) {
+          if (
+            latest.current.ready &&
+            sameReadbackToken(target, latest.current.token)
+          ) {
             if (latest.current.publish(values, target)) {
               published.current = target;
               count("gathers", `${label}:publish`);
@@ -124,6 +129,7 @@ export const ThrottledReadback: LC<{
     token.bytes,
     token.layout,
     token.generation,
+    ready,
     maxHz,
     onPause,
   ]);

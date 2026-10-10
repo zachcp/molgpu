@@ -17,7 +17,9 @@ import {
 import { resolve, where } from "@molgpu/select";
 import { attribute, bySecondaryStructure, categorical } from "@molgpu/fields";
 import { structureFromBcif } from "@molgpu/io";
+import { elasticNetworkData } from "@molgpu/dynamics";
 import {
+  ElasticNetwork,
   GpuDssp,
   NormalMode,
   PickingProvider,
@@ -177,6 +179,21 @@ const App = () => {
     }),
     [data],
   );
+  // Every 100th row is a node (one x=0 plane), so the 25k-100k atom grids keep
+  // a small spring network; all rows share one residue and follow node 0.
+  const network = useMemo(() => {
+    if (kind !== "elastic") return null;
+    const guide = Array.from(
+      { length: Math.floor(n / 100) },
+      (_, i) => i * 100,
+    );
+    return elasticNetworkData(data.positions, data.topology, {
+      guide,
+      cutoff: 3,
+      masses: new Float32Array(guide.length).fill(110),
+      version: epoch,
+    });
+  }, [data]);
   const selection = useMemo(
     () => resolve(where("atom", "visible-four", (_d, i) => i < 4), data),
     [data],
@@ -211,6 +228,17 @@ const App = () => {
       <Superpose to={data.positions} onStatus={() => controls.status++}>
         {children}
       </Superpose>
+    )
+    : kind === "elastic"
+    ? (
+      <ElasticNetwork
+        network={network!}
+        step={10 + epoch}
+        seed={1}
+        onStatus={() => controls.status++}
+      >
+        {children}
+      </ElasticNetwork>
     )
     : kind === "unwrap"
     ? <Unwrap box={box} onStatus={() => controls.status++}>{children}</Unwrap>

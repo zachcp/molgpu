@@ -104,6 +104,100 @@ Deno.test("viewer postprocess", async () => {
 
     assertEquals(errors, [], "page errors");
 
+    // Alpha policy: fields and material wrappers require an explicit draw
+    // mode; a flat alpha and opacity are the only automatic inputs.
+    await page.evaluate(() => globalThis.__probe.setMode("alpha"));
+    const pixels = () =>
+      page.evaluate(() => {
+        const canvas = document.querySelector("canvas");
+        return canvas.toDataURL();
+      });
+    const image = async (style) => {
+      await page.evaluate((name) => globalThis.__probe.setStyle(name), style);
+      await settle();
+      await page.waitForFunction(() =>
+        globalThis.__probe.pendingPipelines === 0
+      );
+      await settle();
+      return await pixels();
+    };
+    const flat = await image("flat");
+    const fixed = await image("constant");
+    assert(
+      fixed === flat,
+      "constant Field with explicit transparency matches flat alpha under OIT",
+    );
+    const implicit = await image("constant-default");
+    const opaque = await image("opaque");
+    assert(
+      implicit === opaque,
+      "constant Field alpha does not infer draw mode",
+    );
+    assert(
+      fixed !== opaque,
+      "transparent overlapping geometry differs from opaque output",
+    );
+    const varyingDefault = await image("varying-default");
+    assert(
+      await image("varying-opaque") === varyingDefault,
+      "per-row Field alpha needs explicit mode too",
+    );
+    const varying = await image("varying");
+    assert(
+      varying !== varyingDefault,
+      "per-row alpha is visible with explicit transparency",
+    );
+    await page.evaluate(() => {
+      globalThis.__probe.enableInstrumentation();
+      globalThis.__probe.resetCounters();
+    });
+    assert(
+      await image("varying-opacity") !== varying,
+      "opacity multiplies per-row alpha",
+    );
+    assert(
+      await image("varying") === varying,
+      "opacity restoration restores the image",
+    );
+    const work = await page.evaluate(() =>
+      globalThis.__probe.snapshotCounters()
+    );
+    assertEquals(
+      work.geometryBuilds,
+      0,
+      "alpha style changes preserve molecular geometry",
+    );
+    assertEquals(
+      work.uploadBytes,
+      0,
+      "alpha style changes upload no molecular buffers",
+    );
+    const material = await image("material");
+    await page.evaluate(() => globalThis.__probe.resetCounters());
+    assert(
+      await image("material-solid") !== material,
+      "explicit transparency includes material alpha",
+    );
+    const materialWork = await page.evaluate(() =>
+      globalThis.__probe.snapshotCounters()
+    );
+    assertEquals(
+      materialWork.geometryBuilds,
+      0,
+      "material alpha preserves geometry",
+    );
+    assertEquals(
+      materialWork.uploadBytes,
+      0,
+      "material alpha uploads no molecular buffers",
+    );
+    assertEquals(
+      (await snap()).errors,
+      [],
+      "alpha policy has no uncaptured WebGPU errors",
+    );
+    assertEquals(errors, [], "alpha policy page errors");
+
     console.log(JSON.stringify({
       status: "passed",
       plainPipelines: plain.pipelines,

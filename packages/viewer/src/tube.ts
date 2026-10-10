@@ -71,6 +71,8 @@ const TubeResolved: ViewerComponent<
     color?: VectorLike | Field;
     sides?: number;
     join?: "tangent" | "bevel" | "miter" | "round";
+    /** Cast shadows under a shadow-enabled Pass; defaults to false. */
+    shadow?: boolean;
     /** Wraps the shaded tube layer; without one, the ambient scene material. */
     material?: MaterialSpec;
   } & Translucency
@@ -201,6 +203,8 @@ export const Tube: ViewerComponent<
     color?: VectorLike | Field;
     sides?: number;
     join?: "tangent" | "bevel" | "miter" | "round";
+    /** Cast shadows under a shadow-enabled Pass; defaults to false. */
+    shadow?: boolean;
     /** Wraps the shaded tube layer; without one, the ambient scene material. */
     material?: MaterialSpec;
   }
