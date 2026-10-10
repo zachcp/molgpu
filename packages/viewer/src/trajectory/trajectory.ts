@@ -24,9 +24,9 @@ import type {
   TrajectoryStatus,
   ViewerComponent,
 } from "../types.ts";
-import { useCoordinates } from "../coordinates-context.ts";
+import { useCoordinates } from "../coordinates/coordinates-context.ts";
 import { TimelineContext } from "../timeline-context.ts";
-import { CoordinateKernel } from "../internal/coordinate-kernel.ts";
+import { CoordinateKernel } from "../coordinates/coordinate-kernel.ts";
 import { ioLoader, useSourceRequest } from "../internal/source-request.ts";
 import { useStatusDelivery } from "../internal/status-delivery.ts";
 import { COPY_UPSTREAM, playbackKernel, Player } from "./trajectory-player.ts";

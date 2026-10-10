@@ -6,8 +6,11 @@ import {
 } from "@molgpu/table";
 import { prepareDsspLayout } from "@molgpu/dynamics/wgsl";
 import { structureFromBcif } from "@molgpu/io";
-import { gpuDssp, GpuDsspOverflowError } from "../../src/gpu-dssp.ts";
-import { dsspOverflowMode } from "../../src/gpu-dssp-provider.ts";
+import {
+  gpuDssp,
+  GpuDsspOverflowError,
+} from "../../src/attributes/gpu-dssp.ts";
+import { dsspOverflowMode } from "../../src/attributes/gpu-dssp-provider.ts";
 
 declare global {
   interface Window {

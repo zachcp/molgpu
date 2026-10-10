@@ -1,5 +1,5 @@
 import { useContext } from "@use-gpu/live";
-import { StructureContext } from "../structure-context.ts";
+import { StructureContext } from "../structure/structure-context.ts";
 import { TrajectoryContext } from "./trajectory-context.ts";
 import type { TrajectoryFrameState } from "../types.ts";
 

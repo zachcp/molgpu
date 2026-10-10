@@ -31,14 +31,14 @@ import {
 import { resolve, where } from "@molgpu/select";
 import { byElement, colormap, curve } from "@molgpu/fields";
 import { structureFromBcif } from "@molgpu/io";
-import { Structure } from "../src/structure.ts";
-import { Spacefill } from "../src/spacefill.ts";
-import { Bonds } from "../src/bonds.ts";
-import { BallAndStick } from "../src/ball-and-stick.ts";
-import { Tube } from "../src/tube.ts";
-import { Cartoon, Ribbon } from "../src/ribbon.ts";
-import { Surface } from "../src/surface.ts";
-import { Distance, Label } from "../src/annotations.ts";
+import { Structure } from "../src/structure/structure.ts";
+import { Spacefill } from "../src/representations/spacefill.ts";
+import { Bonds } from "../src/representations/bonds/bonds.ts";
+import { BallAndStick } from "../src/representations/ball-and-stick.ts";
+import { Tube } from "../src/representations/tube.ts";
+import { Cartoon, Ribbon } from "../src/representations/ribbon/ribbon.ts";
+import { Surface } from "../src/representations/surface/surface.ts";
+import { Distance, Label } from "../src/representations/annotations.ts";
 import { TimelineProvider } from "../src/timeline-context.ts";
 import {
   deviceBufferOrigins,

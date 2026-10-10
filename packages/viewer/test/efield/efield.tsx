@@ -24,7 +24,7 @@ import { structureFromBcif } from "@molgpu/io";
 import { resolve, type Selection, where } from "@molgpu/select";
 import { coordinateBounds, createVolume, sampleVolume } from "@molgpu/table";
 
-import { buildSurfaceGeometry } from "../../src/internal/surface-geometry.ts";
+import { buildSurfaceGeometry } from "../../src/representations/surface/surface-geometry.ts";
 import {
   coulombGrid,
   coulombPotential,
@@ -48,10 +48,10 @@ import {
   enableInstrumentation,
   snapshotCounters,
 } from "../../src/internal/instrumentation.ts";
-import { efieldTesting } from "../../src/efield.ts";
-import { fieldLinesTesting } from "../../src/field-lines.ts";
-import { positionsWgsl } from "../../src/field-arrows.ts";
-import { slicePlaneFrame } from "../../src/internal/slice-plane.ts";
+import { efieldTesting } from "../../src/volume/efield.ts";
+import { fieldLinesTesting } from "../../src/volume/representations/field-lines.ts";
+import { positionsWgsl } from "../../src/volume/representations/field-arrows.ts";
+import { slicePlaneFrame } from "../../src/volume/representations/slice-plane.ts";
 import { WobbleCoordinates } from "../fixtures/wobble-coordinates.ts";
 
 void React;

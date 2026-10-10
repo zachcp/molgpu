@@ -7,8 +7,8 @@ import { assert, assertEquals, assertThrows } from "@std/assert";
 import { createStructure, type StructureInput } from "@molgpu/table";
 import { structureFromBcif } from "@molgpu/io";
 import { all } from "@molgpu/select";
-import { createStructureResource } from "../src/internal/structure-resource.ts";
-import { focusSelection } from "../src/camera-curve.ts";
+import { createStructureResource } from "../src/structure/structure-resource.ts";
+import { focusSelection } from "../src/interaction/camera-curve.ts";
 
 const IDENTITY = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
 const SHIFTED = [...IDENTITY];

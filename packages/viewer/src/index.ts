@@ -46,41 +46,50 @@ export type {
   VolumeLoader,
   VolumeProps,
 } from "./types.ts";
-export { Structure } from "./structure.ts";
-export { Spacefill } from "./spacefill.ts";
-export { Bonds } from "./bonds.ts";
-export { BallAndStick } from "./ball-and-stick.ts";
-export { Tube } from "./tube.ts";
-export { Cartoon, Ribbon } from "./ribbon.ts";
-export type { RibbonProps } from "./ribbon.ts";
-export { Surface } from "./surface.ts";
-export { UnitCell } from "./unit-cell.ts";
-export { Ramachandran } from "./ramachandran.ts";
-export { ramachandranPoints } from "./internal/ramachandran-points.ts";
+export { Structure } from "./structure/structure.ts";
+export { Spacefill } from "./representations/spacefill.ts";
+export { Bonds } from "./representations/bonds/bonds.ts";
+export { BallAndStick } from "./representations/ball-and-stick.ts";
+export { Tube } from "./representations/tube.ts";
+export { Cartoon, Ribbon } from "./representations/ribbon/ribbon.ts";
+export type { RibbonProps } from "./representations/ribbon/ribbon.ts";
+export { Surface } from "./representations/surface/surface.ts";
+export { UnitCell } from "./representations/unit-cell.ts";
+export { Ramachandran } from "./representations/ramachandran.ts";
+export { ramachandranPoints } from "./representations/ramachandran-points.ts";
 export type {
   RamachandranCorner,
   RamachandranPoint,
-} from "./internal/ramachandran-points.ts";
-export { Distance, Label } from "./annotations.ts";
-export { Volume } from "./volume.ts";
-export { Isosurface } from "./isosurface.ts";
-export { VolumeSlice } from "./volume-slice.ts";
-export type { SlicePlane, SliceStops } from "./volume-slice.ts";
-export { EField } from "./efield.ts";
-export { FieldLines } from "./field-lines.ts";
-export { FieldArrows } from "./field-arrows.ts";
+} from "./representations/ramachandran-points.ts";
+export { Distance, Label } from "./representations/annotations.ts";
+export { Volume } from "./volume/volume.ts";
+export { Isosurface } from "./volume/representations/isosurface.ts";
+export { VolumeSlice } from "./volume/representations/volume-slice.ts";
+export type {
+  SlicePlane,
+  SliceStops,
+} from "./volume/representations/volume-slice.ts";
+export { EField } from "./volume/efield.ts";
+export { FieldLines } from "./volume/representations/field-lines.ts";
+export { FieldArrows } from "./volume/representations/field-arrows.ts";
 export { Trajectory } from "./trajectory/trajectory.ts";
 export { useTrajectoryFrame } from "./trajectory/use-trajectory-frame.ts";
-export { Transform } from "./transform.ts";
-export { Superpose } from "./superpose.ts";
-export { Unwrap } from "./unwrap.ts";
-export { NormalMode } from "./normal-mode.ts";
-export { ElasticNetwork } from "./elastic-network.ts";
-export { pointerToPlane, projectToPointer } from "./pointer-plane.ts";
-export { GpuDssp } from "./gpu-dssp-provider.ts";
-export type { GpuDsspProps, GpuDsspStatus } from "./gpu-dssp-provider.ts";
-export { GpuDsspOverflowError } from "./gpu-dssp.ts";
+export { Transform } from "./coordinates/transform.ts";
+export { Superpose } from "./coordinates/superpose.ts";
+export { Unwrap } from "./coordinates/unwrap.ts";
+export { NormalMode } from "./coordinates/normal-mode.ts";
+export { ElasticNetwork } from "./coordinates/elastic-network.ts";
+export {
+  pointerToPlane,
+  projectToPointer,
+} from "./interaction/pointer-plane.ts";
+export { GpuDssp } from "./attributes/gpu-dssp-provider.ts";
+export type {
+  GpuDsspProps,
+  GpuDsspStatus,
+} from "./attributes/gpu-dssp-provider.ts";
+export { GpuDsspOverflowError } from "./attributes/gpu-dssp.ts";
 export { TimelineProvider } from "./timeline-context.ts";
-export { useCoordinateFocus } from "./use-coordinate-focus.ts";
-export { useCameraCurve } from "./use-camera-curve.ts";
-export { PickingProvider, usePicking } from "./picking.ts";
+export { useCoordinateFocus } from "./interaction/use-coordinate-focus.ts";
+export { useCameraCurve } from "./interaction/use-camera-curve.ts";
+export { PickingProvider, usePicking } from "./interaction/picking.ts";

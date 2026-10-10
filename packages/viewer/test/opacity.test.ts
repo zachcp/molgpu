@@ -9,7 +9,7 @@ import {
   checkOpacity,
   flatAlpha,
   modeProps,
-} from "../src/internal/opacity.ts";
+} from "../src/rendering/opacity.ts";
 
 Deno.test("opacity multiplies a flat colour alpha, and is the identity at 1", () => {
   const color = [0.2, 0.4, 0.6, 0.5];

@@ -3,7 +3,7 @@ import {
   checkElasticBindings,
   checkpointLayout,
   RECORD_BUDGET,
-} from "../src/internal/elastic-bindings.ts";
+} from "../src/coordinates/elastic-bindings.ts";
 
 Deno.test("elastic bindings above the device limit throw a RangeError naming bytes", () => {
   const limits = {

@@ -2,7 +2,7 @@
 import {
   flatAlpha,
   modeProps,
-} from "../../../packages/viewer/src/internal/opacity.ts";
+} from "../../../packages/viewer/src/rendering/opacity.ts";
 const rgba = [1, 0, 0, 0.5];
 console.log({
   flat: modeProps(undefined, flatAlpha(rgba, false)),

@@ -42,12 +42,12 @@ import {
   useCoordinateFocus,
 } from "@molgpu/viewer";
 import { useCoordinates, useStructureResource } from "@molgpu/viewer/advanced";
-import { AttributesContext } from "../../src/attributes-context.ts";
-import { AttributeSnapshotContext } from "../../src/attribute-snapshot-context.ts";
-import { CoordinateSnapshotContext } from "../../src/coordinate-snapshot.ts";
+import { AttributesContext } from "../../src/attributes/attributes-context.ts";
+import { AttributeSnapshotContext } from "../../src/attributes/attribute-snapshot-context.ts";
+import { CoordinateSnapshotContext } from "../../src/coordinates/coordinate-snapshot.ts";
 import { selectionData } from "../fixtures/selection-data.ts";
 import { TestAttributeProducer } from "../tsx/test-attribute-producer.ts";
-import { useSelectionInput } from "../../src/internal/use-selection-input.ts";
+import { useSelectionInput } from "../../src/selection/use-selection-input.ts";
 import { AcceptanceScene } from "../tsx/ordinary-jsx-spike.tsx";
 import { structureFromBcif } from "@molgpu/io";
 void React;

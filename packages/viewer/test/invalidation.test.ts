@@ -14,9 +14,9 @@ import {
 } from "@std/assert";
 import { createStructure, withPositions } from "@molgpu/table";
 import { where } from "@molgpu/select";
-import { createStructureResource } from "../src/internal/structure-resource.ts";
-import { buildBondColumns } from "../src/internal/bond-columns.ts";
-import { focusSelection } from "../src/camera-curve.ts";
+import { createStructureResource } from "../src/structure/structure-resource.ts";
+import { buildBondColumns } from "../src/representations/bonds/bond-columns.ts";
+import { focusSelection } from "../src/interaction/camera-curve.ts";
 import { geometryDeps } from "../src/internal/geometry-job.ts";
 import {
   count,

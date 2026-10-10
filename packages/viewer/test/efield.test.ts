@@ -5,11 +5,11 @@ import {
   efieldChargeColumn,
   efieldGrid,
   rowBounds,
-} from "../src/internal/efield-grid.ts";
+} from "../src/volume/efield-grid.ts";
 import {
   latticeSeeds,
   lineSegments,
-} from "../src/internal/field-line-geometry.ts";
+} from "../src/volume/representations/field-line-geometry.ts";
 
 function structure(n: number) {
   return createStructure({

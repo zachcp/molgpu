@@ -19,9 +19,9 @@ import {
 } from "@use-gpu/workbench";
 import { attribute, categorical, colormap, curve } from "@molgpu/fields";
 import { createCurve, createTimeline, sample } from "@molgpu/timeline";
-import { ColumnSource } from "../src/internal/column-source.ts";
-import { WorldSpacePointLayer } from "../src/world-space-points.ts";
-import { useField } from "../src/use-field.ts";
+import { ColumnSource } from "../src/rendering/column-source.ts";
+import { WorldSpacePointLayer } from "../src/representations/world-space-points.ts";
+import { useField } from "../src/field-binding/use-field.ts";
 import { TimelineProvider, useTimelineTime } from "../src/timeline-context.ts";
 
 const probe = globalThis.__probe = {

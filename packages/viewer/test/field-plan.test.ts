@@ -14,7 +14,7 @@ import {
   createVolumeGrid,
   type StructureData,
 } from "@molgpu/table";
-import { planField } from "../src/internal/field-plan.ts";
+import { planField } from "../src/field-binding/field-plan.ts";
 
 // Two residues of two atoms each, in one chain.
 const structure = (atoms = 4): StructureData =>

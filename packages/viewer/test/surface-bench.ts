@@ -8,11 +8,11 @@
 import { activeAtoms, atomRadii, withPositions } from "@molgpu/table";
 import { molecularSurfaceField, structureFromBcif } from "@molgpu/io";
 import { marchingCubes, nearestAtomAttribution } from "@molgpu/geo";
-import { buildSurfaceGeometry } from "../src/internal/surface-geometry.ts";
+import { buildSurfaceGeometry } from "../src/representations/surface/surface-geometry.ts";
 import {
   destroyGpuSurfaceMesh,
   gpuSurfaceGeometry,
-} from "../src/internal/surface-gpu.ts";
+} from "../src/representations/surface/surface-gpu.ts";
 import type { StructureResource } from "../src/types.ts";
 
 const FRAMES = 6;

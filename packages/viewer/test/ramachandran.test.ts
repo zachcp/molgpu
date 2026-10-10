@@ -6,7 +6,7 @@ import {
   insetRect,
   plotAxes,
   ramachandranPoints,
-} from "../src/internal/ramachandran-points.ts";
+} from "../src/representations/ramachandran-points.ts";
 
 const crambin = await structureFromBcif(
   await Deno.readFile(

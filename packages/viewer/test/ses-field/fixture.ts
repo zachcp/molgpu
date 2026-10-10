@@ -1,9 +1,9 @@
 import { activeAtoms, atomRadii } from "@molgpu/table";
 import { molecularSurfaceField, structureFromBcif } from "@molgpu/io";
 import { marchingCubes, nearestAtomAttribution } from "@molgpu/geo";
-import { gpuSesField } from "../../src/internal/ses-field.ts";
-import { gpuMarchingCubes } from "../../src/internal/marching-cubes-gpu.ts";
-import { encodeAttribution } from "../../src/internal/attribution-gpu.ts";
+import { gpuSesField } from "../../src/representations/surface/ses-field.ts";
+import { gpuMarchingCubes } from "../../src/representations/surface/marching-cubes-gpu.ts";
+import { encodeAttribution } from "../../src/representations/surface/attribution-gpu.ts";
 
 declare global {
   var runSesField: (id: string) => Promise<Record<string, unknown>>;

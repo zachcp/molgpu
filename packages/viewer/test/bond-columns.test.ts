@@ -4,7 +4,7 @@ import { byElement, evaluate } from "@molgpu/fields";
 import {
   buildBondColumns,
   buildBondRows,
-} from "../src/internal/bond-columns.ts";
+} from "../src/representations/bonds/bond-columns.ts";
 import { gatherAtomColumns } from "./gather-oracle.ts";
 
 const data = createStructure({

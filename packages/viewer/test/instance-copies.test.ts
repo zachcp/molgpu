@@ -6,7 +6,7 @@ import {
   copyRows,
   instanceCopies,
   type InstanceCopy,
-} from "../src/internal/instance-plan.ts";
+} from "../src/rendering/instance-plan.ts";
 
 const bytes = await Deno.readFile(
   new URL("../../io/test/fixtures/1tqn.bcif", import.meta.url),

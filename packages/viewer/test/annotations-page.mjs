@@ -16,7 +16,7 @@ import {
 import { createStructure } from "@molgpu/table";
 import { resolve, where } from "@molgpu/select";
 import { Distance, Label, Spacefill, Structure } from "../src/index.ts";
-import { centroidOf } from "../src/internal/centroid.ts";
+import { centroidOf } from "../src/representations/centroid.ts";
 
 const probe = globalThis.__probe = {
   storage: 0,

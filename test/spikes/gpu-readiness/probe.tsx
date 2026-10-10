@@ -11,7 +11,7 @@ import {
   useCoordinates,
   useCoordinateSnapshot,
 } from "@molgpu/viewer/advanced";
-import { AttributesContext } from "../../../packages/viewer/src/attributes-context.ts";
+import { AttributesContext } from "../../../packages/viewer/src/attributes/attributes-context.ts";
 import { OffsetCoordinates } from "../../../packages/viewer/test/tsx/offset-coordinates.ts";
 import { structure } from "../../../packages/fields/test/fixture.ts";
 

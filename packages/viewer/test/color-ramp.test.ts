@@ -3,7 +3,7 @@ import {
   colorRampWgsl,
   wgslF32,
   wgslVec4,
-} from "../src/internal/color-ramp.ts";
+} from "../src/volume/representations/color-ramp.ts";
 
 Deno.test("WGSL color ramp uses shared scalar and vector formatting", () => {
   assertEquals(wgslF32(1), "1.0");

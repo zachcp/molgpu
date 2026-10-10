@@ -4,7 +4,10 @@ import {
   volumeIndexToWorld,
   volumeWorldToIndex,
 } from "@molgpu/table";
-import { sliceCorner, slicePlaneFrame } from "../src/internal/slice-plane.ts";
+import {
+  sliceCorner,
+  slicePlaneFrame,
+} from "../src/volume/representations/slice-plane.ts";
 
 const volume = createVolume({
   values: new Float32Array(6 * 5 * 4),

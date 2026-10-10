@@ -9,7 +9,7 @@ import {
   useDeviceContext,
   useRawSource,
 } from "@use-gpu/workbench";
-import { ColumnSource } from "../src/internal/column-source.ts";
+import { ColumnSource } from "../src/rendering/column-source.ts";
 import {
   enableInstrumentation,
   snapshotCounters,

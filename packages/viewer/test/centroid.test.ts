@@ -4,7 +4,7 @@ import {
   centroidOf,
   distanceBetween,
   midpoint,
-} from "../src/internal/centroid.ts";
+} from "../src/representations/centroid.ts";
 
 // The <Label>/<Distance> components reach @use-gpu/workbench (labels need a
 // font atlas), asserted in the browser runner; the anchor math lives here.

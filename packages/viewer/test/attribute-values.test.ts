@@ -1,7 +1,7 @@
 import { assertEquals, assertInstanceOf, assertThrows } from "@std/assert";
 import { createStructure, withAttributes } from "@molgpu/table";
 import { fixture } from "../../table/test/fixture.ts";
-import { snapshotAttributeValues } from "../src/internal/attribute-values.ts";
+import { snapshotAttributeValues } from "../src/attributes/attribute-values.ts";
 
 Deno.test("GPU f32 attributes publish as table semantic columns", () => {
   const root = createStructure(fixture());

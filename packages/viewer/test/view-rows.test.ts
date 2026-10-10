@@ -4,10 +4,10 @@ import { assert, assertEquals, assertStrictEquals } from "@std/assert";
 import { resolve, where } from "@molgpu/select";
 import type { StructureData } from "@molgpu/table";
 import { structureFromBcif } from "@molgpu/io";
-import { allOrRows, viewRows } from "../src/internal/view-rows.ts";
-import { buildBondRows } from "../src/internal/bond-columns.ts";
-import { focusSelection } from "../src/camera-curve.ts";
-import { createStructureResource } from "../src/internal/structure-resource.ts";
+import { allOrRows, viewRows } from "../src/selection/view-rows.ts";
+import { buildBondRows } from "../src/representations/bonds/bond-columns.ts";
+import { focusSelection } from "../src/interaction/camera-curve.ts";
+import { createStructureResource } from "../src/structure/structure-resource.ts";
 
 const load = async (id: string): Promise<StructureData> =>
   await structureFromBcif(
