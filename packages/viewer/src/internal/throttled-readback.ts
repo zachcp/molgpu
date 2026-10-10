@@ -69,14 +69,14 @@ export const ThrottledReadback: LC<{
     let timer: ReturnType<typeof setTimeout> | undefined;
     const schedule = () => {
       if (!alive || inFlight.current || !latest.current.ready) return;
-      const { token: current, maxHz: rate, onPause: pause } = latest.current;
+      const { token: current, maxHz: rate } = latest.current;
       if (sameReadbackToken(published.current, current)) return;
       const remaining = 1000 / rate -
         (performance.now() - lastDispatch.current);
-      // The pause request supplies the last frame after motion stops.
-      const delay = pause
-        ? Math.min(Math.max(0, remaining), 34)
-        : Math.max(0, remaining);
+      // Keep the last revision scheduled after motion stops, within the rate
+      // interval. A short gap between slow animation frames is not a pause
+      // signal and must not bypass the subscriber's maximum rate.
+      const delay = Math.max(0, remaining);
       timer = setTimeout(async () => {
         if (!alive || inFlight.current || !latest.current.ready) return;
         const target = latest.current.token;
