@@ -1,0 +1,593 @@
+{
+  "baseline": "d54ace66a27cb0fa7f9f591f3643838c86da8460",
+  "scope": "alternative 'stream layout' file map; companion to 2026-10-10-viewer-organization-inventory.json, which holds imports and path-sensitive consumers",
+  "method": "relative imports from the companion inventory (re-verified against a fresh scan) mapped to proposed folders; index.ts/advanced.ts excluded from direction rules",
+  "rules": {
+    "R1": "no file outside a representations/ directory imports a file inside one (index.ts/advanced.ts excepted)",
+    "R2": "representation files import provider folders (structure, coordinates, attributes, volume) only through scope contracts: structure-context, coordinates-context, coordinate-snapshot, attribute-snapshot, volume-context, use-trajectory-frame"
+  },
+  "results": {
+    "R1_violations": 0,
+    "R2_violations": 0,
+    "runtime_files": 37,
+    "imports_with_two_or_more_parent_segments": {
+      "as_mapped": 125,
+      "trajectory_top_level": 115,
+      "trajectory_top_level_and_volume_representations_under_volume": 111
+    },
+    "paths_identical_to_hybrid": 48,
+    "total_imports": 419
+  },
+  "files": [
+    {
+      "current": "advanced.ts",
+      "stream": "advanced.ts",
+      "hybrid": "advanced.ts"
+    },
+    {
+      "current": "annotations.ts",
+      "stream": "representations/annotations.ts",
+      "hybrid": "representations/annotations.ts"
+    },
+    {
+      "current": "attribute-producer.ts",
+      "stream": "attributes/attribute-producer.ts",
+      "hybrid": "attributes/attribute-producer.ts"
+    },
+    {
+      "current": "attribute-snapshot-context.ts",
+      "stream": "attributes/attribute-snapshot-context.ts",
+      "hybrid": "attributes/attribute-snapshot-context.ts"
+    },
+    {
+      "current": "attribute-snapshot.ts",
+      "stream": "attributes/attribute-snapshot.ts",
+      "hybrid": "attributes/attribute-snapshot.ts"
+    },
+    {
+      "current": "attributes-context.ts",
+      "stream": "attributes/attributes-context.ts",
+      "hybrid": "attributes/attributes-context.ts"
+    },
+    {
+      "current": "ball-and-stick.ts",
+      "stream": "representations/ball-and-stick.ts",
+      "hybrid": "representations/ball-and-stick.ts"
+    },
+    {
+      "current": "bonds.ts",
+      "stream": "representations/bonds/bonds.ts",
+      "hybrid": "representations/bonds.ts"
+    },
+    {
+      "current": "camera-curve.ts",
+      "stream": "interaction/camera-curve.ts",
+      "hybrid": "interaction/camera-curve.ts"
+    },
+    {
+      "current": "coordinate-snapshot.ts",
+      "stream": "coordinates/coordinate-snapshot.ts",
+      "hybrid": "coordinates/coordinate-snapshot.ts"
+    },
+    {
+      "current": "coordinates-context.ts",
+      "stream": "coordinates/coordinates-context.ts",
+      "hybrid": "coordinates/coordinates-context.ts"
+    },
+    {
+      "current": "efield.ts",
+      "stream": "volume/efield.ts",
+      "hybrid": "volume/efield.ts"
+    },
+    {
+      "current": "elastic-network.ts",
+      "stream": "coordinates/elastic-network.ts",
+      "hybrid": "coordinates/elastic-network.ts"
+    },
+    {
+      "current": "field-arrows.ts",
+      "stream": "representations/volume/field-arrows.ts",
+      "hybrid": "volume/field-arrows.ts"
+    },
+    {
+      "current": "field-lines.ts",
+      "stream": "representations/volume/field-lines.ts",
+      "hybrid": "volume/field-lines.ts"
+    },
+    {
+      "current": "gpu-dssp-provider.ts",
+      "stream": "attributes/gpu-dssp-provider.ts",
+      "hybrid": "attributes/gpu-dssp-provider.ts"
+    },
+    {
+      "current": "gpu-dssp.ts",
+      "stream": "attributes/gpu-dssp.ts",
+      "hybrid": "attributes/gpu-dssp.ts"
+    },
+    {
+      "current": "index.ts",
+      "stream": "index.ts",
+      "hybrid": "index.ts"
+    },
+    {
+      "current": "internal/attribute-sources.ts",
+      "stream": "runtime/styling/attribute-sources.ts",
+      "hybrid": "fields/attribute-sources.ts"
+    },
+    {
+      "current": "internal/attribute-values.ts",
+      "stream": "attributes/attribute-values.ts",
+      "hybrid": "attributes/attribute-values.ts"
+    },
+    {
+      "current": "internal/attribution-gpu.ts",
+      "stream": "representations/surface/attribution-gpu.ts",
+      "hybrid": "representations/attribution-gpu.ts"
+    },
+    {
+      "current": "internal/bond-columns.ts",
+      "stream": "representations/bonds/bond-columns.ts",
+      "hybrid": "representations/bond-columns.ts"
+    },
+    {
+      "current": "internal/bond-positions.ts",
+      "stream": "representations/bonds/bond-positions.ts",
+      "hybrid": "representations/bond-positions.ts"
+    },
+    {
+      "current": "internal/cartoon-geometry.ts",
+      "stream": "representations/ribbon/cartoon-geometry.ts",
+      "hybrid": "representations/cartoon-geometry.ts"
+    },
+    {
+      "current": "internal/centroid.ts",
+      "stream": "representations/centroid.ts",
+      "hybrid": "representations/centroid.ts"
+    },
+    {
+      "current": "internal/color-ramp.ts",
+      "stream": "representations/volume/color-ramp.ts",
+      "hybrid": "volume/color-ramp.ts"
+    },
+    {
+      "current": "internal/column-source.ts",
+      "stream": "runtime/styling/column-source.ts",
+      "hybrid": "rendering/column-source.ts"
+    },
+    {
+      "current": "internal/columns.ts",
+      "stream": "runtime/styling/columns.ts",
+      "hybrid": "rendering/columns.ts"
+    },
+    {
+      "current": "internal/compute-buffers.ts",
+      "stream": "runtime/gpu/compute-buffers.ts",
+      "hybrid": "internal/compute-buffers.ts"
+    },
+    {
+      "current": "internal/coordinate-kernel.ts",
+      "stream": "coordinates/coordinate-kernel.ts",
+      "hybrid": "coordinates/coordinate-kernel.ts"
+    },
+    {
+      "current": "internal/coordinate-passes.ts",
+      "stream": "coordinates/coordinate-passes.ts",
+      "hybrid": "coordinates/coordinate-passes.ts"
+    },
+    {
+      "current": "internal/copy-positions-wgsl.ts",
+      "stream": "runtime/gpu/copy-positions-wgsl.ts",
+      "hybrid": "coordinates/copy-positions-wgsl.ts"
+    },
+    {
+      "current": "internal/dispatch-observation.ts",
+      "stream": "runtime/gpu/dispatch-observation.ts",
+      "hybrid": "internal/dispatch-observation.ts"
+    },
+    {
+      "current": "internal/efield-grid.ts",
+      "stream": "volume/efield-grid.ts",
+      "hybrid": "volume/efield-grid.ts"
+    },
+    {
+      "current": "internal/elastic-bindings.ts",
+      "stream": "coordinates/elastic-bindings.ts",
+      "hybrid": "coordinates/elastic-bindings.ts"
+    },
+    {
+      "current": "internal/field-line-geometry.ts",
+      "stream": "representations/volume/field-line-geometry.ts",
+      "hybrid": "volume/field-line-geometry.ts"
+    },
+    {
+      "current": "internal/field-plan.ts",
+      "stream": "runtime/styling/field-plan.ts",
+      "hybrid": "fields/field-plan.ts"
+    },
+    {
+      "current": "internal/frame-cache.ts",
+      "stream": "coordinates/trajectory/frame-cache.ts",
+      "hybrid": "trajectory/frame-cache.ts"
+    },
+    {
+      "current": "internal/frame-window.ts",
+      "stream": "coordinates/trajectory/frame-window.ts",
+      "hybrid": "trajectory/frame-window.ts"
+    },
+    {
+      "current": "internal/geometry-job.ts",
+      "stream": "runtime/gpu/geometry-job.ts",
+      "hybrid": "internal/geometry-job.ts"
+    },
+    {
+      "current": "internal/gpu-scan.ts",
+      "stream": "runtime/gpu/gpu-scan.ts",
+      "hybrid": "attributes/gpu-scan.ts"
+    },
+    {
+      "current": "internal/immutable-attribute-cache.ts",
+      "stream": "structure/immutable-attribute-cache.ts",
+      "hybrid": "attributes/immutable-attribute-cache.ts"
+    },
+    {
+      "current": "internal/indexed.ts",
+      "stream": "runtime/styling/indexed.ts",
+      "hybrid": "rendering/indexed.ts"
+    },
+    {
+      "current": "internal/instance-context.ts",
+      "stream": "runtime/instances/instance-context.ts",
+      "hybrid": "structure/instance-context.ts"
+    },
+    {
+      "current": "internal/instance-copies.ts",
+      "stream": "runtime/instances/instance-copies.ts",
+      "hybrid": "structure/instance-copies.ts"
+    },
+    {
+      "current": "internal/instance-plan.ts",
+      "stream": "runtime/instances/instance-plan.ts",
+      "hybrid": "structure/instance-plan.ts"
+    },
+    {
+      "current": "internal/instrumentation.ts",
+      "stream": "runtime/instrumentation.ts",
+      "hybrid": "internal/instrumentation.ts"
+    },
+    {
+      "current": "internal/isosurface-geometry.ts",
+      "stream": "representations/volume/isosurface-geometry.ts",
+      "hybrid": "volume/isosurface-geometry.ts"
+    },
+    {
+      "current": "internal/line-size.ts",
+      "stream": "runtime/styling/line-size.ts",
+      "hybrid": "rendering/line-size.ts"
+    },
+    {
+      "current": "internal/marching-cubes-gpu.ts",
+      "stream": "representations/surface/marching-cubes-gpu.ts",
+      "hybrid": "representations/marching-cubes-gpu.ts"
+    },
+    {
+      "current": "internal/material-spec.ts",
+      "stream": "runtime/styling/material-spec.ts",
+      "hybrid": "rendering/material-spec.ts"
+    },
+    {
+      "current": "internal/mesh-builder.ts",
+      "stream": "representations/mesh-builder.ts",
+      "hybrid": "representations/mesh-builder.ts"
+    },
+    {
+      "current": "internal/opacity.ts",
+      "stream": "runtime/styling/opacity.ts",
+      "hybrid": "rendering/opacity.ts"
+    },
+    {
+      "current": "internal/pick-resolve.ts",
+      "stream": "interaction/pick-resolve.ts",
+      "hybrid": "interaction/pick-resolve.ts"
+    },
+    {
+      "current": "internal/point-size.ts",
+      "stream": "runtime/styling/point-size.ts",
+      "hybrid": "rendering/point-size.ts"
+    },
+    {
+      "current": "internal/ramachandran-points.ts",
+      "stream": "representations/ramachandran-points.ts",
+      "hybrid": "representations/ramachandran-points.ts"
+    },
+    {
+      "current": "internal/readback-token.ts",
+      "stream": "runtime/gpu/readback-token.ts",
+      "hybrid": "internal/readback-token.ts"
+    },
+    {
+      "current": "internal/representation.ts",
+      "stream": "runtime/styling/representation.ts",
+      "hybrid": "rendering/representation.ts"
+    },
+    {
+      "current": "internal/ribbon-dssp.ts",
+      "stream": "representations/ribbon/ribbon-dssp.ts",
+      "hybrid": "attributes/ribbon-dssp.ts"
+    },
+    {
+      "current": "internal/ribbon-geometry.ts",
+      "stream": "representations/ribbon/ribbon-geometry.ts",
+      "hybrid": "representations/ribbon-geometry.ts"
+    },
+    {
+      "current": "internal/selection-consumer.ts",
+      "stream": "runtime/selection/selection-consumer.ts",
+      "hybrid": "selection/selection-consumer.ts"
+    },
+    {
+      "current": "internal/selection-diagnostics.ts",
+      "stream": "runtime/selection/selection-diagnostics.ts",
+      "hybrid": "selection/selection-diagnostics.ts"
+    },
+    {
+      "current": "internal/selection-resolution.ts",
+      "stream": "runtime/selection/selection-resolution.ts",
+      "hybrid": "selection/selection-resolution.ts"
+    },
+    {
+      "current": "internal/ses-field.ts",
+      "stream": "representations/surface/ses-field.ts",
+      "hybrid": "representations/ses-field.ts"
+    },
+    {
+      "current": "internal/slice-plane.ts",
+      "stream": "representations/volume/slice-plane.ts",
+      "hybrid": "volume/slice-plane.ts"
+    },
+    {
+      "current": "internal/source-request.ts",
+      "stream": "runtime/source-request.ts",
+      "hybrid": "internal/source-request.ts"
+    },
+    {
+      "current": "internal/status-delivery.ts",
+      "stream": "runtime/status-delivery.ts",
+      "hybrid": "internal/status-delivery.ts"
+    },
+    {
+      "current": "internal/status-readback.ts",
+      "stream": "runtime/gpu/status-readback.ts",
+      "hybrid": "internal/status-readback.ts"
+    },
+    {
+      "current": "internal/structure-resource.ts",
+      "stream": "structure/structure-resource.ts",
+      "hybrid": "structure/structure-resource.ts"
+    },
+    {
+      "current": "internal/surface-geometry.ts",
+      "stream": "representations/surface/surface-geometry.ts",
+      "hybrid": "representations/surface-geometry.ts"
+    },
+    {
+      "current": "internal/surface-gpu.ts",
+      "stream": "representations/surface/surface-gpu.ts",
+      "hybrid": "representations/surface-gpu.ts"
+    },
+    {
+      "current": "internal/throttled-readback.ts",
+      "stream": "runtime/gpu/throttled-readback.ts",
+      "hybrid": "internal/throttled-readback.ts"
+    },
+    {
+      "current": "internal/trajectory-player.ts",
+      "stream": "coordinates/trajectory/trajectory-player.ts",
+      "hybrid": "trajectory/trajectory-player.ts"
+    },
+    {
+      "current": "internal/tube-geometry.ts",
+      "stream": "representations/tube-geometry.ts",
+      "hybrid": "representations/tube-geometry.ts"
+    },
+    {
+      "current": "internal/use-binding-probe.ts",
+      "stream": "runtime/use-binding-probe.ts",
+      "hybrid": "internal/use-binding-probe.ts"
+    },
+    {
+      "current": "internal/use-field-plan.ts",
+      "stream": "runtime/styling/use-field-plan.ts",
+      "hybrid": "fields/use-field-plan.ts"
+    },
+    {
+      "current": "internal/use-gpu-surface.ts",
+      "stream": "representations/surface/use-gpu-surface.ts",
+      "hybrid": "representations/use-gpu-surface.ts"
+    },
+    {
+      "current": "internal/use-opacity-colors.ts",
+      "stream": "runtime/styling/use-opacity-colors.ts",
+      "hybrid": "rendering/use-opacity-colors.ts"
+    },
+    {
+      "current": "internal/use-repaint.ts",
+      "stream": "runtime/use-repaint.ts",
+      "hybrid": "internal/use-repaint.ts"
+    },
+    {
+      "current": "internal/use-selection-input.ts",
+      "stream": "runtime/selection/use-selection-input.ts",
+      "hybrid": "selection/use-selection-input.ts"
+    },
+    {
+      "current": "internal/vertex-field-colors.ts",
+      "stream": "runtime/styling/vertex-field-colors.ts",
+      "hybrid": "fields/vertex-field-colors.ts"
+    },
+    {
+      "current": "internal/view-rows.ts",
+      "stream": "runtime/selection/view-rows.ts",
+      "hybrid": "selection/view-rows.ts"
+    },
+    {
+      "current": "internal/volume-buffers.ts",
+      "stream": "volume/volume-buffers.ts",
+      "hybrid": "volume/volume-buffers.ts"
+    },
+    {
+      "current": "internal/with-material.ts",
+      "stream": "runtime/styling/with-material.ts",
+      "hybrid": "rendering/with-material.ts"
+    },
+    {
+      "current": "isosurface.ts",
+      "stream": "representations/volume/isosurface.ts",
+      "hybrid": "volume/isosurface.ts"
+    },
+    {
+      "current": "normal-mode.ts",
+      "stream": "coordinates/normal-mode.ts",
+      "hybrid": "coordinates/normal-mode.ts"
+    },
+    {
+      "current": "picking.ts",
+      "stream": "interaction/picking.ts",
+      "hybrid": "interaction/picking.ts"
+    },
+    {
+      "current": "pointer-plane.ts",
+      "stream": "interaction/pointer-plane.ts",
+      "hybrid": "interaction/pointer-plane.ts"
+    },
+    {
+      "current": "ramachandran.ts",
+      "stream": "representations/ramachandran.ts",
+      "hybrid": "representations/ramachandran.ts"
+    },
+    {
+      "current": "ribbon.ts",
+      "stream": "representations/ribbon/ribbon.ts",
+      "hybrid": "representations/ribbon.ts"
+    },
+    {
+      "current": "spacefill.ts",
+      "stream": "representations/spacefill.ts",
+      "hybrid": "representations/spacefill.ts"
+    },
+    {
+      "current": "structure-context.ts",
+      "stream": "structure/structure-context.ts",
+      "hybrid": "structure/structure-context.ts"
+    },
+    {
+      "current": "structure.ts",
+      "stream": "structure/structure.ts",
+      "hybrid": "structure/structure.ts"
+    },
+    {
+      "current": "superpose.ts",
+      "stream": "coordinates/superpose.ts",
+      "hybrid": "coordinates/superpose.ts"
+    },
+    {
+      "current": "surface.ts",
+      "stream": "representations/surface/surface.ts",
+      "hybrid": "representations/surface.ts"
+    },
+    {
+      "current": "timeline-context.ts",
+      "stream": "timeline-context.ts",
+      "hybrid": "timeline-context.ts"
+    },
+    {
+      "current": "trajectory-context.ts",
+      "stream": "coordinates/trajectory/trajectory-context.ts",
+      "hybrid": "trajectory/trajectory-context.ts"
+    },
+    {
+      "current": "trajectory.ts",
+      "stream": "coordinates/trajectory/trajectory.ts",
+      "hybrid": "trajectory/trajectory.ts"
+    },
+    {
+      "current": "transform.ts",
+      "stream": "coordinates/transform.ts",
+      "hybrid": "coordinates/transform.ts"
+    },
+    {
+      "current": "tube.ts",
+      "stream": "representations/tube.ts",
+      "hybrid": "representations/tube.ts"
+    },
+    {
+      "current": "types.ts",
+      "stream": "types.ts",
+      "hybrid": "types.ts"
+    },
+    {
+      "current": "unit-cell.ts",
+      "stream": "representations/unit-cell.ts",
+      "hybrid": "representations/unit-cell.ts"
+    },
+    {
+      "current": "unwrap.ts",
+      "stream": "coordinates/unwrap.ts",
+      "hybrid": "coordinates/unwrap.ts"
+    },
+    {
+      "current": "use-camera-curve.ts",
+      "stream": "interaction/use-camera-curve.ts",
+      "hybrid": "interaction/use-camera-curve.ts"
+    },
+    {
+      "current": "use-coordinate-bounds.ts",
+      "stream": "coordinates/use-coordinate-bounds.ts",
+      "hybrid": "coordinates/use-coordinate-bounds.ts"
+    },
+    {
+      "current": "use-coordinate-focus.ts",
+      "stream": "interaction/use-coordinate-focus.ts",
+      "hybrid": "interaction/use-coordinate-focus.ts"
+    },
+    {
+      "current": "use-coordinate-selection.ts",
+      "stream": "coordinates/use-coordinate-selection.ts",
+      "hybrid": "coordinates/use-coordinate-selection.ts"
+    },
+    {
+      "current": "use-field.ts",
+      "stream": "runtime/styling/use-field.ts",
+      "hybrid": "fields/use-field.ts"
+    },
+    {
+      "current": "use-geometry-job.ts",
+      "stream": "runtime/gpu/use-geometry-job.ts",
+      "hybrid": "internal/use-geometry-job.ts"
+    },
+    {
+      "current": "use-trajectory-frame.ts",
+      "stream": "coordinates/trajectory/use-trajectory-frame.ts",
+      "hybrid": "trajectory/use-trajectory-frame.ts"
+    },
+    {
+      "current": "volume-context.ts",
+      "stream": "volume/volume-context.ts",
+      "hybrid": "volume/volume-context.ts"
+    },
+    {
+      "current": "volume-slice.ts",
+      "stream": "representations/volume/volume-slice.ts",
+      "hybrid": "volume/volume-slice.ts"
+    },
+    {
+      "current": "volume.ts",
+      "stream": "volume/volume.ts",
+      "hybrid": "volume/volume.ts"
+    },
+    {
+      "current": "world-space-points.ts",
+      "stream": "representations/world-space-points.ts",
+      "hybrid": "representations/world-space-points.ts"
+    }
+  ]
+}
