@@ -42,6 +42,13 @@ of GPU completion.
 | Fixed, Tube         |              6 |                   8 |      9 |
 | Fixed, Ribbon       |              6 |                   7 |      9 |
 
+A later slower run also exposed the old 34 ms final-on-pause shortcut exceeding
+the rate budget between slow frames. Final revisions now remain scheduled within
+the normal rate interval. The final rerun reports Tube 5 builds/7 copies and
+Ribbon 7 builds/7 copies, still with zero new staging allocations. Acceptance
+waits for actual publication and consumption after pausing; it does not assume
+that the pause button completes a mapped GPU copy.
+
 The fixed cases allocate no new coordinate-snapshot staging buffers during
 playback. The original implementation fails the same test. Components and
 readback-identity browser suites pass, including source replacement, resizing
@@ -116,6 +123,13 @@ change.
   clipping defect. The surface scene leaves atoms outside the clip scope, and
   the test can observe them before asynchronous surface drawing completes. Do
   not claim a clean full site or full GPU gate from the passing subsets.
+
+Initial hosted validation passed static/unit checks and the electric-field,
+invalidation and retirement groups. The hosted site run passed clipping but
+failed the new Motion budget's publication assertion: counters were read
+immediately after pausing while a GPU readback could still be mapping. The
+acceptance test now waits for a real publication and trace build, retaining the
+same rate and allocation limits. Hosted validation must refresh for that change.
 
 Release PR #87 (`0.3.0`) was mergeable with successful static and all five
 WebGPU groups on its existing head. These follow-ups must land and the release

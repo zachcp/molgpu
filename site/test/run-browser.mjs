@@ -1056,6 +1056,19 @@ Deno.test("site landing page and maintained gallery routes", async () => {
             return performance.now() - start;
           });
           await page.getByLabel("Pause looping playback").click();
+          // A slower GPU can still be mapping the final copy when playback
+          // pauses. Observe publication and consumption instead of assuming
+          // that pausing completes asynchronous GPU work.
+          await page.waitForFunction(
+            (representation) => {
+              const { detail } = globalThis.__snapshotCounters
+                .snapshotCounters();
+              return (detail["gathers:coords:snapshot:publish"] ?? 0) > 0 &&
+                (detail[`geometryBuilds:${representation}:trace`] ?? 0) > 0;
+            },
+            representation,
+            { timeout: 15_000 },
+          );
           const work = await page.evaluate(() => {
             const counters = globalThis.__snapshotCounters;
             const { detail } = counters.snapshotCounters();
