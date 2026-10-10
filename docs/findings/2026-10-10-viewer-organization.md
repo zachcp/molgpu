@@ -5,6 +5,11 @@ Date: 2026-10-10. Baseline: `d54ace6`, the final follow-up revision in draft PR
 public entries remain `@molgpu/viewer` and `@molgpu/viewer/advanced`. Tracking
 decision: `molgpu-sept-9fw`.
 
+The owner selected the corrected hybrid after counter-review. This document
+retains the original proposal; see the
+[selected layout and implementation](2026-10-10-viewer-hybrid-implementation.md)
+for the authoritative migration map and acceptance.
+
 ## Recommendation
 
 Use a hybrid of dataset folders and shared capabilities. Give `Structure`,
