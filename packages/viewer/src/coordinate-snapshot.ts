@@ -172,9 +172,10 @@ export const CoordinateSnapshotBoundary: LC<{
   const maxHz = Math.max(...demand.map((request) => request.maxHz));
   const onPause = demand.some((request) => request.onPause);
   return provide(CoordinateSnapshotContext, context, [
-    demand.length && current
+    demand.length
       ? use(ThrottledReadback, {
         token,
+        ready: current,
         maxHz,
         onPause,
         label: "coords:snapshot",

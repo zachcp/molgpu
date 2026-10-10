@@ -86,6 +86,7 @@ const line = (
     width,
     join: "round",
     ...(shaded ? { shaded: true, sides, depth: -1 } : {}),
+    ...(props.shadow ? { depth: -1 } : {}),
     ...extra,
     ...props,
   });
@@ -240,6 +241,8 @@ const BondsResolved: ViewerComponent<
     color?: VectorLike | Field;
     sides?: number;
     shaded?: boolean;
+    /** Cast shadows under a shadow-enabled Pass; defaults to false. */
+    shadow?: boolean;
     /** Wraps the shaded stick layer; without one, the ambient scene material. */
     material?: MaterialSpec;
   } & Translucency
@@ -360,6 +363,8 @@ export const Bonds: ViewerComponent<
     color?: VectorLike | Field;
     sides?: number;
     shaded?: boolean;
+    /** Cast shadows under a shadow-enabled Pass; defaults to false. */
+    shadow?: boolean;
     /** Wraps the shaded stick layer; without one, the ambient scene material. */
     material?: MaterialSpec;
   }

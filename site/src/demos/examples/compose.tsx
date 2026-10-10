@@ -27,9 +27,9 @@ export const composeScene = (
       <MeasureScene data={data} picks={measure.picks} onPick={measure.onPick} />
     ),
     on("cartoon") && <Cartoon color={bySecondaryStructure()} />,
-    on("tube") && <Tube radius={0.5} color={[0.55, 0.85, 0.6, 1]} />,
+    on("tube") && <Tube shadow radius={0.5} color={[0.55, 0.85, 0.6, 1]} />,
     on("spacefill") && <Spacefill scale={0.55} color={[0.75, 0.78, 0.86, 1]} />,
-    on("sticks") && <BallAndStick ball={0.18} stick={0.24} />,
+    on("sticks") && <BallAndStick shadow ball={0.18} stick={0.24} />,
     on("surface") && (
       <Surface
         resolution={0.65}

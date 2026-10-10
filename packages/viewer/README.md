@@ -97,10 +97,10 @@ selection status callbacks.
 Every representation takes `opacity` (0–1), which is multiplied into the
 colour's alpha, for both flat colours and `@molgpu/fields` Fields. Automatic
 transparent mode considers the flat colour alpha and the `opacity` prop. It does
-not inspect per-row Field alpha or alpha introduced by a material wrapper: use
-`mode="transparent"` for those translucent inputs. This limitation is tracked by
-`molgpu-sept-0vs.8`. Add `oit` to the workbench `<Pass>` so overlapping
-translucent geometry composites correctly:
+not inspect Field alpha (including constant Fields) or alpha introduced by a
+material wrapper: use `mode="transparent"` for those translucent inputs. This
+limitation is tracked by `molgpu-sept-0vs.8`. Add `oit` to the workbench
+`<Pass>` so overlapping translucent geometry composites correctly:
 
 ```tsx
 import { byElement } from "@molgpu/fields";
@@ -228,6 +228,21 @@ Normal shading visualizes normals instead. This follows the pinned workbench
 material shaders. Native wrappers can supply lazy values, shader maps, render
 callbacks and the full upstream color syntax. Native wrappers use upstream
 material defaults (PBR roughness 0.5 unless specified).
+
+### Shadows
+
+`<Tube shadow>`, `<Bonds shadow>` and `<BallAndStick shadow>` opt into casting
+under a workbench `<Pass lights shadows>` with a shadow-mapped light. The
+default is false. BallAndStick casts stick shadows only; its balls retain their
+default without shadows. Transparent layers do not cast. Keep Spacefill shadow
+casting off: the current billboard sizing is incorrect in the light's view.
+
+```tsx
+<Structure data={data}>
+  <Tube shadow />
+  <BallAndStick shadow />
+</Structure>;
+```
 
 ### Ramachandran inset
 
@@ -587,9 +602,11 @@ write a GPU coordinate transform. Give it the upstream coordinates
 (`useCoordinates()`), a WGSL compute module and its `args`, and a `parameterKey`
 that changes whenever the args change the output. It owns one packed output
 buffer (destroyed on unmount). Its generation identifies requested content;
-`ready` becomes true only after that revision's dispatch submits. Dependent work
-then follows queue order, while CPU snapshots appear after a mapped copy. The
-kernel links `getSize()`, one getter per arg, one per extra `sources` entry,
+`ready` becomes true after the first dispatch into that buffer submits and stays
+true during later generations so live drawing remains continuous. CPU snapshots
+copy only a dispatched generation, at the requested cadence and again on pause.
+Dependent work follows queue order, while snapshots appear after a mapped copy.
+The kernel links `getSize()`, one getter per arg, one per extra `sources` entry,
 then `getInput(i) -> vec3<f32>`, and writes `output[i * 3u + k]`.
 [coordinate provider example](https://github.com/zachcp/molgpu/blob/main/site/src/demos/coordinates.ts)
 is a complete example.

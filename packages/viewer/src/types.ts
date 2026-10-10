@@ -520,9 +520,10 @@ export interface Translucency {
   /** 0–1, multiplied into the colour's alpha. A uniform: changing it (a fade,
    *  a timeline curve) never rebuilds or re-uploads geometry. Defaults to 1. */
   opacity?: number;
-  /** Draw mode override. By default it is 'transparent' whenever the effective
-   *  alpha (colour alpha × opacity) is below 1, else the layer's opaque mode.
-   *  Pair translucent representations with <Pass oit>. */
+  /** Draw mode override. Automatic mode uses flat colour alpha × opacity;
+   *  Fields (including constants) and material alpha require explicit
+   *  'transparent' mode unless opacity is below 1. Pair translucency with
+   *  <Pass oit>. */
   mode?: DrawMode;
 }
 
