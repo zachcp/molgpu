@@ -1,0 +1,75 @@
+{
+  "browser": "154.0.8037.98",
+  "depth": {
+    "current": {
+      "lit": 20431,
+      "meanChannelError": 2.271352356712862,
+      "differentFraction": 0.015221966619352944
+    },
+    "candidate": {
+      "lit": 20431,
+      "meanChannelError": 2.271352356712862,
+      "differentFraction": 0.015221966619352944
+    }
+  },
+  "shadow": {
+    "perspective": {
+      "lit": 155055,
+      "meanChannelError": 0.4089774596111189,
+      "differentFraction": 0.002586179097739512,
+      "ground": {
+        "shadowPixels": 3446,
+        "disagreement": 184
+      }
+    },
+    "ortho": {
+      "lit": 80549,
+      "meanChannelError": 0.7409237441392016,
+      "differentFraction": 0.005164558219220599,
+      "ground": {
+        "shadowPixels": 2770,
+        "disagreement": 139
+      }
+    },
+    "offaxis": {
+      "lit": 153055,
+      "meanChannelError": 0.4521294088181998,
+      "differentFraction": 0.00292705236679625,
+      "ground": {
+        "shadowPixels": 3314,
+        "disagreement": 179
+      }
+    },
+    "near": {
+      "lit": 66095,
+      "meanChannelError": 0.9596338603525538,
+      "differentFraction": 0.006067024737120811,
+      "ground": {
+        "shadowPixels": 3446,
+        "disagreement": 183
+      }
+    },
+    "crossNear": {
+      "current": {
+        "lit": 52543,
+        "meanChannelError": 19.634648446664585,
+        "differentFraction": 0.3519593475819805
+      },
+      "originalNative": {
+        "lit": 52543,
+        "meanChannelError": 20.039034695387915,
+        "differentFraction": 0.35323449365281767
+      }
+    }
+  },
+  "timings": {
+    "current": {
+      "medianMs": 17.00154100000509,
+      "p95Ms": 35.78029100000276
+    },
+    "candidate": {
+      "medianMs": 17.06691700000374,
+      "p95Ms": 22.614291000005323
+    }
+  }
+}

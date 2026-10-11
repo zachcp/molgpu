@@ -1799,6 +1799,7 @@
           "npm:@use-gpu/core@0.20.0",
           "npm:@use-gpu/live@0.20.0",
           "npm:@use-gpu/shader@0.20.0",
+          "npm:@use-gpu/wgsl@0.20.0",
           "npm:@use-gpu/workbench@0.20.0"
         ]
       }

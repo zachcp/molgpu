@@ -21,6 +21,7 @@
     "@use-gpu/live/": "npm:/@use-gpu/live@0.20.0/",
     "@use-gpu/shader": "npm:@use-gpu/shader@0.20.0",
     "@use-gpu/shader/": "npm:/@use-gpu/shader@0.20.0/",
+    "@use-gpu/wgsl/": "npm:/@use-gpu/wgsl@0.20.0/",
     "@use-gpu/workbench": "npm:@use-gpu/workbench@0.20.0",
     "@use-gpu/workbench/": "npm:/@use-gpu/workbench@0.20.0/"
   }

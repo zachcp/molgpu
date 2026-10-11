@@ -13,7 +13,7 @@ scene. It runs in a browser with WebGPU only.
 ## Install
 
 ```sh
-deno add jsr:@molgpu/viewer jsr:@molgpu/table npm:@use-gpu/live@0.20.0 npm:@use-gpu/webgpu@0.20.0 npm:@use-gpu/workbench@0.20.0 npm:@use-gpu/shader@0.20.0 npm:@use-gpu/core@0.20.0
+deno add jsr:@molgpu/viewer jsr:@molgpu/table npm:@use-gpu/live@0.20.0 npm:@use-gpu/webgpu@0.20.0 npm:@use-gpu/workbench@0.20.0 npm:@use-gpu/shader@0.20.0 npm:@use-gpu/core@0.20.0 npm:@use-gpu/wgsl@0.20.0
 ```
 
 ### Dependency resolution
@@ -232,11 +232,14 @@ material defaults (PBR roughness 0.5 unless specified).
 
 ### Shadows
 
-`<Tube shadow>`, `<Bonds shadow>` and `<BallAndStick shadow>` opt into casting
-under a workbench `<Pass lights shadows>` with a shadow-mapped light. The
-default is false. BallAndStick casts stick shadows only; its balls retain their
-default without shadows. Transparent layers do not cast. Keep Spacefill shadow
-casting off: the current billboard sizing is incorrect in the light's view.
+`<Spacefill shadow>`, `<Tube shadow>`, `<Bonds shadow>` and
+`<BallAndStick shadow>` opt into casting under a workbench
+`<Pass lights shadows>` with a shadow-mapped light. The default is false.
+BallAndStick casts stick shadows only; its balls retain their default without
+shadows. Transparent layers do not cast. Spacefill uses pass-local sizing and
+the native ray-traced sphere depth path in the light's view. Camera near-plane
+intersections retain a native proxy-clipping limitation (`molgpu-sept-m0y`);
+keep the near plane in front of the atoms.
 
 ```tsx
 <Structure data={data}>

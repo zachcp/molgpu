@@ -5,6 +5,7 @@ import { AutoCanvas, WebGPU } from "@use-gpu/webgpu";
 import {
   AmbientLight,
   DirectionalLight,
+  Environment,
   FaceLayer,
   NormalMaterial,
   OrbitCamera,
@@ -23,23 +24,50 @@ const probe = globalThis.__sphere = {
   errors: [],
   draws: 0,
   storage: 0,
+  storageWrites: 0,
   objectDraws: 0,
+  pendingPipelines: 0,
+  shadowDraws: 0,
 };
+const storageBuffers = new WeakSet();
 const create = GPUDevice.prototype.createBuffer;
 GPUDevice.prototype.createBuffer = function (desc) {
   if (desc.usage & GPUBufferUsage.STORAGE) probe.storage++;
-  return create.call(this, desc);
+  const buffer = create.call(this, desc);
+  if (desc.usage & GPUBufferUsage.STORAGE) storageBuffers.add(buffer);
+  return buffer;
 };
+const write = GPUQueue.prototype.writeBuffer;
+GPUQueue.prototype.writeBuffer = function (buffer, ...args) {
+  // The 100k molecular columns are 400k/1.6M bytes. Exclude native light
+  // storage, which is legitimately rewritten while shadow views change.
+  if (storageBuffers.has(buffer) && buffer.size >= 400000) {
+    probe.storageWrites++;
+  }
+  return write.call(this, buffer, ...args);
+};
+const pipeline = GPUDevice.prototype.createRenderPipelineAsync;
+GPUDevice.prototype.createRenderPipelineAsync = async function (descriptor) {
+  probe.pendingPipelines++;
+  try {
+    return await pipeline.call(this, descriptor);
+  } finally {
+    probe.pendingPipelines--;
+  }
+};
+const shadowPasses = new WeakSet();
 const colorPasses = new WeakSet();
 const begin = GPUCommandEncoder.prototype.beginRenderPass;
 GPUCommandEncoder.prototype.beginRenderPass = function (descriptor) {
   const pass = begin.call(this, descriptor);
+  if (descriptor.label?.includes("ShadowPass")) shadowPasses.add(pass);
   if (descriptor.label === "ColorPass") colorPasses.add(pass);
   return pass;
 };
 const draw = GPURenderPassEncoder.prototype.draw;
 GPURenderPassEncoder.prototype.draw = function (...args) {
   probe.draws++;
+  if (shadowPasses.has(this)) probe.shadowDraws++;
   if (
     colorPasses.has(this) && (args[0] === 4 || (args[0] === 3 && args[1] > 2))
   ) probe.objectDraws++;
@@ -83,24 +111,26 @@ for (let k = 0; k < centers.length; k++) {
 }
 const column = (data, format, children) =>
   use(RawData, { data, format, children });
-const mesh = column(
-  Float32Array.from(positions),
-  "vec4<f32>",
-  (positions) =>
-    column(
-      Float32Array.from(normals),
-      "vec4<f32>",
-      (normals) =>
-        column(Float32Array.from(meshColors), "vec4<f32>", (colors) =>
-          use(FaceLayer, {
-            positions,
-            normals,
-            colors,
-            shaded: true,
-            side: "both",
-          })),
-    ),
-);
+const mesh = (shadow) =>
+  column(
+    Float32Array.from(positions),
+    "vec4<f32>",
+    (positions) =>
+      column(
+        Float32Array.from(normals),
+        "vec4<f32>",
+        (normals) =>
+          column(Float32Array.from(meshColors), "vec4<f32>", (colors) =>
+            use(FaceLayer, {
+              positions,
+              normals,
+              colors,
+              shaded: true,
+              shadow,
+              side: "both",
+            })),
+      ),
+  );
 const datasets = new Map();
 for (const count of [2, 100000]) {
   const pos = new Float32Array(count * 4), col = new Float32Array(count * 4);
@@ -176,7 +206,7 @@ const ground = column(
   (positions) =>
     use(FaceLayer, {
       positions,
-      normal: [0, 1, 0, 0],
+      normal: [0, -1, 0, 0],
       color: [0.7, 0.7, 0.7, 1],
       shaded: true,
       shadow: false,
@@ -192,15 +222,20 @@ const Scene = () => {
     renderer: params.get("renderer") ?? "current",
     count: Number(params.get("count") ?? 2),
     shadow: params.has("shadow"),
+    cast: !params.has("nocast"),
     normal: !params.has("pbr"),
     ssao: params.has("ssao"),
     bearing: 0,
     roughness: 0.5,
+    environment: params.has("env") ? "park" : "none",
+    dolly: params.has("ortho") ? 0 : 1,
+    near: params.has("crossnear") ? 6.3 : params.has("near") ? 5.5 : 0.001,
+    target: params.has("offaxis") ? [1.5, 0, 0] : [0, 0, 0],
   });
   probe.set = (next) => setState((previous) => ({ ...previous, ...next }));
   const object = state.renderer === "mesh"
-    ? mesh
-    : points(state.renderer, state.count, state.shadow);
+    ? mesh(state.shadow && state.cast)
+    : points(state.renderer, state.count, state.shadow && state.cast);
   const material = state.normal
     ? use(NormalMaterial, { children: object })
     : use(PBRMaterial, { roughness: state.roughness, children: object });
@@ -208,11 +243,14 @@ const Scene = () => {
     radius: state.count === 2 ? 7 : 22,
     bearing: state.bearing,
     pitch: 0.15,
-    target: [0, 0, 0],
+    target: state.target,
+    dolly: state.dolly,
+    near: state.near,
     children: use(Pass, {
       lights: true,
       shadows: state.shadow,
       ssao: state.ssao,
+      outline: params.has("outline") ? { width: 2 } : undefined,
       children: [
         use(AmbientLight, { intensity: 0.3 }),
         use(DirectionalLight, {
@@ -229,7 +267,7 @@ const Scene = () => {
             : undefined,
         }),
         state.shadow ? ground : null,
-        material,
+        use(Environment, { preset: state.environment, children: material }),
       ],
     }),
   });

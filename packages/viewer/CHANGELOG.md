@@ -7,6 +7,11 @@ for the procedure.
 
 ## [Unreleased]
 
+- Correct opt-in Spacefill shadows with pass-local radius conversion and native
+  ray-traced shadow depth. Reuse existing coordinate/radius sources and
+  material, picking and postprocess paths; camera near-plane intersections
+  remain tracked separately as `molgpu-sept-m0y`.
+
 - Organize viewer source around dataset scopes, coordinate/attribute pipelines,
   visual features and named shared mechanics. Public imports and behavior are
   unchanged; add a source reading guide and a visual-import hardening guard.
