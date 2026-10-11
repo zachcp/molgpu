@@ -124,3 +124,27 @@ Run logs were retained locally under `/private/tmp/molgpu-rc2-*.log`. Fresh raw
 retirement evidence is in `/private/tmp/molgpu-rc2-retirement-evidence`; the
 runner overwrites historical October 1 paths, which were restored after saving
 the new outputs. Historical evidence is not silently relabeled as rc.2 evidence.
+
+## Remaining work
+
+Implementation is committed as `03406b0`; `molgpu-sept-erf`, `molgpu-sept-gvq`
+and `molgpu-sept-mik` are closed with validation evidence. The following open,
+unassigned tasks are discovered from `mik`. Each bead contains source entry
+points, implementation steps, scope boundaries and acceptance criteria:
+
+| Bead              | Follow-up                                             | Completion requirement                                                                                                                                               |
+| ----------------- | ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `molgpu-sept-qlv` | Write retirement evidence to distinct run directories | All eleven cases retain provenance and failure diagnostics; repeated runs and standalone children leave historical evidence unchanged.                               |
+| `molgpu-sept-8ej` | Complete remaining rc.2 GPU acceptance                | Run the separate surface, ribbon, materials and postprocess suites on the exact pin; record outcomes and resolve or explicitly track reproduced blockers.            |
+| `molgpu-sept-nw6` | Validate and adopt stable 0.21 when available         | Inspect coherent stable artifacts, prove isolated consumer resolution and runtime compatibility, and remove prerelease configuration only when verified unnecessary. |
+
+The first two tasks can proceed independently; acceptance work must preserve
+historical artifacts until the output-routing fix lands. Stable adoption is
+conditional on actual artifact availability and requires fresh validation of the
+selected release. No stable release availability was checked or assumed when
+creating these tasks.
+
+Existing clipping, shadow and standalone CDN work remains with `icj.3`, `hr8`,
+`m0y` and `zfi`; these tasks do not duplicate or close that work. The successful
+FieldArrows pilot does not justify a blanket representation rewrite or a new
+generic schema framework.
