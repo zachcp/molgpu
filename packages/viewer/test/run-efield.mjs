@@ -498,6 +498,36 @@ Deno.test("electric fields", async () => {
       path: `${out}/efield-arrows.png`,
     });
 
+    // Enable the colour-ramp/transparent shader variants before measuring
+    // uniform-only edits. Enabling a range itself legitimately builds modules.
+    await update({ arrowRange: [0, 2], arrowOpacity: 0.8 });
+    await frames(10);
+    for (
+      const patch of [
+        { arrowWidth: 5 },
+        { arrowColor: [0.6, 0.9, 0.7, 1] },
+        { arrowOpacity: 0.6 },
+        { arrowRange: [0.25, 3] },
+      ]
+    ) {
+      before = await counters();
+      await update(patch);
+      now = await counters();
+      const prop = Object.keys(patch)[0];
+      assert(now.bindingUpdates > before.bindingUpdates, `${prop}: bound`);
+      for (
+        const key of [
+          "uploadBytes",
+          "allocations",
+          "geometryBuilds",
+          "shaderBuilds",
+        ]
+      ) {
+        assertStrictEquals(now[key], before[key], `${prop}: no ${key}`);
+      }
+    }
+    report.states.arrows.uniformEdits = ["width", "color", "opacity", "range"];
+
     // 13. Throughput at the plan's budget case: a 128³ grid (timed after
     //     the settling recomputes, so pipelines are warm). A software
     //     adapter (CI SwiftShader) sets MOLGPU_SKIP_TIMING: ~1e11 pairs there

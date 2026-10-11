@@ -17,11 +17,11 @@ import {
   ComputeBuffer,
   Kernel,
   LineLayer,
-  LoopContext,
   useDeviceContext,
   useShader,
   useShaderRef,
 } from "@use-gpu/workbench";
+import { LoopContext } from "@use-gpu/frame";
 import { loadModuleWithCache, wgsl } from "@use-gpu/shader/wgsl";
 import {
   FIELD_LINES_WORKGROUP as WORKGROUP,

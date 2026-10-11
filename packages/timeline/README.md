@@ -13,9 +13,11 @@ into numbers or fixed-width vectors.
 deno add jsr:@molgpu/timeline
 ```
 
-The only runtime dependency is `@use-gpu/core`, pinned exactly (`0.20.0`) and
-used for its pure easing math behind a private adapter. No use.gpu types appear
-in this package's public API.
+The only runtime dependency is `@use-gpu/math`, pinned exactly (`0.21.0-rc.2`)
+and used for its pure easing math behind a private adapter. This prerelease
+comes from the scoped GitLab registry configured in the root `.npmrc`;
+applications using this branch need the same configuration (see the viewer
+README). No use.gpu types appear in this package's public API.
 
 ## Example
 
@@ -147,4 +149,4 @@ the first model's primary conformers by default; `empty: "null"` on
 
 This package is renderer-free and has no dependency on other `@molgpu/*`
 packages. Its private interpolation adapter uses pure math from the pinned
-`@use-gpu/core`; public values are plain numbers, arrays and immutable curves.
+`@use-gpu/math`; public values are plain numbers, arrays and immutable curves.

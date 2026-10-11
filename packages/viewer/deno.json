@@ -15,13 +15,17 @@
     ]
   },
   "imports": {
-    "@use-gpu/core": "npm:@use-gpu/core@0.20.0",
-    "@use-gpu/core/": "npm:/@use-gpu/core@0.20.0/",
-    "@use-gpu/live": "npm:@use-gpu/live@0.20.0",
-    "@use-gpu/live/": "npm:/@use-gpu/live@0.20.0/",
-    "@use-gpu/shader": "npm:@use-gpu/shader@0.20.0",
-    "@use-gpu/shader/": "npm:/@use-gpu/shader@0.20.0/",
-    "@use-gpu/workbench": "npm:@use-gpu/workbench@0.20.0",
-    "@use-gpu/workbench/": "npm:/@use-gpu/workbench@0.20.0/"
+    "@use-gpu/core": "npm:@use-gpu/core@0.21.0-rc.2",
+    "@use-gpu/core/": "npm:/@use-gpu/core@0.21.0-rc.2/",
+    "@use-gpu/live": "npm:@use-gpu/live@0.21.0-rc.2",
+    "@use-gpu/live/": "npm:/@use-gpu/live@0.21.0-rc.2/",
+    "@use-gpu/shader": "npm:@use-gpu/shader@0.21.0-rc.2",
+    "@use-gpu/shader/": "npm:/@use-gpu/shader@0.21.0-rc.2/",
+    "@use-gpu/workbench": "npm:@use-gpu/workbench@0.21.0-rc.2",
+    "@use-gpu/workbench/": "npm:/@use-gpu/workbench@0.21.0-rc.2/",
+    "@use-gpu/math": "npm:@use-gpu/math@0.21.0-rc.2",
+    "@use-gpu/math/": "npm:/@use-gpu/math@0.21.0-rc.2/",
+    "@use-gpu/frame": "npm:@use-gpu/frame@0.21.0-rc.2",
+    "@use-gpu/frame/": "npm:/@use-gpu/frame@0.21.0-rc.2/"
   }
 }

@@ -37,7 +37,15 @@ const ENTRIES = [
   "@molgpu/dynamics/wgsl",
   "@molgpu/viewer/advanced",
 ];
-const USE_GPU = ["live", "webgpu", "workbench", "core", "shader"];
+const USE_GPU = [
+  "live",
+  "webgpu",
+  "workbench",
+  "core",
+  "shader",
+  "math",
+  "frame",
+];
 const workspaceVersions = await Promise.all(
   PACKAGES.map(async (name) => {
     const config = JSON.parse(
@@ -95,12 +103,16 @@ async function consumer(
     JSON.stringify(
       {
         imports,
+        // rc.2 omits some inter-package dependency declarations. A local
+        // npm tree resolves their installed siblings, as in the workspace.
+        nodeModulesDir: "auto",
         compilerOptions: { lib: ["ES2023", "DOM", "DOM.Iterable", "deno.ns"] },
       },
       null,
       2,
     ),
   );
+  await Deno.copyFile(join(root, ".npmrc"), join(dir, ".npmrc"));
   for (const file of files) {
     await Deno.copyFile(here(file), join(dir, file));
   }
@@ -113,7 +125,7 @@ const molgpu = (version = workspaceVersion) =>
       name,
     ) => [`@molgpu/${name}`, `jsr:@molgpu/${name}@${version}`]),
   );
-const useGpu = (version = "0.20.0") =>
+const useGpu = (version = "0.21.0-rc.2") =>
   Object.fromEntries(
     USE_GPU.map((
       name,
@@ -126,6 +138,7 @@ async function publishCopy(name: string, version: string) {
   const source = join(root, "packages", name);
   const config = JSON.parse(await Deno.readTextFile(join(source, "deno.json")));
   config.version = version;
+  await Deno.copyFile(join(root, ".npmrc"), join(dir, ".npmrc"));
   await Deno.writeTextFile(join(dir, "deno.json"), JSON.stringify(config));
   for (const entry of ["src", "README.md", "LICENSE", "CHANGELOG.md"]) {
     await new Deno.Command("cp", {
@@ -339,15 +352,23 @@ try {
     workspaceRange,
   );
 
-  // A consumer on another use.gpu line than the viewer's exact pin.
-  const otherLive = await consumer({ ...molgpu(), ...useGpu("0.19.0") }, [
+  // GitLab exposes release candidates rather than stable 0.19.0. Probe the
+  // older available line; Math/Frame did not exist then and keep the current pin.
+  const otherLive = await consumer({
+    ...molgpu(),
+    ...useGpu("0.19.0-rc.11"),
+    "@use-gpu/math": "npm:@use-gpu/math@0.21.0-rc.2",
+    "@use-gpu/frame": "npm:@use-gpu/frame@0.21.0-rc.2",
+  }, [
     "scene.tsx",
   ]);
   const otherCheck = await deno(["check", "scene.tsx"], otherLive);
   const otherGraph = await deno(["info", "--json", "scene.tsx"], otherLive);
   const liveVersions = [
     ...new Set(
-      [...otherGraph.stdout.matchAll(/@use-gpu\/live@(\d+\.\d+\.\d+)/g)].map((
+      [...otherGraph.stdout.matchAll(
+        /@use-gpu\/live@(\d+\.\d+\.\d+(?:-[\w.]+)?)/g,
+      )].map((
         m,
       ) => m[1]),
     ),
@@ -356,9 +377,10 @@ try {
     compatible,
     divergent,
     useGpu: {
-      consumer: "0.19.0",
-      viewer: "0.20.0",
+      consumer: "0.19.0-rc.11",
+      viewer: "0.21.0-rc.2",
       liveVersionsInGraph: liveVersions,
+      graphErrors: errors(otherGraph.stderr),
       check: otherCheck.code === 0 ? "pass" : "fail",
       errors: errors(otherCheck.stderr),
     },

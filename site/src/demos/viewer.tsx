@@ -19,10 +19,8 @@ import {
   LinearRGB,
   OrbitCamera,
   Pass,
-  Queue,
-  useMouseState,
-  useWheelState,
 } from "@use-gpu/workbench";
+import { Queue, useMouseState, useWheelState } from "@use-gpu/frame";
 import type { StructureData } from "@molgpu/table";
 import { all } from "@molgpu/select";
 import {

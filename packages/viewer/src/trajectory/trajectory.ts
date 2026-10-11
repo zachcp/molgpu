@@ -14,7 +14,8 @@ import {
   useResource,
   useState,
 } from "@use-gpu/live";
-import { LoopContext, useDeviceContext } from "@use-gpu/workbench";
+import { useDeviceContext } from "@use-gpu/workbench";
+import { LoopContext } from "@use-gpu/frame";
 import { type TrajectoryData, validateTrajectory } from "@molgpu/table";
 import { type Curve, sample } from "@molgpu/timeline";
 import type {
@@ -22,8 +23,8 @@ import type {
   TrajectoryLoader,
   TrajectoryProps,
   TrajectoryStatus,
-  ViewerComponent,
-} from "../types.ts";
+} from "./trajectory-props.ts";
+import type { ViewerComponent } from "../types.ts";
 import { useCoordinates } from "../coordinates/coordinates-context.ts";
 import { TimelineContext } from "../timeline-context.ts";
 import { CoordinateKernel } from "../coordinates/coordinate-kernel.ts";

@@ -2,7 +2,9 @@
 
 Reviewed 2026-10-05 against `origin/main` at `8bf1005`. This is the navigation
 and composition map; package READMEs describe supported APIs, dated findings
-retain decisions and evidence, and Beads track remaining work.
+retain decisions and evidence, and Beads track remaining work. The October 11
+GitLab rc.2 migration is recorded in the
+[implementation notes](findings/2026-10-11-bezbox-implementation.md).
 [DESIGN](DESIGN.md) records intent and [ROADMAP](ROADMAP.md) retains historical
 phase outcomes.
 
@@ -18,7 +20,7 @@ flowchart BT
   select --> table
   fields --> table
   dynamics --> table
-  timeline --> core["use.gpu core: private pinned math adapter"]
+  timeline --> math["use.gpu math: private pinned adapter"]
   viewer --> table
   viewer --> io
   viewer --> select
@@ -38,8 +40,8 @@ Reducing dependency edges should follow removing a responsibility, not copying
 its implementation into callers. Table owns identities, attributes and molecular
 data contracts; select owns query semantics; fields owns field evaluation and
 WGSL generation; dynamics owns scientific kernels; geo owns geometry. Live and
-GPU adaptation stay in viewer. Exact use.gpu `0.20.0` and bundled browser viewer
-execution are the verified dependency contract.
+GPU adaptation stay in viewer. Exact use.gpu `0.21.0-rc.2` and bundled browser
+viewer execution are the verified dependency contract.
 
 ## Dataset scopes and specialized consumers
 

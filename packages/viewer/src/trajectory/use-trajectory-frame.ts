@@ -1,7 +1,7 @@
 import { useContext } from "@use-gpu/live";
 import { StructureContext } from "../structure/structure-context.ts";
 import { TrajectoryContext } from "./trajectory-context.ts";
-import type { TrajectoryFrameState } from "../types.ts";
+import type { TrajectoryFrameState } from "./trajectory-props.ts";
 
 /** What the nearest `<Trajectory>` shows; null outside one. */
 export function useTrajectoryFrame(): TrajectoryFrameState | null {

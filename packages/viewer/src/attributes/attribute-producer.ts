@@ -12,12 +12,8 @@ import {
 } from "@use-gpu/live";
 import type { StorageSource, StorageTarget } from "@use-gpu/core";
 import type { ShaderModule } from "@use-gpu/shader";
-import {
-  Compute,
-  ComputeBuffer,
-  Kernel,
-  LoopContext,
-} from "@use-gpu/workbench";
+import { Compute, ComputeBuffer, Kernel } from "@use-gpu/workbench";
+import { LoopContext } from "@use-gpu/frame";
 import type { AttributeDomain } from "@molgpu/table";
 import { type Attributes, AttributesContext } from "./attributes-context.ts";
 import { useCoordinates } from "../coordinates/coordinates-context.ts";

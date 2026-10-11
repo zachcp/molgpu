@@ -5,6 +5,11 @@ Date: 2026-10-11. Spike: `molgpu-sept-d90`, claimed by Codex. Branch:
 `0fb2734`. Research and executable contract probes only; production source,
 package manifests, API snapshots and the dependency lock remain unchanged.
 
+After this research, the owner authorized GitLab 0.21 adoption. See the
+[implementation and validation notes](2026-10-11-bezbox-implementation.md) for
+the completed follow-ups. The executable probe now follows the branch's rc.2
+pin; the baseline findings below describe the original research commit.
+
 ## Decision
 
 **Adopt the separation of concerns and the small primitive vocabulary. Pilot it

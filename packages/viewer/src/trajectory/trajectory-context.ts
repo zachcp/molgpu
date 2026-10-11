@@ -1,9 +1,9 @@
 import { type LiveContext, makeContext } from "@use-gpu/live";
 import type {
-  StructureResource,
   TrajectoryFrameState,
   TrajectoryStatus,
-} from "../types.ts";
+} from "./trajectory-props.ts";
+import type { StructureResource } from "../types.ts";
 
 /** A nearest trajectory scope belongs to one structure, including while opening. */
 export interface OwnedTrajectoryFrame {

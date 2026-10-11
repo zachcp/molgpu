@@ -12,26 +12,41 @@ scene. It runs in a browser with WebGPU only.
 
 ## Install
 
+This branch uses the GitLab prerelease. Add this project-local `.npmrc`
+configuration before resolving dependencies:
+
+```ini
+@use-gpu:registry=https://gitlab.com/api/v4/projects/27922731/packages/npm/
+```
+
+Set `"nodeModulesDir": "auto"` in the application's `deno.json` as well. The
+rc.2 Frame and Workbench artifacts omit some transitive dependencies from their
+manifests; a local node_modules tree resolves their sibling packages when
+bundling. The isolated-consumer gate exercises this configuration.
+
+Published molgpu versions retain their own dependency pins; the following pin
+applies to this checkout and its next release.
+
 ```sh
-deno add jsr:@molgpu/viewer jsr:@molgpu/table npm:@use-gpu/live@0.20.0 npm:@use-gpu/webgpu@0.20.0 npm:@use-gpu/workbench@0.20.0 npm:@use-gpu/shader@0.20.0 npm:@use-gpu/core@0.20.0
+deno add jsr:@molgpu/viewer jsr:@molgpu/table npm:@use-gpu/live@0.21.0-rc.2 npm:@use-gpu/webgpu@0.21.0-rc.2 npm:@use-gpu/workbench@0.21.0-rc.2 npm:@use-gpu/shader@0.21.0-rc.2 npm:@use-gpu/core@0.21.0-rc.2 npm:@use-gpu/frame@0.21.0-rc.2
 ```
 
 ### Dependency resolution
 
-The use.gpu packages are exact npm dependencies, all `0.20.0`. Match that
+The use.gpu packages are exact npm dependencies, all `0.21.0-rc.2`. Match that
 version in the application, including `@use-gpu/webgpu` for
 `<WebGPU>`/`<AutoCanvas>` and `@use-gpu/glyph` for `<Label>` or `<Distance>`.
-Multiple Live copies do not share contexts and can cause type or runtime
-failures.
+Resolve one copy of Live and Frame. Multiple Live copies do not share contexts
+and can cause type or runtime failures.
 
 Keep all `@molgpu/*` packages on compatible versions so the application resolves
 one shared `@molgpu/table`; see
 [one shared table copy](https://jsr.io/@molgpu/table#one-shared-table-copy).
 
 Bundle the viewer for the browser (for example, with Vite or `deno bundle`).
-Direct execution under Deno cannot link the pinned workbench's CommonJS entry:
-its re-exports do not expose `LoopContext` to Deno. Bundlers resolve the ESM
-`module` entry. Public entries still type-check under Deno.
+Direct execution under Deno cannot reliably link upstream CommonJS re-exports.
+Bundlers resolve the ESM `module` entry. Public entries still type-check under
+Deno.
 
 ## Example
 
@@ -301,6 +316,7 @@ may change in 0.x minor releases; _advanced_ — only from
 | `EFieldProps`             | experimental | `<EField>` props: selection, charge column, dielectric model, optional cutoff, grid and budgets.                                                                                                                        |
 | `FieldLines`              | experimental | RK4 streamlines of E = −∇φ through the nearest volume, integrated on the GPU per volume generation.                                                                                                                     |
 | `FieldArrows`             | experimental | E = −∇φ arrows on a lattice in a slice plane; moving the plane is a uniform write.                                                                                                                                      |
+| `FieldArrowsProps`        | experimental | Named options for FieldArrows, including plane, lattice spacing, strength scaling and style.                                                                                                                            |
 | `Trajectory`              | experimental | Coordinate provider that plays a `TrajectoryData` (`data`) or a DCD/XTC/TRR URL (`src`) over the nearest coordinates; `frame` is a number or timeline curve; `interpolate`, `pbc="minimum-image"`.                      |
 | `Transform`               | experimental | Coordinate provider applying a column-major 4×4 affine matrix (or vector curve) to all atoms or `select` rows. Other rows pass through.                                                                                 |
 | `TransformProps`          | experimental | Matrix, optional atom selection, and children for `<Transform>`.                                                                                                                                                        |
@@ -646,6 +662,11 @@ through snapshots. Attribute producers overlay values without replacing
 topology. EField consumes molecular coordinates/charges and publishes the same
 volume contract as loaded Volume; its descendants read the nearest volume.
 Timeline time remains independent of these dataset scopes.
+
+Caller contracts live in `trajectory/trajectory-props.ts` and
+`volume/volume-props.ts`, with unchanged exports from the public entry.
+FieldArrows keeps its props/defaults and WGSL builders beside its Live component
+in `field-arrows-options.ts` and `field-arrows-shaders.ts`.
 
 For trajectory changes, start with `trajectory/trajectory.ts` (source opening,
 orchestration and metadata), then `trajectory-player.ts` (GPU ownership and

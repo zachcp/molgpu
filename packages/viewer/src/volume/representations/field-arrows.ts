@@ -10,88 +10,26 @@ import {
   useShaderRef,
 } from "@use-gpu/workbench";
 import { loadModuleWithCache } from "@use-gpu/shader/wgsl";
-import { sampleVolumeGradientWgsl } from "@molgpu/fields";
-import type { VolumeGrid } from "@molgpu/table";
-import type { Translucency, VectorLike, ViewerComponent } from "../../types.ts";
+import type { ViewerComponent } from "../../types.ts";
 import { useVolume } from "../volume-context.ts";
-import { checkOpacity, modeProps } from "../../rendering/opacity.ts";
-import { type SlicePlane, slicePlaneFrame } from "./slice-plane.ts";
+import { modeProps } from "../../rendering/opacity.ts";
+import { slicePlaneFrame } from "./slice-plane.ts";
 import { count } from "../../internal/instrumentation.ts";
 import { useRepaint } from "../../internal/use-repaint.ts";
 import { useBindingProbe } from "../../internal/use-binding-probe.ts";
 
-import type { SliceStops } from "./volume-slice.ts";
-import { colorRampWgsl, wgslF32 as f32 } from "./color-ramp.ts";
+import {
+  type FieldArrowsProps,
+  normalizeFieldArrowsOptions,
+} from "./field-arrows-options.ts";
+import {
+  colorsWgsl,
+  positionsWgsl,
+  widthsWgsl,
+} from "./field-arrows-shaders.ts";
 
-const DEFAULT_STOPS: SliceStops = [
-  [0, [0.25, 0.35, 1, 1]],
-  [1, [1, 0.85, 0.2, 1]],
-];
-
-/** Shared prelude: lattice placement and the field at an arrow's tail. */
-function prelude(grid: VolumeGrid, side: number): string {
-  return `@link fn getVolumeValue(i: u32) -> f32;
-@link fn getCenter() -> vec3<f32>;
-@link fn getAxisU() -> vec3<f32>;
-@link fn getAxisV() -> vec3<f32>;
-@link fn getStyle() -> vec4<f32>;
-${sampleVolumeGradientWgsl(grid, "arrowGrad", "getVolumeValue")}
-fn arrowTail(a: u32) -> vec3<f32> {
-  let n = ${side}u;
-  let s = -1.0 + (f32(a % n) + 0.5) * ${f32(2 / side)};
-  let t = -1.0 + (f32(a / n) + 0.5) * ${f32(2 / side)};
-  return getCenter() + s * getAxisU() + t * getAxisV();
-}
-fn arrowField(a: u32) -> vec3<f32> { return -arrowGrad(arrowTail(a)); }
-// style = (scale Å per unit |E|, maxLength Å, minField, width px)
-fn arrowShown(e: vec3<f32>) -> bool { return length(e) >= getStyle().z; }
-`;
-}
-
-/** Endpoint WGSL (exported for the harness, not public API). */
-export function positionsWgsl(grid: VolumeGrid, side: number): string {
-  return `${prelude(grid, side)}
-@export fn getArrowPosition(k: u32) -> vec4<f32> {
-  let a = k / 2u;
-  let p = arrowTail(a);
-  if ((k & 1u) == 0u) { return vec4<f32>(p, 1.0); }
-  let e = arrowField(a);
-  let m = length(e);
-  let len = min(m * getStyle().x, getStyle().y);
-  return vec4<f32>(p + select(vec3<f32>(0.0), e / m * len, m > 0.0), 1.0);
-}
-`;
-}
-
-function widthsWgsl(grid: VolumeGrid, side: number): string {
-  return `${prelude(grid, side)}
-@export fn getArrowWidth(k: u32) -> f32 {
-  return select(0.0, getStyle().w, arrowShown(arrowField(k / 2u)));
-}
-`;
-}
-
-function colorsWgsl(
-  grid: VolumeGrid,
-  side: number,
-  stops: SliceStops | null,
-): string {
-  const ramp = colorRampWgsl(stops);
-  return `${prelude(grid, side)}
-@link fn getRange() -> vec2<f32>;
-@link fn getTint() -> vec4<f32>;
-fn arrowRamp(x: f32) -> vec4<f32> {
-${ramp}
-}
-@export fn getArrowColor(k: u32) -> vec4<f32> {
-  let e = arrowField(k / 2u);
-  if (!arrowShown(e)) { return vec4<f32>(0.0); }
-  let range = getRange();
-  let x = clamp((length(e) - range.x) / (range.y - range.x), 0.0, 1.0);
-  return arrowRamp(x) * getTint();
-}
-`;
-}
+// Kept for the endpoint readback harness; not a public package entry.
+export { positionsWgsl } from "./field-arrows-shaders.ts";
 
 /**
  * Arrows of the electric field E = −∇φ of the nearest `<EField>` (or scalar
@@ -105,56 +43,25 @@ ${ramp}
  * Moving the plane, `scale`, `maxLength`, `minField`, `width`, `color`,
  * `colorRange` and `opacity` are uniform writes: nothing is uploaded or
  * computed. The endpoints follow the live samples, so arrows update with
- * every volume generation. `spacing` and `stops` rebuild shaders.
+ * every volume generation. Changing lattice size, colour stops, or whether
+ * `colorRange` is present rebuilds shaders.
  */
-export const FieldArrows: ViewerComponent<
-  {
-    plane?: SlicePlane;
-    spacing?: number;
-    scale?: number;
-    maxLength?: number;
-    minField?: number;
-    color?: VectorLike;
-    colorRange?: readonly [number, number];
-    stops?: SliceStops;
-    /** Line width in pixels; default 3. */
-    width?: number;
-  } & Translucency
-> = (
-  {
-    plane,
-    spacing = 2,
-    scale = 1,
-    maxLength,
-    minField = 1e-3,
-    color = [1, 1, 1, 1],
-    colorRange,
-    stops = DEFAULT_STOPS,
-    width = 3,
-    opacity = 1,
-    mode,
-  },
-) => {
+export const FieldArrows: ViewerComponent<FieldArrowsProps> = (props) => {
   useRepaint();
+  const {
+    plane,
+    spacing,
+    scale,
+    maxLength: cap,
+    minField,
+    color,
+    colorRange,
+    stops,
+    width,
+    opacity,
+    mode,
+  } = normalizeFieldArrowsOptions(props);
   useBindingProbe("fieldArrows", color, opacity, width, scale, colorRange);
-  checkOpacity(opacity, "FieldArrows");
-  const cap = maxLength ?? 0.9 * spacing;
-  for (
-    const [name, value] of [
-      ["spacing", spacing],
-      ["scale", scale],
-      ["maxLength", cap],
-      ["minField", minField],
-      ["width", width],
-    ] as const
-  ) {
-    if (!Number.isFinite(value) || value <= 0) {
-      throw new TypeError(`FieldArrows ${name} must be positive and finite`);
-    }
-  }
-  if (colorRange && !(colorRange[1] > colorRange[0])) {
-    throw new TypeError("FieldArrows colorRange must be [lo, hi] with lo < hi");
-  }
   const { grid, source } = useVolume();
   const frame = slicePlaneFrame(
     grid,

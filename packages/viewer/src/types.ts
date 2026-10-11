@@ -1,7 +1,7 @@
 // The viewer boundary uses the pinned native LiveElement for scene composition.
 // Molecular values stay owned; shader/context APIs live in the advanced entry.
 import type { LiveElement } from "@use-gpu/live";
-import type { StructureData, TrajectoryData, VolumeData } from "@molgpu/table";
+import type { StructureData } from "@molgpu/table";
 import type { Curve } from "@molgpu/timeline";
 import type {
   DielectricModel,
@@ -197,67 +197,6 @@ export type StructureProps =
     error?: ViewerElement | ((failure: unknown) => ViewerElement);
   };
 
-/** Open with a request signal; replacement/unmount aborts it and suppresses stale results. */
-export type TrajectoryLoader = (
-  src: string,
-  cancelled: () => boolean,
-  signal?: AbortSignal,
-) => TrajectoryData | null | Promise<TrajectoryData | null>;
-
-/**
- * Source and frame state of one `<Trajectory>`. On `error`, upstream
- * coordinates pass through until the source changes; `phase` says whether
- * opening the source or reading `frame` failed.
- */
-export type TrajectoryStatus =
-  | { readonly status: "opening" }
-  | { readonly status: "ready"; readonly frameCount: number }
-  | {
-    readonly status: "error";
-    readonly phase: "source" | "frame";
-    /** The frame that failed to load, or null for a source failure. */
-    readonly frame: number | null;
-    readonly error: unknown;
-  };
-
-/**
- * `<Trajectory>` props: playback (`frame`, `interpolate`, `pbc`) plus exactly
- * one of `data` (opened already, e.g. with `openTrajectory` from @molgpu/io) or
- * `src` (a DCD/XTC/TRR URL streamed through @molgpu/io).
- */
-export type TrajectoryProps =
-  & {
-    children?: ViewerElement;
-    /**
-     * Fractional frame index, or a curve from timeline seconds to frames (see
-     * `frameCurve` in @molgpu/timeline). Clamped to `[0, frameCount - 1]`.
-     */
-    frame: number | Curve<number>;
-    /** `"linear"` (default) blends neighbouring frames; `"nearest"` rounds. */
-    interpolate?: "linear" | "nearest";
-    /**
-     * `"minimum-image"` interpolates each atom along the shortest periodic
-     * displacement when both frames carry a box, so atoms that wrap do not
-     * cross the box on screen. Default `"none"`.
-     */
-    pbc?: "none" | "minimum-image";
-    /**
-     * Source and frame state. Failures pass upstream coordinates through and
-     * are reported here instead of thrown; without a callback each failure is
-     * logged once with `console.error`.
-     */
-    onStatus?: (status: TrajectoryStatus) => void;
-  }
-  & (
-    | { data: TrajectoryData; src?: undefined; loader?: undefined }
-    | {
-      src: string;
-      data?: undefined;
-      /** Defaults to `openTrajectory(src)` (HTTP Range reads). Pass a stable function. */
-      loader?: TrajectoryLoader;
-    }
-  );
-
 /** Apply a column-major 4x4 affine to all atoms or an atom selection. */
 export interface TransformProps extends SelectionDiagnostics {
   children?: ViewerElement;
@@ -406,26 +345,6 @@ export interface ElasticNetworkStatus {
   readonly lastStep: number | null;
 }
 
-/** What the nearest `<Trajectory>` shows, from `useTrajectoryFrame()`. */
-export interface TrajectoryFrameState {
-  readonly trajectory: TrajectoryData;
-  /** The clamped frame asked for (after sampling a curve). */
-  readonly requested: number;
-  /**
-   * Frames on screen, `a + t (b - a)`. It trails `requested` while frames
-   * load, and is null before the first frame lands (upstream coordinates show).
-   */
-  readonly displayed: {
-    readonly a: number;
-    readonly b: number;
-    readonly t: number;
-  } | null;
-  /** `a + t (b - a)` of `displayed`, or null. */
-  readonly frame: number | null;
-  /** Interpolated column-major box of the displayed frames, if both have one. */
-  readonly box: Float32Array | null;
-}
-
 /**
  * `<EField>` props. Physics defaults follow `electrostatics()` in
  * `@molgpu/dynamics`: ε = 4r, 1 Å distance clamp, output in kT/e at 298.15 K.
@@ -481,36 +400,6 @@ export interface EFieldProps extends SelectionDiagnostics {
   /** Cap recomputation per second; default: every coordinate generation. */
   maxHz?: number;
 }
-
-/** Load with a request signal; replacement/unmount aborts it and suppresses stale results. */
-export type VolumeLoader = (
-  src: string,
-  cancelled: () => boolean,
-  signal?: AbortSignal,
-) => VolumeData | null | Promise<VolumeData | null>;
-
-/**
- * `<Volume>` props: exactly one of `data` (a preloaded `VolumeData`) or `src`
- * (loaded with `loader`, by default fetch + CCP4/MRC through @molgpu/io).
- */
-export type VolumeProps =
-  | {
-    children?: ViewerElement;
-    data: VolumeData;
-    src?: undefined;
-    loader?: undefined;
-    loading?: undefined;
-    error?: undefined;
-  }
-  | {
-    children?: ViewerElement;
-    src: string;
-    data?: undefined;
-    /** Its identity is a reload dependency alongside `src`. */
-    loader?: VolumeLoader;
-    loading?: ViewerElement | (() => ViewerElement);
-    error?: ViewerElement | ((failure: unknown) => ViewerElement);
-  };
 
 /** How a representation's layer draws: opaque (writes depth, hides what is
  *  behind) or transparent (blended after opaques; exact under <Pass oit>). */

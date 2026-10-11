@@ -224,6 +224,10 @@ interface State {
   planeIndex: number;
   lineRange: [number, number];
   arrowScale: number;
+  arrowWidth: number;
+  arrowColor: [number, number, number, number];
+  arrowOpacity: number;
+  arrowRange?: [number, number];
   sampleOffset: number;
   chain: string;
   perfAtoms: number;
@@ -797,6 +801,10 @@ const Scene = ({ state }: { state: State }): LiveElement => {
               plane={{ axis: 2, index: state.planeIndex }}
               spacing={2}
               scale={state.arrowScale}
+              width={state.arrowWidth}
+              color={state.arrowColor}
+              opacity={state.arrowOpacity}
+              colorRange={state.arrowRange}
             />
           </EField>
         </Structure>
@@ -814,6 +822,9 @@ const App = (): LiveElement => {
     planeIndex: 12,
     lineRange: [0, 2],
     arrowScale: 1,
+    arrowWidth: 3,
+    arrowColor: [1, 1, 1, 1],
+    arrowOpacity: 1,
     sampleOffset: 1.4,
     chain: "A",
     perfAtoms: 5000,

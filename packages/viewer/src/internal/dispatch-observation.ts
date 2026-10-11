@@ -8,7 +8,7 @@ import {
 
 /**
  * Observe one native Kernel's encoded revision, retaining its initial guard.
- * Pinned use.gpu 0.20.0 yields no compute call until its pipeline is ready and
+ * Pinned use.gpu 0.21.0-rc.2 yields no compute call until its pipeline is ready and
  * exposes no submitted-generation callback. Its count callback distinguishes
  * an encoded dispatch from a suppressed call. ComputePass submits synchronously
  * after the wrapper returns; the microtask publishes after that submission,
@@ -29,16 +29,25 @@ export function useDispatchObservation(
   return (kernel, onEncoded) =>
     gather(
       kernel,
-      (calls: { compute?: (...args: unknown[]) => unknown }[]) => {
-        const call = calls.find((item) => item?.compute);
-        return call?.compute
+      (calls: {
+        computePre?: (...args: unknown[]) => unknown;
+        computePost?: (...args: unknown[]) => unknown;
+      }[]) => {
+        // Native dispatch records carry their compute phase. Preserve it so
+        // Compute/ComputePass retain the kernel's ordering around draw work.
+        const call = calls.find((item) =>
+          item?.computePre || item?.computePost
+        );
+        const phase = call?.computePre ? "computePre" : "computePost";
+        const compute = call?.[phase];
+        return compute
           ? yeet({
-            compute: (
+            [phase]: (
               pass: unknown,
               countDispatch: (...args: number[]) => void,
             ) => {
               let encoded = false;
-              const result = call.compute!(pass, (...counts: number[]) => {
+              const result = compute(pass, (...counts: number[]) => {
                 encoded = true;
                 countDispatch(...counts);
               });

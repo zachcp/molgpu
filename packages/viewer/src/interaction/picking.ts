@@ -15,11 +15,8 @@ import {
   useResource,
   useState,
 } from "@use-gpu/live";
-import {
-  useMouseState,
-  usePickingContext,
-  usePickingId,
-} from "@use-gpu/workbench";
+import { usePickingContext } from "@use-gpu/workbench";
+import { useMouseState, usePickingId } from "@use-gpu/frame";
 import { type PickEntry, resolvePick } from "./pick-resolve.ts";
 
 import { InstanceContext } from "../rendering/instance-context.ts";

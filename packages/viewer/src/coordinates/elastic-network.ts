@@ -24,7 +24,8 @@ import {
 } from "@use-gpu/live";
 import type { StorageSource } from "@use-gpu/core";
 import { wgsl } from "@use-gpu/shader/wgsl";
-import { LoopContext, useDeviceContext } from "@use-gpu/workbench";
+import { useDeviceContext } from "@use-gpu/workbench";
+import { LoopContext } from "@use-gpu/frame";
 import { type LangevinParams, langevinParams } from "@molgpu/dynamics";
 import {
   elasticDisplacementWgsl,
