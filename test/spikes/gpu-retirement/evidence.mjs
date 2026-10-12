@@ -138,24 +138,54 @@ export async function createEvidence(scenario, args = Deno.args) {
   };
 }
 
+async function persist(stream, file) {
+  try {
+    for await (const chunk of stream) {
+      let offset = 0;
+      while (offset < chunk.length) {
+        offset += await file.write(chunk.subarray(offset));
+      }
+    }
+  } finally {
+    file.close();
+  }
+}
+
 export async function runChild(directory, id, command) {
   // Reserve logs before launch; repeated explicit destinations cannot overwrite.
   const stdoutPath = join(directory, `${id}.stdout.log`);
   const stderrPath = join(directory, `${id}.stderr.log`);
   await Deno.mkdir(dirname(stdoutPath), { recursive: true });
-  await Deno.writeTextFile(stdoutPath, "", { createNew: true });
-  await Deno.writeTextFile(stderrPath, "", { createNew: true });
-  const output = await command.output();
-  await Deno.writeFile(stdoutPath, output.stdout);
-  await Deno.writeFile(stderrPath, output.stderr);
-  if (output.stdout.length) {
-    console.log(new TextDecoder().decode(output.stdout));
+  const stdout = await Deno.open(stdoutPath, { write: true, createNew: true });
+  let stderr;
+  let child;
+  try {
+    stderr = await Deno.open(stderrPath, { write: true, createNew: true });
+    child = command.spawn();
+  } catch (error) {
+    stdout.close();
+    stderr?.close();
+    throw error;
+  }
+  // Drain both pipes into files while the child runs. An external timeout can
+  // kill this process before status resolves; diagnostics must already be saved.
+  const results = await Promise.allSettled([
+    child.status,
+    persist(child.stdout, stdout),
+    persist(child.stderr, stderr),
+  ]);
+  for (const result of results) {
+    if (result.status === "rejected") throw result.reason;
+  }
+  const output = results[0].value;
+  const trace = await Deno.readTextFile(stdoutPath);
+  if (trace.length) {
+    console.log(trace);
   }
   if (!output.success) {
+    const diagnostics = await Deno.readTextFile(stderrPath);
     throw new Error(
-      `${id} failed (exit ${output.code}); diagnostics: ${stderrPath}\n${
-        new TextDecoder().decode(output.stderr)
-      }`,
+      `${id} failed (exit ${output.code}); diagnostics: ${stderrPath}\n${diagnostics}`,
     );
   }
 }

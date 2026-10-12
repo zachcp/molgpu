@@ -182,7 +182,8 @@ Choose a new destination for each explicit run.
 Each scenario JSON records UTC time, source commit/dirty state, installed exact
 use.gpu versions, options, browser/adapter metadata when available, the original
 report and pass/fail outcome. Missing metadata is marked unavailable. The
-wrapper retains stdout/stderr logs even when a child fails and propagates its
+wrapper writes stdout/stderr chunks directly to log files while each child runs,
+so emitted diagnostics survive an external timeout, and propagates child
 failure. CI uploads the retirement group's directory on success or failure.
 These files are fresh acceptance evidence; exporting them into dated findings is
 a separate deliberate action. Default execution never rewrites historical

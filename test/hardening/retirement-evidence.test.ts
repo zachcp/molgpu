@@ -46,6 +46,61 @@ Deno.test("retirement artifacts use fresh destinations and refuse collisions", a
   }
 });
 
+Deno.test("retirement diagnostics reach files before a hung child is terminated", async () => {
+  const directory = await Deno.makeTempDir();
+  const pidPath = join(directory, "child.pid");
+  let pid: number | undefined;
+  const running = runChild(
+    directory,
+    "hung",
+    new Deno.Command(Deno.execPath(), {
+      args: [
+        "eval",
+        `await Deno.writeTextFile(${JSON.stringify(pidPath)}, String(Deno.pid));
+console.log("before timeout"); console.error("held resource diagnostic");
+setInterval(() => {}, 1000);`,
+      ],
+      stdout: "piped",
+      stderr: "piped",
+    }),
+  );
+  // Attach a rejection handler immediately; termination is expected below.
+  const settled = running.catch((error) => error);
+  try {
+    const deadline = Date.now() + 5000;
+    let retained = false;
+    while (Date.now() < deadline) {
+      try {
+        pid = Number(await Deno.readTextFile(pidPath));
+        retained =
+          await Deno.readTextFile(join(directory, "hung.stdout.log")) ===
+            "before timeout\n" &&
+          await Deno.readTextFile(join(directory, "hung.stderr.log")) ===
+            "held resource diagnostic\n";
+        if (retained) break;
+      } catch (error) {
+        if (!(error instanceof Deno.errors.NotFound)) throw error;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    assert(retained, "both streams must be persisted while the child is alive");
+  } finally {
+    // Also clean up on a regression, when the buffered implementation times out.
+    if (pid === undefined) {
+      try {
+        pid = Number(await Deno.readTextFile(pidPath));
+      } catch {
+        // No child was launched.
+      }
+    }
+    if (pid !== undefined) Deno.kill(pid, "SIGTERM");
+    const error = await settled;
+    await Deno.remove(directory, { recursive: true });
+    assert(error instanceof Error);
+    assert(error.message.includes("hung failed (exit"));
+  }
+});
+
 Deno.test("retirement failures retain reports and child diagnostics and propagate", async () => {
   const directory = await Deno.makeTempDir();
   try {
@@ -75,6 +130,8 @@ Deno.test("retirement failures retain reports and child diagnostics and propagat
               "eval",
               'console.log("trace"); console.error("assertion failed"); Deno.exit(7);',
             ],
+            stdout: "piped",
+            stderr: "piped",
           }),
         ),
       Error,

@@ -89,3 +89,27 @@ are `/private/tmp/molgpu-qlv-evidence-before.sha256` and
 status contains only the intended harness, CI, documentation and focused-test
 changes plus the previously present report edit and `.claude/`. Historical
 evidence was not modified. No publication or deployment was performed.
+
+## PR #93 timeout diagnostics correction (2026-10-12)
+
+The independent counter-review reproduced a gap: `command.output()` kept child
+diagnostics in memory until exit, so the CI script's external 15-minute timeout
+could leave reserved log files empty. `runChild` now spawns children with piped
+streams and writes each received chunk directly to the corresponding file,
+handling partial writes and closing both files after their streams finish. The
+wrapper explicitly requests piped stdout/stderr. Child failures still fail the
+wrapper, and explicit destinations still refuse collisions.
+
+The regression launches a child that emits both streams and then remains alive.
+It checks both files before terminating the child, then checks failure
+propagation. The first attempt using `FsFile.writable` also failed that test
+because its buffering delayed small writes; direct `FsFile.write` passed. All
+three focused tests and scoped formatting/lint passed. The complete retirement
+wrapper passed all eleven children in 2m19s; the fresh directory
+`/var/folders/5m/nnqc8qr11hbglqw0j763vtv80000gn/T/molgpu-retirement-4da931c8d84a660e`
+contains eleven passed JSON records and twenty-two logs. The run log is
+`/private/tmp/molgpu-pr93-streaming-retirement.log`.
+
+Hosted CI for the preceding PR head (`d6b7655`) passed CPU, build and all five
+WebGPU groups, including retirement. The streaming correction requires a new CI
+run; the earlier hosted pass does not validate this correction.

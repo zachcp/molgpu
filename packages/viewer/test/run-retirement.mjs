@@ -39,6 +39,8 @@ Deno.test("GPU retirement across held draws, compute, maps and memory churn", as
       id,
       new Deno.Command(Deno.execPath(), {
         args: ["run", "-A", spike(name), ...args, `--output-dir=${directory}`],
+        stdout: "piped",
+        stderr: "piped",
       }),
     );
   }
