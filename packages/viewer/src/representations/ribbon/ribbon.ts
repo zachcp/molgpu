@@ -92,30 +92,10 @@ function useStableProjection(
  * bindings.
  */
 const RibbonResolved: ViewerComponent<
-  {
-    /** A molecular query or exact atom selection. Defaults to first-model/primary-altloc atoms. */
+  Omit<RibbonProps, "select" | keyof SelectionDiagnostics> & {
     select?: Selection | null;
-    /** Samples per guide segment; defaults to 8. */
-    smooth?: number;
-    /**
-     * A flat colour or a numeric colour Field such as `byChain()`,
-     * `bySecondaryStructure()` or a B-factor ramp. Each vertex reads its
-     * residue's guide atom (CA or nucleic trace atom); recolouring rebuilds
-     * no geometry.
-     */
-    color?: VectorLike | Field;
-    /** Wraps the shaded ribbon layer; without one, the ambient scene material. */
-    material?: MaterialSpec;
-    /**
-     * `"model"` (default) draws the structure's `ssCode`. `"dssp"` runs DSSP
-     * on each coordinate snapshot the ribbon draws, over the primary-altloc
-     * atoms of every model the drawn atoms belong to, so codes always come
-     * from the displayed coordinates of the displayed models.
-     */
-    secondaryStructure?: "model" | "dssp";
-    /** `"cartoon"` adds nucleotide rings and polymer-gap dashes to the trace. */
     composition?: "trace" | "cartoon";
-  } & Translucency
+  }
 > = (
   {
     select,

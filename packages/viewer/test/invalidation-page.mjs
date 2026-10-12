@@ -37,6 +37,7 @@ import { Bonds } from "../src/representations/bonds/bonds.ts";
 import { BallAndStick } from "../src/representations/ball-and-stick.ts";
 import { Tube } from "../src/representations/tube.ts";
 import { Cartoon, Ribbon } from "../src/representations/ribbon/ribbon.ts";
+import { Ramachandran } from "../src/representations/ramachandran.ts";
 import { Surface } from "../src/representations/surface/surface.ts";
 import { Distance, Label } from "../src/representations/annotations.ts";
 import { TimelineProvider } from "../src/timeline-context.ts";
@@ -216,6 +217,7 @@ const KINDS = {
   ribbon: Ribbon,
   cartoon: Cartoon,
   surface: Surface,
+  ramachandran: Ramachandran,
   label: Label,
   distance: Distance,
 };

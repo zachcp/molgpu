@@ -22,17 +22,17 @@ import {
   useShaderRef,
 } from "@use-gpu/workbench";
 import { LoopContext } from "@use-gpu/frame";
-import { loadModuleWithCache, wgsl } from "@use-gpu/shader/wgsl";
+import { loadModuleWithCache } from "@use-gpu/shader/wgsl";
 import {
   FIELD_LINES_WORKGROUP as WORKGROUP,
   fieldLinesWgsl,
   latticeSeeds,
   lineSegments,
 } from "./field-line-geometry.ts";
-import type { Translucency, VectorLike, ViewerComponent } from "../../types.ts";
+import type { ColorStops, Translucency, ViewerComponent } from "../../types.ts";
 import { useVolume } from "../volume-context.ts";
 import { withColumns } from "../../rendering/representation.ts";
-import { checkOpacity, modeProps } from "../../rendering/opacity.ts";
+import { modeProps } from "../../rendering/opacity.ts";
 import {
   count,
   releaseOwnedBuffer,
@@ -41,8 +41,15 @@ import {
 import { useRepaint } from "../../internal/use-repaint.ts";
 import { useBindingProbe } from "../../internal/use-binding-probe.ts";
 
-import type { SliceStops } from "./volume-slice.ts";
-import { colorRampWgsl } from "./color-ramp.ts";
+import {
+  type FieldLinesProps,
+  normalizeFieldLinesOptions,
+} from "./field-lines-options.ts";
+import {
+  rampWgsl,
+  VERTEX_POSITIONS,
+  VERTEX_WIDTHS,
+} from "./field-lines-shaders.ts";
 
 const STORAGE = 0x0080;
 const COPY_DST = 0x0008;
@@ -53,43 +60,6 @@ const MAX_INVOCATIONS = 65535 * WORKGROUP;
 export const fieldLinesTesting: {
   last: { buffer: GPUBuffer; vertices: number; generation: number } | null;
 } = { last: null };
-
-const DEFAULT_STOPS: SliceStops = [
-  [0, [0.25, 0.35, 1, 1]],
-  [1, [1, 0.85, 0.2, 1]],
-];
-
-const VERTEX_POSITIONS = wgsl`
-@link fn getVertex(i: u32) -> vec4<f32>;
-@export fn getLinePosition(i: u32) -> vec4<f32> {
-  return vec4<f32>(getVertex(i).xyz, 1.0);
-}
-`;
-const VERTEX_WIDTHS = wgsl`
-@link fn getVertex(i: u32) -> vec4<f32>;
-@link fn getWidth() -> f32;
-@export fn getLineWidth(i: u32) -> f32 {
-  return select(0.0, getWidth(), getVertex(i).w >= 0.0);
-}
-`;
-/** Colour by |E| through the ramp, or flat; stopped vertices are clear. */
-function rampWgsl(stops: SliceStops | null): string {
-  const ramp = colorRampWgsl(stops);
-  return `@link fn getVertex(i: u32) -> vec4<f32>;
-@link fn getRange() -> vec2<f32>;
-@link fn getTint() -> vec4<f32>;
-fn lineRamp(x: f32) -> vec4<f32> {
-${ramp}
-}
-@export fn getLineColor(i: u32) -> vec4<f32> {
-  let w = getVertex(i).w;
-  if (w < 0.0) { return vec4<f32>(0.0); }
-  let range = getRange();
-  let x = clamp((w - range.x) / (range.y - range.x), 0.0, 1.0);
-  return lineRamp(x) * getTint();
-}
-`;
-}
 
 /**
  * Streamlines of the electric field E = −∇φ of the nearest `<EField>` (or any
@@ -110,60 +80,23 @@ ${ramp}
  * `stops` recompiles a shader; none re-integrates. Seeds, steps, step and
  * the grid rebuild the pass.
  */
-export const FieldLines: ViewerComponent<
-  {
-    seeds?: Float32Array | { readonly spacing?: number };
-    maxLines?: number;
-    step?: number;
-    steps?: number;
-    minField?: number;
-    maxPotential?: number;
-    color?: VectorLike;
-    colorRange?: readonly [number, number];
-    stops?: SliceStops;
-    /** Line width in pixels; default 2. */
-    width?: number;
-  } & Translucency
-> = (
-  {
-    seeds = { spacing: 4 },
-    maxLines = 4096,
-    step = 0.25,
-    steps = 128,
-    minField = 0.05,
+export const FieldLines: ViewerComponent<FieldLinesProps> = (props) => {
+  const {
+    seeds,
+    maxLines,
+    step,
+    steps,
+    minField,
     maxPotential,
-    color = [1, 1, 1, 1],
+    color,
     colorRange,
-    stops = DEFAULT_STOPS,
-    width = 2,
-    opacity = 1,
+    stops,
+    width,
+    opacity,
     mode,
-  },
-) => {
+  } = normalizeFieldLinesOptions(props);
   useRepaint();
   useBindingProbe("fieldLines", color, opacity, width, colorRange);
-  checkOpacity(opacity, "FieldLines");
-  for (
-    const [name, value] of [
-      ["step", step],
-      ["minField", minField],
-      ["maxPotential", maxPotential ?? 1],
-      ["width", width],
-    ] as const
-  ) {
-    if (!Number.isFinite(value) || value <= 0) {
-      throw new TypeError(`FieldLines ${name} must be positive and finite`);
-    }
-  }
-  if (!Number.isSafeInteger(steps) || steps < 1) {
-    throw new TypeError("FieldLines steps must be a positive integer");
-  }
-  if (!Number.isSafeInteger(maxLines) || maxLines < 1) {
-    throw new TypeError("FieldLines maxLines must be a positive integer");
-  }
-  if (colorRange && !(colorRange[1] > colorRange[0])) {
-    throw new TypeError("FieldLines colorRange must be [lo, hi] with lo < hi");
-  }
   const { grid, source, generation, range } = useVolume();
   // Ten times the display range: well inside the charges' clamp for every
   // model's default range (distance ≈ 1 Å, vacuum ≈ 4 Å from a unit charge).
@@ -311,7 +244,7 @@ const LinesDraw: LC<{
   steps: number;
   width: number;
   colorRange?: readonly [number, number];
-  stops: SliceStops;
+  stops: ColorStops;
   tint: number[];
   mode: Translucency["mode"];
 }> = (

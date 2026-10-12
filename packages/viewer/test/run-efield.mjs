@@ -445,6 +445,51 @@ Deno.test("electric fields", async () => {
       before.uploadBytes,
       "ramp range is a uniform",
     );
+    // Warm transparent mode, then independently edit live line-style bindings.
+    await update({ lineOpacity: 0.8 });
+    await frames(10);
+    for (
+      const patch of [{ lineWidth: 4 }, { lineColor: [0.8, 0.3, 0.2, 1] }, {
+        lineOpacity: 0.6,
+      }]
+    ) {
+      before = await counters();
+      await update(patch);
+      now = await counters();
+      assertStrictEquals(delta(now, before, "gathers:fieldLines:dispatch"), 0);
+      for (
+        const key of [
+          "uploadBytes",
+          "allocations",
+          "geometryBuilds",
+          "shaderBuilds",
+        ]
+      ) {
+        assertStrictEquals(
+          now[key],
+          before[key],
+          `${Object.keys(patch)[0]}: no ${key}`,
+        );
+      }
+    }
+    for (
+      const patch of [
+        { lineStops: [[0, [0, 1, 0, 1]], [1, [1, 0, 1, 1]]] },
+        { lineRange: undefined },
+        { lineRange: [0, 3] },
+      ]
+    ) {
+      before = await counters();
+      await update(patch);
+      now = await counters();
+      assertStrictEquals(delta(now, before, "gathers:fieldLines:dispatch"), 0);
+      assert(
+        now.shaderBuilds > before.shaderBuilds,
+        "line ramp variant specialized",
+      );
+      assertStrictEquals(now.uploadBytes, before.uploadBytes);
+      assertStrictEquals(now.geometryBuilds, before.geometryBuilds);
+    }
     await page.locator("canvas").screenshot({
       path: `${out}/efield-lines.png`,
     });
@@ -525,6 +570,23 @@ Deno.test("electric fields", async () => {
       ) {
         assertStrictEquals(now[key], before[key], `${prop}: no ${key}`);
       }
+    }
+    for (
+      const patch of [
+        { arrowStops: [[0, [0, 1, 0, 1]], [1, [1, 0, 1, 1]]] },
+        { arrowRange: undefined },
+        { arrowRange: [0, 3] },
+      ]
+    ) {
+      before = await counters();
+      await update(patch);
+      now = await counters();
+      assert(
+        now.shaderBuilds > before.shaderBuilds,
+        "arrow ramp variant specialized",
+      );
+      assertStrictEquals(now.uploadBytes, before.uploadBytes);
+      assertStrictEquals(now.geometryBuilds, before.geometryBuilds);
     }
     report.states.arrows.uniformEdits = ["width", "color", "opacity", "range"];
 

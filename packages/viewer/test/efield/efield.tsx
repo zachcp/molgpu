@@ -33,6 +33,7 @@ import { COULOMB_GRID_BLOCK, COULOMB_WORKGROUP } from "@molgpu/dynamics/wgsl";
 import { type ElectrostaticsOptions, templateCharges } from "@molgpu/dynamics";
 import { byPotential } from "@molgpu/fields";
 import {
+  type ColorStops,
   EField,
   type EFieldProps,
   FieldArrows,
@@ -222,7 +223,12 @@ interface State {
   spacing: number;
   maxSamples?: number;
   planeIndex: number;
-  lineRange: [number, number];
+  lineRange?: [number, number];
+  lineWidth?: number;
+  lineColor?: [number, number, number, number];
+  lineOpacity?: number;
+  lineStops?: ColorStops;
+  arrowStops?: ColorStops;
   arrowScale: number;
   arrowWidth: number;
   arrowColor: [number, number, number, number];
@@ -783,6 +789,10 @@ const Scene = ({ state }: { state: State }): LiveElement => {
               step={0.1}
               maxPotential={1e4}
               colorRange={state.lineRange}
+              width={state.lineWidth}
+              color={state.lineColor}
+              opacity={state.lineOpacity}
+              stops={state.lineStops}
             />
           </EField>
         </Structure>
@@ -805,6 +815,7 @@ const Scene = ({ state }: { state: State }): LiveElement => {
               color={state.arrowColor}
               opacity={state.arrowOpacity}
               colorRange={state.arrowRange}
+              stops={state.arrowStops}
             />
           </EField>
         </Structure>

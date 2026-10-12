@@ -317,6 +317,14 @@ may change in 0.x minor releases; _advanced_ — only from
 | `FieldLines`              | experimental | RK4 streamlines of E = −∇φ through the nearest volume, integrated on the GPU per volume generation.                                                                                                                     |
 | `FieldArrows`             | experimental | E = −∇φ arrows on a lattice in a slice plane; moving the plane is a uniform write.                                                                                                                                      |
 | `FieldArrowsProps`        | experimental | Named options for FieldArrows, including plane, lattice spacing, strength scaling and style.                                                                                                                            |
+| `BondsProps`              | stable       | Caller options for `Bonds`, also usable by typed wrappers.                                                                                                                                                              |
+| `BallAndStickProps`       | stable       | Caller options for `BallAndStick`, also usable by typed wrappers.                                                                                                                                                       |
+| `TubeProps`               | stable       | Caller options for `Tube`, also usable by typed wrappers.                                                                                                                                                               |
+| `SurfaceProps`            | stable       | Caller options for `Surface`, also usable by typed wrappers.                                                                                                                                                            |
+| `LabelProps`              | experimental | Caller options for `Label`, also usable by typed wrappers.                                                                                                                                                              |
+| `DistanceProps`           | experimental | Caller options for `Distance`, also usable by typed wrappers.                                                                                                                                                           |
+| `FieldLinesProps`         | experimental | Caller options for `FieldLines`, also usable by typed wrappers.                                                                                                                                                         |
+| `VolumeSliceProps`        | experimental | Caller options for `VolumeSlice`, also usable by typed wrappers.                                                                                                                                                        |
 | `Trajectory`              | experimental | Coordinate provider that plays a `TrajectoryData` (`data`) or a DCD/XTC/TRR URL (`src`) over the nearest coordinates; `frame` is a number or timeline curve; `interpolate`, `pbc="minimum-image"`.                      |
 | `Transform`               | experimental | Coordinate provider applying a column-major 4×4 affine matrix (or vector curve) to all atoms or `select` rows. Other rows pass through.                                                                                 |
 | `TransformProps`          | experimental | Matrix, optional atom selection, and children for `<Transform>`.                                                                                                                                                        |
@@ -739,3 +747,21 @@ return [<Structure key={`attempt-${attempt}`} src={src} error={onFailure} />];
 
 Switching the same element between `src` and `data` mounts `data` immediately
 and cancels any pending request; switching back to `src` shows `loading`.
+
+### Primitive option contracts
+
+Bonds, BallAndStick, Tube, Surface, Label, Distance, FieldLines and VolumeSlice
+export named props for typed wrappers; their private draw adapters derive from
+those contracts. Ribbon and Cartoon continue to share RibbonProps.
+
+Volume color ranges and ramp entries must be finite f32 values. FieldLines and
+FieldArrows require increasing magnitude ranges and accept a single constant
+stop; VolumeSlice accepts descending ranges and requires at least two stops.
+Duplicate stop positions retain their existing ordered interpolation behavior.
+The input stop array is borrowed unchanged; shader construction sorts a copy.
+Stops on field glyphs are unused until colorRange is supplied.
+
+Ramachandran recoloring reuses torsions, point positions and grid geometry. Its
+CPU color column can upload when the color changes; published coordinates update
+torsions and positions, while inset layout changes update point/grid placement.
+The onPoints callback receives updated colored point values.

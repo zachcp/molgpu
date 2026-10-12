@@ -3,11 +3,15 @@
 ## .
 
 BallAndStick
-  export const BallAndStick: ViewerComponent<{ select?: SelectionInput; /** A flat colour or a @molgpu/fields Field, applied to balls and sticks. */ color?: VectorLike | Field; /** Ball radius scale; defaults to 0.3. */ ball?: number; /** Stick width; defaults to 0.28. */ stick?: number; endpoints?: "both" | "either"; /** Cast stick shadows under a shadow-enabled Pass; balls do not cast. */ shadow?: boolean; /** Forwarded to both balls and sticks, so they share one shading model. */ material?: MaterialSpec } & Translucency & SelectionDiagnostics>;
+  export const BallAndStick: ViewerComponent<BallAndStickProps>;
+BallAndStickProps
+  export type BallAndStickProps = { select?: SelectionInput; /** A flat colour or a @molgpu/fields Field, applied to balls and sticks. */ color?: VectorLike | Field; /** Ball radius scale; defaults to 0.3. */ ball?: number; /** Stick width; defaults to 0.28. */ stick?: number; endpoints?: "both" | "either"; /** Cast stick shadows under a shadow-enabled Pass; balls do not cast. */ shadow?: boolean; /** Forwarded to both balls and sticks, so they share one shading model. */ material?: MaterialSpec } & Translucency & SelectionDiagnostics;
 BlendMode
   export type BlendMode = "none" | "alpha" | "premultiply" | "add" | "subtract" | "multiply";
 Bonds
-  export const Bonds: ViewerComponent<{ /** Stick width; defaults to 0.3. */ width?: number; /** A molecular query or exact atom selection for this structure. */ select?: SelectionInput; /** Keep bonds whose endpoints are 'both' (default) or 'either' selected. */ endpoints?: "both" | "either"; /** A flat colour, or a @molgpu/fields Field coloured per endpoint atom. */ color?: VectorLike | Field; sides?: number; shaded?: boolean; /** Cast shadows under a shadow-enabled Pass; defaults to false. */ shadow?: boolean; /** Wraps the shaded stick layer; without one, the ambient scene material. */ material?: MaterialSpec } & Translucency & SelectionDiagnostics>;
+  export const Bonds: ViewerComponent<BondsProps>;
+BondsProps
+  export type BondsProps = { /** Stick width; defaults to 0.3. */ width?: number; /** A molecular query or exact atom selection for this structure. */ select?: SelectionInput; /** Keep bonds whose endpoints are 'both' (default) or 'either' selected. */ endpoints?: "both" | "either"; /** A flat colour, or a @molgpu/fields Field coloured per endpoint atom. */ color?: VectorLike | Field; sides?: number; shaded?: boolean; /** Cast shadows under a shadow-enabled Pass; defaults to false. */ shadow?: boolean; /** Wraps the shaded stick layer; without one, the ambient scene material. */ material?: MaterialSpec } & Translucency & SelectionDiagnostics;
 CameraCurve
   export type CameraCurve = readonly (CameraFrame | FocusCameraFrame)[];
 CameraFrame
@@ -19,7 +23,9 @@ Cartoon
 ColorStops
   export type ColorStops = ReadonlyArray<readonly [number, readonly [number, number, number, number]]>;
 Distance
-  export const Distance: ViewerComponent<{ a: SelectionInput; b: SelectionInput; color?: VectorLike; width?: number; size?: number; labelColor?: VectorLike; /** 0–1, fades the line and label together. */ opacity?: number; /** Customise the label text; receives the distance in Ångström. */ format?: (distance: number) => string } & SelectionDiagnostics>;
+  export const Distance: ViewerComponent<DistanceProps>;
+DistanceProps
+  export type DistanceProps = { a: SelectionInput; b: SelectionInput; color?: VectorLike; width?: number; size?: number; labelColor?: VectorLike; /** 0–1, fades the line and label together. */ opacity?: number; /** Customise the label text; receives the distance in Ångström. */ format?: (distance: number) => string } & SelectionDiagnostics;
 DrawMode
   export type DrawMode = "opaque" | "transparent";
 EField
@@ -35,9 +41,11 @@ ElasticNetworkStatus
 FieldArrows
   export const FieldArrows: ViewerComponent<FieldArrowsProps>;
 FieldArrowsProps
-  export type FieldArrowsProps = { /** Lattice plane; default the grid's middle k plane. */ plane?: SlicePlane; /** Lattice spacing in Å; default 2. */ spacing?: number; /** Arrow length in Å per unit field strength; default 1. */ scale?: number; /** Length cap in Å; default 0.9 × spacing. */ maxLength?: number; /** Hide weaker field magnitudes (volume units per Å); default 1e-3. */ minField?: number; /** RGB(A) tint; default white. */ color?: VectorLike; /** Field magnitude range (volume units per Å); omitted uses only the tint. */ colorRange?: readonly [number, number]; /** Strength colour ramp; default blue to yellow. Used with colorRange. */ stops?: SliceStops; /** Line width in pixels; default 3. */ width?: number } & Translucency;
+  export type FieldArrowsProps = { /** Lattice plane; default the grid's middle k plane. */ plane?: SlicePlane; /** Lattice spacing in Å; default 2. */ spacing?: number; /** Arrow length in Å per unit field strength; default 1. */ scale?: number; /** Length cap in Å; default 0.9 × spacing. */ maxLength?: number; /** Hide weaker field magnitudes (volume units per Å); default 1e-3. */ minField?: number; /** RGB(A) tint; default white. */ color?: VectorLike; /** Field magnitude range (volume units per Å); omitted uses only the tint. */ colorRange?: readonly [number, number]; /** Strength colour ramp; default blue to yellow. Used with colorRange. */ stops?: ColorStops; /** Line width in pixels; default 3. */ width?: number } & Translucency;
 FieldLines
-  export const FieldLines: ViewerComponent<{ seeds?: Float32Array | { readonly spacing?: number }; maxLines?: number; step?: number; steps?: number; minField?: number; maxPotential?: number; color?: VectorLike; colorRange?: readonly [number, number]; stops?: SliceStops; /** Line width in pixels; default 2. */ width?: number } & Translucency>;
+  export const FieldLines: ViewerComponent<FieldLinesProps>;
+FieldLinesProps
+  export type FieldLinesProps = { /** Packed xyz seeds or a lattice; default spacing 4 Å. */ seeds?: Float32Array | { readonly spacing?: number }; /** Seed ceiling; default 4096. Explicit excess seeds are rejected. */ maxLines?: number; /** Arc-length step in Å; default 0.25. */ step?: number; /** Steps in each direction; default 128. */ steps?: number; /** Stop below this field magnitude (volume units per Å); default 0.05. */ minField?: number; /** Stop above this absolute potential; default ten times the volume display extent. */ maxPotential?: number; /** RGB(A) tint; default white. */ color?: VectorLike; /** Increasing field-magnitude range; omitted uses only the tint. */ colorRange?: readonly [number, number]; /** Field-strength ramp; default blue to yellow. Used only with colorRange. */ stops?: ColorStops; /** Line width in pixels; default 2. */ width?: number } & Translucency;
 FocusCameraFrame
   export type FocusCameraFrame = Omit<CameraFrame, "target" | "radius"> & { readonly focus: SelectionInput; readonly target?: never; readonly radius?: never };
 FocusOptions
@@ -55,7 +63,9 @@ GpuDsspStatus
 Isosurface
   export const Isosurface: ViewerComponent<{ /** Absolute isovalue, or `{ sigma: k }`. Defaults to `{ sigma: 1 }`. */ level?: VolumeLevel; color?: VectorLike; /** Wraps the shaded face layer; without one, the ambient scene material. */ material?: MaterialSpec; loading?: ViewerElement | (() => ViewerElement); error?: ViewerElement | ((failure: unknown) => ViewerElement) } & Translucency>;
 Label
-  export const Label: ViewerComponent<{ select?: SelectionInput; /** Explicit [x, y, z] anchor, overriding the selection centroid. */ at?: readonly number[]; text?: string; size?: number; color?: VectorLike; offset?: readonly number[]; family?: string; /** 0–1, multiplied into the text colour's alpha (text always blends). */ opacity?: number } & SelectionDiagnostics>;
+  export const Label: ViewerComponent<LabelProps>;
+LabelProps
+  export type LabelProps = { select?: SelectionInput; /** Explicit [x, y, z] anchor, overriding the selection centroid. */ at?: readonly number[]; text?: string; size?: number; color?: VectorLike; offset?: readonly number[]; family?: string; /** 0–1, multiplied into the text colour's alpha (text always blends). */ opacity?: number } & SelectionDiagnostics;
 MaterialSpec
   export type MaterialSpec = { type?: "pbr"; metalness?: number; roughness?: number; albedo?: VectorLike; emissive?: VectorLike } | { type: "basic"; color?: VectorLike } | { type: "normal" } | ((children: ViewerElement) => ViewerElement);
 MaterialType
@@ -107,7 +117,9 @@ SuperposeProps
 SuperposeStatus
   export interface SuperposeStatus { readonly status: "solved" | "passthrough" | "pending" | "error"; /** Fitted RMSD in Å, or null while pending, on error or collinear passthrough. */ readonly rmsd: number | null; /** Fit generation, or upstream generation when reference state changed. */ readonly generation: number; /** Present on error: trajectory source/playback or first-reference read. */ readonly phase?: "source" | "reference"; readonly error?: unknown }
 Surface
-  export const Surface: ViewerComponent<{ /** A molecular query or exact atom selection. Defaults to first-model/primary-altloc atoms. */ select?: SelectionInput; /** "excluded" (default): the solvent-excluded surface a `probeRadius` * sphere rolls out. "accessible": the solvent-accessible surface, the * union of atoms grown by `probeRadius`, which closes channels the probe * fits through. */ kind?: "excluded" | "accessible"; /** Ångström probe radius; defaults to 1.4 (water). */ probeRadius?: number; /** Grid spacing in Ångströms; defaults to 0.5. Smaller is finer and slower. */ resolution?: number; /** Grid byte budget override; defaults to 256 MiB. */ maxBytes?: number; /** A flat colour or an atom/position Field such as `byElement()` or `byPotential()`. */ color?: VectorLike | Field; /** Å along the vertex normal where a colour field samples; default 1.4. */ sampleOffset?: number; /** Wraps the shaded face layer; without one, the ambient scene material. */ material?: MaterialSpec; loading?: ViewerElement | (() => ViewerElement); error?: ViewerElement | ((failure: unknown) => ViewerElement) } & Translucency & SelectionDiagnostics>;
+  export const Surface: ViewerComponent<SurfaceProps>;
+SurfaceProps
+  export type SurfaceProps = { /** A molecular query or exact atom selection. Defaults to first-model/primary-altloc atoms. */ select?: SelectionInput; /** "excluded" (default): the solvent-excluded surface a `probeRadius` * sphere rolls out. "accessible": the solvent-accessible surface, the * union of atoms grown by `probeRadius`, which closes channels the probe * fits through. */ kind?: "excluded" | "accessible"; /** Ångström probe radius; defaults to 1.4 (water). */ probeRadius?: number; /** Grid spacing in Ångströms; defaults to 0.5. Smaller is finer and slower. */ resolution?: number; /** Grid byte budget override; defaults to 256 MiB. */ maxBytes?: number; /** A flat colour or an atom/position Field such as `byElement()` or `byPotential()`. */ color?: VectorLike | Field; /** Å along the vertex normal where a colour field samples; default 1.4. */ sampleOffset?: number; /** Wraps the shaded face layer; without one, the ambient scene material. */ material?: MaterialSpec; loading?: ViewerElement | (() => ViewerElement); error?: ViewerElement | ((failure: unknown) => ViewerElement) } & Translucency & SelectionDiagnostics;
 TimelineProvider
   export const TimelineProvider: ViewerComponent<{ time: number; children?: ViewerElement }>;
 Trajectory
@@ -127,7 +139,9 @@ TransformProps
 Translucency
   export interface Translucency { /** 0–1, multiplied into the colour's alpha. A uniform: changing it (a fade, * a timeline curve) never rebuilds or re-uploads geometry. Defaults to 1. */ opacity?: number; /** Draw mode override. Automatic mode uses flat colour alpha × opacity; * Fields (including constants) and material alpha require explicit * 'transparent' mode unless opacity is below 1. Pair translucency with * <Pass oit>. */ mode?: DrawMode }
 Tube
-  export const Tube: ViewerComponent<{ /** A molecular query or exact atom selection. Defaults to first-model/primary-altloc atoms. */ select?: SelectionInput; /** Ångström tube radius; defaults to 0.3. */ radius?: number; /** Samples per guide segment; defaults to 6. */ smooth?: number; /** * A flat colour or a numeric colour Field such as `byChain()`, * `bySecondaryStructure()` or a B-factor ramp. Each sample reads its * residue's guide atom (CA or nucleic trace atom); recolouring rebuilds * no geometry. */ color?: VectorLike | Field; sides?: number; join?: "tangent" | "bevel" | "miter" | "round"; /** Cast shadows under a shadow-enabled Pass; defaults to false. */ shadow?: boolean; /** Wraps the shaded tube layer; without one, the ambient scene material. */ material?: MaterialSpec } & Translucency & SelectionDiagnostics>;
+  export const Tube: ViewerComponent<TubeProps>;
+TubeProps
+  export type TubeProps = { /** A molecular query or exact atom selection. Defaults to first-model/primary-altloc atoms. */ select?: SelectionInput; /** Ångström tube radius; defaults to 0.3. */ radius?: number; /** Samples per guide segment; defaults to 6. */ smooth?: number; /** * A flat colour or a numeric colour Field such as `byChain()`, * `bySecondaryStructure()` or a B-factor ramp. Each sample reads its * residue's guide atom (CA or nucleic trace atom); recolouring rebuilds * no geometry. */ color?: VectorLike | Field; sides?: number; join?: "tangent" | "bevel" | "miter" | "round"; /** Cast shadows under a shadow-enabled Pass; defaults to false. */ shadow?: boolean; /** Wraps the shaded tube layer; without one, the ambient scene material. */ material?: MaterialSpec } & Translucency & SelectionDiagnostics;
 UnitCell
   export const UnitCell: ViewerComponent<{ color?: VectorLike; width?: number; opacity?: number }>;
 Unwrap
@@ -149,7 +163,9 @@ VolumeLoader
 VolumeProps
   export type VolumeProps = { children?: ViewerElement; data: VolumeData; src?: undefined; loader?: undefined; loading?: undefined; error?: undefined } | { children?: ViewerElement; src: string; data?: undefined; /** Its identity is a reload dependency alongside `src`. */ loader?: VolumeLoader; loading?: ViewerElement | (() => ViewerElement); error?: ViewerElement | ((failure: unknown) => ViewerElement) };
 VolumeSlice
-  export const VolumeSlice: ViewerComponent<{ /** Defaults to the middle k (third-axis) grid plane. */ plane?: SlicePlane; /** Value interval mapped to 0–1. Defaults to the volume's min and max. */ range?: readonly [number, number]; /** Colour stops over 0–1. Defaults to black → white. */ stops?: SliceStops; /** Multiplied into every fragment's colour. Defaults to white. */ color?: VectorLike } & Translucency>;
+  export const VolumeSlice: ViewerComponent<VolumeSliceProps>;
+VolumeSliceProps
+  export type VolumeSliceProps = { /** Defaults to the middle k (third-axis) grid plane. */ plane?: SlicePlane; /** Value interval mapped to 0–1. Defaults to the volume's min and max. */ range?: readonly [number, number]; /** Colour stops over 0–1. Defaults to black → white. */ stops?: ColorStops; /** Multiplied into every fragment's colour. Defaults to white. */ color?: VectorLike } & Translucency;
 pointerToPlane
   export function pointerToPlane(u: number, v: number, projectionView: ArrayLike<number>, anchor: ArrayLike<number>): [number, number, number];
 projectToPointer

@@ -55,27 +55,9 @@ import { useBindingProbe } from "../internal/use-binding-probe.ts";
  * rebuild the trace/spline geometry; `radius` and `color` update bindings.
  */
 const TubeResolved: ViewerComponent<
-  {
-    /** A molecular query or exact atom selection. Defaults to first-model/primary-altloc atoms. */
+  Omit<TubeProps, "select" | keyof SelectionDiagnostics> & {
     select?: Selection | null;
-    /** Ångström tube radius; defaults to 0.3. */
-    radius?: number;
-    /** Samples per guide segment; defaults to 6. */
-    smooth?: number;
-    /**
-     * A flat colour or a numeric colour Field such as `byChain()`,
-     * `bySecondaryStructure()` or a B-factor ramp. Each sample reads its
-     * residue's guide atom (CA or nucleic trace atom); recolouring rebuilds
-     * no geometry.
-     */
-    color?: VectorLike | Field;
-    sides?: number;
-    join?: "tangent" | "bevel" | "miter" | "round";
-    /** Cast shadows under a shadow-enabled Pass; defaults to false. */
-    shadow?: boolean;
-    /** Wraps the shaded tube layer; without one, the ambient scene material. */
-    material?: MaterialSpec;
-  } & Translucency
+  }
 > = (
   {
     select,
@@ -183,10 +165,8 @@ const TubeResolved: ViewerComponent<
       : tube(map));
 };
 
-/** Draw a polymer backbone tube from published coordinate snapshots.
- * A residue participates only when its guide atom is selected. Color fields
- * read guide-atom values; changing color or opacity preserves geometry. */
-export const Tube: ViewerComponent<
+/** Caller options for `<Tube>`. */
+export type TubeProps =
   & {
     /** A molecular query or exact atom selection. Defaults to first-model/primary-altloc atoms. */
     select?: SelectionInput;
@@ -209,8 +189,12 @@ export const Tube: ViewerComponent<
     material?: MaterialSpec;
   }
   & Translucency
-  & SelectionDiagnostics
-> = withGeometryCopies((props) =>
+  & SelectionDiagnostics;
+
+/** Draw a polymer backbone tube from published coordinate snapshots.
+ * A residue participates only when its guide atom is selected. Color fields
+ * read guide-atom values; changing color or opacity preserves geometry. */
+export const Tube: ViewerComponent<TubeProps> = withGeometryCopies((props) =>
   use(SelectionConsumer, {
     input: props.select,
     who: "Tube",
