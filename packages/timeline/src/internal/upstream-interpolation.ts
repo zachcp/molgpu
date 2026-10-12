@@ -1,8 +1,5 @@
-// Small renderer-free adapter over the pure math kernels in pinned use.gpu
-// 0.20.0. This follows its EaseNumber/EaseAngle and automaticKeyframes math,
-// but imports only core ESM functions: the workbench ESM helper cannot load in
-// Node because its @use-gpu/core root import omits named ESM exports. Its CJS
-// fallback bundled the whole workbench (424 kB unminified).
+// Renderer-free adapter over the pure math kernels in use.gpu 0.21.0-rc.2.
+// Explicit ESM entry keeps this graph independent of Live and GPU machinery.
 import {
   bezierEase,
   catmullRomWeightedDual,
@@ -12,7 +9,7 @@ import {
   makeArcLengthMap,
   sampleToCubicBezier,
   velocityToBezierEase,
-} from "@use-gpu/core/mjs/ease.mjs";
+} from "@use-gpu/math/mjs/index.mjs";
 
 /** A value being interpolated: a number, or a vector as a plain array. */
 export type Value = number | number[];

@@ -13,11 +13,11 @@ import { AutoCanvas, WebGPU } from "@use-gpu/webgpu";
 import {
   OrbitCamera,
   Pass,
-  QueueReconciler,
   RawData,
   RawFaces,
   useDeviceContext,
 } from "@use-gpu/workbench";
+import { QueueReconciler } from "@use-gpu/frame";
 import type { StorageSource } from "@use-gpu/core";
 import {
   EField,

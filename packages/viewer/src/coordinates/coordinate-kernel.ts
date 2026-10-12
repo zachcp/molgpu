@@ -12,12 +12,8 @@ import {
 } from "@use-gpu/live";
 import type { StorageSource, StorageTarget } from "@use-gpu/core";
 import type { ShaderModule } from "@use-gpu/shader";
-import {
-  Compute,
-  ComputeBuffer,
-  Kernel,
-  LoopContext,
-} from "@use-gpu/workbench";
+import { Compute, ComputeBuffer, Kernel } from "@use-gpu/workbench";
+import { LoopContext } from "@use-gpu/frame";
 import { type Coordinates, CoordinatesContext } from "./coordinates-context.ts";
 import { CoordinateSnapshotBoundary } from "./coordinate-snapshot.ts";
 import {

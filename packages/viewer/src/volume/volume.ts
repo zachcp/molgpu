@@ -1,6 +1,7 @@
 import { ioLoader, useSourceRequest } from "../internal/source-request.ts";
 import type { VolumeData } from "@molgpu/table";
-import type { ViewerComponent, VolumeLoader, VolumeProps } from "../types.ts";
+import type { ViewerComponent } from "../types.ts";
+import type { VolumeLoader, VolumeProps } from "./volume-props.ts";
 import {
   type LC,
   type LiveElement,

@@ -44,8 +44,8 @@ small follow-ups. Routine fixes do not require a new design process.
 - `geo`: pure geometry kernels and attribution with typed-array inputs/outputs.
 - `dynamics`: renderer-free scientific calculations; shader sources use its
   `./wgsl` export. No use.gpu imports.
-- `timeline`: scrubbable curves and seconds-based time; pinned use.gpu core math
-  is isolated behind `src/internal`.
+- `timeline`: scrubbable curves and seconds-based time; pinned use.gpu math is
+  isolated behind `src/internal`.
 - `viewer`: Live orchestration, GPU adaptation, resources and representations.
   Workbench, Live and shader runtime imports belong here.
 

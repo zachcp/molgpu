@@ -18,7 +18,7 @@
  * instead of passing silently:
  * - the viewer loads only through a bundler, not by a direct Deno import
  *   (use.gpu's CommonJS main);
- * - a consumer on another use.gpu version does not type-check (exact pin).
+ * - the tested older use.gpu line does not type-check (exact pin policy).
  */
 import { assert, assertEquals, assertMatch } from "@std/assert";
 import { fromFileUrl } from "@std/path";
@@ -109,8 +109,14 @@ Deno.test("isolated JSR consumers", async () => {
     for (const copy of [compatible, divergent]) {
       assertMatch(copy.viewerLoad, /does not provide an export named/);
     }
-    assertEquals(useGpu.check, "fail", "a use.gpu 0.19 consumer must not pass");
-    assertEquals(useGpu.liveVersionsInGraph, ["0.19.0", "0.20.0"]);
+    assertEquals(useGpu.graphErrors, [], "divergent dependencies must resolve");
+    assertEquals(
+      useGpu.check,
+      "fail",
+      "the tested older use.gpu line is incompatible",
+    );
+    assertMatch(useGpu.errors.join("\n"), /TS2322.*OrbitCameraProps/);
+    assertEquals(useGpu.liveVersionsInGraph, ["0.19.0-rc.11", "0.21.0-rc.2"]);
   } finally {
     await Deno.remove(dir, { recursive: true });
   }

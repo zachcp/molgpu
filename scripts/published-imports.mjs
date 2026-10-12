@@ -59,18 +59,20 @@ export function checkPublishedImports(
       }
       if (/^npm:\/?@use-gpu\//.test(specifier) && name !== "@molgpu/viewer") {
         if (
-          !(["@molgpu/timeline", "@molgpu/geo"].includes(name) &&
+          !(name === "@molgpu/timeline" &&
             path.startsWith("/src/internal/") &&
-            /^npm:\/?@use-gpu\/core@/.test(specifier))
+            /^npm:\/?@use-gpu\/math@/.test(specifier))
         ) {
           errors.push(`use.gpu import violates the package wall: ${where}`);
         }
       }
       if (
         /^npm:\/?@use-gpu\//.test(specifier) &&
-        !/^npm:\/?@use-gpu\/[^@/]+@0\.20\.0(\/|$)/.test(specifier)
+        !/^npm:\/?@use-gpu\/[^@/]+@0\.21\.0-rc\.2(\/|$)/.test(specifier)
       ) {
-        errors.push(`use.gpu must match exact reviewed pin 0.20.0: ${where}`);
+        errors.push(
+          `use.gpu must match exact reviewed pin 0.21.0-rc.2: ${where}`,
+        );
       }
       if (/^npm:\/?molstar(?:@|\/|$)/.test(specifier)) {
         if (name !== "@molgpu/io" || (!dynamic && !typeOnly && !lazyOnly)) {

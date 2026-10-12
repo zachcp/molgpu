@@ -14,10 +14,11 @@ export const USE_GPU_PREBUNDLE = [
   "@use-gpu/workbench",
   "@use-gpu/webgpu",
   "@use-gpu/core",
-  // @molgpu/timeline imports this pinned easing module. Prebundle it before
+  "@use-gpu/frame",
+  // @molgpu/timeline imports this pinned Math module. Prebundle it before
   // navigation so Vite does not reload live modules with an Outdated Optimize
   // Dep response during the test.
-  "@use-gpu/core/mjs/ease.mjs",
+  "@use-gpu/math/mjs/index.mjs",
   "@use-gpu/shader",
   "@use-gpu/shader/wgsl",
   "@use-gpu/wgsl",

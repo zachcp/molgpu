@@ -35,10 +35,6 @@ export type {
   StructureProps,
   SuperposeProps,
   SuperposeStatus,
-  TrajectoryFrameState,
-  TrajectoryLoader,
-  TrajectoryProps,
-  TrajectoryStatus,
   TransformProps,
   Translucency,
   UnwrapProps,
@@ -46,8 +42,6 @@ export type {
   VectorLike,
   ViewerComponent,
   ViewerElement,
-  VolumeLoader,
-  VolumeProps,
 } from "./types.ts";
 export { Structure } from "./structure/structure.ts";
 export { Spacefill } from "./representations/spacefill.ts";
@@ -65,6 +59,7 @@ export type {
   RamachandranPoint,
 } from "./representations/ramachandran-points.ts";
 export { Distance, Label } from "./representations/annotations.ts";
+export type { VolumeLoader, VolumeProps } from "./volume/volume-props.ts";
 export { Volume } from "./volume/volume.ts";
 export { Isosurface } from "./volume/representations/isosurface.ts";
 export { VolumeSlice } from "./volume/representations/volume-slice.ts";
@@ -75,6 +70,13 @@ export type {
 export { EField } from "./volume/efield.ts";
 export { FieldLines } from "./volume/representations/field-lines.ts";
 export { FieldArrows } from "./volume/representations/field-arrows.ts";
+export type { FieldArrowsProps } from "./volume/representations/field-arrows-options.ts";
+export type {
+  TrajectoryFrameState,
+  TrajectoryLoader,
+  TrajectoryProps,
+  TrajectoryStatus,
+} from "./trajectory/trajectory-props.ts";
 export { Trajectory } from "./trajectory/trajectory.ts";
 export { useTrajectoryFrame } from "./trajectory/use-trajectory-frame.ts";
 export { Transform } from "./coordinates/transform.ts";

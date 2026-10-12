@@ -8,19 +8,11 @@
 // draws but extrudes each vertex pair as its own cone when shaded — the
 // spiky artifact this avoids. A run needs at least 2 guide points to have a
 // direction at all, so a single-residue run contributes no tube geometry.
-// A namespace import, not a named one: Vite resolves @use-gpu/core's real ESM
-// build (named export works directly), but plain `deno test` resolves its
-// CJS build, whose named exports Node's static CJS/ESM interop cannot always
-// see — falling back to the namespace's `default` (the full module.exports)
-// covers that case too.
-import * as useGpuCore from "@use-gpu/core";
+// Pure math has its own package in use.gpu 0.21; use its explicit ESM entry.
+import { catmullRomWeighted } from "@use-gpu/math/mjs/index.mjs";
 import type { Trace } from "@molgpu/table";
 import { count as countWork } from "../internal/instrumentation.ts";
 
-const catmullRomWeighted: typeof useGpuCore.catmullRomWeighted =
-  useGpuCore.catmullRomWeighted ??
-    (useGpuCore as unknown as { default: typeof useGpuCore }).default
-      .catmullRomWeighted;
 function fail(message: string): never {
   throw new TypeError(`Tube geometry: ${message}`);
 }

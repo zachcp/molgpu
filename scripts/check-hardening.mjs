@@ -712,7 +712,7 @@ function checkPackage(
         fail("H4", `${rel} imports Mol* ("${spec}"); only @molgpu/io may`);
       }
       if (spec.startsWith("@use-gpu/") && !isViewer) {
-        if (!spec.startsWith("@use-gpu/core")) {
+        if (!/^@use-gpu\/math(?:\/|$)/.test(spec)) {
           fail("H4", `${rel} imports "${spec}"; only ${VIEWER} may`);
         } else if (!internal) {
           fail("H4", `${rel} imports "${spec}" outside src/internal/`);

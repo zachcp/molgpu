@@ -54,7 +54,15 @@ jobs:
       - name: WebGPU browser suites
         env:
           SUITE_GROUP: ${{ matrix.group }}
+          MOLGPU_RETIREMENT_OUTPUT_DIR: ${{ runner.temp }}/molgpu-retirement
         run: bash scripts/run-webgpu-ci.sh
+      - name: Retain GPU retirement evidence
+        if: always() && matrix.group == 'retirement'
+        uses: actions/upload-artifact@v4
+        with:
+          name: gpu-retirement-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/molgpu-retirement
+          if-no-files-found: warn
 
   # Preserve the existing required check name while requiring every group.
   webgpu:

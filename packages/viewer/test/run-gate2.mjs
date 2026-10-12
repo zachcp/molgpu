@@ -271,7 +271,7 @@ Deno.test("viewer gate 2", async () => {
     assertEquals(heldPageErrors, [], "held replacement page errors");
     // Reuse one 50k-row column across 64 owners, then churn 64 distinct
     // columns. Browser-native GPU memory is opaque to WebGPU.
-    const retention = await heldPage.evaluate(async () => {
+    await heldPage.evaluate(async () => {
       const { immutableAttributeSource, releaseImmutableAttributes } =
         await import("../src/structure/immutable-attribute-cache.ts");
       const values = new Float32Array(50_000);
@@ -305,26 +305,47 @@ Deno.test("viewer gate 2", async () => {
         releaseImmutableAttributes(owner);
       }
       globalThis.__probe.storageBuffers.length = 0;
-      if (typeof globalThis.gc !== "function") {
-        throw new Error("Chrome exposed GC is required for wrapper budget");
-      }
-      await new Promise((resolve) => setTimeout(resolve, 200));
-      for (let i = 0; i < 5; i++) {
-        await new Promise((resolve) => setTimeout(resolve, 0));
-        globalThis.gc();
-      }
-      return {
+      globalThis.__retention = {
+        refs,
         owners: refs.length,
         bytesPerOwner: values.byteLength,
         sharedAllocations,
         distinctAllocations: globalThis.__probe.storage.length -
           beforeAllocations - sharedAllocations,
-        wrappersRemaining: new Set(
-          refs.map((ref) => ref.deref()).filter(Boolean),
-        )
-          .size,
       };
     });
+    // End the allocating evaluate call before GC, so its lexical stack cannot
+    // retain wrappers. Await submitted writes before sampling. Cleanup timers
+    // and browser collection can be delayed on a busy software-GPU runner, so
+    // observe the original wrapper budget within a bounded deadline rather
+    // than assuming every grace callback ran within 200ms.
+    await heldPage.evaluate(() =>
+      globalThis.__probe.device.queue.onSubmittedWorkDone()
+    );
+    let retention;
+    const collectionDeadline = Date.now() + 10000;
+    do {
+      await heldPage.evaluate(() => {
+        if (typeof globalThis.gc !== "function") {
+          throw new Error("Chrome exposed GC is required for wrapper budget");
+        }
+        globalThis.gc();
+      });
+      retention = await heldPage.evaluate(() => {
+        const { refs, ...metrics } = globalThis.__retention;
+        return {
+          ...metrics,
+          wrappersRemaining: new Set(
+            refs.map((ref) => ref.deref()).filter(Boolean),
+          ).size,
+        };
+      });
+      if (retention.wrappersRemaining <= 1) break;
+      // WeakRef.deref keeps its target alive for the current browser task.
+      // Cross a task boundary before requesting another collection.
+      await heldPage.waitForTimeout(100);
+    } while (Date.now() < collectionDeadline);
+    await heldPage.evaluate(() => delete globalThis.__retention);
     assertEquals(
       retention.sharedAllocations,
       1,

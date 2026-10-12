@@ -5,13 +5,15 @@
     "jsr:@std/internal@^1.0.12": "1.0.14",
     "jsr:@std/internal@^1.0.14": "1.0.14",
     "jsr:@std/path@^1.1.6": "1.1.6",
-    "npm:@use-gpu/core@0.20.0": "0.20.0",
-    "npm:@use-gpu/glyph@0.20.0": "0.20.0",
-    "npm:@use-gpu/live@0.20.0": "0.20.0",
-    "npm:@use-gpu/shader@0.20.0": "0.20.0",
-    "npm:@use-gpu/webgpu@0.20.0": "0.20.0",
-    "npm:@use-gpu/wgsl@0.20.0": "0.20.0",
-    "npm:@use-gpu/workbench@0.20.0": "0.20.0",
+    "npm:@use-gpu/core@0.21.0-rc.2": "0.21.0-rc.2",
+    "npm:@use-gpu/frame@0.21.0-rc.2": "0.21.0-rc.2",
+    "npm:@use-gpu/glyph@0.21.0-rc.2": "0.21.0-rc.2",
+    "npm:@use-gpu/live@0.21.0-rc.2": "0.21.0-rc.2",
+    "npm:@use-gpu/math@0.21.0-rc.2": "0.21.0-rc.2",
+    "npm:@use-gpu/shader@0.21.0-rc.2": "0.21.0-rc.2",
+    "npm:@use-gpu/webgpu@0.21.0-rc.2": "0.21.0-rc.2",
+    "npm:@use-gpu/wgsl@0.21.0-rc.2": "0.21.0-rc.2",
+    "npm:@use-gpu/workbench@0.21.0-rc.2": "0.21.0-rc.2",
     "npm:@webgpu/types@0.1.68": "0.1.68",
     "npm:molstar@5.13.0": "5.13.0_react@19.3.0_react-dom@19.3.0_@types+react@19.3.0_fp-ts@2.16.11",
     "npm:playwright@1.62.1": "1.62.1",
@@ -265,33 +267,52 @@
     "@ungap/structured-clone@1.4.0": {
       "integrity": "sha512-1mEZtMKPM09vDmQt5y7YvmN2+DFTP7Tg0EWXdic8/C6VRnpb33e4ghisCIE3WZjsE2N8mf+QV1Zqh7ZFYLWInQ=="
     },
-    "@use-gpu/core@0.20.0": {
-      "integrity": "sha512-srvExwCi5DRrJN/p23S1wsiKlHeIi6DcEu3EOCiU4yAAgmR6bGm2kaWaQbbPVCDVSR9vzQc5fdiLLFCFNgCm+w==",
+    "@use-gpu/core@0.21.0-rc.2": {
+      "integrity": "4a0a40b3398cd1f7535b5e869db69051a8b9b528",
       "dependencies": [
+        "@use-gpu/math",
         "@use-gpu/state",
         "earcut",
         "gl-matrix",
         "lodash"
-      ]
+      ],
+      "tarball": "https://gitlab.com/api/v4/projects/27922731/packages/npm/@use-gpu/core/-/@use-gpu/core-0.21.0-rc.2.tgz"
     },
-    "@use-gpu/glyph@0.20.0": {
-      "integrity": "sha512-igviY8+hfKb4BPuoigV2q8DYXhutOnun5Gkv5A24fIAFWmUHm9X9Pk3DJGcP3deXRuiRRtCCdL4U3omfSYd9BQ==",
+    "@use-gpu/frame@0.21.0-rc.2": {
+      "integrity": "d17212fe22e627846a4e1ae5d164763e384ebdfe",
+      "dependencies": [
+        "@use-gpu/core",
+        "@use-gpu/live",
+        "@use-gpu/math",
+        "@use-gpu/state"
+      ],
+      "tarball": "https://gitlab.com/api/v4/projects/27922731/packages/npm/@use-gpu/frame/-/@use-gpu/frame-0.21.0-rc.2.tgz"
+    },
+    "@use-gpu/glyph@0.21.0-rc.2": {
+      "integrity": "ff72f405e2be48b9936fb7d93b1ae3c6ac52737b",
       "dependencies": [
         "@use-gpu/state"
-      ]
+      ],
+      "tarball": "https://gitlab.com/api/v4/projects/27922731/packages/npm/@use-gpu/glyph/-/@use-gpu/glyph-0.21.0-rc.2.tgz"
     },
-    "@use-gpu/live@0.20.0": {
-      "integrity": "sha512-Z8YvLEP1H35sLlZWbZWHlSD1TI03c3XAp7rIoVroCkMy8OQ7St70JtfG8FT/XZ7U9szwIoQxJMAob53swogiTg=="
+    "@use-gpu/live@0.21.0-rc.2": {
+      "integrity": "924a1fa1d9d6790bc4ee152a3d7590c82d348681",
+      "tarball": "https://gitlab.com/api/v4/projects/27922731/packages/npm/@use-gpu/live/-/@use-gpu/live-0.21.0-rc.2.tgz"
     },
-    "@use-gpu/parse@0.20.0": {
-      "integrity": "sha512-bFZDbFmEl7t3MW3dMaNbDXz2FHKm7iX5rJGnFsvG9d6kQ+rg2cPSqxxBxlPjP4di1hejd6WuLWlhytQvf5YpkQ==",
+    "@use-gpu/math@0.21.0-rc.2": {
+      "integrity": "ad72b8e432481c9e296c6b1706195265c0e9e571",
+      "tarball": "https://gitlab.com/api/v4/projects/27922731/packages/npm/@use-gpu/math/-/@use-gpu/math-0.21.0-rc.2.tgz"
+    },
+    "@use-gpu/parse@0.21.0-rc.2": {
+      "integrity": "89cb1304187964e20a1f27c0507a071d84e72c46",
       "dependencies": [
         "@use-gpu/core",
         "gl-matrix"
-      ]
+      ],
+      "tarball": "https://gitlab.com/api/v4/projects/27922731/packages/npm/@use-gpu/parse/-/@use-gpu/parse-0.21.0-rc.2.tgz"
     },
-    "@use-gpu/shader@0.20.0": {
-      "integrity": "sha512-sq5RPtJHSxbxHmxZgoXYrIyC+NQEkLsWahxuNcXKyfC/0Id2Aekb+rg3Gj7xb24G/Upk0G/AMAkPmRUcAQUieg==",
+    "@use-gpu/shader@0.21.0-rc.2": {
+      "integrity": "d586eaf8869eb7dc0cff823c097eaa010531104b",
       "dependencies": [
         "@lezer/generator",
         "@lezer/lr",
@@ -301,32 +322,38 @@
         "lru-cache",
         "magic-string"
       ],
-      "bin": true
+      "bin": true,
+      "tarball": "https://gitlab.com/api/v4/projects/27922731/packages/npm/@use-gpu/shader/-/@use-gpu/shader-0.21.0-rc.2.tgz"
     },
-    "@use-gpu/state@0.20.0": {
-      "integrity": "sha512-1ZbrX3nTqQVUSCDrDgkHha/9TbvTjNNU2ruZdTtc+CTvd8rAAWuCzPIQ8tbPq4/4V6lKlWfhx8xDwAjUuRnCyw=="
+    "@use-gpu/state@0.21.0-rc.2": {
+      "integrity": "1acb819a4c1ab38b8ed192fe90b8a46d6bfeb487",
+      "tarball": "https://gitlab.com/api/v4/projects/27922731/packages/npm/@use-gpu/state/-/@use-gpu/state-0.21.0-rc.2.tgz"
     },
-    "@use-gpu/traits@0.20.0": {
-      "integrity": "sha512-cK0uXIAjwVfbyyXVXwHJVYAyYNhpx6/lRbmdpXVaNWGeiMBV5D+By2b4jMJ83Acr2CZjNGj6y6/VkZe1pTXVAA==",
+    "@use-gpu/traits@0.21.0-rc.2": {
+      "integrity": "786b02ba4c9039ab1cd750b974ebf39226e6ac6c",
       "dependencies": [
         "@use-gpu/live"
-      ]
+      ],
+      "tarball": "https://gitlab.com/api/v4/projects/27922731/packages/npm/@use-gpu/traits/-/@use-gpu/traits-0.21.0-rc.2.tgz"
     },
-    "@use-gpu/webgpu@0.20.0": {
-      "integrity": "sha512-bVXwABWf7qu2yApIQSDvqXWfD9GdwCHwq81GDo8cmPBESCVHRzdEUa92o5K/TiYjmhVpqN/o9/bH5OKF3OFULA==",
+    "@use-gpu/webgpu@0.21.0-rc.2": {
+      "integrity": "d91df59cde7a998b6a168aee127f8b51b75d78ae",
       "dependencies": [
         "@use-gpu/core",
         "@use-gpu/live",
         "@use-gpu/workbench"
-      ]
+      ],
+      "tarball": "https://gitlab.com/api/v4/projects/27922731/packages/npm/@use-gpu/webgpu/-/@use-gpu/webgpu-0.21.0-rc.2.tgz"
     },
-    "@use-gpu/wgsl@0.20.0": {
-      "integrity": "sha512-ARFT+BYZjd23m5gSI4TE7sh34Iz2C6fwccETmRr80O/JtDyNpQZc0DHgbLvqW63N7JZRuW0xsElPU/kQKcUpJg=="
+    "@use-gpu/wgsl@0.21.0-rc.2": {
+      "integrity": "e3d9fed6f2256e84bf3ea59e5676ecddacba1759",
+      "tarball": "https://gitlab.com/api/v4/projects/27922731/packages/npm/@use-gpu/wgsl/-/@use-gpu/wgsl-0.21.0-rc.2.tgz"
     },
-    "@use-gpu/workbench@0.20.0": {
-      "integrity": "sha512-stNljeqbQlQIffXr5o8y0LvT6+oST2ISsDn5svT5r3Lbzb+50RhDNS3UPE1AjDJoytpAgQVagQvkG4xIH2ikNQ==",
+    "@use-gpu/workbench@0.21.0-rc.2": {
+      "integrity": "901a089d7fd91e484ed6ee835f0943fac8d73eeb",
       "dependencies": [
         "@use-gpu/core",
+        "@use-gpu/frame",
         "@use-gpu/glyph",
         "@use-gpu/live",
         "@use-gpu/parse",
@@ -338,7 +365,8 @@
         "gl-matrix",
         "lodash",
         "lru-cache"
-      ]
+      ],
+      "tarball": "https://gitlab.com/api/v4/projects/27922731/packages/npm/@use-gpu/workbench/-/@use-gpu/workbench-0.21.0-rc.2.tgz"
     },
     "@webgpu/types@0.1.68": {
       "integrity": "sha512-3ab1B59Ojb6RwjOspYLsTpCzbNB3ZaamIAxBMmvnNkiDoLTZUOBXZ9p5nAYVEkQlDdf6qAZWi1pqj9+ypiqznA=="
@@ -1768,13 +1796,15 @@
     "dependencies": [
       "jsr:@std/assert@^1.0.19",
       "jsr:@std/path@^1.1.6",
-      "npm:@use-gpu/core@0.20.0",
-      "npm:@use-gpu/glyph@0.20.0",
-      "npm:@use-gpu/live@0.20.0",
-      "npm:@use-gpu/shader@0.20.0",
-      "npm:@use-gpu/webgpu@0.20.0",
-      "npm:@use-gpu/wgsl@0.20.0",
-      "npm:@use-gpu/workbench@0.20.0",
+      "npm:@use-gpu/core@0.21.0-rc.2",
+      "npm:@use-gpu/frame@0.21.0-rc.2",
+      "npm:@use-gpu/glyph@0.21.0-rc.2",
+      "npm:@use-gpu/live@0.21.0-rc.2",
+      "npm:@use-gpu/math@0.21.0-rc.2",
+      "npm:@use-gpu/shader@0.21.0-rc.2",
+      "npm:@use-gpu/webgpu@0.21.0-rc.2",
+      "npm:@use-gpu/wgsl@0.21.0-rc.2",
+      "npm:@use-gpu/workbench@0.21.0-rc.2",
       "npm:@webgpu/types@0.1.68",
       "npm:molstar@5.13.0",
       "npm:playwright@1.62.1",
@@ -1791,15 +1821,17 @@
       },
       "packages/timeline": {
         "dependencies": [
-          "npm:@use-gpu/core@0.20.0"
+          "npm:@use-gpu/math@0.21.0-rc.2"
         ]
       },
       "packages/viewer": {
         "dependencies": [
-          "npm:@use-gpu/core@0.20.0",
-          "npm:@use-gpu/live@0.20.0",
-          "npm:@use-gpu/shader@0.20.0",
-          "npm:@use-gpu/workbench@0.20.0"
+          "npm:@use-gpu/core@0.21.0-rc.2",
+          "npm:@use-gpu/frame@0.21.0-rc.2",
+          "npm:@use-gpu/live@0.21.0-rc.2",
+          "npm:@use-gpu/math@0.21.0-rc.2",
+          "npm:@use-gpu/shader@0.21.0-rc.2",
+          "npm:@use-gpu/workbench@0.21.0-rc.2"
         ]
       }
     }

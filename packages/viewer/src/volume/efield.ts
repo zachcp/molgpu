@@ -19,7 +19,8 @@ import {
   useResource,
   useState,
 } from "@use-gpu/live";
-import { LoopContext, useDeviceContext } from "@use-gpu/workbench";
+import { useDeviceContext } from "@use-gpu/workbench";
+import { LoopContext } from "@use-gpu/frame";
 import type { StorageSource } from "@use-gpu/core";
 import { createVolume, type VolumeData, type VolumeGrid } from "@molgpu/table";
 import {

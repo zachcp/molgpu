@@ -6,7 +6,8 @@ import {
   useResource,
   useState,
 } from "@use-gpu/live";
-import { useMouseState, useViewContext } from "@use-gpu/workbench";
+import { useViewContext } from "@use-gpu/workbench";
+import { useMouseState } from "@use-gpu/frame";
 import type { StructureData } from "@molgpu/table";
 import {
   type ElasticNetworkData,

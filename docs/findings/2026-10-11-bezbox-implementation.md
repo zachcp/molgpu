@@ -1,0 +1,204 @@
+# Bezbox follow-ups and GitLab use.gpu 0.21 adoption
+
+Date: 2026-10-11. Branch: `codex/bezbox-primitive-spike`. Tracking:
+`molgpu-sept-erf`, `molgpu-sept-gvq`, `molgpu-sept-mik`. This follows the
+[research spike](2026-10-11-bezbox-primitives-spike.md). The owner explicitly
+authorized GitLab 0.21 adoption after that report; the report's original
+recommendation to wait is superseded by this implementation.
+
+## Result
+
+The three issues were delegated in parallel with separate file ownership and
+integrated on the same branch. The data/props cleanup and FieldArrows pilot did
+not require waiting for the dependency investigation. Final acceptance used the
+combined implementation on exact `0.21.0-rc.2` artifacts.
+
+- FieldArrows now has a small Live component, documented `FieldArrowsProps` and
+  strict option normalization in `field-arrows-options.ts`, and shader builders
+  in `field-arrows-shaders.ts`. It still uses native ArrowLayer and
+  shader-derived attributes, with the same memoization and ownership. There is
+  no new trait framework, general schema compiler or Plot aggregation step.
+- Trajectory and Volume caller contracts are colocated in `trajectory-props.ts`
+  and `volume-props.ts`. Their public entry exports, source unions, defaults and
+  behavior are unchanged. The only API snapshot change is the explicit exported
+  FieldArrowsProps alias replacing that component's inline prop declaration.
+- The root and affected Deno manifests and lock use GitLab `0.21.0-rc.2`.
+  Timeline's private easing adapter and Tube's spline helper import Math.
+  Loop/event/picking-ID/queue imports use Frame. GPU device, geometry, material,
+  source binding and rendering imports remain in Workbench/Core.
+
+No package.json, extra workspace package, upstream patch, vendored dependency,
+publication, deployment or remote push was introduced.
+
+## Dependency provenance and consumer requirements
+
+The project-local `.npmrc` scopes only `@use-gpu` to:
+
+```ini
+@use-gpu:registry=https://gitlab.com/api/v4/projects/27922731/packages/npm/
+```
+
+Deno's lock records the artifact URL and integrity for each of the twelve
+installed use.gpu packages. The resolved viewer graph contains exactly one copy
+of each, all `0.21.0-rc.2`, including Live and Frame. Selected artifact SHA-1s:
+
+| Artifact  | SHA-1                                      |
+| --------- | ------------------------------------------ |
+| core      | `4a0a40b3398cd1f7535b5e869db69051a8b9b528` |
+| frame     | `d17212fe22e627846a4e1ae5d164763e384ebdfe` |
+| math      | `ad72b8e432481c9e296c6b1706195265c0e9e571` |
+| live      | `924a1fa1d9d6790bc4ee152a3d7590c82d348681` |
+| workbench | `901a089d7fd91e484ed6ee835f0943fac8d73eeb` |
+
+The
+[Math artifact](https://gitlab.com/api/v4/projects/27922731/packages/npm/@use-gpu/math/-/@use-gpu/math-0.21.0-rc.2.tgz)
+is available in rc.2, unlike the rc.1 URL checked in the research spike. The
+registry's package metadata and untouched tarballs were inspected directly.
+
+Consumers of this branch require that scoped registry configuration and
+`"nodeModulesDir": "auto"` in their Deno manifest. The exact rc.2 upstream
+manifests omit some sibling imports: Frame imports Parse and Traits, and
+Workbench imports Math, without declaring all of them. Deno's global-cache-only
+bundle failed on those omissions; its local node_modules mode resolves the
+installed sibling packages. This setting is exercised in the isolated consumer,
+not assumed from a successful workspace build. No extra application dependency
+or upstream file patch was needed.
+
+The consumer gate still checks actual divergent-copy incompatibility. GitLab
+lacks stable 0.19.0, so its comparison uses available `0.19.0-rc.11` packages
+with current Math/Frame (which did not exist on that older line). Both Live
+versions must resolve, and the check must fail with the observed TS2322
+OrbitCameraProps mismatch, not a package-download error. Overriding only Live
+can still type-check because its types are structurally compatible; that is not
+a supported mixed-version configuration. Match the exact pin.
+
+## Runtime migration discovered by integration
+
+The rc.2 native dispatch record changed from `compute` to `computePre` or
+`computePost`. Our dispatch observer intercepted Kernel output using the old
+key, so it dropped native compute work. EField stalled in `updating`; a
+trajectory composition read unwritten output. These failures were reproduced in
+browser acceptance before the fix.
+
+`dispatch-observation.ts` now preserves the phase key emitted by the native
+Kernel. It still uses the native countDispatch callback to distinguish an
+encoded dispatch from a suppressed one. Its existing microtask publication runs
+after ComputePass's synchronous submission, not after GPU completion. No timer,
+root-coordinate fallback or weakened readiness check was added. EField and
+trajectory acceptance passed after this change; retained draw/dispatch/readback
+retirement was then checked separately.
+
+The site retained a Vite cache pointing to the removed 0.20.0 package path.
+Adding Math and Frame to its prebundling/deduplication configuration updates
+that cache and covers the new imports; the shared browser harness also
+prebundles Frame. This is distinct from a shader or scientific failure.
+
+## Validation
+
+Passed on the combined implementation:
+
+- Workspace CPU run: 566 passed with one local HTTP-server test blocked by the
+  sandbox. The complete IO trajectory file then passed all 11 tests outside that
+  socket restriction, covering the remaining test. No CPU assertion failed.
+- Five executable trait/schema probes on rc.2 and the public JSX example with
+  negative source-union checks.
+- Full source/test type check, component type check and site type check.
+- All eight packages H1–H6, with reviewed API snapshot; JSR dry run succeeded.
+- EField and trajectory browser suites (including live compute, source handling,
+  interpolation and the new independent width/tint/opacity/range invalidation
+  assertions); Volume suite including shared storage and replacement/unmount.
+- Combined browser run: 91 passed, 15 steps passed, 28 inapplicable cases
+  ignored. This includes isolated JSR consumer, base GPU, Gate 2, Tube, picking,
+  typed components, Superpose source handling, GPU DSSP, ElasticNetwork,
+  invalidation and the full 11-part retirement runner. The only failure in that
+  run was the stale site dependency cache described above.
+
+The site rerun passed all maintained routes after the Vite configuration update
+(49 seconds). Final repository formatting (650 files) and lint (429 files)
+passed, along with scoped lint for changed scripts. This is a broad scoped gate,
+not a claim that every repository GPU suite ran. In particular, the separate
+surface/ribbon/material/postprocess suites were not part of this command. No
+publication or deployment was used as validation.
+
+Run logs were retained locally under `/private/tmp/molgpu-rc2-*.log`. Fresh raw
+retirement evidence is in `/private/tmp/molgpu-rc2-retirement-evidence`; the
+runner overwrites historical October 1 paths, which were restored after saving
+the new outputs. Historical evidence is not silently relabeled as rc.2 evidence.
+
+## Remaining work
+
+Implementation is committed as `03406b0`; `molgpu-sept-erf`, `molgpu-sept-gvq`
+and `molgpu-sept-mik` are closed with validation evidence. The following open,
+unassigned tasks are discovered from `mik`. Each bead contains source entry
+points, implementation steps, scope boundaries and acceptance criteria:
+
+| Bead              | Follow-up                                             | Completion requirement                                                                                                                                               |
+| ----------------- | ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `molgpu-sept-qlv` | Write retirement evidence to distinct run directories | All eleven cases retain provenance and failure diagnostics; repeated runs and standalone children leave historical evidence unchanged.                               |
+| `molgpu-sept-8ej` | Complete remaining rc.2 GPU acceptance                | Run the separate surface, ribbon, materials and postprocess suites on the exact pin; record outcomes and resolve or explicitly track reproduced blockers.            |
+| `molgpu-sept-nw6` | Validate and adopt stable 0.21 when available         | Inspect coherent stable artifacts, prove isolated consumer resolution and runtime compatibility, and remove prerelease configuration only when verified unnecessary. |
+
+The first two tasks can proceed independently; acceptance work must preserve
+historical artifacts until the output-routing fix lands. Stable adoption is
+conditional on actual artifact availability and requires fresh validation of the
+selected release. No stable release availability was checked or assumed when
+creating these tasks.
+
+Existing clipping, shadow and standalone CDN work remains with `icj.3`, `hr8`,
+`m0y` and `zfi`; these tasks do not duplicate or close that work. The successful
+FieldArrows pilot does not justify a blanket representation rewrite or a new
+generic schema framework.
+
+## Remaining rc.2 acceptance completed (2026-10-11)
+
+Tracking: `molgpu-sept-8ej`. This is fresh acceptance evidence, separate from
+the original scoped gate above. Source:
+`f202603a04109cb8b48e3ef8205d76da3324a2e3`, containing `03406b0`. Tracked source
+was clean before execution; an unrelated untracked `.claude/` directory was
+present. No production or harness change was needed.
+
+Command:
+
+```sh
+deno test -A packages/viewer/test/run-surface.mjs packages/viewer/test/run-ribbon.mjs packages/viewer/test/run-materials.mjs packages/viewer/test/run-postprocess.mjs
+```
+
+The initial sandbox run could not bind the Vite loopback sockets (`EACCES` at
+ports 5201, 5209, 5211 and 5212); no browser assertions ran in that attempt. The
+approved execution outside that socket restriction passed all four suites in 39
+seconds: **4 passed, 0 failed, 0 ignored**. This is an environment retry, not a
+retry of a failed rendering assertion. Each suite's uncaptured WebGPU error
+checks passed.
+
+| Suite       | Outcome | Observations                                                                                                               |
+| ----------- | ------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Surface     | Passed  | CPU resolution rebuild and atom attribution; live GPU movement, burst replacement and unmount; style storage delta zero.   |
+| Ribbon      | Passed  | Flat/field styling reuses geometry; GPU DSSP publication, computed coordinates and bounded continuous playback.            |
+| Materials   | Passed  | PBR parameter changes reuse pipelines/geometry; basic switch increases pipelines from 2 to 4; other wrappers draw cleanly. |
+| Postprocess | Passed  | SSAO/outline/OIT increase pipelines from 4 to 28 and textures from 3 to 21; explicit alpha policy and zero style uploads.  |
+
+Environment: Deno 2.9.7, `aarch64-apple-darwin`, headless installed Chrome
+`154.0.8037.98`, default `--enable-unsafe-webgpu`. A separate metadata probe
+using the same harness reports vendor `apple`, architecture `metal-3`, and
+`isFallbackAdapter: false`; adapter device and description are empty, so the
+specific GPU model is unavailable. Metadata was captured at
+`2026-10-11T23:36:39.372Z`. The installed `node_modules/.deno` inventory has one
+Live and one Frame, both exactly `0.21.0-rc.2`, matching the manifests and lock.
+No dependency changes were made.
+
+Retained local artifacts:
+
+- `/private/tmp/molgpu-8ej-acceptance.log`: sandbox socket failure.
+- `/private/tmp/molgpu-8ej-acceptance-unsandboxed.log`: full passing run and
+  per-suite metrics.
+- `/private/tmp/molgpu-8ej-environment.json`: browser/adapter metadata.
+- `/private/tmp/molgpu-8ej-evidence-before.sha256` and
+  `/private/tmp/molgpu-8ej-evidence-after.sha256`: identical SHA-256 inventories
+  of every tracked file under `docs/findings/evidence`.
+
+These four runners do not write dated evidence JSON. Git status and the hash
+comparison confirm that historical evidence was preserved. Documentation
+formatting passed. The local slab investigation (`icj.3`), sphere shadow work
+(`hr8`) and near-plane clipping defect (`m0y`) remain independently tracked;
+this run does not establish their acceptance or a full repository GPU gate. No
+publication or deployment was performed.

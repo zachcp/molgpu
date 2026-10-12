@@ -22,8 +22,11 @@ dynamic `import()`, at the tested exact version.
 Compatible internal ranges must resolve a single table/timeline copy. Divergent
 copies can reject values because identity and curve state are module-private;
 inspect `deno info` and the lockfile, then align dependency ranges. The app must
-match use.gpu `0.20.0` exactly. Bundle viewer entries for the browser: direct
-Deno execution cannot link workbench's CommonJS `LoopContext` re-export.
+match use.gpu `0.21.0-rc.2` exactly. Bundle viewer entries for the browser:
+direct Deno execution cannot reliably link the upstream CommonJS re-exports; the
+branch uses the scoped GitLab npm registry in `.npmrc` for rc.2. Isolated
+consumers also set `nodeModulesDir: "auto"` for the prerelease's sibling-package
+resolution; the consumer gate must reproduce these requirements.
 
 **H2 — Types match the runtime.** Each `deno.json` export resolves to its
 TypeScript source file. Public declarations are checked from that same source;
@@ -44,16 +47,17 @@ remain excluded.
 - The only package that imports `molstar` at runtime, or declares it as a
   dependency, is `io`. Other packages may use Mol* only in test oracles, as dev
   dependencies.
-- The only package that imports `@use-gpu/live`, `@use-gpu/workbench` or
-  `@use-gpu/shader` is `viewer`.
+- The only package that imports `@use-gpu/live`, `@use-gpu/frame`,
+  `@use-gpu/workbench` or `@use-gpu/shader` is `viewer`.
 - Viewer providers and shared mechanics do not import modules under a
   `representations/` folder, including `volume/representations/`. Its ordinary
   and advanced entries may export those modules; representation implementations
   may share visual helpers. This is a narrow direction rule, not a dependency
   wall between the other viewer topic folders.
-- A lower package (`geo`, `timeline`) may import `@use-gpu/core` only from
-  `src/internal/`. It must re-export what it needs under its own name, not pass
-  the upstream binding straight through.
+- A lower package may use pure upstream math only behind its private adapter.
+  `timeline` imports `@use-gpu/math` only from `src/internal/`. It must
+  re-export what it needs under its own name, not pass the upstream binding
+  straight through.
 
 **H5 — Reviewed public API.**
 
@@ -164,3 +168,23 @@ contract; historical npm-era findings do not add manifest requirements. Export
 discipline R1/R3 was reconciled in `molgpu-sept-ktr.7`: useful shared aliases
 and concrete inline props are accepted, with no public removals. A passing
 hardening script does not prove every review judgement or browser composition.
+
+## Fresh GPU retirement artifacts
+
+`deno test -A packages/viewer/test/run-retirement.mjs` prints an absolute fresh
+temporary run directory and sends all eleven child cases there. Standalone
+`test/spikes/gpu-retirement/run*.mjs` runners also default to fresh directories.
+Use `--output-dir=/absolute/path` (after `--` for `deno test`) or
+`MOLGPU_RETIREMENT_OUTPUT_DIR` to select a destination; the argument takes
+precedence. Existing scenario artifacts and logs are never silently overwritten.
+Choose a new destination for each explicit run.
+
+Each scenario JSON records UTC time, source commit/dirty state, installed exact
+use.gpu versions, options, browser/adapter metadata when available, the original
+report and pass/fail outcome. Missing metadata is marked unavailable. The
+wrapper writes stdout/stderr chunks directly to log files while each child runs,
+so emitted diagnostics survive an external timeout, and propagates child
+failure. CI uploads the retirement group's directory on success or failure.
+These files are fresh acceptance evidence; exporting them into dated findings is
+a separate deliberate action. Default execution never rewrites historical
+findings.

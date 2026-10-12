@@ -1,4 +1,7 @@
-import { assertEquals } from "@std/assert";
+import {
+  outputDirectory,
+  runChild,
+} from "../../../test/spikes/gpu-retirement/evidence.mjs";
 import { fromFileUrl } from "@std/path";
 
 const spike = (name) =>
@@ -7,15 +10,15 @@ const spike = (name) =>
   );
 
 Deno.test("GPU retirement across held draws, compute, maps and memory churn", async () => {
+  const directory = await outputDirectory();
   for (
     const [name, args] of [
-      ["run.mjs", ["--volume", "--acceptance", "--evidence-date=2026-10-01"]],
-      ["run.mjs", ["--efield", "--acceptance", "--evidence-date=2026-10-01"]],
-      ["run.mjs", ["--lines", "--acceptance", "--evidence-date=2026-10-01"]],
+      ["run.mjs", ["--volume", "--acceptance"]],
+      ["run.mjs", ["--efield", "--acceptance"]],
+      ["run.mjs", ["--lines", "--acceptance"]],
       ["run.mjs", [
         "--attribute",
         "--acceptance",
-        "--evidence-date=2026-10-01",
       ]],
       ["run-matrix.mjs", ["--passes"]],
       ["run-matrix.mjs", ["--passes", "--same-size"]],
@@ -26,12 +29,19 @@ Deno.test("GPU retirement across held draws, compute, maps and memory churn", as
       ["run-memory.mjs", []],
     ]
   ) {
-    const output = await new Deno.Command(Deno.execPath(), {
-      args: ["run", "-A", spike(name), ...args],
-    }).output();
-    const stdout = new TextDecoder().decode(output.stdout);
-    const stderr = new TextDecoder().decode(output.stderr);
-    if (stdout) console.log(stdout);
-    assertEquals(output.code, 0, `${name} failed:\n${stderr}`);
+    const id = `${name.replace(".mjs", "")}${
+      args.length
+        ? "-" + args.map((arg) => arg.replace(/^--/, "")).join("-")
+        : ""
+    }`;
+    await runChild(
+      directory,
+      id,
+      new Deno.Command(Deno.execPath(), {
+        args: ["run", "-A", spike(name), ...args, `--output-dir=${directory}`],
+        stdout: "piped",
+        stderr: "piped",
+      }),
+    );
   }
 });
