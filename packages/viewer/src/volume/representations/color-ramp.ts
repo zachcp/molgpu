@@ -16,12 +16,15 @@ export function checkColorRange(
   ascending = true,
 ): void {
   const [lo, hi] = range;
+  const low = Math.fround(lo), high = Math.fround(hi);
+  const width = Math.fround(high - low);
   if (
     !finite(lo) || !finite(hi) ||
-    (ascending ? !(hi > lo) : hi === lo)
+    !Number.isFinite(width) ||
+    (ascending ? !(width > 0) : width === 0)
   ) {
     throw new TypeError(
-      `${who}: range must contain two distinct finite f32 values${
+      `${who}: range must contain two distinct finite f32 values with finite nonzero f32 width${
         ascending ? " with lo < hi" : ""
       }`,
     );
@@ -36,11 +39,11 @@ export function checkColorStops(
 ): void {
   if (
     !Array.isArray(stops) || stops.length < minimum ||
-    stops.some((stop) =>
+    Array.from(stops).some((stop) =>
       !Array.isArray(stop) || stop.length !== 2 ||
       !finite(stop[0]) ||
       !Array.isArray(stop[1]) || stop[1].length !== 4 ||
-      stop[1].some((value) => !finite(value))
+      [0, 1, 2, 3].some((i) => !finite(stop[1][i]))
     )
   ) {
     throw new TypeError(

@@ -754,12 +754,15 @@ Bonds, BallAndStick, Tube, Surface, Label, Distance, FieldLines and VolumeSlice
 export named props for typed wrappers; their private draw adapters derive from
 those contracts. Ribbon and Cartoon continue to share RibbonProps.
 
-Volume color ranges and ramp entries must be finite f32 values. FieldLines and
-FieldArrows require increasing magnitude ranges and accept a single constant
-stop; VolumeSlice accepts descending ranges and requires at least two stops.
-Duplicate stop positions retain their existing ordered interpolation behavior.
-The input stop array is borrowed unchanged; shader construction sorts a copy.
-Stops on field glyphs are unused until colorRange is supplied.
+Volume color ranges and ramp entries must be finite f32 values. Range endpoints
+must remain distinct after f32 rounding, with a finite nonzero f32 width. Ramp
+entries must contain all four RGBA channels; sparse arrays are rejected.
+FieldLines and FieldArrows require increasing magnitude ranges and accept a
+single constant stop; VolumeSlice accepts descending ranges and requires at
+least two stops. Duplicate stop positions retain their existing ordered
+interpolation behavior. The input stop array is borrowed unchanged; shader
+construction sorts a copy. Stops on field glyphs are unused until colorRange is
+supplied.
 
 Ramachandran recoloring reuses torsions, point positions and grid geometry. Its
 CPU color column can upload when the color changes; published coordinates update

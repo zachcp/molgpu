@@ -103,3 +103,52 @@ Deno.test("field scalar controls retain strict positive/integer validation", () 
   assertThrows(() => lines({ steps: 1.5 }), TypeError);
   assertThrows(() => slice({ opacity: 2 }, [0, 1]), RangeError);
 });
+
+Deno.test("volume ranges reject collapse and nonfinite width at GPU precision", () => {
+  for (
+    const range of [[1, 1 + 1e-8], [0, 1e-50], [-3e38, 3e38]] as const
+  ) {
+    assertThrows(() => arrows({ colorRange: range }), TypeError, "FieldArrows");
+    assertThrows(() => lines({ colorRange: range }), TypeError, "FieldLines");
+    assertThrows(() => slice({ range }, [0, 1]), TypeError, "VolumeSlice");
+    const reversed = [range[1], range[0]] as const;
+    assertThrows(() => slice({ range: reversed }, [0, 1]), TypeError);
+  }
+  // Adjacent f32 values and a subnormal interval still have usable widths.
+  for (const range of [[1, 1 + 2 ** -23], [0, 2 ** -149]] as const) {
+    assertStrictEquals(arrows({ colorRange: range }).colorRange, range);
+    assertStrictEquals(lines({ colorRange: range }).colorRange, range);
+    assertStrictEquals(slice({ range }, [0, 1]).range, range);
+    const reversed = [range[1], range[0]] as const;
+    assertStrictEquals(slice({ range: reversed }, [0, 1]).range, reversed);
+  }
+});
+
+Deno.test("volume ramps reject holes in stops and every RGBA channel", () => {
+  const complete = [[0, [0, 0, 0, 1]], [1, [1, 1, 1, 1]]] as const;
+  const sparse = new Array(2);
+  sparse[1] = complete[1];
+  const malformed = [sparse];
+  for (let i = 0; i < 4; i++) {
+    const rgba = [1, 1, 1, 1];
+    delete rgba[i];
+    malformed.push([[0, rgba], complete[1]]);
+  }
+  for (const bad of malformed) {
+    const stops = bad as unknown as ColorStops;
+    assertThrows(
+      () => arrows({ colorRange: [0, 1], stops }),
+      TypeError,
+      "FieldArrows",
+    );
+    assertThrows(
+      () => lines({ colorRange: [0, 1], stops }),
+      TypeError,
+      "FieldLines",
+    );
+    assertThrows(() => slice({ stops }, [0, 1]), TypeError, "VolumeSlice");
+    assertThrows(() => colorRampWgsl(stops), TypeError, "Color ramp");
+    assertStrictEquals(arrows({ stops }).stops, stops);
+    assertStrictEquals(lines({ stops }).stops, stops);
+  }
+});
