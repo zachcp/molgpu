@@ -350,6 +350,50 @@ baseline; this section records the subsequent changes.
   colored callback payload remain intact. Browser invalidation acceptance was
   added for flat/Field recoloring, other styles, coordinates and layout.
 
-Validation is in progress. Production signatures now name the new props exports,
-so API snapshot review, hardening and a JSR dry run are required in addition to
-CPU/component checks and the relevant browser suites.
+Implementation is committed as `cb22352`; review and the type probe are in
+`92ee4d7`. The public API snapshot was reviewed: eight named props exports
+replace the corresponding inline signatures, with the same accepted shapes;
+FieldArrows/FieldLines/VolumeSlice use the existing equivalent `ColorStops`
+contract internally. No dependencies, package boundaries or scientific units
+changed. Trivial components remain inline, and shared `types.ts` declarations
+were not moved merely to reduce file size.
+
+### Final implementation acceptance
+
+- Four maintained volume-option regression tests and all four existing
+  Ramachandran scientific/value tests pass.
+- Public component and site typechecks and both the derived-contract probe and
+  Bezbox JSX/negative-union consumer pass.
+- All eight packages pass H1–H6; the full workspace JSR dry run succeeds.
+- Integrated EField, Volume and invalidation browser run: **84 passed, 0 failed,
+  28 inapplicable ignored**, in 5m03s. This includes the new Ramachandran
+  flat/Field recoloring, point-size/background/grid-color, coordinate and layout
+  checks, plus the existing representation replacement, mount/unmount, retained
+  buffer/GC and selection-churn checks. No uncaptured WebGPU errors.
+- Expanded EField rerun: **1 passed**, in 1m17s. Line width/tint/opacity/range
+  edits preserve geometry, uploads and integration; changing stops or toggling
+  line/arrow ranges specializes shaders without geometry uploads. This rerun
+  explicitly skipped the unrelated throughput benchmark; the initial EField run
+  used its ordinary settings.
+- Site browser suite: **1 passed**, in 51s, including visible Ramachandran
+  inset, clipping, shadow probes and bounded snapshot playback on maintained
+  routes.
+- Scoped formatting/lint, local report links, issue template lint and
+  `git diff --check` pass. The pre-existing untracked `.claude/` directory is
+  unrelated and remains untouched.
+
+Local raw logs are retained at:
+
+- `/private/tmp/molgpu-primitives-implementation-browser.log`
+- `/private/tmp/molgpu-primitives-ramp-browser.log`
+- `/private/tmp/molgpu-primitives-site.log`
+- `/private/tmp/molgpu-primitives-implementation-types.log`
+- `/private/tmp/molgpu-primitives-all-hardening.log`
+- `/private/tmp/molgpu-primitives-jsr.log`
+
+Environment: Deno 2.9.7 on aarch64 Apple Darwin, existing Chrome WebGPU harness,
+exact use.gpu rc.2. Vite emitted the existing unresolved `@std/path` config
+warning, but built and all browser assertions passed. These are the relevant
+scoped suites, not a claim that every standalone GPU suite ran. Nothing was
+published or deployed. The four implementation follow-ups are complete with this
+evidence; unrelated shadow/clipping/dynamics/inspector issues are unchanged.
