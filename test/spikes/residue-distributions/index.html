@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <link rel="icon" href="data:,">
+    <title>Residue distribution planning sketch</title>
+    <style>
+    body {
+      margin: 0;
+      background: #111927;
+      color: #e8edf6;
+      font: 15px system-ui;
+    }
+    main {
+      max-width: 1180px;
+      margin: auto;
+      padding: 24px;
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 28px;
+    }
+    p {
+      color: #b9c7da;
+    }
+    #root {
+      width: 100%;
+      height: 360px;
+      position: relative;
+      background: #080d16;
+    }
+    .controls {
+      display: flex;
+      gap: 16px;
+      margin: 16px 0;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    select,
+    button {
+      color: inherit;
+      background: #24354b;
+      border: 1px solid #6c809a;
+      padding: 7px;
+      border-radius: 4px;
+    }
+    #matrix {
+      overflow: auto;
+    }
+    table {
+      border-collapse: separate;
+      border-spacing: 3px;
+    }
+    th {
+      font-size: 12px;
+    }
+    td button {
+      min-width: 36px;
+      font-size: 12px;
+      padding: 5px;
+    }
+    td button[aria-pressed=true] {
+      outline: 2px solid #ffcb6b;
+    }
+    #detail {
+      min-height: 45px;
+      padding: 12px;
+      border: 1px solid #6c809a;
+    }
+    .hint {
+      font-size: 13px;
+    }
+    a {
+      color: #90caf9;
+    }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Inspect one residue, keep its backbone context</h1>
+      <p>Synthetic Cα backbone and authored probabilities. No inference or calibrated mutation likelihoods.</p>
+      <div id="root"></div>
+      <div class="controls">
+        <label>Chain <select id="chain"><option value="all">All</option><option>A</option><option>B</option></select></label>
+        <label>Seven-residue window <select id="window"><option value="all">All residues</option></select></label>
+        <button id="unmount">Unmount scene</button>
+      </div>
+      <p
+        class="hint">Color: low native-residue probability (blue) → high (orange); missing rows gray. Select any cell to highlight its residue on the backbone. Enter activates focused cells. X remains an explicit unknown category.</p>
+      <div id="detail" aria-live="polite"></div>
+      <div id="matrix"></div>
+      <script type="module" src="./page.tsx"></script>
+    </main>
+  </body>
+</html>

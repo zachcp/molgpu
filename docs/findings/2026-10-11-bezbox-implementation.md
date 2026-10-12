@@ -148,3 +148,57 @@ Existing clipping, shadow and standalone CDN work remains with `icj.3`, `hr8`,
 `m0y` and `zfi`; these tasks do not duplicate or close that work. The successful
 FieldArrows pilot does not justify a blanket representation rewrite or a new
 generic schema framework.
+
+## Remaining rc.2 acceptance completed (2026-10-11)
+
+Tracking: `molgpu-sept-8ej`. This is fresh acceptance evidence, separate from
+the original scoped gate above. Source:
+`f202603a04109cb8b48e3ef8205d76da3324a2e3`, containing `03406b0`. Tracked source
+was clean before execution; an unrelated untracked `.claude/` directory was
+present. No production or harness change was needed.
+
+Command:
+
+```sh
+deno test -A packages/viewer/test/run-surface.mjs packages/viewer/test/run-ribbon.mjs packages/viewer/test/run-materials.mjs packages/viewer/test/run-postprocess.mjs
+```
+
+The initial sandbox run could not bind the Vite loopback sockets (`EACCES` at
+ports 5201, 5209, 5211 and 5212); no browser assertions ran in that attempt. The
+approved execution outside that socket restriction passed all four suites in 39
+seconds: **4 passed, 0 failed, 0 ignored**. This is an environment retry, not a
+retry of a failed rendering assertion. Each suite's uncaptured WebGPU error
+checks passed.
+
+| Suite       | Outcome | Observations                                                                                                               |
+| ----------- | ------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Surface     | Passed  | CPU resolution rebuild and atom attribution; live GPU movement, burst replacement and unmount; style storage delta zero.   |
+| Ribbon      | Passed  | Flat/field styling reuses geometry; GPU DSSP publication, computed coordinates and bounded continuous playback.            |
+| Materials   | Passed  | PBR parameter changes reuse pipelines/geometry; basic switch increases pipelines from 2 to 4; other wrappers draw cleanly. |
+| Postprocess | Passed  | SSAO/outline/OIT increase pipelines from 4 to 28 and textures from 3 to 21; explicit alpha policy and zero style uploads.  |
+
+Environment: Deno 2.9.7, `aarch64-apple-darwin`, headless installed Chrome
+`154.0.8037.98`, default `--enable-unsafe-webgpu`. A separate metadata probe
+using the same harness reports vendor `apple`, architecture `metal-3`, and
+`isFallbackAdapter: false`; adapter device and description are empty, so the
+specific GPU model is unavailable. Metadata was captured at
+`2026-10-11T23:36:39.372Z`. The installed `node_modules/.deno` inventory has one
+Live and one Frame, both exactly `0.21.0-rc.2`, matching the manifests and lock.
+No dependency changes were made.
+
+Retained local artifacts:
+
+- `/private/tmp/molgpu-8ej-acceptance.log`: sandbox socket failure.
+- `/private/tmp/molgpu-8ej-acceptance-unsandboxed.log`: full passing run and
+  per-suite metrics.
+- `/private/tmp/molgpu-8ej-environment.json`: browser/adapter metadata.
+- `/private/tmp/molgpu-8ej-evidence-before.sha256` and
+  `/private/tmp/molgpu-8ej-evidence-after.sha256`: identical SHA-256 inventories
+  of every tracked file under `docs/findings/evidence`.
+
+These four runners do not write dated evidence JSON. Git status and the hash
+comparison confirm that historical evidence was preserved. Documentation
+formatting passed. The local slab investigation (`icj.3`), sphere shadow work
+(`hr8`) and near-plane clipping defect (`m0y`) remain independently tracked;
+this run does not establish their acceptance or a full repository GPU gate. No
+publication or deployment was performed.

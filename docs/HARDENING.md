@@ -168,3 +168,22 @@ contract; historical npm-era findings do not add manifest requirements. Export
 discipline R1/R3 was reconciled in `molgpu-sept-ktr.7`: useful shared aliases
 and concrete inline props are accepted, with no public removals. A passing
 hardening script does not prove every review judgement or browser composition.
+
+## Fresh GPU retirement artifacts
+
+`deno test -A packages/viewer/test/run-retirement.mjs` prints an absolute fresh
+temporary run directory and sends all eleven child cases there. Standalone
+`test/spikes/gpu-retirement/run*.mjs` runners also default to fresh directories.
+Use `--output-dir=/absolute/path` (after `--` for `deno test`) or
+`MOLGPU_RETIREMENT_OUTPUT_DIR` to select a destination; the argument takes
+precedence. Existing scenario artifacts and logs are never silently overwritten.
+Choose a new destination for each explicit run.
+
+Each scenario JSON records UTC time, source commit/dirty state, installed exact
+use.gpu versions, options, browser/adapter metadata when available, the original
+report and pass/fail outcome. Missing metadata is marked unavailable. The
+wrapper retains stdout/stderr logs even when a child fails and propagates its
+failure. CI uploads the retirement group's directory on success or failure.
+These files are fresh acceptance evidence; exporting them into dated findings is
+a separate deliberate action. Default execution never rewrites historical
+findings.
