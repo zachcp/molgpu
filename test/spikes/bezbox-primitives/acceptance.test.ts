@@ -10,13 +10,13 @@ import { createTrajectory, createVolume } from "@molgpu/table";
 import { createRequire } from "node:module";
 // Research-only pin; keep the production import map and lock unchanged.
 // deno-lint-ignore no-import-prefix
-import type { TraitProps } from "npm:@use-gpu/traits@0.21.0-rc.2";
+import type { TraitProps } from "npm:@use-gpu/traits@0.21.0-rc.3";
 
 // The pinned traits ESM entry imports missing Live named exports under Deno.
 // Its require export supports this CPU-only probe; browser code uses bundling.
 const { combine, parseTrait, trait } = createRequire(import.meta.url)(
   "@use-gpu/traits",
-) as typeof import("npm:@use-gpu/traits@0.21.0-rc.2");
+) as typeof import("npm:@use-gpu/traits@0.21.0-rc.3");
 
 // A storage layout describes values. It deliberately says nothing about units,
 // dimensions, ownership, async readiness, atom mapping or source replacement.

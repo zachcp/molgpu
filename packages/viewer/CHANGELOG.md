@@ -7,7 +7,10 @@ for the procedure.
 
 ## [Unreleased]
 
-- Use exact use.gpu `0.21.0-rc.2` packages from the scoped GitLab registry;
+- Select the pure Math ESM entry in Deno and use its package alias for molecular
+  interpolation imports.
+
+- Use exact use.gpu `0.21.0-rc.3` packages from the scoped GitLab registry;
   preserve native pre/post compute phases when observing dispatch publication.
 - Expose `FieldArrowsProps` and separate field-arrow options/shaders; colocate
   trajectory and volume contracts without changing their props.

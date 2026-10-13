@@ -4,9 +4,10 @@ Reviewed 2026-10-05 against `origin/main` at `8bf1005`. This is the navigation
 and composition map; package READMEs describe supported APIs, dated findings
 retain decisions and evidence, and Beads track remaining work. The October 11
 GitLab rc.2 migration is recorded in the
-[implementation notes](findings/2026-10-11-bezbox-implementation.md).
-[DESIGN](DESIGN.md) records intent and [ROADMAP](ROADMAP.md) retains historical
-phase outcomes.
+[implementation notes](findings/2026-10-11-bezbox-implementation.md). The rc.3
+upgrade is recorded in the
+[October 12 acceptance](findings/2026-10-12-use-gpu-rc3.md). [DESIGN](DESIGN.md)
+records intent and [ROADMAP](ROADMAP.md) retains historical phase outcomes.
 
 ## Package boundaries
 
@@ -40,7 +41,7 @@ Reducing dependency edges should follow removing a responsibility, not copying
 its implementation into callers. Table owns identities, attributes and molecular
 data contracts; select owns query semantics; fields owns field evaluation and
 WGSL generation; dynamics owns scientific kernels; geo owns geometry. Live and
-GPU adaptation stay in viewer. Exact use.gpu `0.21.0-rc.2` and bundled browser
+GPU adaptation stay in viewer. Exact use.gpu `0.21.0-rc.3` and bundled browser
 viewer execution are the verified dependency contract.
 
 ## Dataset scopes and specialized consumers

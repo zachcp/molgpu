@@ -22,9 +22,9 @@ dynamic `import()`, at the tested exact version.
 Compatible internal ranges must resolve a single table/timeline copy. Divergent
 copies can reject values because identity and curve state are module-private;
 inspect `deno info` and the lockfile, then align dependency ranges. The app must
-match use.gpu `0.21.0-rc.2` exactly. Bundle viewer entries for the browser:
+match use.gpu `0.21.0-rc.3` exactly. Bundle viewer entries for the browser:
 direct Deno execution cannot reliably link the upstream CommonJS re-exports; the
-branch uses the scoped GitLab npm registry in `.npmrc` for rc.2. Isolated
+branch uses the scoped GitLab npm registry in `.npmrc` for rc.3. Isolated
 consumers also set `nodeModulesDir: "auto"` for the prerelease's sibling-package
 resolution; the consumer gate must reproduce these requirements.
 

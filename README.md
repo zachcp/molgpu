@@ -28,7 +28,7 @@ console.log(data.topology.atoms.count, cysteines.indices.length);
 Save this as `example.ts` and run `deno run --allow-net example.ts`. For
 rendering, start with the
 [viewer setup and scene example](packages/viewer/README.md). Use the same
-use.gpu version as the viewer (`0.21.0-rc.2`) throughout your application. This
+use.gpu version as the viewer (`0.21.0-rc.3`) throughout your application. This
 branch uses the GitLab prerelease registry configured in `.npmrc`; see the
 viewer dependency-resolution instructions.
 
