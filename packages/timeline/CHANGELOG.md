@@ -7,6 +7,9 @@ for the procedure.
 
 ## [Unreleased]
 
+- Select the pure Math ESM entry in Deno and use its package alias for molecular
+  interpolation imports.
+
 - Use exact use.gpu `0.21.0-rc.3` packages from the scoped GitLab registry.
 - Keep pure easing behind the private adapter, now importing `@use-gpu/math`.
 

@@ -8,8 +8,8 @@
 // draws but extrudes each vertex pair as its own cone when shaded — the
 // spiky artifact this avoids. A run needs at least 2 guide points to have a
 // direction at all, so a single-residue run contributes no tube geometry.
-// Pure math has its own package in use.gpu 0.21; use its explicit ESM entry.
-import { catmullRomWeighted } from "@use-gpu/math/mjs/index.mjs";
+// Pure math has its own package; the Deno alias selects its ESM entry.
+import { catmullRomWeighted } from "@use-gpu/math";
 import type { Trace } from "@molgpu/table";
 import { count as countWork } from "../internal/instrumentation.ts";
 
@@ -33,7 +33,7 @@ const dist3 = (guide: Float32Array, i: number, j: number): number =>
   );
 
 /**
- * Subdivide one run's guide points with @use-gpu/core's centripetal
+ * Subdivide one run's guide points with @use-gpu/math's centripetal
  * (power=0.5) Catmull-Rom, which — unlike a uniform parameterization — stays
  * well-behaved when consecutive guide points are unevenly spaced. `at(k)`
  * clamps to this run's own ends, never a neighbor run's.

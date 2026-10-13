@@ -4,7 +4,7 @@
   "license": "MIT",
   "exports": "./src/index.mjs",
   "imports": {
-    "@use-gpu/math": "npm:@use-gpu/math@0.21.0-rc.3",
+    "@use-gpu/math": "npm:/@use-gpu/math@0.21.0-rc.3/mjs/index.mjs",
     "@use-gpu/math/": "npm:/@use-gpu/math@0.21.0-rc.3/"
   },
   "publish": {

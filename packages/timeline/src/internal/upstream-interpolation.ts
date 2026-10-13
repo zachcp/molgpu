@@ -1,5 +1,5 @@
 // Renderer-free adapter over the pure math kernels in use.gpu 0.21.0-rc.3.
-// Explicit ESM entry keeps this graph independent of Live and GPU machinery.
+// The package alias selects the pure ESM entry in the Deno manifests.
 import {
   bezierEase,
   catmullRomWeightedDual,
@@ -9,7 +9,7 @@ import {
   makeArcLengthMap,
   sampleToCubicBezier,
   velocityToBezierEase,
-} from "@use-gpu/math/mjs/index.mjs";
+} from "@use-gpu/math";
 
 /** A value being interpolated: a number, or a vector as a plain array. */
 export type Value = number | number[];

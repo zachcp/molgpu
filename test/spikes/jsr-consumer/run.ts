@@ -129,7 +129,12 @@ const useGpu = (version = "0.21.0-rc.3") =>
   Object.fromEntries(
     USE_GPU.map((
       name,
-    ) => [`@use-gpu/${name}`, `npm:@use-gpu/${name}@${version}`]),
+    ) => [
+      `@use-gpu/${name}`,
+      name === "math"
+        ? `npm:/@use-gpu/math@${version}/mjs/index.mjs`
+        : `npm:@use-gpu/${name}@${version}`,
+    ]),
   );
 
 /** Publish a copy of one package at another version, from outside the workspace. */
@@ -357,7 +362,7 @@ try {
   const otherLive = await consumer({
     ...molgpu(),
     ...useGpu("0.19.0-rc.11"),
-    "@use-gpu/math": "npm:@use-gpu/math@0.21.0-rc.3",
+    "@use-gpu/math": "npm:/@use-gpu/math@0.21.0-rc.3/mjs/index.mjs",
     "@use-gpu/frame": "npm:@use-gpu/frame@0.21.0-rc.3",
   }, [
     "scene.tsx",

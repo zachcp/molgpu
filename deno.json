@@ -55,7 +55,7 @@
     "react-dom/client": "npm:react-dom@19.3.0/client",
     "typescript": "npm:typescript@5.9.3",
     "vite": "npm:vite@8.3.0",
-    "@use-gpu/math": "npm:@use-gpu/math@0.21.0-rc.3",
+    "@use-gpu/math": "npm:/@use-gpu/math@0.21.0-rc.3/mjs/index.mjs",
     "@use-gpu/math/": "npm:/@use-gpu/math@0.21.0-rc.3/",
     "@use-gpu/frame": "npm:@use-gpu/frame@0.21.0-rc.3",
     "@use-gpu/frame/": "npm:/@use-gpu/frame@0.21.0-rc.3/"
