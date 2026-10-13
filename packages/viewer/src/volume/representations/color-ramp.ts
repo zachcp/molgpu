@@ -75,9 +75,12 @@ export function colorRampWgsl(stops: ColorStops | null): string {
   }; }\n`;
   for (let i = 1; i < stops.length; i++) {
     const [t0, c0] = stops[i - 1], [t1, c1] = stops[i];
+    // Use the same f32 endpoints as the shader subtraction. Only duplicate
+    // positions need a fallback; a narrow nonzero interval must retain its width.
+    const width = Math.fround(Math.fround(t1) - Math.fround(t0));
     ramp += `  if (x <= ${wgslF32(t1)}) { return mix(${wgslVec4(c0)}, ${
       wgslVec4(c1)
-    }, (x - ${wgslF32(t0)}) / ${wgslF32(Math.max(t1 - t0, 1e-12))}); }\n`;
+    }, (x - ${wgslF32(t0)}) / ${wgslF32(width || 1e-12)}); }\n`;
   }
   return ramp + `  return ${wgslVec4(stops[stops.length - 1][1])};`;
 }
