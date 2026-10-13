@@ -103,7 +103,7 @@ async function consumer(
     JSON.stringify(
       {
         imports,
-        // rc.2 omits some inter-package dependency declarations. A local
+        // rc.3 omits some inter-package dependency declarations. A local
         // npm tree resolves their installed siblings, as in the workspace.
         nodeModulesDir: "auto",
         compilerOptions: { lib: ["ES2023", "DOM", "DOM.Iterable", "deno.ns"] },
@@ -125,7 +125,7 @@ const molgpu = (version = workspaceVersion) =>
       name,
     ) => [`@molgpu/${name}`, `jsr:@molgpu/${name}@${version}`]),
   );
-const useGpu = (version = "0.21.0-rc.2") =>
+const useGpu = (version = "0.21.0-rc.3") =>
   Object.fromEntries(
     USE_GPU.map((
       name,
@@ -357,8 +357,8 @@ try {
   const otherLive = await consumer({
     ...molgpu(),
     ...useGpu("0.19.0-rc.11"),
-    "@use-gpu/math": "npm:@use-gpu/math@0.21.0-rc.2",
-    "@use-gpu/frame": "npm:@use-gpu/frame@0.21.0-rc.2",
+    "@use-gpu/math": "npm:@use-gpu/math@0.21.0-rc.3",
+    "@use-gpu/frame": "npm:@use-gpu/frame@0.21.0-rc.3",
   }, [
     "scene.tsx",
   ]);
@@ -378,7 +378,7 @@ try {
     divergent,
     useGpu: {
       consumer: "0.19.0-rc.11",
-      viewer: "0.21.0-rc.2",
+      viewer: "0.21.0-rc.3",
       liveVersionsInGraph: liveVersions,
       graphErrors: errors(otherGraph.stderr),
       check: otherCheck.code === 0 ? "pass" : "fail",

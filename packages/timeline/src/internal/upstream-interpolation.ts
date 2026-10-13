@@ -1,4 +1,4 @@
-// Renderer-free adapter over the pure math kernels in use.gpu 0.21.0-rc.2.
+// Renderer-free adapter over the pure math kernels in use.gpu 0.21.0-rc.3.
 // Explicit ESM entry keeps this graph independent of Live and GPU machinery.
 import {
   bezierEase,

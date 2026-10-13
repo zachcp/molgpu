@@ -7,7 +7,7 @@ for the procedure.
 
 ## [Unreleased]
 
-- Use exact use.gpu `0.21.0-rc.2` packages from the scoped GitLab registry.
+- Use exact use.gpu `0.21.0-rc.3` packages from the scoped GitLab registry.
 - Keep pure easing behind the private adapter, now importing `@use-gpu/math`.
 
 - Clarify published documentation, correct public-entry examples and add JSR

@@ -12,7 +12,7 @@
     ]
   },
   "imports": {
-    "@use-gpu/math": "npm:@use-gpu/math@0.21.0-rc.2",
-    "@use-gpu/math/": "npm:/@use-gpu/math@0.21.0-rc.2/"
+    "@use-gpu/math": "npm:@use-gpu/math@0.21.0-rc.3",
+    "@use-gpu/math/": "npm:/@use-gpu/math@0.21.0-rc.3/"
   }
 }
