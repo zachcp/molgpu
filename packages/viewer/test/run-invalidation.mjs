@@ -1045,6 +1045,67 @@ test("selection churn: 64 distinct Spacefill selections keep owned live GPU buff
   );
 });
 
+test("Ramachandran separates color, scientific coordinates and inset layout", async () => {
+  const base = scene("ramachandran", { props: { color: [1, 0, 0, 1] } });
+  for (const color of [[0, 1, 0, 1], "field:element"]) {
+    const edited = await measure(
+      base,
+      scene("ramachandran", { props: { color } }),
+    );
+    noErrors(edited);
+    assertEquals(edited.geometryBuilds, 0, brief(edited));
+    assert(edited.detail["uploadBytes:colors"] > 0, brief(edited));
+    assertEquals(
+      keysOf(
+        edited,
+        /^uploadBytes:(positions|lines|segments|quad|indices|structure:)/,
+      ),
+      [],
+      brief(edited),
+    );
+  }
+  for (
+    const props of [{ pointSize: 9 }, { background: [0.2, 0.2, 0.2, 1] }, {
+      gridColor: [1, 1, 0, 1],
+    }]
+  ) {
+    const edited = await measure(
+      base,
+      scene("ramachandran", { props: { color: [1, 0, 0, 1], ...props } }),
+    );
+    styleOnly(edited);
+  }
+  const moved = await measure(
+    base,
+    scene("ramachandran", { dataKey: "moved", props: { color: [1, 0, 0, 1] } }),
+  );
+  noErrors(moved);
+  assert(
+    moved.detail["geometryBuilds:ramachandran:torsions"] > 0,
+    brief(moved),
+  );
+  assert(moved.detail["uploadBytes:positions"] > 0, brief(moved));
+  assertEquals(
+    keysOf(moved, /^uploadBytes:(lines|segments|quad|indices)$/),
+    [],
+    brief(moved),
+  );
+  const resized = await measure(
+    base,
+    scene("ramachandran", { props: { color: [1, 0, 0, 1], size: 180 } }),
+  );
+  noErrors(resized);
+  assertEquals(
+    resized.detail["geometryBuilds:ramachandran:torsions"],
+    undefined,
+    brief(resized),
+  );
+  assert(resized.detail["uploadBytes:positions"] > 0, brief(resized));
+  assert(resized.detail["uploadBytes:lines"] > 0, brief(resized));
+  await setScene({ mounted: false, dataKey: "base", time: 0, reps: [] });
+  noErrors(await settle());
+});
+
 let setupPromise;
 let remaining =
   registrations.filter(({ options }) => !options.skip && !options.todo).length;

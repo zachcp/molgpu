@@ -23,15 +23,16 @@ export interface RamachandranPoint {
 
 export const DEFAULT_RAMACHANDRAN_COLOR = [0.85, 0.9, 0.96, 1] as const;
 
-/**
- * Residues of the default view (first model, primary conformers) with both
- * torsions defined. A Field colour is evaluated per atom and read at each
- * residue's CA (else its first row).
- */
-export function ramachandranPoints(
-  data: StructureData,
-  color: Field | VectorLike = DEFAULT_RAMACHANDRAN_COLOR,
-): RamachandranPoint[] {
+/** Private scientific rows, independent of display color and inset placement. */
+export interface BackbonePoint {
+  readonly residue: number;
+  readonly row: number;
+  readonly phi: number;
+  readonly psi: number;
+}
+
+/** Default-view residues with finite torsions; anchors prefer each residue's CA. */
+export function backbonePoints(data: StructureData): BackbonePoint[] {
   const rows = activeAtoms(data);
   const { phi, psi } = backboneDihedrals(data, { rows });
   const { atoms } = data.topology;
@@ -40,22 +41,45 @@ export function ramachandranPoints(
     const r = atoms.residue[i];
     if (!anchor.has(r) || atoms.name[i] === "CA") anchor.set(r, i);
   }
+  return [...anchor].filter(([r]) =>
+    Number.isFinite(phi[r]) && Number.isFinite(psi[r])
+  )
+    .map(([residue, row]) => ({
+      residue,
+      row,
+      phi: phi[residue],
+      psi: psi[residue],
+    }))
+    .sort((a, b) => a.residue - b.residue);
+}
+
+/** Apply colors without re-evaluating scientific coordinates. */
+export function colorBackbonePoints(
+  data: StructureData,
+  geometry: readonly BackbonePoint[],
+  color: Field | VectorLike,
+): RamachandranPoint[] {
   const rgba = Array.isArray(color) || ArrayBuffer.isView(color)
     ? null
     : evaluate(color as Field, data, { domain: "atom" }) as Float32Array;
   const fixed = [0, 1, 2, 3].map((k) => (color as VectorLike)[k] ?? 1);
-  const points: RamachandranPoint[] = [];
-  for (const [r, row] of anchor) {
-    if (!Number.isFinite(phi[r]) || !Number.isFinite(psi[r])) continue;
+  return geometry.map(({ residue, row, phi, psi }) => {
     const c = rgba ? [0, 1, 2, 3].map((k) => rgba[4 * row + k]) : fixed;
-    points.push({
-      residue: r,
-      phi: phi[r],
-      psi: psi[r],
+    return {
+      residue,
+      phi,
+      psi,
       color: c as unknown as RamachandranPoint["color"],
-    });
-  }
-  return points.sort((a, b) => a.residue - b.residue);
+    };
+  });
+}
+
+/** Default-view residue torsions in degrees, with flat or per-atom Field color. */
+export function ramachandranPoints(
+  data: StructureData,
+  color: Field | VectorLike = DEFAULT_RAMACHANDRAN_COLOR,
+): RamachandranPoint[] {
+  return colorBackbonePoints(data, backbonePoints(data), color);
 }
 
 /** Inset square's top-left corner in CSS pixels for a canvas of w × h. */

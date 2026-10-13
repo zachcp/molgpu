@@ -233,22 +233,9 @@ const BondLines: LC<{
  * transparent mode (pair with <Pass oit>) unless an explicit `mode` is given.
  */
 const BondsResolved: ViewerComponent<
-  {
-    /** Stick width; defaults to 0.3. */
-    width?: number;
-    /** A molecular query or exact atom selection for this structure. */
+  Omit<BondsProps, "select" | keyof SelectionDiagnostics> & {
     select?: Selection | null;
-    /** Keep bonds whose endpoints are 'both' (default) or 'either' selected. */
-    endpoints?: "both" | "either";
-    /** A flat colour, or a @molgpu/fields Field coloured per endpoint atom. */
-    color?: VectorLike | Field;
-    sides?: number;
-    shaded?: boolean;
-    /** Cast shadows under a shadow-enabled Pass; defaults to false. */
-    shadow?: boolean;
-    /** Wraps the shaded stick layer; without one, the ambient scene material. */
-    material?: MaterialSpec;
-  } & Translucency
+  }
 > = (
   {
     width = 0.3,
@@ -352,9 +339,8 @@ const BondsResolved: ViewerComponent<
   );
 };
 
-/** Draw bond sticks from the nearest live GPU coordinates. Select queries or
- * exact atom selections; both endpoints must match unless endpoints is either. */
-export const Bonds: ViewerComponent<
+/** Caller options for `<Bonds>`. */
+export type BondsProps =
   & {
     /** Stick width; defaults to 0.3. */
     width?: number;
@@ -372,8 +358,11 @@ export const Bonds: ViewerComponent<
     material?: MaterialSpec;
   }
   & Translucency
-  & SelectionDiagnostics
-> = withInstances((props) =>
+  & SelectionDiagnostics;
+
+/** Draw bond sticks from the nearest live GPU coordinates. Select queries or
+ * exact atom selections; both endpoints must match unless endpoints is either. */
+export const Bonds: ViewerComponent<BondsProps> = withInstances((props) =>
   use(SelectionConsumer, {
     input: props.select,
     who: "Bonds",

@@ -13,13 +13,17 @@ import {
 import type { Field } from "@molgpu/fields";
 import { useCoordinateSnapshot } from "../coordinates/coordinate-snapshot.ts";
 import {
+  backbonePoints,
+  colorBackbonePoints,
   DEFAULT_RAMACHANDRAN_COLOR,
   insetRect,
   plotAxes,
   type RamachandranCorner,
   type RamachandranPoint,
-  ramachandranPoints,
 } from "./ramachandran-points.ts";
+import { count } from "../internal/instrumentation.ts";
+import { useRepaint } from "../internal/use-repaint.ts";
+import { useBindingProbe } from "../internal/use-binding-probe.ts";
 import type { VectorLike, ViewerComponent } from "../types.ts";
 import {
   type ColumnMap,
@@ -146,20 +150,35 @@ export const Ramachandran: ViewerComponent<{
   const w = width / pixelRatio, h = height / pixelRatio;
   const { left, top } = insetRect(corner, size, margin, w, h);
 
+  useRepaint();
+  useBindingProbe("ramachandran", color, pointSize, background, gridColor);
+  const data = snapshot?.data;
+  const geometry = useMemo(() => {
+    if (!data) return [];
+    count("geometryBuilds", "ramachandran:torsions");
+    return backbonePoints(data);
+  }, [data?.identity, data?.topology, data?.positions]);
   const points = useMemo(
-    () => snapshot ? ramachandranPoints(snapshot.data, color) : [],
-    [snapshot, color],
+    () => data ? colorBackbonePoints(data, geometry, color) : [],
+    [data, geometry, color],
   );
   useMemo(() => onPoints?.(points), [points, onPoints]);
 
-  const specs = useMemo(() => {
+  const positions = useMemo(() => {
+    count("geometryBuilds", "ramachandran:positions");
     const [x, y] = plotAxes(left, top, size);
-    const positions = new Float32Array(Math.max(1, points.length) * 4);
-    const colors = new Float32Array(Math.max(1, points.length) * 4);
-    points.forEach((p, i) => {
-      positions.set([x(p.phi), y(p.psi), 0, 1], 4 * i);
-      colors.set(p.color, 4 * i);
-    });
+    const values = new Float32Array(Math.max(1, geometry.length) * 4);
+    geometry.forEach((p, i) => values.set([x(p.phi), y(p.psi), 0, 1], 4 * i));
+    return values;
+  }, [geometry, left, top, size]);
+  const colors = useMemo(() => {
+    const values = new Float32Array(Math.max(1, points.length) * 4);
+    points.forEach((p, i) => values.set(p.color, 4 * i));
+    return values;
+  }, [points]);
+  const specs = useMemo(() => {
+    count("geometryBuilds", "ramachandran:grid");
+    const [x, y] = plotAxes(left, top, size);
     const lines: number[] = [];
     const add = (x0: number, y0: number, x1: number, y1: number) =>
       lines.push(x0, y0, 0, 1, x1, y1, 0, 1);
@@ -169,11 +188,8 @@ export const Ramachandran: ViewerComponent<{
     }
     const r = left + size, b = top + size;
     return {
-      points: points.length,
       lines: lines.length / 4,
       columns: [
-        { key: "positions", data: positions, format: "vec4<f32>" },
-        { key: "colors", data: colors, format: "vec4<f32>" },
         { key: "lines", data: Float32Array.from(lines), format: "vec4<f32>" },
         {
           key: "segments",
@@ -209,12 +225,16 @@ export const Ramachandran: ViewerComponent<{
         },
       ] as ColumnSpec[],
     };
-  }, [points, left, top, size]);
+  }, [left, top, size]);
 
-  return withColumns(specs.columns, (map) =>
+  return withColumns([
+    { key: "positions", data: positions, format: "vec4<f32>" },
+    { key: "colors", data: colors, format: "vec4<f32>" },
+    ...specs.columns,
+  ], (map) =>
     use(InsetLayers, {
       map,
-      points: specs.points,
+      points: points.length,
       lines: specs.lines,
       background,
       gridColor,

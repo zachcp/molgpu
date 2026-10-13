@@ -98,3 +98,14 @@ export { TimelineProvider } from "./timeline-context.ts";
 export { useCoordinateFocus } from "./interaction/use-coordinate-focus.ts";
 export { useCameraCurve } from "./interaction/use-camera-curve.ts";
 export { PickingProvider, usePicking } from "./interaction/picking.ts";
+
+export type { BondsProps } from "./representations/bonds/bonds.ts";
+export type { BallAndStickProps } from "./representations/ball-and-stick.ts";
+export type { TubeProps } from "./representations/tube.ts";
+export type { SurfaceProps } from "./representations/surface/surface.ts";
+export type {
+  DistanceProps,
+  LabelProps,
+} from "./representations/annotations.ts";
+export type { FieldLinesProps } from "./volume/representations/field-lines-options.ts";
+export type { VolumeSliceProps } from "./volume/representations/volume-slice-options.ts";

@@ -1,7 +1,7 @@
-import type { Translucency, VectorLike } from "../../types.ts";
+import type { ColorStops, Translucency, VectorLike } from "../../types.ts";
 import { checkOpacity } from "../../rendering/opacity.ts";
 import type { SlicePlane } from "./slice-plane.ts";
-import type { SliceStops } from "./volume-slice.ts";
+import { checkColorRange, checkColorStops, FIELD_STOPS } from "./color-ramp.ts";
 
 /** Caller options for the live field glyphs; storage and bindings stay private. */
 export type FieldArrowsProps = {
@@ -20,15 +20,10 @@ export type FieldArrowsProps = {
   /** Field magnitude range (volume units per Å); omitted uses only the tint. */
   colorRange?: readonly [number, number];
   /** Strength colour ramp; default blue to yellow. Used with colorRange. */
-  stops?: SliceStops;
+  stops?: ColorStops;
   /** Line width in pixels; default 3. */
   width?: number;
 } & Translucency;
-
-const DEFAULT_STOPS: SliceStops = [
-  [0, [0.25, 0.35, 1, 1]],
-  [1, [1, 0.85, 0.2, 1]],
-];
 
 /** Resolve defaults without copying borrowed arrays or changing their identity. */
 export function normalizeFieldArrowsOptions({
@@ -39,7 +34,7 @@ export function normalizeFieldArrowsOptions({
   minField = 1e-3,
   color = [1, 1, 1, 1],
   colorRange,
-  stops = DEFAULT_STOPS,
+  stops = FIELD_STOPS,
   width = 3,
   opacity = 1,
   mode,
@@ -59,8 +54,9 @@ export function normalizeFieldArrowsOptions({
       throw new TypeError(`FieldArrows ${name} must be positive and finite`);
     }
   }
-  if (colorRange && !(colorRange[1] > colorRange[0])) {
-    throw new TypeError("FieldArrows colorRange must be [lo, hi] with lo < hi");
+  if (colorRange) {
+    checkColorRange(colorRange, "FieldArrows");
+    checkColorStops(stops, "FieldArrows");
   }
   return {
     plane,

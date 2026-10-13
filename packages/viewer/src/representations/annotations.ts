@@ -57,18 +57,11 @@ const toPoint = (
  * the anchor; `text`/`color`/`size`/`opacity` are style. Text always blends
  * (SDF glyphs draw in transparent mode); `opacity` (0–1) scales its alpha.
  */
-const LabelResolved: ViewerComponent<{
-  select?: Selection | null;
-  /** Explicit [x, y, z] anchor, overriding the selection centroid. */
-  at?: readonly number[];
-  text?: string;
-  size?: number;
-  color?: VectorLike;
-  offset?: readonly number[];
-  family?: string;
-  /** 0–1, multiplied into the text colour's alpha (text always blends). */
-  opacity?: number;
-}> = (
+const LabelResolved: ViewerComponent<
+  Omit<LabelProps, "select" | keyof SelectionDiagnostics> & {
+    select?: Selection | null;
+  }
+> = (
   {
     select,
     at,
@@ -128,18 +121,12 @@ const SEGMENTS = Int32Array.of(1, 2); // 1 = start, 2 = end: one open line.
  * `opacity` (0–1) fades line and label together; below 1 the line draws in
  * transparent mode.
  */
-const DistanceResolved: ViewerComponent<{
-  a: Selection;
-  b: Selection;
-  color?: VectorLike;
-  width?: number;
-  size?: number;
-  labelColor?: VectorLike;
-  /** 0–1, fades the line and label together. */
-  opacity?: number;
-  /** Customise the label text; receives the distance in Ångström. */
-  format?: (distance: number) => string;
-}> = (
+const DistanceResolved: ViewerComponent<
+  Omit<DistanceProps, "a" | "b" | keyof SelectionDiagnostics> & {
+    a: Selection;
+    b: Selection;
+  }
+> = (
   {
     a,
     b,
@@ -240,22 +227,25 @@ const DistanceResolved: ViewerComponent<{
   ]);
 };
 
+/** Caller options for `<Label>`. */
+export type LabelProps = {
+  select?: SelectionInput;
+  /** Explicit [x, y, z] anchor, overriding the selection centroid. */
+  at?: readonly number[];
+  text?: string;
+  size?: number;
+  color?: VectorLike;
+  offset?: readonly number[];
+  family?: string;
+  /** 0–1, multiplied into the text colour's alpha (text always blends). */
+  opacity?: number;
+} & SelectionDiagnostics;
+
 /** Text anchored to selected atom centroids, using published coordinates.
  * Requires FontLoader and SDFFontProvider ancestors; at overrides the anchor. */
-export const Label: ViewerComponent<
-  {
-    select?: SelectionInput;
-    /** Explicit [x, y, z] anchor, overriding the selection centroid. */
-    at?: readonly number[];
-    text?: string;
-    size?: number;
-    color?: VectorLike;
-    offset?: readonly number[];
-    family?: string;
-    /** 0–1, multiplied into the text colour's alpha (text always blends). */
-    opacity?: number;
-  } & SelectionDiagnostics
-> = (props) => (use(props.at ? LabelOnce : LabelCopies, props));
+export const Label: ViewerComponent<LabelProps> = (
+  props,
+) => (use(props.at ? LabelOnce : LabelCopies, props));
 
 /** One label per call: the selection centroid or an explicit `at`. */
 const LabelOnce: typeof Label = (props) =>
@@ -280,29 +270,32 @@ const LabelOnce: typeof Label = (props) =>
  */
 const LabelCopies = withInstances(LabelOnce);
 
+/** Caller options for `<Distance>`. */
+export type DistanceProps = {
+  a: SelectionInput;
+  b: SelectionInput;
+  color?: VectorLike;
+  width?: number;
+  size?: number;
+  labelColor?: VectorLike;
+  /** 0–1, fades the line and label together. */
+  opacity?: number;
+  /** Customise the label text; receives the distance in Ångström. */
+  format?: (distance: number) => string;
+} & SelectionDiagnostics;
+
 /** Line and distance label between two selection centroids, in angstroms.
  * Anchors follow published coordinate snapshots; font providers are required. */
-export const Distance: ViewerComponent<
-  {
-    a: SelectionInput;
-    b: SelectionInput;
-    color?: VectorLike;
-    width?: number;
-    size?: number;
-    labelColor?: VectorLike;
-    /** 0–1, fades the line and label together. */
-    opacity?: number;
-    /** Customise the label text; receives the distance in Ångström. */
-    format?: (distance: number) => string;
-  } & SelectionDiagnostics
-> = withInstances((props) => {
-  const a = useSelectionInput(props.a, "Distance", "a", props);
-  const b = useSelectionInput(props.b, "Distance", "b", props);
-  if (
-    a.status !== "ready" || b.status !== "ready" ||
-    !a.selection.indices.length || !b.selection.indices.length
-  ) return null;
-  const { onSelectionStatus: _status, warnEmptySelection: _warn, ...draw } =
-    props;
-  return use(DistanceResolved, { ...draw, a: a.selection, b: b.selection });
-});
+export const Distance: ViewerComponent<DistanceProps> = withInstances(
+  (props) => {
+    const a = useSelectionInput(props.a, "Distance", "a", props);
+    const b = useSelectionInput(props.b, "Distance", "b", props);
+    if (
+      a.status !== "ready" || b.status !== "ready" ||
+      !a.selection.indices.length || !b.selection.indices.length
+    ) return null;
+    const { onSelectionStatus: _status, warnEmptySelection: _warn, ...draw } =
+      props;
+    return use(DistanceResolved, { ...draw, a: a.selection, b: b.selection });
+  },
+);

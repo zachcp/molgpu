@@ -16,6 +16,109 @@ import { build } from "vite";
 import { chromium } from "playwright";
 import { webgpuBrowserArgs } from "./webgpu-browser-args.mjs";
 import { writeCcp4 } from "../../io/test/ccp4-fixture.ts";
+import {
+  colorRampWgsl,
+  wgslF32,
+} from "../src/volume/representations/color-ramp.ts";
+
+/** Numeric shader regression: stop endpoints and interior samples, not source strings. */
+async function checkRampInterpolation(page) {
+  const red = [1, 0, 0, 1], green = [0, 1, 0, 1], blue = [0, 0, 1, 1];
+  const lo = 0.5, hi = Math.fround(0.5000001);
+  const tiny = Math.fround(1e-13);
+  const cases = [
+    { stops: [[lo, red], [0.5000001, green]], x: lo, expected: red },
+    {
+      stops: [[lo, red], [0.5000001, green]],
+      x: (lo + hi) / 2,
+      expected: [0.5, 0.5, 0, 1],
+    },
+    { stops: [[lo, red], [0.5000001, green]], x: hi, expected: green },
+    {
+      stops: [[0, red], [1e-13, green]],
+      x: tiny / 2,
+      expected: [0.5, 0.5, 0, 1],
+    },
+    { stops: [[0, red], [1e-13, green]], x: tiny, expected: green },
+    { stops: [[lo, red], [lo, green], [1, blue]], x: lo, expected: red },
+    {
+      stops: [[lo, red], [lo, green], [1, blue]],
+      x: 0.75,
+      expected: [0, 0.5, 0.5, 1],
+    },
+    {
+      stops: [[lo, red], [lo + 1e-8, green], [1, blue]],
+      x: 0.75,
+      expected: [0, 0.5, 0.5, 1],
+    },
+    { stops: [[lo, green]], x: 0.75, expected: green },
+  ];
+  const code =
+    cases.map(({ stops }, i) =>
+      `fn ramp${i}(x: f32) -> vec4<f32> {\n${colorRampWgsl(stops)}\n}`
+    ).join("\n") + `
+@group(0) @binding(0) var<storage, read_write> output: array<vec4<f32>>;
+@compute @workgroup_size(1) fn main() {
+${cases.map(({ x }, i) => `output[${i}] = ramp${i}(${wgslF32(x)});`).join("\n")}
+}`;
+  const result = await page.evaluate(async ({ code, bytes }) => {
+    const { device } = globalThis.__volume;
+    const module = device.createShaderModule({ code });
+    const info = await module.getCompilationInfo();
+    const pipeline = await device.createComputePipelineAsync({
+      layout: "auto",
+      compute: { module, entryPoint: "main" },
+    });
+    const output = device.createBuffer({
+      size: bytes,
+      usage: globalThis.GPUBufferUsage.STORAGE |
+        globalThis.GPUBufferUsage.COPY_SRC,
+    });
+    const staging = device.createBuffer({
+      size: bytes,
+      usage: globalThis.GPUBufferUsage.MAP_READ |
+        globalThis.GPUBufferUsage.COPY_DST,
+    });
+    try {
+      const group = device.createBindGroup({
+        layout: pipeline.getBindGroupLayout(0),
+        entries: [{ binding: 0, resource: { buffer: output } }],
+      });
+      const encoder = device.createCommandEncoder();
+      const pass = encoder.beginComputePass();
+      pass.setPipeline(pipeline);
+      pass.setBindGroup(0, group);
+      pass.dispatchWorkgroups(1);
+      pass.end();
+      encoder.copyBufferToBuffer(output, 0, staging, 0, bytes);
+      device.queue.submit([encoder.finish()]);
+      await staging.mapAsync(globalThis.GPUMapMode.READ);
+      const values = Array.from(new Float32Array(staging.getMappedRange()));
+      staging.unmap();
+      return {
+        values,
+        errors: Array.from(info.messages).filter((m) => m.type === "error").map(
+          (m) => m.message,
+        ),
+      };
+    } finally {
+      staging.destroy();
+      output.destroy();
+    }
+  }, { code, bytes: cases.length * 16 });
+  assertEquals(result.errors, []);
+  for (const [i, { expected }] of cases.entries()) {
+    for (let k = 0; k < 4; k++) {
+      assert(
+        Math.abs(result.values[i * 4 + k] - expected[k]) < 1e-6,
+        `ramp case ${i} channel ${k}: ${result.values[i * 4 + k]} != ${
+          expected[k]
+        }`,
+      );
+    }
+  }
+  return { cases: cases.length, endpoint: result.values.slice(8, 12) };
+}
 
 Deno.test("volume components", async () => {
   const root = fromFileUrl(new URL("../../../", import.meta.url));
@@ -122,6 +225,7 @@ Deno.test("volume components", async () => {
       });
     });
 
+    report.states.rampInterpolation = await checkRampInterpolation(page);
     const settle = () =>
       page.evaluate(async () => {
         for (let i = 0; i < 8; i++) await new Promise(requestAnimationFrame);

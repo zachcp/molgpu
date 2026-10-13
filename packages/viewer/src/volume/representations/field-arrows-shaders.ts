@@ -2,7 +2,7 @@
 // Linked values (volume samples, plane, style, range and tint) stay live.
 import { sampleVolumeGradientWgsl } from "@molgpu/fields";
 import type { VolumeGrid } from "@molgpu/table";
-import type { SliceStops } from "./volume-slice.ts";
+import type { ColorStops } from "../../types.ts";
 import { colorRampWgsl, wgslF32 as f32 } from "./color-ramp.ts";
 
 /** Shared prelude: lattice placement and the field at an arrow's tail. */
@@ -51,7 +51,7 @@ export function widthsWgsl(grid: VolumeGrid, side: number): string {
 export function colorsWgsl(
   grid: VolumeGrid,
   side: number,
-  stops: SliceStops | null,
+  stops: ColorStops | null,
 ): string {
   const ramp = colorRampWgsl(stops);
   return `${prelude(grid, side)}

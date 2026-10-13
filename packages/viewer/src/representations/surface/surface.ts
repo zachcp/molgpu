@@ -159,29 +159,9 @@ const ACCESSIBLE_SMOOTHING = 0.25;
  * accessible kind, whose smoothing probe is below that bound.
  */
 const SurfaceResolved: ViewerComponent<
-  {
-    /** A molecular query or exact atom selection. Defaults to first-model/primary-altloc atoms. */
+  Omit<SurfaceProps, "select" | keyof SelectionDiagnostics> & {
     select?: Selection | null;
-    /** "excluded" (default): the solvent-excluded surface a `probeRadius`
-     * sphere rolls out. "accessible": the solvent-accessible surface, the
-     * union of atoms grown by `probeRadius`, which closes channels the probe
-     * fits through. */
-    kind?: "excluded" | "accessible";
-    /** Ångström probe radius; defaults to 1.4 (water). */
-    probeRadius?: number;
-    /** Grid spacing in Ångströms; defaults to 0.5. Smaller is finer and slower. */
-    resolution?: number;
-    /** Grid byte budget override; defaults to 256 MiB. */
-    maxBytes?: number;
-    /** A flat colour or an atom/position Field such as `byElement()` or `byPotential()`. */
-    color?: VectorLike | Field;
-    /** Å along the vertex normal where a colour field samples; default 1.4. */
-    sampleOffset?: number;
-    /** Wraps the shaded face layer; without one, the ambient scene material. */
-    material?: MaterialSpec;
-    loading?: ViewerElement | (() => ViewerElement);
-    error?: ViewerElement | ((failure: unknown) => ViewerElement);
-  } & Translucency
+  }
 > = (
   {
     select,
@@ -353,11 +333,8 @@ const SurfaceResolved: ViewerComponent<
   });
 };
 
-/** Draw a solvent-excluded (or, with `kind="accessible"`, solvent-accessible)
- * molecular surface around the selected atoms.
- * Supported moving grids update GPU geometry; other cases use CPU snapshots.
- * Resolution and probeRadius control geometry; color and opacity style it. */
-export const Surface: ViewerComponent<
+/** Caller options for `<Surface>`. */
+export type SurfaceProps =
   & {
     /** A molecular query or exact atom selection. Defaults to first-model/primary-altloc atoms. */
     select?: SelectionInput;
@@ -382,8 +359,15 @@ export const Surface: ViewerComponent<
     error?: ViewerElement | ((failure: unknown) => ViewerElement);
   }
   & Translucency
-  & SelectionDiagnostics
-> = withGeometryCopies((props) =>
+  & SelectionDiagnostics;
+
+/** Draw a solvent-excluded (or, with `kind="accessible"`, solvent-accessible)
+ * molecular surface around the selected atoms.
+ * Supported moving grids update GPU geometry; other cases use CPU snapshots.
+ * Resolution and probeRadius control geometry; color and opacity style it. */
+export const Surface: ViewerComponent<SurfaceProps> = withGeometryCopies((
+  props,
+) =>
   use(SelectionConsumer, {
     input: props.select,
     who: "Surface",
