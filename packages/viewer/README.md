@@ -20,7 +20,7 @@ configuration before resolving dependencies:
 ```
 
 Set `"nodeModulesDir": "auto"` in the application's `deno.json` as well. The
-rc.3 Frame and Workbench artifacts omit some transitive dependencies from their
+rc.4 Parse and WebGPU artifacts still omit some sibling dependencies from their
 manifests; a local node_modules tree resolves their sibling packages when
 bundling. The isolated-consumer gate exercises this configuration.
 
@@ -28,12 +28,12 @@ Published molgpu versions retain their own dependency pins; the following pin
 applies to this checkout and its next release.
 
 ```sh
-deno add jsr:@molgpu/viewer jsr:@molgpu/table npm:@use-gpu/live@0.21.0-rc.3 npm:@use-gpu/webgpu@0.21.0-rc.3 npm:@use-gpu/workbench@0.21.0-rc.3 npm:@use-gpu/shader@0.21.0-rc.3 npm:@use-gpu/core@0.21.0-rc.3 npm:@use-gpu/frame@0.21.0-rc.3
+deno add jsr:@molgpu/viewer jsr:@molgpu/table npm:@use-gpu/live@0.21.0-rc.4 npm:@use-gpu/webgpu@0.21.0-rc.4 npm:@use-gpu/workbench@0.21.0-rc.4 npm:@use-gpu/shader@0.21.0-rc.4 npm:@use-gpu/core@0.21.0-rc.4 npm:@use-gpu/frame@0.21.0-rc.4
 ```
 
 ### Dependency resolution
 
-The use.gpu packages are exact npm dependencies, all `0.21.0-rc.3`. Match that
+The use.gpu packages are exact npm dependencies, all `0.21.0-rc.4`. Match that
 version in the application, including `@use-gpu/webgpu` for
 `<WebGPU>`/`<AutoCanvas>` and `@use-gpu/glyph` for `<Label>` or `<Distance>`.
 Resolve one copy of Live and Frame. Multiple Live copies do not share contexts

@@ -21,11 +21,12 @@ Deno.test("published import guard detects injected dependency regressions", () =
     const source of [
       'import { x } from "@molgpu/table";',
       'export { x } from "jsr:@molgpu/table@0.1.0";',
-      'import { x } from "npm:@use-gpu/live@^0.21.0-rc.3";',
+      'import { x } from "npm:@use-gpu/live@^0.21.0-rc.4";',
       'import { x } from "npm:/molstar@5.13.0/lib/parser.js";',
       'import("npm:/molstar@^5.13.0/lib/parser.js");',
       // A previously tested pin is a regression too.
       'import("npm:/molstar@5.12.0/lib/parser.js");',
+      'import { x } from "npm:@use-gpu/live@0.21.0-rc.3";',
     ]
   ) assertEquals(check(source).length > 0, true, source);
   assertEquals(
@@ -42,7 +43,7 @@ Deno.test("published use.gpu imports retain lower-package walls", () => {
       "@molgpu/timeline",
       files(
         "/src/internal/ease.ts",
-        'import { x } from "npm:/@use-gpu/math@0.21.0-rc.3/mjs/index.mjs";',
+        'import { x } from "npm:/@use-gpu/math@0.21.0-rc.4/mjs/index.mjs";',
       ),
     ),
     [],
@@ -52,7 +53,7 @@ Deno.test("published use.gpu imports retain lower-package walls", () => {
       "@molgpu/dynamics",
       files(
         "/src/index.ts",
-        'import { x } from "npm:@use-gpu/core@0.21.0-rc.3";',
+        'import { x } from "npm:@use-gpu/core@0.21.0-rc.4";',
       ),
     ).length > 0,
     true,
