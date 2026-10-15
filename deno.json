@@ -58,7 +58,11 @@
     "@use-gpu/math": "npm:/@use-gpu/math@0.21.0-rc.4/mjs/index.mjs",
     "@use-gpu/math/": "npm:/@use-gpu/math@0.21.0-rc.4/",
     "@use-gpu/frame": "npm:@use-gpu/frame@0.21.0-rc.4",
-    "@use-gpu/frame/": "npm:/@use-gpu/frame@0.21.0-rc.4/"
+    "@use-gpu/frame/": "npm:/@use-gpu/frame@0.21.0-rc.4/",
+    "@use-gpu/interact": "npm:@use-gpu/interact@0.21.0-rc.4",
+    "@use-gpu/plot": "npm:@use-gpu/plot@0.21.0-rc.4",
+    "@use-gpu/traits": "npm:@use-gpu/traits@0.21.0-rc.4",
+    "@use-gpu/parse": "npm:@use-gpu/parse@0.21.0-rc.4"
   },
   "tasks": {
     "fmt": "deno fmt --check",
