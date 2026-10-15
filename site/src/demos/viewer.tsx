@@ -6,6 +6,7 @@ import {
   use,
   useAwait,
   useMemo,
+  useOne,
   useResource,
   useState,
   wrap,
@@ -20,7 +21,12 @@ import {
   OrbitCamera,
   Pass,
 } from "@use-gpu/workbench";
-import { Queue, useMouseState, useWheelState } from "@use-gpu/frame";
+import { Queue } from "@use-gpu/frame";
+import {
+  type ActionMap,
+  ORBIT_CONTROLS_DEFAULT,
+  OrbitControls as UpstreamOrbitControls,
+} from "@use-gpu/interact";
 import type { StructureData } from "@molgpu/table";
 import { all } from "@molgpu/select";
 import {
@@ -81,16 +87,22 @@ const ALL_ATOMS = all("atom");
 const srgbToLinear = (c: number) =>
   c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
 
-/** Controlled camera state driven by AutoCanvas's mouse, wheel, and touch events. */
+// Rotate and zoom only: right-drag stays free for the dynamics demo's tug.
+const ORBIT_BINDINGS: ActionMap = {
+  move: null,
+  rotate: ORBIT_CONTROLS_DEFAULT.rotate,
+  zoom: ORBIT_CONTROLS_DEFAULT.zoom,
+};
+
+/**
+ * Orbit camera driven by @use-gpu/interact's OrbitControls, which handles
+ * canvas pointer and wheel events and prevents the page from scrolling while
+ * zooming. Upstream reseeds its state whenever an initial value changes, so it
+ * owns only bearing, pitch and a zoom factor; `radius` and `target` (which a
+ * camera curve may move every frame) are applied here.
+ */
 const OrbitControls = (
-  {
-    host,
-    bearing: initialBearing,
-    pitch: initialPitch,
-    radius: initialRadius,
-    target,
-    children,
-  }: {
+  { host, bearing, pitch, radius, target, children }: {
     host: string;
     bearing: number;
     pitch: number;
@@ -98,35 +110,59 @@ const OrbitControls = (
     target: [number, number, number];
     children: ViewerElement;
   },
+) =>
+  use(UpstreamOrbitControls, {
+    bearing,
+    pitch,
+    radius: 1,
+    minRadius: 0.1,
+    maxRadius: 20,
+    minPitch: -1.5,
+    maxPitch: 1.5,
+    actionBindings: ORBIT_BINDINGS,
+    render: (zoom: number, bearing: number, pitch: number) =>
+      use(OrbitPose, {
+        host,
+        bearing,
+        pitch,
+        zoom,
+        radius,
+        target,
+        children,
+      }),
+  });
+
+/** Applies the user's orbit to the camera and reports gestures to the host. */
+const OrbitPose = (
+  { host, bearing, pitch, zoom, radius, target, children }: {
+    host: string;
+    bearing: number;
+    pitch: number;
+    zoom: number;
+    radius: number;
+    target: [number, number, number];
+    children: ViewerElement;
+  },
 ) => {
-  const [bearing, setBearing] = useState(initialBearing);
-  const [pitch, setPitch] = useState(initialPitch);
-  // A new initial pitch (figure mode looks down at its ground) resets the orbit.
-  useResource(() => setPitch(initialPitch), [initialPitch]);
-  const [zoom, setZoom] = useState(1);
-  const mouse = useMouseState();
-  const wheel = useWheelState();
+  const last = useOne(() => ({ bearing, pitch, zoom }));
   useResource(() => {
-    if (!mouse.buttons.left) return;
-    setBearing((value) => value - mouse.moveX * 0.01);
-    setPitch((value) => clamp(value - mouse.moveY * 0.01, -1.5, 1.5));
-    document.querySelector<HTMLElement>(host)?.setAttribute(
-      "data-orbit",
-      "dragging",
-    );
-  }, [mouse]);
-  useResource(() => {
-    if (!wheel.moveY) return;
-    setZoom((value) => clamp(value * Math.exp(wheel.moveY * 0.002), 0.1, 20));
-    document.querySelector<HTMLElement>(host)?.setAttribute(
-      "data-orbit",
-      "zooming",
-    );
-  }, [wheel]);
+    const gesture = zoom !== last.zoom
+      ? "zooming"
+      : bearing !== last.bearing || pitch !== last.pitch
+      ? "dragging"
+      : null;
+    Object.assign(last, { bearing, pitch, zoom });
+    if (gesture) {
+      document.querySelector<HTMLElement>(host)?.setAttribute(
+        "data-orbit",
+        gesture,
+      );
+    }
+  }, [bearing, pitch, zoom]);
   return use(OrbitCamera, {
     bearing,
     pitch,
-    radius: clamp(initialRadius * zoom, 0.5, 5000),
+    radius: clamp(radius * zoom, 0.5, 5000),
     target,
     children,
   });

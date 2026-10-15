@@ -8,10 +8,14 @@
     "npm:@use-gpu/core@0.21.0-rc.4": "0.21.0-rc.4",
     "npm:@use-gpu/frame@0.21.0-rc.4": "0.21.0-rc.4",
     "npm:@use-gpu/glyph@0.21.0-rc.4": "0.21.0-rc.4",
+    "npm:@use-gpu/interact@0.21.0-rc.4": "0.21.0-rc.4",
     "npm:@use-gpu/live@0.21.0-rc.4": "0.21.0-rc.4",
     "npm:@use-gpu/math@0.21.0-rc.4": "0.21.0-rc.4",
+    "npm:@use-gpu/parse@0.21.0-rc.4": "0.21.0-rc.4",
+    "npm:@use-gpu/plot@0.21.0-rc.4": "0.21.0-rc.4",
     "npm:@use-gpu/shader@0.21.0-rc.4": "0.21.0-rc.4",
     "npm:@use-gpu/traits@0.21.0-rc.3": "0.21.0-rc.3",
+    "npm:@use-gpu/traits@0.21.0-rc.4": "0.21.0-rc.4",
     "npm:@use-gpu/webgpu@0.21.0-rc.4": "0.21.0-rc.4",
     "npm:@use-gpu/wgsl@0.21.0-rc.4": "0.21.0-rc.4",
     "npm:@use-gpu/workbench@0.21.0-rc.4": "0.21.0-rc.4",
@@ -298,6 +302,15 @@
       ],
       "tarball": "https://gitlab.com/api/v4/projects/27922731/packages/npm/@use-gpu/glyph/-/@use-gpu/glyph-0.21.0-rc.4.tgz"
     },
+    "@use-gpu/interact@0.21.0-rc.4": {
+      "integrity": "22cc73c0b13d1cabb8ec7ade27577adaa3933100",
+      "dependencies": [
+        "@use-gpu/frame",
+        "@use-gpu/plot",
+        "@use-gpu/workbench"
+      ],
+      "tarball": "https://gitlab.com/api/v4/projects/27922731/packages/npm/@use-gpu/interact/-/@use-gpu/interact-0.21.0-rc.4.tgz"
+    },
     "@use-gpu/live@0.21.0-rc.4": {
       "integrity": "e60d74fc566e7f8ffc638d71e937e8af68a8109c",
       "tarball": "https://gitlab.com/api/v4/projects/27922731/packages/npm/@use-gpu/live/-/@use-gpu/live-0.21.0-rc.4.tgz"
@@ -313,6 +326,17 @@
         "gl-matrix"
       ],
       "tarball": "https://gitlab.com/api/v4/projects/27922731/packages/npm/@use-gpu/parse/-/@use-gpu/parse-0.21.0-rc.4.tgz"
+    },
+    "@use-gpu/plot@0.21.0-rc.4": {
+      "integrity": "b77d7ed832f687d0115199c50d30c8110b7540f2",
+      "dependencies": [
+        "@use-gpu/core",
+        "@use-gpu/frame",
+        "@use-gpu/live",
+        "@use-gpu/shader",
+        "@use-gpu/workbench"
+      ],
+      "tarball": "https://gitlab.com/api/v4/projects/27922731/packages/npm/@use-gpu/plot/-/@use-gpu/plot-0.21.0-rc.4.tgz"
     },
     "@use-gpu/shader@0.21.0-rc.4": {
       "integrity": "9f459836d413ac88f098f56d4924c936685506fc",
@@ -1810,9 +1834,13 @@
       "npm:@use-gpu/core@0.21.0-rc.4",
       "npm:@use-gpu/frame@0.21.0-rc.4",
       "npm:@use-gpu/glyph@0.21.0-rc.4",
+      "npm:@use-gpu/interact@0.21.0-rc.4",
       "npm:@use-gpu/live@0.21.0-rc.4",
       "npm:@use-gpu/math@0.21.0-rc.4",
+      "npm:@use-gpu/parse@0.21.0-rc.4",
+      "npm:@use-gpu/plot@0.21.0-rc.4",
       "npm:@use-gpu/shader@0.21.0-rc.4",
+      "npm:@use-gpu/traits@0.21.0-rc.4",
       "npm:@use-gpu/webgpu@0.21.0-rc.4",
       "npm:@use-gpu/wgsl@0.21.0-rc.4",
       "npm:@use-gpu/workbench@0.21.0-rc.4",

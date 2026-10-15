@@ -350,11 +350,26 @@ Deno.test("site landing page and maintained gallery routes", async () => {
         "dragging",
         "dragging updates the shared orbit controller",
       );
+      // Page scrolling is applied asynchronously, so check the cause directly:
+      // after use.gpu's canvas listener (registered first; the orbit controls
+      // also stop propagation), the wheel event must be default-prevented.
+      await page.evaluate(() => {
+        document.querySelector("#molecule-canvas canvas").addEventListener(
+          "wheel",
+          (event) => {
+            globalThis.__wheelPrevented = event.defaultPrevented;
+          },
+          { once: true },
+        );
+      });
       await page.mouse.wheel(0, 120);
+      await page.waitForFunction(() =>
+        document.querySelector("#molecule-canvas")?.dataset.orbit === "zooming"
+      );
       assertStrictEquals(
-        await host.getAttribute("data-orbit"),
-        "zooming",
-        "wheel input updates the shared orbit controller",
+        await page.evaluate(() => globalThis.__wheelPrevented),
+        true,
+        "zooming the canvas prevents the page from scrolling",
       );
       const dataIs = (key, value) =>
         page.waitForFunction(
