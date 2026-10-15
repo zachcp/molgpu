@@ -2,7 +2,7 @@
  * Extension APIs for custom molecular representations and GPU providers.
  * Read the nearest structure, coordinates and volumes; use CPU snapshots when
  * a consumer cannot read GPU data. Snapshots can lag live rendering and return
- * null while pending. Shader and context types require use.gpu 0.21.0-rc.3.
+ * null while pending. Shader and context types require use.gpu 0.21.0-rc.4.
  *
  * @module
  */

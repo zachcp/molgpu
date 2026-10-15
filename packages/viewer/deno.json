@@ -15,17 +15,17 @@
     ]
   },
   "imports": {
-    "@use-gpu/core": "npm:@use-gpu/core@0.21.0-rc.3",
-    "@use-gpu/core/": "npm:/@use-gpu/core@0.21.0-rc.3/",
-    "@use-gpu/live": "npm:@use-gpu/live@0.21.0-rc.3",
-    "@use-gpu/live/": "npm:/@use-gpu/live@0.21.0-rc.3/",
-    "@use-gpu/shader": "npm:@use-gpu/shader@0.21.0-rc.3",
-    "@use-gpu/shader/": "npm:/@use-gpu/shader@0.21.0-rc.3/",
-    "@use-gpu/workbench": "npm:@use-gpu/workbench@0.21.0-rc.3",
-    "@use-gpu/workbench/": "npm:/@use-gpu/workbench@0.21.0-rc.3/",
-    "@use-gpu/math": "npm:/@use-gpu/math@0.21.0-rc.3/mjs/index.mjs",
-    "@use-gpu/math/": "npm:/@use-gpu/math@0.21.0-rc.3/",
-    "@use-gpu/frame": "npm:@use-gpu/frame@0.21.0-rc.3",
-    "@use-gpu/frame/": "npm:/@use-gpu/frame@0.21.0-rc.3/"
+    "@use-gpu/core": "npm:@use-gpu/core@0.21.0-rc.4",
+    "@use-gpu/core/": "npm:/@use-gpu/core@0.21.0-rc.4/",
+    "@use-gpu/live": "npm:@use-gpu/live@0.21.0-rc.4",
+    "@use-gpu/live/": "npm:/@use-gpu/live@0.21.0-rc.4/",
+    "@use-gpu/shader": "npm:@use-gpu/shader@0.21.0-rc.4",
+    "@use-gpu/shader/": "npm:/@use-gpu/shader@0.21.0-rc.4/",
+    "@use-gpu/workbench": "npm:@use-gpu/workbench@0.21.0-rc.4",
+    "@use-gpu/workbench/": "npm:/@use-gpu/workbench@0.21.0-rc.4/",
+    "@use-gpu/math": "npm:/@use-gpu/math@0.21.0-rc.4/mjs/index.mjs",
+    "@use-gpu/math/": "npm:/@use-gpu/math@0.21.0-rc.4/",
+    "@use-gpu/frame": "npm:@use-gpu/frame@0.21.0-rc.4",
+    "@use-gpu/frame/": "npm:/@use-gpu/frame@0.21.0-rc.4/"
   }
 }
