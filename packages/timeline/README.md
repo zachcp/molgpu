@@ -13,13 +13,11 @@ into numbers or fixed-width vectors.
 deno add jsr:@molgpu/timeline
 ```
 
-The only runtime dependency is `@use-gpu/math`, pinned exactly (`0.21.0-rc.7`)
-and used for its pure easing math behind a private adapter. This prerelease
-comes from the scoped GitLab registry configured in the root `.npmrc`;
-applications using this branch need the same configuration (see the viewer
-README). Its Deno import mapping selects Math's pure ESM entry, so named imports
-work without going through the CommonJS main. No use.gpu types appear in this
-package's public API.
+The only runtime dependency is `@use-gpu/math`, pinned exactly (`0.21.0`) and
+used for its pure easing math behind a private adapter. It resolves from the
+public npm registry without custom registry configuration. Its Deno import
+mapping selects Math's pure ESM entry, so named imports work without going
+through the CommonJS main. No use.gpu types appear in this package's public API.
 
 ## Example
 

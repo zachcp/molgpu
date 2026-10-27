@@ -27,7 +27,7 @@ Deno.test("retirement artifacts use fresh destinations and refuse collisions", a
     assertEquals(typeof record.provenance.source.commit, "string");
     assertEquals(typeof record.provenance.source.dirty, "boolean");
     assertEquals(record.provenance.useGpuVersions["@use-gpu/live"], [
-      "0.21.0-rc.7",
+      "0.21.0",
     ]);
     assertEquals(record.provenance.browser, { unavailable: true });
     assertEquals(record.provenance.adapter, { unavailable: true });
