@@ -6,7 +6,7 @@ resolve one copy when compatible (see the table README's
 [one shared table copy](../packages/table/README.md#one-shared-table-copy)).
 Keep the application on compatible table and timeline versions: their
 module-private identity/curve state rejects values from divergent copies. Match
-use.gpu's reviewed exact `0.21.0-rc.4` npm dependencies in the application. IO
+use.gpu's reviewed exact `0.21.0-rc.7` npm dependencies in the application. IO
 publishes the tested Mol* version exactly (`5.13.0`).
 
 Changelogs are kept by hand (no changesets). Each package has its own

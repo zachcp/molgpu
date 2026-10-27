@@ -7,6 +7,8 @@ for the procedure.
 
 ## [Unreleased]
 
+- Upgrade the exact GitLab use.gpu Math dependency pin to `0.21.0-rc.7`.
+
 - Select the pure Math ESM entry in Deno and use its package alias for molecular
   interpolation imports.
 

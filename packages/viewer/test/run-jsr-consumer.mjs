@@ -116,7 +116,7 @@ Deno.test("isolated JSR consumers", async () => {
       "the tested older use.gpu line is incompatible",
     );
     assertMatch(useGpu.errors.join("\n"), /TS2322.*OrbitCameraProps/);
-    assertEquals(useGpu.liveVersionsInGraph, ["0.19.0-rc.11", "0.21.0-rc.4"]);
+    assertEquals(useGpu.liveVersionsInGraph, ["0.19.0-rc.11", "0.21.0-rc.7"]);
   } finally {
     await Deno.remove(dir, { recursive: true });
   }
