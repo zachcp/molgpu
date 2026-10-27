@@ -103,8 +103,8 @@ async function consumer(
     JSON.stringify(
       {
         imports,
-        // rc.4 still omits some inter-package dependency declarations (parse→math, webgpu→frame). A local
-        // npm tree resolves their installed siblings, as in the workspace.
+        // A local npm tree supports the upstream sibling-package resolution
+        // required by the bundled consumer configuration.
         nodeModulesDir: "auto",
         compilerOptions: { lib: ["ES2023", "DOM", "DOM.Iterable", "deno.ns"] },
       },
@@ -125,7 +125,7 @@ const molgpu = (version = workspaceVersion) =>
       name,
     ) => [`@molgpu/${name}`, `jsr:@molgpu/${name}@${version}`]),
   );
-const useGpu = (version = "0.21.0-rc.4") =>
+const useGpu = (version = "0.21.0-rc.7") =>
   Object.fromEntries(
     USE_GPU.map((
       name,
@@ -362,8 +362,8 @@ try {
   const otherLive = await consumer({
     ...molgpu(),
     ...useGpu("0.19.0-rc.11"),
-    "@use-gpu/math": "npm:/@use-gpu/math@0.21.0-rc.4/mjs/index.mjs",
-    "@use-gpu/frame": "npm:@use-gpu/frame@0.21.0-rc.4",
+    "@use-gpu/math": "npm:/@use-gpu/math@0.21.0-rc.7/mjs/index.mjs",
+    "@use-gpu/frame": "npm:@use-gpu/frame@0.21.0-rc.7",
   }, [
     "scene.tsx",
   ]);
@@ -383,7 +383,7 @@ try {
     divergent,
     useGpu: {
       consumer: "0.19.0-rc.11",
-      viewer: "0.21.0-rc.4",
+      viewer: "0.21.0-rc.7",
       liveVersionsInGraph: liveVersions,
       graphErrors: errors(otherGraph.stderr),
       check: otherCheck.code === 0 ? "pass" : "fail",
