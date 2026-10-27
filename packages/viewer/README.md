@@ -12,28 +12,24 @@ scene. It runs in a browser with WebGPU only.
 
 ## Install
 
-This branch uses the GitLab prerelease. Add this project-local `.npmrc`
-configuration before resolving dependencies:
-
-```ini
-@use-gpu:registry=https://gitlab.com/api/v4/projects/27922731/packages/npm/
-```
+use.gpu `0.21.0` resolves from the public npm registry. No custom `.npmrc` is
+needed.
 
 Set `"nodeModulesDir": "auto"` in the application's `deno.json` as well. The
-rc.7 Parse and WebGPU artifacts still omit some sibling dependencies from their
-manifests; a local node_modules tree resolves their sibling packages when
+0.21.0 Parse and WebGPU artifacts still omit some sibling dependencies from
+their manifests; a local node_modules tree resolves their sibling packages when
 bundling. The isolated-consumer gate exercises this configuration.
 
 Published molgpu versions retain their own dependency pins; the following pin
 applies to this checkout and its next release.
 
 ```sh
-deno add jsr:@molgpu/viewer jsr:@molgpu/table npm:@use-gpu/live@0.21.0-rc.7 npm:@use-gpu/webgpu@0.21.0-rc.7 npm:@use-gpu/workbench@0.21.0-rc.7 npm:@use-gpu/shader@0.21.0-rc.7 npm:@use-gpu/core@0.21.0-rc.7 npm:@use-gpu/frame@0.21.0-rc.7
+deno add jsr:@molgpu/viewer jsr:@molgpu/table npm:@use-gpu/live@0.21.0 npm:@use-gpu/webgpu@0.21.0 npm:@use-gpu/workbench@0.21.0 npm:@use-gpu/shader@0.21.0 npm:@use-gpu/core@0.21.0 npm:@use-gpu/frame@0.21.0
 ```
 
 ### Dependency resolution
 
-The use.gpu packages are exact npm dependencies, all `0.21.0-rc.7`. Match that
+The use.gpu packages are exact npm dependencies, all `0.21.0`. Match that
 version in the application, including `@use-gpu/webgpu` for
 `<WebGPU>`/`<AutoCanvas>` and `@use-gpu/glyph` for `<Label>` or `<Distance>`.
 Resolve one copy of Live and Frame. Multiple Live copies do not share contexts

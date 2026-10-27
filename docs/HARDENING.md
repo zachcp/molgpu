@@ -22,11 +22,11 @@ dynamic `import()`, at the tested exact version.
 Compatible internal ranges must resolve a single table/timeline copy. Divergent
 copies can reject values because identity and curve state are module-private;
 inspect `deno info` and the lockfile, then align dependency ranges. The app must
-match use.gpu `0.21.0-rc.7` exactly. Bundle viewer entries for the browser:
-direct Deno execution cannot reliably link the upstream CommonJS re-exports; the
-branch uses the scoped GitLab npm registry in `.npmrc` for rc.7. Isolated
-consumers also set `nodeModulesDir: "auto"` for the prerelease's sibling-package
-resolution; the consumer gate must reproduce these requirements.
+match use.gpu `0.21.0` exactly. Bundle viewer entries for the browser: direct
+Deno execution cannot reliably link the upstream CommonJS re-exports; the
+packages resolve from the public npm registry without custom `.npmrc` settings.
+Isolated consumers also set `nodeModulesDir: "auto"` for upstream
+sibling-package resolution; the consumer gate must reproduce these requirements.
 
 **H2 — Types match the runtime.** Each `deno.json` export resolves to its
 TypeScript source file. Public declarations are checked from that same source;

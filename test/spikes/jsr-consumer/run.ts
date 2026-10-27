@@ -112,7 +112,6 @@ async function consumer(
       2,
     ),
   );
-  await Deno.copyFile(join(root, ".npmrc"), join(dir, ".npmrc"));
   for (const file of files) {
     await Deno.copyFile(here(file), join(dir, file));
   }
@@ -125,7 +124,7 @@ const molgpu = (version = workspaceVersion) =>
       name,
     ) => [`@molgpu/${name}`, `jsr:@molgpu/${name}@${version}`]),
   );
-const useGpu = (version = "0.21.0-rc.7") =>
+const useGpu = (version = "0.21.0") =>
   Object.fromEntries(
     USE_GPU.map((
       name,
@@ -143,7 +142,6 @@ async function publishCopy(name: string, version: string) {
   const source = join(root, "packages", name);
   const config = JSON.parse(await Deno.readTextFile(join(source, "deno.json")));
   config.version = version;
-  await Deno.copyFile(join(root, ".npmrc"), join(dir, ".npmrc"));
   await Deno.writeTextFile(join(dir, "deno.json"), JSON.stringify(config));
   for (const entry of ["src", "README.md", "LICENSE", "CHANGELOG.md"]) {
     await new Deno.Command("cp", {
@@ -357,13 +355,12 @@ try {
     workspaceRange,
   );
 
-  // GitLab exposes release candidates rather than stable 0.19.0. Probe the
-  // older available line; Math/Frame did not exist then and keep the current pin.
+  // Probe an older npm release; Math/Frame did not exist then and keep the current pin.
   const otherLive = await consumer({
     ...molgpu(),
-    ...useGpu("0.19.0-rc.11"),
-    "@use-gpu/math": "npm:/@use-gpu/math@0.21.0-rc.7/mjs/index.mjs",
-    "@use-gpu/frame": "npm:@use-gpu/frame@0.21.0-rc.7",
+    ...useGpu("0.19.0"),
+    "@use-gpu/math": "npm:/@use-gpu/math@0.21.0/mjs/index.mjs",
+    "@use-gpu/frame": "npm:@use-gpu/frame@0.21.0",
   }, [
     "scene.tsx",
   ]);
@@ -382,8 +379,8 @@ try {
     compatible,
     divergent,
     useGpu: {
-      consumer: "0.19.0-rc.11",
-      viewer: "0.21.0-rc.7",
+      consumer: "0.19.0",
+      viewer: "0.21.0",
       liveVersionsInGraph: liveVersions,
       graphErrors: errors(otherGraph.stderr),
       check: otherCheck.code === 0 ? "pass" : "fail",

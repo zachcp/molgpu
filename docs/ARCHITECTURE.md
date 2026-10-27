@@ -41,8 +41,9 @@ Reducing dependency edges should follow removing a responsibility, not copying
 its implementation into callers. Table owns identities, attributes and molecular
 data contracts; select owns query semantics; fields owns field evaluation and
 WGSL generation; dynamics owns scientific kernels; geo owns geometry. Live and
-GPU adaptation stay in viewer. Exact use.gpu `0.21.0-rc.7` and bundled browser
-viewer execution are the verified dependency contract.
+GPU adaptation stay in viewer. Exact use.gpu `0.21.0` from the public npm
+registry and bundled browser viewer execution are the verified dependency
+contract.
 
 ## Dataset scopes and specialized consumers
 

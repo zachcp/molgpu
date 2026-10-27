@@ -8,7 +8,7 @@ import {
 
 /**
  * Observe one native Kernel's encoded revision, retaining its initial guard.
- * Pinned use.gpu 0.21.0-rc.7 yields no compute call until its pipeline is ready and
+ * Pinned use.gpu 0.21.0 yields no compute call until its pipeline is ready and
  * exposes no submitted-generation callback. Its count callback distinguishes
  * an encoded dispatch from a suppressed call. ComputePass submits synchronously
  * after the wrapper returns; the microtask publishes after that submission,

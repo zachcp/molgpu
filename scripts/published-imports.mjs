@@ -68,10 +68,10 @@ export function checkPublishedImports(
       }
       if (
         /^npm:\/?@use-gpu\//.test(specifier) &&
-        !/^npm:\/?@use-gpu\/[^@/]+@0\.21\.0-rc\.7(\/|$)/.test(specifier)
+        !/^npm:\/?@use-gpu\/[^@/]+@0\.21\.0(\/|$)/.test(specifier)
       ) {
         errors.push(
-          `use.gpu must match exact reviewed pin 0.21.0-rc.7: ${where}`,
+          `use.gpu must match exact reviewed pin 0.21.0: ${where}`,
         );
       }
       if (/^npm:\/?molstar(?:@|\/|$)/.test(specifier)) {

@@ -7,6 +7,9 @@ for the procedure.
 
 ## [Unreleased]
 
+- Upgrade use.gpu to exact `0.21.0` packages from public npm and remove the
+  GitLab registry configuration and isolated-consumer registry copying.
+
 - Upgrade the exact GitLab use.gpu dependency pins to `0.21.0-rc.7`.
 
 - Select the pure Math ESM entry in Deno and use its package alias for molecular

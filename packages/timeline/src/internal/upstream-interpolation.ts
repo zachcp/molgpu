@@ -1,4 +1,4 @@
-// Renderer-free adapter over the pure math kernels in use.gpu 0.21.0-rc.7.
+// Renderer-free adapter over the pure math kernels in use.gpu 0.21.0.
 // The package alias selects the pure ESM entry in the Deno manifests.
 import {
   bezierEase,
