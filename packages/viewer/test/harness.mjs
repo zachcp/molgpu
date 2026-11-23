@@ -15,6 +15,9 @@ export const USE_GPU_PREBUNDLE = [
   "@use-gpu/webgpu",
   "@use-gpu/core",
   "@use-gpu/frame",
+  // Viewer picking imports Pick. With discovery disabled, its CommonJS
+  // transitive imports must also be bundled before the page loads.
+  "@use-gpu/interact",
   // @molgpu/timeline imports this pinned Math module. Prebundle it before
   // navigation so Vite does not reload live modules with an Outdated Optimize
   // Dep response during the test.

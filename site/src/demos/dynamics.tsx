@@ -7,7 +7,11 @@ import {
   useState,
 } from "@use-gpu/live";
 import { useViewContext } from "@use-gpu/workbench";
-import { useMouseState } from "@use-gpu/frame";
+import {
+  type PointerEvent,
+  useCanvasEvents,
+  usePointerCapture,
+} from "@use-gpu/frame";
 import type { StructureData } from "@molgpu/table";
 import {
   type ElasticNetworkData,
@@ -52,38 +56,60 @@ const TugControls = (
   },
 ) => {
   const { hover } = usePicking();
-  const mouse = useMouseState();
+  const capture = usePointerCapture();
   const { uniforms } = useViewContext();
   const snapshot = useCoordinateSnapshot();
-  const grab = useOne(() => ({ node: -1, anchor: [0, 0, 0] }));
-  useResource(() => {
-    const right = !!mouse.buttons?.right;
-    if (right && grab.node < 0 && hover) {
+  const grab = useOne(() => ({ node: -1, id: 0, anchor: [0, 0, 0] }));
+  const move = (event: PointerEvent) => {
+    const target = pointerToPlane(
+      event.u,
+      event.v,
+      uniforms.projectionViewMatrix.current,
+      grab.anchor,
+    );
+    onTug({ node: grab.node, target, k: TUG_K });
+    event.preventDefault();
+    event.stopPropagation();
+  };
+  const release = () => {
+    if (grab.node < 0) return;
+    if (capture.hasCapture()?.pickId === grab.id) capture.endCapture();
+    grab.node = -1;
+    grab.id = 0;
+    host()?.setAttribute("data-tug", "released");
+    onTug(undefined);
+  };
+  useResource((dispose) => dispose(release), []);
+  // Capture only right-drag: upstream Pick's capture prop takes every button
+  // and would prevent the enclosing OrbitControls from rotating on left-drag.
+  return useCanvasEvents(grab.id || hover?.id || null, {
+    pointerDown: (event) => {
+      if (
+        event.button !== "right" || !hover ||
+        event.pickId !== hover.id || event.pickIndex !== hover.drawIndex
+      ) return;
       const node = network.atomToNode[hover.atom];
       if (node === undefined || node === 0xffffffff) return;
       const row = network.guideRows[node];
       const positions = snapshot?.data.positions;
       grab.node = node;
+      grab.id = event.pickId;
       grab.anchor = positions
         ? [positions[3 * row], positions[3 * row + 1], positions[3 * row + 2]]
         : Array.from(network.system.reference.subarray(3 * node, 3 * node + 3));
       host()?.setAttribute("data-tug", "active");
-    }
-    if (right && grab.node >= 0) {
-      const target = pointerToPlane(
-        mouse.u,
-        mouse.v,
-        uniforms.projectionViewMatrix.current,
-        grab.anchor,
-      );
-      onTug({ node: grab.node, target, k: TUG_K });
-    } else if (!right && grab.node >= 0) {
-      grab.node = -1;
-      host()?.setAttribute("data-tug", "released");
-      onTug(undefined);
-    }
-  }, [mouse]);
-  return null;
+      capture.beginCapture(event);
+      move(event);
+    },
+    pointerMove: (event) => {
+      if (grab.node >= 0) move(event);
+    },
+    pointerUp: (event) => {
+      if (event.button !== "right" || grab.node < 0) return;
+      release();
+      event.stopPropagation();
+    },
+  });
 };
 
 /** Langevin dynamics of 1CRN's CA elastic network, scrubbable and tuggable. */
@@ -93,14 +119,6 @@ export const DynamicsScene = ({ data }: { data: StructureData }) => {
     [data],
   );
   const [tug, setTug] = useState<LangevinTug | undefined>(undefined);
-  // Right-drag tugs, so keep the browser's context menu off the canvas.
-  useResource((dispose) => {
-    const element = host();
-    if (!element) return;
-    const block = (event: Event) => event.preventDefault();
-    element.addEventListener("contextmenu", block);
-    dispose(() => element.removeEventListener("contextmenu", block));
-  }, []);
   return (
     <PickingProvider>
       <ElasticNetwork

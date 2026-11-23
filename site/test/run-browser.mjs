@@ -342,8 +342,13 @@ Deno.test("site landing page and maintained gallery routes", async () => {
         assert(lit > 0, "the saved PNG contains the rendered molecule");
       }
       await host.hover();
+      const orbitBox = await host.boundingBox();
       await page.mouse.down();
-      await page.mouse.move(600, 420, { steps: 4 });
+      await page.mouse.move(
+        orbitBox.x + orbitBox.width / 2 + 40,
+        orbitBox.y + orbitBox.height / 2 + 20,
+        { steps: 4 },
+      );
       await page.mouse.up();
       assertStrictEquals(
         await host.getAttribute("data-orbit"),
@@ -1388,6 +1393,38 @@ Deno.test("site landing page and maintained gallery routes", async () => {
       await page.locator("#molecule-canvas canvas").count(),
       1,
       "returning to demos creates one fresh viewer root",
+    );
+    route = "responsive gallery";
+    const gallery = page.getByRole("navigation", { name: "Demo gallery" });
+    assertEquals(await gallery.getByRole("link").count(), 5);
+    assertEquals(
+      await gallery.getByRole("link", { name: "Compose", exact: true })
+        .getAttribute("aria-current"),
+      "page",
+    );
+    for (const width of [320, 390, 720, 960]) {
+      await page.setViewportSize({ width, height: 800 });
+      assert(
+        await page.evaluate(() =>
+          document.documentElement.scrollWidth <= globalThis.innerWidth
+        ),
+        `gallery stays within the ${width}px viewport`,
+      );
+      if (width <= 720) {
+        const stage = await page.locator(".demo-stage").boundingBox();
+        const controls = await page.locator(".demo-copy").boundingBox();
+        assert(
+          stage.y + stage.height <= controls.y,
+          "narrow layouts show the molecule before settings",
+        );
+      }
+    }
+    const source = page.locator('[data-demo-source="compose"]');
+    await source.locator("summary").focus();
+    await page.keyboard.press("Enter");
+    assert(
+      await source.locator("pre").isVisible(),
+      "source opens from the keyboard",
     );
     assertEquals(errors, [], "page has no JavaScript errors");
   } catch (error) {

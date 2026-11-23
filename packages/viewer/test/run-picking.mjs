@@ -42,6 +42,7 @@ Deno.test("viewer picking", async () => {
         hover: globalThis.__probe.hover,
         pick: globalThis.__probe.pick,
         time: globalThis.__probe.time,
+        presses: globalThis.__probe.presses,
         errors: [...globalThis.__probe.errors],
       }));
     const cx = 320, cy = 240; // canvas centre = the middle atom
@@ -96,6 +97,14 @@ Deno.test("viewer picking", async () => {
       5,
       `click-to-seek must move the timeline to beat time 5, got ${clicked.time}`,
     );
+    assertEquals(clicked.presses, 1, "one callback for a left press");
+    await page.mouse.click(cx, cy, { button: "right" });
+    await settle();
+    assertEquals((await snap()).presses, 1, "right press does not pick");
+    await page.mouse.click(8, 8);
+    await settle();
+    assertEquals((await snap()).pick, null, "background press clears the pick");
+    assertEquals((await snap()).hover, null, "leaving the atom clears hover");
 
     // A selection that drops row 0: the middle atom is drawn instance 0. Its
     // position is read through the selection rows on the GPU, and the hit
@@ -151,6 +160,27 @@ Deno.test("viewer picking", async () => {
     }
     assert(other, "the +6 Å copy picks the same atom under operator 2");
     assert(other.id !== base.id, "each copy draws under its own picking id");
+
+    // Multiple pickables observe the same native press, but notify each
+    // molecular reader once. A second press without moving still picks.
+    await page.mouse.click(cx, cy);
+    await settle();
+    await page.mouse.click(cx, cy);
+    await settle();
+    assertEquals((await snap()).presses, 2, "one callback per assembly press");
+    await page.evaluate(() => globalThis.__probe.setVisible(false));
+    await settle();
+    assertEquals((await snap()).hover, null, "unmount withdraws the hover");
+    await page.evaluate(() => globalThis.__probe.setVisible(true));
+    await settle();
+    await page.mouse.move(8, 8);
+    await page.mouse.click(cx, cy);
+    await settle();
+    assertEquals(
+      (await snap()).presses,
+      3,
+      "remount does not duplicate handlers",
+    );
 
     assertEquals(errors, [], "page errors");
     console.log(
