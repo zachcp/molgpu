@@ -83,8 +83,7 @@ h2 {
 h3 {
   margin-top: 0;
 }
-.lede,
-.demo-copy p {
+.lede {
   color: #b9c7da;
   font-size: 1.15rem;
   line-height: 1.65;
@@ -146,26 +145,104 @@ code {
   color: #98e6de;
 }
 .demo-page {
-  padding: 4rem 0;
+  padding: 2.5rem 0 3rem;
   display: grid;
-  grid-template-columns: minmax(260px, .8fr) minmax(0, 1.2fr);
+  grid-template-columns: 268px minmax(0, 1fr);
+  gap: 1.25rem;
+  align-items: start;
+}
+.demo-heading {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
   gap: 2rem;
-  align-items: stretch;
-  min-height: calc(100vh - 150px);
 }
 .demo-page h1 {
-  font-size: clamp(2.5rem, 5vw, 4.4rem);
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.1;
+  margin: .5rem 0 0;
+  letter-spacing: -.045em;
+}
+.demo-heading > p {
+  max-width: 34rem;
+  margin: 0;
+  color: #a9bad0;
+  font-size: .9rem;
+  line-height: 1.65;
+}
+.demo-heading .eyebrow {
+  margin: 0;
+  font-size: .65rem;
+}
+.demo-copy {
+  border: 1px solid #263449;
+  border-radius: .75rem;
+  padding: 1.1rem;
+  background: #0d1522aa;
+  min-width: 0;
+}
+.demo-copy h2 {
+  margin: 0 0 1.2rem;
+  font-size: .8rem;
+  font-weight: 600;
+  letter-spacing: .02em;
+  color: #e9eff9;
+}
+.demo-copy p {
+  color: #a9bad0;
+  font-size: .78rem;
+  line-height: 1.65;
 }
 .hint {
-  font-size: .9rem !important;
-  color: #7ed6cc !important;
+  color: #8a9eb6;
+}
+.demo-copy > .hint {
+  margin: .65rem 0 1.25rem;
+}
+.demo-copy > .hint:last-of-type {
+  border-top: 1px solid #263449;
+  padding-top: 1rem;
+  margin: 1.2rem 0 0;
+}
+.demo-stage {
+  min-width: 0;
+  border: 1px solid #2f486a;
+  border-radius: .75rem;
+  overflow: hidden;
+  background: #09101d;
+}
+.viewer-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: .65rem 1rem;
+  border-bottom: 1px solid #263449;
+  font-size: .72rem;
+  color: #8a9eb6;
+}
+.viewer-toolbar strong {
+  font-family: ui-monospace, monospace;
+  color: #b9c7da;
+  font-weight: 500;
+}
+.viewer-caption {
+  display: flex;
+  justify-content: space-between;
+  gap: .5rem;
+  margin: 0;
+  padding: .7rem 1rem;
+  border-top: 1px solid #263449;
+  font-size: .65rem;
+  color: #8a9eb6;
+}
+.viewer-caption span {
+  color: #7ed6cc;
 }
 .molecule-canvas {
-  min-height: 540px;
+  height: clamp(440px, 60vh, 680px);
   position: relative;
   overflow: hidden;
-  border: 1px solid #2f486a;
-  border-radius: 1rem;
   background: #09101d;
   touch-action: none;
 }
@@ -187,34 +264,121 @@ footer {
   font-size: .9rem;
 }
 .demo-assertion {
-  color: #b7c8db;
-  font-size: .92rem !important;
+  margin-bottom: 0;
+}
+.demo-notes {
+  margin-top: 1rem;
+}
+.demo-notes summary,
+.advanced-controls summary {
+  color: #b9c7da;
+  font-size: .75rem;
+  cursor: pointer;
 }
 .demo-links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: .35rem .7rem;
-  margin-top: 1.4rem;
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: .35rem;
+  padding: .35rem;
+  margin: .4rem 0 .25rem;
+  border: 1px solid #263449;
+  border-radius: .65rem;
+  background: #0d1522;
 }
 .demo-links a {
-  color: #8ccef7;
-  font-size: .83rem;
+  display: flex;
+  align-items: center;
+  gap: .7rem;
+  padding: .8rem;
+  border-radius: .35rem;
+  color: #a9bad0;
+  font-size: .8rem;
+  font-weight: 500;
+}
+.demo-links a span {
+  font-family: ui-monospace, monospace;
+  font-size: .65rem;
+  color: #71829a;
+}
+.demo-links a:hover {
+  background: #172538;
 }
 .demo-links a[aria-current=page] {
-  color: inherit;
-  text-decoration-thickness: 2px;
+  color: #98e6de;
+  background: #17312f;
+}
+.demo-links a[aria-current=page] span {
+  color: #7ed6cc;
 }
 .timeline-control {
   display: flex;
   align-items: center;
   gap: .55rem;
+  margin: .85rem 0;
   color: #b9c7da;
+  font-size: .78rem;
 }
-/* The Compose layer list wraps inside its column instead of running under
-   the canvas, whose pointer events would take the clicks. */
-fieldset.timeline-control {
-  flex-wrap: wrap;
+.timeline-control:has(select) {
+  display: grid;
+  gap: .4rem;
+}
+.timeline-control select {
+  width: 100%;
   min-width: 0;
+  padding: .6rem .5rem;
+  border: 1px solid #34475f;
+  border-radius: .35rem;
+  background: #111e2d;
+  color: #e9eff9;
+  font: inherit;
+}
+.timeline-control:has(select:disabled),
+.timeline-control:has(input:disabled) {
+  opacity: .5;
+}
+.timeline-control select:disabled,
+.timeline-control input:disabled {
+  cursor: not-allowed;
+}
+.layer-controls.timeline-control {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: .65rem .5rem;
+  border: 0;
+  border-top: 1px solid #263449;
+  padding: 1rem 0 0;
+  margin: 1.2rem 0;
+  min-width: 0;
+}
+.layer-controls legend {
+  padding: 0 .5rem 0 0;
+  color: #8a9eb6;
+  font-size: .7rem;
+}
+.layer-controls .timeline-control {
+  margin: 0;
+  font-size: .72rem;
+}
+.layer-controls .timeline-control:last-child {
+  grid-column: 1 / -1;
+}
+.toggle-control input {
+  margin: 0;
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+}
+.playback-control {
+  flex-wrap: wrap;
+  padding: .8rem 0 0;
+  border-top: 1px solid #263449;
+}
+.playback-control label {
+  width: 100%;
+}
+.advanced-controls {
+  margin-top: 1rem;
 }
 .measure-readout {
   flex-direction: column;
@@ -228,28 +392,36 @@ fieldset.timeline-control {
 .timeline-control input {
   accent-color: #7ed6cc;
 }
+.timeline-control > input[type=range] {
+  min-width: 0;
+  width: 4rem;
+  flex: 1;
+  margin-inline: 0;
+}
 .timeline-control output {
   font-variant-numeric: tabular-nums;
 }
-.timeline-control button {
+.demo-page button {
   padding: .35rem .65rem;
   border: 1px solid #45627f;
   border-radius: .4rem;
   background: #16283d;
   color: #e2edf7;
   cursor: pointer;
+  font: inherit;
+  font-size: .72rem;
 }
-.timeline-control button:hover {
+.demo-page button:hover {
   border-color: #7ed6cc;
 }
-.timeline-control button:focus-visible {
+.demo-page :is(button, select, input, summary, a):focus-visible {
   outline: 2px solid #7ed6cc;
   outline-offset: 2px;
 }
 .demo-source {
   grid-column: 1 / -1;
   border: 1px solid #2f486a;
-  border-radius: 1rem;
+  border-radius: .65rem;
   background: #09101d;
   padding: .8rem 1rem;
   position: relative;
@@ -257,6 +429,12 @@ fieldset.timeline-control {
 .demo-source summary {
   cursor: pointer;
   color: #b9c7da;
+  padding-right: 3.5rem;
+  font-size: .8rem;
+}
+.demo-source summary code {
+  margin-left: .5rem;
+  font-size: .75rem;
 }
 .demo-source button {
   position: absolute;
@@ -285,8 +463,33 @@ fieldset.timeline-control {
   .demo-page {
     grid-template-columns: 1fr;
   }
+  .demo-page {
+    padding-top: 1.5rem;
+  }
+  .demo-heading {
+    display: block;
+  }
+  .demo-heading > p {
+    margin-top: .8rem;
+  }
+  .demo-links {
+    display: flex;
+    flex-wrap: wrap;
+  }
+  .demo-links a {
+    flex: 1 0 auto;
+    padding: .55rem .65rem;
+    justify-content: center;
+  }
+  .demo-stage {
+    grid-row: 3;
+  }
   .molecule-canvas {
-    min-height: 400px;
+    height: 380px;
+  }
+  .demo-source summary code {
+    display: block;
+    margin: .4rem 0 0;
   }
 }
 

@@ -402,13 +402,27 @@ export const DemosPage = () => {
 
   return (
     <section className="demo-page" aria-labelledby="demo-title">
-      <div className="demo-copy">
-        <p className="eyebrow">Maintained example</p>
-        <h1 id="demo-title">{demo.title}</h1>
+      <header className="demo-heading">
+        <div>
+          <p className="eyebrow">The example collection</p>
+          <h1 id="demo-title">{demo.title}</h1>
+        </div>
         <p>{demo.summary}</p>
-        <p className="demo-assertion" data-demo-assertion={demo.id}>
-          Behavior: {demo.assertion}.
-        </p>
+      </header>
+      <nav className="demo-links" aria-label="Demo gallery">
+        {demos.map((item, index) => (
+          <a
+            key={item.id}
+            href={`#demos/${item.id}`}
+            aria-current={item.id === demo.id ? "page" : undefined}
+          >
+            <span aria-hidden="true">0{index + 1}</span>
+            {item.title}
+          </a>
+        ))}
+      </nav>
+      <div className="demo-copy">
+        <h2>Scene settings</h2>
         <label className="timeline-control">
           Structure
           <select
@@ -452,7 +466,7 @@ export const DemosPage = () => {
           </div>
         )}
         {demo.id === "motion" && (
-          <div className="timeline-control">
+          <div className="timeline-control playback-control">
             <label htmlFor="timeline-time">Scrub</label>
             <input
               id="timeline-time"
@@ -479,28 +493,35 @@ export const DemosPage = () => {
         )}
         <p className="hint">
           Drag or touch-drag to orbit; scroll, trackpad, or pinch to zoom.
+          {demo.id === "motion" && effectiveMotion === "elastic" &&
+            " Right-drag an atom to tug its residue."}
         </p>
-        <button type="button" onClick={() => void savePng(demo.id)}>
-          Save PNG
-        </button>
-        <nav className="demo-links" aria-label="Demo gallery">
-          {demos.map((item) => (
-            <a
-              key={item.id}
-              href={`#demos/${item.id}`}
-              aria-current={item.id === demo.id ? "page" : undefined}
-            >
-              {item.title}
-            </a>
-          ))}
-        </nav>
+        <details className="demo-notes">
+          <summary>How this example works</summary>
+          <p className="demo-assertion" data-demo-assertion={demo.id}>
+            {demo.assertion}.
+          </p>
+        </details>
       </div>
-      <div
-        id="molecule-canvas"
-        className="molecule-canvas"
-        aria-label="Interactive molecular WebGPU demo"
-      >
-        <p data-webgpu-error="true" role="status">Preparing WebGPU…</p>
+      <div className="demo-stage">
+        <div className="viewer-toolbar">
+          <span>
+            <strong>{structure.id.toUpperCase()}</strong> / Molecular view
+          </span>
+          <button type="button" onClick={() => void savePng(demo.id)}>
+            Save PNG
+          </button>
+        </div>
+        <div
+          id="molecule-canvas"
+          className="molecule-canvas"
+          aria-label="Interactive molecular WebGPU demo"
+        >
+          <p data-webgpu-error="true" role="status">Preparing WebGPU…</p>
+        </div>
+        <p className="viewer-caption">
+          Interactive molecular scene <span>WebGPU / use.gpu</span>
+        </p>
       </div>
       <SourcePanel id={demo.id} />
     </section>

@@ -29,12 +29,21 @@ history, so it cannot be scrubbed. Only the cartoon casts shadows in figure mode
 
 Each example is one file in `src/demos/examples/`; the page shows that file's
 text (Vite `import.meta.glob` with `?raw`) beside the canvas, with a copy
-button, so the displayed source is the source that runs. A structure picker
-switches every example between 1CRN, 1TQN (P450 3A4 with heme), 1A4Y (inhibitor
-complex) and 1C3W (bacteriorhodopsin, a membrane protein with resolved lipids);
-each has a site selection preset. Partial charges and the XTC trajectory ship
-for 1CRN only, so charge colour, the electrostatic potential and trajectory
-playback are disabled for the other structures.
+button, so the displayed source is the source that runs. The numbered gallery
+navigation switches examples without leaving the page. Scene settings sit next
+to the viewer on wider screens, and beneath it on narrow screens; PNG export
+lives in the viewer toolbar. The source panel is keyboard-accessible.
+
+`demos/options.ts` owns typed settings and their defaults; `demos/controls.tsx`
+renders ordinary React form controls. The page applies legacy presets as one
+settings update and derives structure-dependent rendering values separately.
+Keep the molecular examples as public-API Live JSX, not form or routing code.
+
+A structure picker switches every example between 1CRN, 1TQN (P450 3A4 with
+heme), 1A4Y (inhibitor complex) and 1C3W (bacteriorhodopsin, a membrane protein
+with resolved lipids); each has a site selection preset. Partial charges and the
+XTC trajectory ship for 1CRN only, so charge colour, the electrostatic potential
+and trajectory playback are disabled for the other structures.
 
 `public/data/` holds local example files (see `manifest.json`), served at
 `<base>data/<file>` for examples and bundler-free pages. Structure and charge
