@@ -38,6 +38,11 @@ import type { ElasticNetworkData } from "@molgpu/dynamics";
 import { sample } from "@molgpu/timeline";
 import { useCoordinates } from "./coordinates-context.ts";
 import { checkElasticBindings, checkpointLayout } from "./elastic-bindings.ts";
+import {
+  type CheckpointHistory,
+  recordCheckpoint,
+  seekCheckpoint,
+} from "./elastic-checkpoints.ts";
 import { CoordinateKernel } from "./coordinate-kernel.ts";
 import {
   count,
@@ -209,21 +214,9 @@ function createGpu(device: GPUDevice, network: ElasticNetworkData): Gpu {
   };
 }
 
-/** One recorded integrator state (x, v, f) in a ring slot. */
-interface Checkpoint {
-  step: number;
-  slot: number;
-  perturbed: boolean;
-}
-
-interface Ring {
+interface Ring extends CheckpointHistory {
   buffer: GPUBuffer;
-  every: number;
   slotBytes: number;
-  slots: number;
-  /** Retained checkpoints, oldest to newest. */
-  list: Checkpoint[];
-  free: number[];
 }
 
 function createRing(
@@ -246,7 +239,6 @@ function createRing(
     buffer,
     every: record.every,
     slotBytes,
-    slots,
     list: [],
     free: Array.from({ length: slots }, (_, i) => slots - 1 - i),
   };
@@ -254,7 +246,6 @@ function createRing(
 
 interface Run {
   gpu: Gpu | null;
-  ring: Ring | null;
   seed: number;
   completed: number;
   epoch: number;
@@ -331,7 +322,6 @@ const Integrator: LC<
   const [wake, setWake] = useState(0);
   const run = useRef<Run>({
     gpu: null,
-    ring: null,
     seed,
     completed: 0,
     epoch: 0,
@@ -356,14 +346,7 @@ const Integrator: LC<
         dirty: false,
       });
     };
-    if (r.gpu !== gpu || r.seed !== seed) {
-      reset();
-      r.ring = null;
-    }
-    if (r.ring !== ring) {
-      // A new ring (or none) starts empty; the run itself continues.
-      r.ring = ring;
-    }
+    if (r.gpu !== gpu || r.seed !== seed) reset();
     if (r.paramsKey !== paramsKey || !r.forcesValid) {
       device.queue.writeBuffer(
         gpu.uniform,
@@ -380,32 +363,14 @@ const Integrator: LC<
       r.forcesValid = false;
     }
 
-    // Seek: restore a checkpoint, replay from step 0, or clamp.
-    let goal = target, evicted = false;
-    let restore: Checkpoint | null = null;
-    const newestAtOrBelow = (step: number) => {
-      const list = ring?.list ?? [];
-      for (let i = list.length - 1; i >= 0; i--) {
-        if (list[i].step <= step) return list[i];
-      }
-      return null;
-    };
-    if (goal < r.completed || (ring && goal > r.completed)) {
-      const c = newestAtOrBelow(goal);
-      const oldest = ring?.list[0];
-      if (goal < r.completed) {
-        if (c) restore = c;
-        else if (oldest?.perturbed) {
-          // Before the retained range of a perturbed run: nothing replays it.
-          goal = oldest.step;
-          evicted = true;
-          if (r.completed !== oldest.step || r.dirty) restore = oldest;
-        } else reset();
-      } else if (c && c.step > r.completed && !r.dirty && !tugging) {
-        restore = c;
-      }
-    }
-
+    const { goal, restore, reset: replay, evicted } = seekCheckpoint(
+      ring,
+      target,
+      r.completed,
+      r.dirty,
+      tugging,
+    );
+    if (replay) reset();
     const steps = Math.min(
       maxStepsPerFrame,
       goal - (restore?.step ?? r.completed),
@@ -448,30 +413,20 @@ const Integrator: LC<
           r.perturbed = true;
           r.dirty = true;
         }
-        if (ring && r.completed % ring.every === 0) {
-          const step = r.completed, list = ring.list;
-          const at = list.findIndex((c) => c.step >= step);
-          const existing = at >= 0 && list[at].step === step;
-          // A departing run branches: later checkpoints belong to the old
-          // history. An identical run keeps them.
-          if (at >= 0 && (r.dirty || !existing)) {
-            if (r.dirty) {
-              for (const c of list.splice(at)) ring.free.push(c.slot);
-            } else continue; // inside an evicted gap: keep order
-          } else if (existing) continue;
-          if (!ring.free.length) ring.free.push(list.shift()!.slot);
-          const slot = ring.free.pop()!;
+        const checkpoint = ring
+          ? recordCheckpoint(ring, r.completed, r.perturbed, r.dirty)
+          : null;
+        if (ring && checkpoint) {
           pass.end();
           encoder.copyBufferToBuffer(
             gpu.state,
             0,
             ring.buffer,
-            slot * ring.slotBytes,
+            checkpoint.slot * ring.slotBytes,
             ring.slotBytes,
           );
           pass = encoder.beginComputePass({ label: "molgpu:elastic" });
           pass.setBindGroup(0, gpu.group);
-          list.push({ step, slot, perturbed: r.perturbed });
         }
       }
       pass.end();
