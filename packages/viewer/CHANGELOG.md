@@ -7,6 +7,11 @@ for the procedure.
 
 ## [Unreleased]
 
+- Use native world-unit PointLayer sizing and remove camera-dependent radius
+  conversion. Resolve molecular hover through upstream Pick events instead of
+  polling and re-sampling the picking buffer; preserve left-press picking,
+  selected atom rows and assembly operator identities.
+
 - Upgrade use.gpu to exact `0.21.0` packages from public npm and remove the
   GitLab registry configuration and isolated-consumer registry copying.
 

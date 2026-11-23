@@ -1883,9 +1883,13 @@
         "dependencies": [
           "npm:@use-gpu/core@0.21.0",
           "npm:@use-gpu/frame@0.21.0",
+          "npm:@use-gpu/interact@0.21.0",
           "npm:@use-gpu/live@0.21.0",
           "npm:@use-gpu/math@0.21.0",
+          "npm:@use-gpu/parse@0.21.0",
+          "npm:@use-gpu/plot@0.21.0",
           "npm:@use-gpu/shader@0.21.0",
+          "npm:@use-gpu/traits@0.21.0",
           "npm:@use-gpu/workbench@0.21.0"
         ]
       }

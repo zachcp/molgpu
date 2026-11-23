@@ -9,14 +9,19 @@ import {
   type LiveElement,
   makeContext,
   provide,
+  use,
   useContext,
   useMemo,
-  useOne,
+  useRef,
   useResource,
   useState,
 } from "@use-gpu/live";
-import { usePickingContext } from "@use-gpu/workbench";
-import { useMouseState, usePickingId } from "@use-gpu/frame";
+import { Pick } from "@use-gpu/interact";
+import {
+  type PointerEvent,
+  useCanvasEvents,
+  usePickingId,
+} from "@use-gpu/frame";
 import { type PickEntry, resolvePick } from "./pick-resolve.ts";
 
 import { InstanceContext } from "../rendering/instance-context.ts";
@@ -26,14 +31,22 @@ interface PickingRegistry {
   set(id: number, entry: PickEntry): void;
   remove(id: number): void;
   get(id: number): PickEntry | null;
+  hover: PickHit | null;
+  pick: PickHit | null;
+  move(hit: PickHit | null): void;
+  press(event: PointerEvent): void;
+  subscribe(listener: {
+    hover(hit: PickHit | null): void;
+    pick(hit: PickHit | null): void;
+  }): () => void;
 }
 
 /**
  * Molecular picking. A pickable representation draws itself into @use-gpu's
  * picking buffer under a unique object id and registers, against that id, which
  * structure it drew and the atom row each drawn instance maps to. `usePicking()`
- * samples the picking buffer under the cursor and resolves the hit back to a
- * concrete atom. The scene must be inside an <AutoCanvas> (which provides the
+ * resolves upstream Pick events back to a concrete atom. The scene must be
+ * inside an <AutoCanvas> (which provides the
  * picking target and pointer events, both on by default) and a <Pass picking>,
  * and everything picking-related must be inside a <PickingProvider>.
  */
@@ -53,15 +66,41 @@ export const PickingProvider: ViewerComponent<{ children?: ViewerElement }> = (
 ) => {
   const registry = useMemo((): PickingRegistry => {
     const map = new Map<number, PickEntry>();
-    return {
+    const listeners = new Set<Parameters<PickingRegistry["subscribe"]>[0]>();
+    let lastPress: PointerEvent | null = null;
+    const registry: PickingRegistry = {
+      hover: null,
+      pick: null,
       set: (id, entry) => {
         map.set(id, entry);
       },
       remove: (id) => {
         map.delete(id);
+        if (registry.hover?.id === id) registry.move(null);
       },
       get: (id) => map.get(id) ?? null,
+      move: (hit) => {
+        registry.hover = hit;
+        for (const listener of listeners) listener.hover(hit);
+      },
+      press: (event) => {
+        // Each pickable mounts an observer in its canvas event scope. One
+        // canvas event must notify readers only once, including background
+        // presses and scenes with multiple assembly copies.
+        if (event.button !== "left" || lastPress === event) return;
+        lastPress = event;
+        registry.pick = resolvePick(
+          [event.pickId, event.pickIndex],
+          registry.get,
+        );
+        for (const listener of listeners) listener.pick(registry.pick);
+      },
+      subscribe: (listener) => {
+        listeners.add(listener);
+        return () => listeners.delete(listener);
+      },
     };
+    return registry;
   }, []);
   return (provide(PickingRegistryContext, registry, children));
 };
@@ -100,7 +139,28 @@ export const Pickable: LC<{
     });
     dispose(() => registry.remove(id));
   }, [registry, id, resource, indices, copy]);
-  return render(id) as LiveElement;
+  // Pick owns hit/leave event routing. The plain canvas observer also sees
+  // background presses; molecular readers retain their left-press contract.
+  // Mount here rather than in PickingProvider, which may wrap AutoCanvas and
+  // therefore sit outside the upstream event context.
+  const presses = useCanvasEvents(
+    null,
+    useMemo(() => ({
+      pointerDown: registry.press,
+    }), [registry]),
+  );
+  return [
+    presses,
+    use(Pick, {
+      id,
+      onPointerMove: (event: PointerEvent) =>
+        registry.move(resolvePick([id, event.pickIndex], registry.get)),
+      onPointerLeave: () => {
+        if (registry.hover?.id === id) registry.move(null);
+      },
+      render: () => render(id) as LiveElement,
+    }),
+  ];
 };
 
 /**
@@ -116,26 +176,24 @@ export function usePicking(options: {
 } = {}): { hover: PickHit | null; pick: PickHit | null } {
   const { onHover, onPick } = options;
   const registry = useRegistry();
-  const { samplePoint } = usePickingContext();
-  const mouse = useMouseState();
-  const [hover, setHover] = useState<PickHit | null>(null);
-  const [pick, setPick] = useState<PickHit | null>(null);
-  const prev = useOne(() => ({ left: false }));
-
-  // Runs once per pointer event (mouse is a fresh object each time), not per
-  // frame. samplePoint reads the picking buffer PickingTarget refreshes each
-  // frame, so a move resolves against the latest render.
-  useResource(() => {
-    const resolved = resolvePick(samplePoint(mouse.x, mouse.y), registry.get);
-    setHover(resolved);
-    if (onHover) onHover(resolved);
-    const left = !!mouse.buttons?.left;
-    if (left && !prev.left) { // left-button press edge = a pick
-      setPick(resolved);
-      if (onPick) onPick(resolved);
-    }
-    prev.left = left;
-  }, [mouse]);
+  const [hover, setHover] = useState<PickHit | null>(registry.hover);
+  const [pick, setPick] = useState<PickHit | null>(registry.pick);
+  const callbacks = useRef(options);
+  callbacks.current = { onHover, onPick };
+  useResource((dispose) => {
+    setHover(registry.hover);
+    setPick(registry.pick);
+    dispose(registry.subscribe({
+      hover: (hit) => {
+        setHover(hit);
+        callbacks.current.onHover?.(hit);
+      },
+      pick: (hit) => {
+        setPick(hit);
+        callbacks.current.onPick?.(hit);
+      },
+    }));
+  }, [registry]);
 
   return { hover, pick };
 }

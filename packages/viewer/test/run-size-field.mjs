@@ -207,8 +207,78 @@ Deno.test("viewer size field", async () => {
     assertEquals(errors, [], "page errors");
     assertEquals(reset.errors, [], "uncaptured WebGPU errors");
 
+    // A unit-radius, unshaded circle at the orbit target has an independently
+    // known projected diameter. This catches radius/diameter confusion and
+    // accidental screen-space sizing across camera, viewport and DPR changes.
+    const diameters = [];
+    for (
+      const { width, height, dpr, radius, scale } of [
+        { width: 640, height: 480, dpr: 1, radius: 14, scale: 1 },
+        { width: 800, height: 600, dpr: 2, radius: 25, scale: 1.7 },
+        { width: 480, height: 640, dpr: 1.5, radius: 20, scale: 0.8 },
+      ]
+    ) {
+      const sizing = await browser.newPage({
+        viewport: { width, height },
+        deviceScaleFactor: dpr,
+      });
+      const sizingErrors = captureErrors(sizing);
+      try {
+        await sizing.goto(
+          "http://127.0.0.1:5193/packages/viewer/test/size-field.html?sizing",
+        );
+        await sizing.waitForFunction(() => globalThis.__probe?.mounted);
+        await sizing.evaluate(({ radius, scale }) => {
+          globalThis.__probe.setRadius(radius);
+          globalThis.__probe.setScale(scale);
+        }, { radius, scale });
+        const expected = height * dpr * scale /
+          (radius * Math.tan(Math.PI / 6));
+        let actual = 0;
+        const started = performance.now();
+        while (!actual && performance.now() - started < 30000) {
+          const png = await sizing.locator("canvas").screenshot();
+          actual = await sizing.evaluate(async (base64) => {
+            const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+            const bitmap = await createImageBitmap(
+              new Blob([bytes], { type: "image/png" }),
+            );
+            const copy = new OffscreenCanvas(bitmap.width, bitmap.height);
+            const context = copy.getContext("2d");
+            context.drawImage(bitmap, 0, 0);
+            bitmap.close();
+            const { data } = context.getImageData(
+              0,
+              Math.floor(copy.height / 2),
+              copy.width,
+              1,
+            );
+            let diameter = 0;
+            for (let x = 0; x < copy.width; x++) {
+              if (data[x * 4] > 32) diameter++;
+            }
+            return diameter;
+          }, png.toString("base64"));
+        }
+        assert(
+          Math.abs(actual - expected) <= 3,
+          `world-unit diameter: ${actual} pixels, expected ${expected}`,
+        );
+        diameters.push({ expected, actual });
+        assertEquals(sizingErrors, [], "sizing page errors");
+        assertEquals(
+          await sizing.evaluate(() => globalThis.__probe.errors),
+          [],
+          "sizing WebGPU errors",
+        );
+      } finally {
+        await sizing.close();
+      }
+    }
+
     console.log(JSON.stringify({
       status: "passed",
+      diameters,
       storageBefore: before.storage,
       scaleStorageDelta: storageDelta,
       paletteStorageDelta: paletteDelta,

@@ -59,7 +59,8 @@ GPUAdapter.prototype.requestDevice = async function (...args) {
   return device;
 };
 
-const N = 216;
+const SIZING = new URLSearchParams(location.search).has("sizing");
+const N = SIZING ? 1 : 216;
 const positions = new Float32Array(N * 3);
 const radii = new Float32Array(N);
 const elements = new Float32Array(N);
@@ -70,6 +71,10 @@ for (let i = 0; i < N; i++) {
   positions[i * 3 + 2] = 0;
   radii[i] = 0.6 + (i % 5) * 0.12;
   elements[i] = ELS[i % 4];
+}
+if (SIZING) {
+  positions.fill(0);
+  radii.fill(1);
 }
 
 // Two palettes: swapping between them changes colours via a new shader module,
@@ -125,13 +130,13 @@ const Points = ({ positions, radiusSource, elementSource, scale, palette }) => {
     count: N,
     scale,
     shape: "circle",
-    shaded: true,
+    shaded: !SIZING,
   });
 };
 
 const Scene = ({ state }) => {
   const time = useTimelineTime();
-  const radius = sample(cameraRadius, time);
+  const radius = state.radius ?? sample(cameraRadius, time);
   const bearing = sample(cameraBearing, time);
   probe.camera = { radius, bearing };
   return use(ColumnSource, {
@@ -184,6 +189,7 @@ const App = () => {
   probe.setScale = (scale) => setState((s) => ({ ...s, scale }));
   probe.setPalette = (palette) => setState((s) => ({ ...s, palette }));
   probe.setTime = (time) => setState((s) => ({ ...s, time }));
+  probe.setRadius = (radius) => setState((s) => ({ ...s, radius }));
   probe.mounted = true;
   return use(TimelineProvider, {
     time: state.time,

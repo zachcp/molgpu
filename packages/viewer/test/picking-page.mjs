@@ -30,6 +30,7 @@ const probe = globalThis.__probe = {
   hover: null,
   pick: null,
   time: null,
+  presses: 0,
 };
 const request = GPUAdapter.prototype.requestDevice;
 GPUAdapter.prototype.requestDevice = async function (...args) {
@@ -134,6 +135,7 @@ const seek = (atom) =>
 const Readout = () => {
   const { hover, pick } = usePicking({
     onPick: (hit) => {
+      probe.presses++;
       if (hit) probe.setTime(seek(hit.atom));
     },
   });
@@ -162,6 +164,8 @@ const selectedProps = new URLSearchParams(location.search).has("select")
 const App = () => {
   useDeviceContext();
   const [time, setTime] = useState(0);
+  const [visible, setVisible] = useState(true);
+  probe.setVisible = setVisible;
   probe.setTime = setTime;
   probe.time = time;
   probe.mounted = true;
@@ -180,7 +184,7 @@ const App = () => {
           use(DirectionalLight, { direction: [-1, -2, -1.5], intensity: 1 }),
           use(Structure, {
             data: shown,
-            children: use(Spacefill, {
+            children: visible && use(Spacefill, {
               pickable: true,
               scale: 1,
               ...selectedProps,

@@ -532,6 +532,22 @@ updates where supported, otherwise snapshots. `status.lagging` reports when the
 integration budget trails the target; performance depends on the network and
 GPU.
 
+## Picking and world-unit sizes
+
+`<Spacefill pickable>` uses upstream `<Pick>` events and the molecular picking
+registry to resolve atom rows, selected draw indices and assembly operators.
+`usePicking()` keeps its `{ hover, pick }` result: a left press updates `pick`,
+including clearing it on the background; right presses do not pick. Hover
+updates follow upstream event routing and may pause while another control owns
+pointer capture. Unmounting a hovered representation clears its hover. Keep
+`<PickingProvider>` around the pickable representations and their readers; it
+may wrap `<AutoCanvas>` or sit beneath it.
+
+Atom sizes use native `PointLayer depth={-1}` world units. Molecular radii are
+converted to diameters in the shader, without a camera-dependent CPU conversion
+or a separate size buffer. This does not enable sphere shadows; the existing
+shadow policy is unchanged.
+
 ## Computed attributes
 
 `<AttributeProducer>` from `@molgpu/viewer/advanced` computes one `f32` atom or
