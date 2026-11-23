@@ -1,5 +1,6 @@
 import type {
   ComposeLayer,
+  DemoPreset,
   MotionMode,
   StructureId,
   VolumeMode,
@@ -58,3 +59,48 @@ export interface SceneOptions {
     readonly onPick: (row: number) => void;
   };
 }
+
+/** Editable example values. Rendering derives data-dependent values separately. */
+export type DemoSettings =
+  & Omit<SceneOptions, "structure" | "sliceIndex" | "measure" | "onFocusPick">
+  & {
+    readonly figure: boolean;
+    readonly shadows: boolean;
+    readonly focusMode: boolean;
+    readonly environment: EnvironmentPreset;
+    readonly tonemap: Tonemap;
+    readonly sliceFraction: number;
+  };
+
+export const defaultRoughness = (mode: MaterialMode) =>
+  mode === "metal" ? 0.2 : 0.85;
+
+export const defaultSettings = (preset?: DemoPreset): DemoSettings => ({
+  layers: ["tube"],
+  surfaceMode: "opaque",
+  surfaceColorMode: "neutral",
+  surfaceKind: "accessible",
+  materialMode: "matte",
+  roughness: defaultRoughness(preset?.materialMode ?? "matte"),
+  clip: [0, 1],
+  fresnel: true,
+  bump: 0.6,
+  bumpScale: 1.2,
+  figure: false,
+  shadows: true,
+  focusMode: false,
+  environment: "none",
+  tonemap: "linear",
+  selectionMode: "sulfur",
+  fieldMode: "element",
+  motionMode: "trajectory",
+  trajectoryMode: "tube",
+  ramachandran: true,
+  volumeMode: "density",
+  efieldSpacing: 1,
+  seedSpacing: 7,
+  lineDistance: 30,
+  sliceFraction: 0.5,
+  isoSigma: 2,
+  ...preset,
+});
