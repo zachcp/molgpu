@@ -22,12 +22,13 @@ export function vertexAtoms(trace: Trace, residue: Uint32Array): Uint32Array {
 
 /**
  * Evaluate a colour `field` per drawn vertex: positions sample where the
- * vertex is drawn, attributes and annotation rows through `sourceAtom`.
+ * vertex is drawn (or a shader-derived sampling position), attributes and
+ * annotation rows through `sourceAtom`.
  * Recolouring only rebinds; the geometry columns stay as they are.
  */
 export const VertexFieldColors: LC<{
   field: Field;
-  positions: StorageSource;
+  positions: ShaderSource;
   sourceAtom: StorageSource | null;
   annotation: StorageSource | null;
   data: StructureData;

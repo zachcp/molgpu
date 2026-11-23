@@ -2,7 +2,6 @@ import type { SelectionDiagnostics, SelectionInput } from "../../types.ts";
 import { SelectionConsumer } from "../../selection/selection-consumer.ts";
 import type { Selection } from "@molgpu/select";
 import type { Field } from "@molgpu/fields";
-import type { StructureData } from "@molgpu/table";
 import type {
   MaterialSpec,
   Translucency,
@@ -29,8 +28,7 @@ import {
   useActiveRows,
   withColumns,
 } from "../../rendering/representation.ts";
-import { useField } from "../../field-binding/use-field.ts";
-import { useOpacityColors } from "../../rendering/use-opacity-colors.ts";
+import { VertexFieldColors } from "../../field-binding/vertex-field-colors.ts";
 
 import {
   applyOpacity,
@@ -47,12 +45,7 @@ import { useGeometryJob } from "../../internal/use-geometry-job.ts";
 import { buildSurfaceGeometry } from "./surface-geometry.ts";
 import { useRepaint } from "../../internal/use-repaint.ts";
 import { useBindingProbe } from "../../internal/use-binding-probe.ts";
-import { useAttributeSources } from "../../field-binding/attribute-sources.ts";
-import {
-  fieldColumns,
-  type FieldPlan,
-  useFieldPlan,
-} from "../../field-binding/use-field-plan.ts";
+import { useFieldPlan } from "../../field-binding/use-field-plan.ts";
 
 // A vertex pushed `offset` Å along its normal: where a surface colour field
 // samples, so moving the sampling shell is a uniform write.
@@ -68,57 +61,15 @@ const OFFSET_POSITIONS = wgsl`
 // Surface vertices sample positions directly, and atom columns and
 // annotation rows through the nearest source atom recorded when the mesh is
 // built.
-const FieldFaces: LC<{
-  field: Field;
-  positions: StorageSource;
-  normals: StorageSource;
-  sourceAtom: StorageSource | null;
-  annotation: StorageSource | null;
-  data: StructureData;
-  plan: FieldPlan;
-  sampleOffset: number;
-  opacity: number;
-  render: (colors: ShaderSource) => ViewerElement;
-}> = (
-  {
-    field,
-    positions,
-    normals,
-    sourceAtom,
-    annotation,
-    data,
-    plan,
-    sampleOffset,
-    opacity,
-    render,
-  },
-) => {
+const FieldFaces: LC<
+  Parameters<typeof VertexFieldColors>[0] & {
+    normals: StorageSource;
+    sampleOffset: number;
+  }
+> = ({ positions, normals, sampleOffset, ...props }) => {
   const offset = useShaderRef(sampleOffset);
   const shell = useShader(OFFSET_POSITIONS, [positions, normals, offset]);
-  const attributes = useAttributeSources(data, plan.attrNames);
-  const keys = plan.attrNames.map((name) => `attr:${name}`);
-  const inputs = useMemo(() => ({
-    positions: shell,
-    ...fieldColumns(
-      plan,
-      attributes.sources,
-      attributes.domains,
-      annotation,
-      sourceAtom,
-    ),
-  }), [
-    shell,
-    sourceAtom,
-    annotation,
-    plan,
-    ...keys.map((key) => attributes.sources[key]),
-    ...keys.map((key) => attributes.domains[key]),
-  ]);
-  const colors = useOpacityColors(
-    useField(field, inputs, { domain: "atom" }),
-    opacity,
-  );
-  return attributes.ready ? render(colors) : null;
+  return use(VertexFieldColors, { ...props, positions: shell });
 };
 
 /** Rolling probe (Å) that smooths the accessible surface's sphere seams. */
@@ -224,13 +175,10 @@ const SurfaceResolved: ViewerComponent<
     }),
     [indices, radii, fieldProbe, resolution, maxBytes],
   );
-  const gpu = useGpuSurface(
-    coordinates,
-    request,
-    live && indices.length > 0 && fieldProbe >= 2 * resolution,
-  );
-  const onGpu = live && indices.length > 0 &&
-    fieldProbe >= 2 * resolution && !gpu.unsupported;
+  const gpuEligible = live && indices.length > 0 &&
+    fieldProbe >= 2 * resolution;
+  const gpu = useGpuSurface(coordinates, request, gpuEligible);
+  const onGpu = gpuEligible && !gpu.unsupported;
   const snapshot = useCoordinateSnapshot({ enabled: !onGpu });
   const params = useMemo(
     () => ({ indices, probeRadius: fieldProbe, inflate, resolution, maxBytes }),
