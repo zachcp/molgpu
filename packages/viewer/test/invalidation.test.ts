@@ -15,7 +15,7 @@ import {
 import { createStructure, withPositions } from "@molgpu/table";
 import { where } from "@molgpu/select";
 import { createStructureResource } from "../src/structure/structure-resource.ts";
-import { buildBondColumns } from "../src/representations/bonds/bond-columns.ts";
+import { buildBondRows } from "../src/representations/bonds/bond-columns.ts";
 import { focusSelection } from "../src/interaction/camera-curve.ts";
 import { geometryDeps } from "../src/internal/geometry-job.ts";
 import {
@@ -188,8 +188,8 @@ test("instrumentDevice counts every buffer created/destroyed and bytes written b
 
 test("bond columns: explicit connectivity never counts a topology build, even on a coordinate edit", () => {
   const data = structure({ bonds: true });
-  buildBondColumns(data, null, "both");
-  buildBondColumns(
+  buildBondRows(data, null, "both");
+  buildBondRows(
     withPositions(data, data.positions.map((v) => v * 1.01)),
     null,
     "both",
@@ -199,19 +199,19 @@ test("bond columns: explicit connectivity never counts a topology build, even on
   assertStrictEquals(
     s.detail["geometryBuilds:bonds:columns"],
     2,
-    "coordinates are baked into bond vertices, so geometry rebuilds",
+    "each call is counted as a bond geometry build",
   );
 });
 
 test("bond columns: inferred connectivity is built once per positions revision (a coordinate-dependent derivation)", () => {
   const data = structure();
-  buildBondColumns(data, null, "both");
-  buildBondColumns(data, null, "both", true); // cache hit in @molgpu/table
+  buildBondRows(data, null, "both");
+  buildBondRows(data, null, "both"); // cache hit in @molgpu/table
   assertStrictEquals(
     snapshotCounters().detail["topologyBuilds:bonds:infer"],
     1,
   );
-  buildBondColumns(
+  buildBondRows(
     withPositions(data, data.positions.map((v) => v * 1.01)),
     null,
     "both",

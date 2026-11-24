@@ -7,6 +7,7 @@ import {
   useState,
 } from "@use-gpu/live";
 import { useViewContext } from "@use-gpu/workbench";
+import { intersectRayPlane } from "@use-gpu/interact";
 import {
   type PointerEvent,
   useCanvasEvents,
@@ -23,7 +24,6 @@ import {
   ElasticNetwork,
   type ElasticNetworkStatus,
   PickingProvider,
-  pointerToPlane,
   Spacefill,
   usePicking,
 } from "@molgpu/viewer";
@@ -57,17 +57,22 @@ const TugControls = (
 ) => {
   const { hover } = usePicking();
   const capture = usePointerCapture();
-  const { uniforms } = useViewContext();
+  const { pick, uniforms } = useViewContext();
   const snapshot = useCoordinateSnapshot();
   const grab = useOne(() => ({ node: -1, id: 0, anchor: [0, 0, 0] }));
   const move = (event: PointerEvent) => {
-    const target = pointerToPlane(
-      event.u,
-      event.v,
-      uniforms.projectionViewMatrix.current,
-      grab.anchor,
-    );
-    onTug({ node: grab.node, target, k: TUG_K });
+    // The view axis is the third row of the column-major view matrix.
+    const view = uniforms.viewMatrix.current;
+    const [x, y, z] = grab.anchor;
+    const n = [view[2], view[6], view[10]];
+    const [origin, ray] = pick(event);
+    const hit = intersectRayPlane(origin, ray, [
+      ...n,
+      n[0] * x + n[1] * y + n[2] * z,
+    ] as [number, number, number, number]);
+    if (hit) {
+      onTug({ node: grab.node, target: [hit[0], hit[1], hit[2]], k: TUG_K });
+    }
     event.preventDefault();
     event.stopPropagation();
   };

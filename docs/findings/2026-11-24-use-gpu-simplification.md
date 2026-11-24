@@ -67,7 +67,12 @@ Each item keeps behaviour and instrumentation counters unless stated.
    view ray (`useViewContext().pick` plus `@use-gpu/interact`
    `intersectRayPlane`); `buildBondColumns` is a test oracle in `src`; most of
    `line-size.ts` is reached only by tests; row equality is written three times.
-   Validate with the site tug check, unit tests and `run-tube`.
+   Validate with the site tug check, unit tests and `run-tube`. **Done:** the
+   dynamics demo intersects `pick(event)` with the view-normal plane, and the
+   experimental `pointerToPlane`/`projectToPointer` exports are gone; the bond
+   oracle lives in `bond-columns.test.ts`; Tube's width is `2 * radius`. Row
+   equality was left alone: the viewer has one copy, and the other two are
+   private to `@molgpu/select`.
 
 ## Not changed
 

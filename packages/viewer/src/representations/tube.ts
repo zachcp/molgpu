@@ -29,7 +29,6 @@ import { useTranslucency } from "../rendering/draw-mode.ts";
 import { withMaterial } from "../rendering/with-material.ts";
 import { CopyDraws, withGeometryCopies } from "../rendering/instance-copies.ts";
 import { buildTubeGeometry } from "./tube-geometry.ts";
-import { lineWidthForRadius } from "../rendering/line-size.ts";
 import { useRepaint } from "../internal/use-repaint.ts";
 import { count } from "../internal/instrumentation.ts";
 import { useBindingProbe } from "../internal/use-binding-probe.ts";
@@ -42,10 +41,9 @@ import { useBindingProbe } from "../internal/use-binding-probe.ts";
  * every altloc conformer at once (which would jumble the guide path).
  * Missing residues, chain/model breaks, and a selection that drops a
  * residue's guide atom all end a run rather than being bridged across.
- * `radius` is an Ångström tube radius, converted through the verified
- * depth:-1 LineLayer width contract (internal/line-size.mjs) with no
- * empirical floor. Only `select` and `smooth` (samples per guide segment)
- * rebuild the trace/spline geometry; `radius` and `color` update bindings.
+ * `radius` is an Ångström tube radius: at `depth: -1` use.gpu's
+ * getWorldScale is 1, so LineLayer's width is exactly the diameter. Only
+ * `select` and `smooth` (samples per guide segment) rebuild the trace/spline geometry; `radius` and `color` update bindings.
  */
 const TubeResolved: ViewerComponent<
   Resolved<TubeProps>
@@ -105,7 +103,10 @@ const TubeResolved: ViewerComponent<
   );
   if (!built?.count) return null;
 
-  const width = lineWidthForRadius(radius, -1);
+  if (!Number.isFinite(radius) || radius <= 0) {
+    throw new RangeError("radius must be a positive finite number");
+  }
+  const width = 2 * radius;
   const specs: ColumnSpec[] = [
     { key: "positions", data: built.positions, format: "vec3<f32>" },
     { key: "segments", data: built.segments, format: "i32" },
