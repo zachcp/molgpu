@@ -84,10 +84,6 @@ export { Superpose } from "./coordinates/superpose.ts";
 export { Unwrap } from "./coordinates/unwrap.ts";
 export { NormalMode } from "./coordinates/normal-mode.ts";
 export { ElasticNetwork } from "./coordinates/elastic-network.ts";
-export {
-  pointerToPlane,
-  projectToPointer,
-} from "./interaction/pointer-plane.ts";
 export { GpuDssp } from "./attributes/gpu-dssp-provider.ts";
 export type {
   GpuDsspProps,

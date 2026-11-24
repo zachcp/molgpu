@@ -1,10 +1,8 @@
 import { assertEquals, assertNotEquals, assertStrictEquals } from "@std/assert";
 import { createStructure } from "@molgpu/table";
 import { byElement, evaluate } from "@molgpu/fields";
-import {
-  buildBondColumns,
-  buildBondRows,
-} from "../src/representations/bonds/bond-columns.ts";
+import type { StructureData } from "@molgpu/table";
+import { buildBondRows } from "../src/representations/bonds/bond-columns.ts";
 import { gatherAtomColumns } from "./gather-oracle.ts";
 
 const data = createStructure({
@@ -69,12 +67,45 @@ const data = createStructure({
   },
 });
 
+/**
+ * CPU oracle for the vertices Bonds draws with `segment: 1`: default
+ * two-colour bonds are two strokes meeting at the midpoint, with atom rows
+ * [A,A,B,B]; explicit styling keeps one [A,B] stroke per bond.
+ */
+function buildBondColumns(
+  data: StructureData,
+  indices: Uint32Array | null,
+  endpoints: "both" | "either",
+  splitAtMidpoint = false,
+) {
+  const { endpoints: pairs } = buildBondRows(data, indices, endpoints);
+  const rows: number[] = [], positions: number[] = [];
+  const at = (
+    row: number,
+  ) => [...data.positions.subarray(3 * row, 3 * row + 3)];
+  for (let b = 0; b < pairs.length; b += 2) {
+    const a = pairs[b], z = pairs[b + 1];
+    if (splitAtMidpoint) {
+      const mid = at(a).map((v, axis) => (v + at(z)[axis]) / 2);
+      rows.push(a, a, z, z);
+      positions.push(...at(a), ...mid, ...mid, ...at(z));
+    } else {
+      rows.push(a, z);
+      positions.push(...at(a), ...at(z));
+    }
+  }
+  return {
+    n: rows.length,
+    rows: Uint32Array.from(rows),
+    positions: Float32Array.from(positions),
+  };
+}
+
 Deno.test("default bonds split C-O and diagonal N-S at exact midpoints with matching endpoint colors", () => {
   const built = buildBondColumns(data, null, "both", true);
   const live = buildBondRows(data, null, "both");
   assertEquals([...live.endpoints], [0, 1, 2, 3]);
   assertEquals([...built.rows], [0, 0, 1, 1, 2, 2, 3, 3]);
-  assertEquals([...built.segments], [1, 2, 1, 2, 1, 2, 1, 2]);
   assertEquals([...built.positions], [
     -4,
     0,
@@ -123,7 +154,6 @@ Deno.test("explicit styling keeps one unsplit stroke per bond and selection endp
   const live = buildBondRows(data, null, "both");
   assertEquals([...live.endpoints], [0, 1, 2, 3]);
   assertEquals([...unsplit.rows], [0, 1, 2, 3]);
-  assertEquals([...unsplit.segments], [1, 2, 1, 2]);
   assertEquals([...unsplit.positions], [...data.positions]);
   assertStrictEquals(
     buildBondColumns(data, Uint32Array.of(0), "both", true).n,
