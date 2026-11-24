@@ -58,7 +58,11 @@ Each item keeps behaviour and instrumentation counters unless stated.
    per-device compute-pipeline cache and bind-group mapping; 19 files redefine
    buffer usage flags. Share them without changing labels, ownership or
    destruction points. Validate with `run-gpu-dssp`, `run-ses-field`,
-   `run-surface`, `run-efield`, `run-trajectory` and `run-retirement`.
+   `run-surface`, `run-efield`, `run-trajectory` and `run-retirement`. **Done:**
+   `internal/gpu-job.ts` holds the usage flags, `computePipeline`,
+   `bindBuffers`, `TransientBuffers` and `mapped`. The DSSP, SES, marching
+   cubes, scan and attribution jobs use them; superpose, unwrap, EField and
+   coordinate bounds keep their own pipelines and layouts.
 9. **Test-only and duplicated helpers.** `pointer-plane.ts` re-derives use.gpu's
    view ray (`useViewContext().pick` plus `@use-gpu/interact`
    `intersectRayPlane`); `buildBondColumns` is a test oracle in `src`; most of

@@ -3,10 +3,7 @@ import { useDeviceContext } from "@use-gpu/workbench";
 import type { Coordinates } from "./coordinates-context.ts";
 import { Published } from "./coordinate-kernel.ts";
 import { count } from "../internal/instrumentation.ts";
-
-const STORAGE = 0x0080;
-const COPY_SRC = 0x0004;
-const COPY_DST = 0x0008;
+import { COPY_DST, COPY_SRC, STORAGE } from "../internal/gpu-job.ts";
 
 /**
  * Encode a provider's stages, reading `input` and writing packed `output`. It

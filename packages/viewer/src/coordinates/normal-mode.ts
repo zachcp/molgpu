@@ -14,10 +14,9 @@ import { useComputeBuffers } from "../internal/compute-buffers.ts";
 
 import { TimelineContext } from "../timeline-context.ts";
 import type { NormalModeProps, ViewerComponent } from "../types.ts";
+import { COPY_DST, STORAGE } from "../internal/gpu-job.ts";
 
 const SHADER = wgsl`${normalModeWgsl}`;
-const STORAGE = 0x0080;
-const COPY_DST = 0x0008;
 
 const Mode: LC<{
   mode: NormalModeData;

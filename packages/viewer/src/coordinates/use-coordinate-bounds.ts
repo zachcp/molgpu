@@ -13,12 +13,14 @@ import {
   releaseOwnedBuffer,
   trackOwnedBuffer,
 } from "../internal/instrumentation.ts";
+import {
+  COPY_DST,
+  COPY_SRC,
+  MAP_READ,
+  STORAGE,
+  UNIFORM,
+} from "../internal/gpu-job.ts";
 
-const COPY_SRC = 0x0004;
-const COPY_DST = 0x0008;
-const MAP_READ = 0x0001;
-const STORAGE = 0x0080;
-const UNIFORM = 0x0040;
 const THREADS = 256;
 const PARTIAL_BYTES = 48;
 

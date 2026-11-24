@@ -16,10 +16,8 @@ import {
 } from "./frame-window.ts";
 import { count, gauge } from "../internal/instrumentation.ts";
 import { ComputeBuffers } from "../internal/compute-buffers.ts";
+import { COPY_DST, COPY_SRC, STORAGE } from "../internal/gpu-job.ts";
 
-const STORAGE = 0x0080;
-const COPY_DST = 0x0008;
-const COPY_SRC = 0x0004;
 /** Frames read ahead of the playhead. */
 const PREFETCH = 2;
 

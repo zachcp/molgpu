@@ -29,12 +29,16 @@ import {
   dispatchFolded,
   encodeExclusiveScan,
 } from "../../internal/gpu-scan.ts";
+import {
+  bindBuffers,
+  computePipeline,
+  COPY_DST,
+  COPY_SRC,
+  STORAGE,
+  TransientBuffers,
+  UNIFORM,
+} from "../../internal/gpu-job.ts";
 
-const MAP_READ = 0x0001;
-const COPY_SRC = 0x0004;
-const COPY_DST = 0x0008;
-const UNIFORM = 0x0040;
-const STORAGE = 0x0080;
 const GROUP = 64;
 const NONE = 0xffffffff;
 
@@ -350,27 +354,8 @@ const STAGES = {
 } as const;
 type Stage = keyof typeof STAGES;
 
-const pipelines = new WeakMap<GPUDevice, Map<Stage, GPUComputePipeline>>();
-function pipeline(device: GPUDevice, name: Stage): GPUComputePipeline {
-  let cache = pipelines.get(device);
-  if (!cache) pipelines.set(device, cache = new Map());
-  let result = cache.get(name);
-  if (!result) {
-    result = device.createComputePipeline({
-      layout: "auto",
-      compute: {
-        module: device.createShaderModule({
-          code: STAGES[name],
-          label: `molgpu:ses:${name}`,
-        }),
-        entryPoint: "main",
-      },
-      label: `molgpu:ses:${name}`,
-    });
-    cache.set(name, result);
-  }
-  return result;
-}
+const pipeline = (device: GPUDevice, name: Stage): GPUComputePipeline =>
+  computePipeline(device, STAGES[name], "main", `molgpu:ses:${name}`);
 
 /** Mol*'s angle table: theta accumulated in f64, stored as f32. */
 function angleTable(count: number): Float32Array {
@@ -530,31 +515,8 @@ export async function gpuSesField(
   };
   checkCurrent();
 
-  const transient: GPUBuffer[] = [];
-  let workingBytes = 0;
-  let readbackBytes = 0;
-  const make = (
-    size: number,
-    usage: number,
-    label: string,
-    initial?: ArrayBufferView,
-    owned = true,
-  ) => {
-    const allocated = Math.max(16, Math.ceil(size / 4) * 4);
-    const buffer = device.createBuffer({
-      size: allocated,
-      usage,
-      label: `molgpu:ses:${label}`,
-    });
-    if (owned) {
-      transient.push(buffer);
-      workingBytes += allocated;
-    }
-    if (initial?.byteLength) {
-      device.queue.writeBuffer(buffer, 0, initial as BufferSource);
-    }
-    return buffer;
-  };
+  const job = new TransientBuffers(device, "ses");
+  const make = job.make;
   const dispatch = (
     pass: GPUComputePassEncoder,
     name: Stage,
@@ -565,27 +527,11 @@ export async function gpuSesField(
     pass.setPipeline(p);
     pass.setBindGroup(
       0,
-      device.createBindGroup({
-        layout: p.getBindGroupLayout(0),
-        entries: entries.map(([binding, buffer]) => ({
-          binding,
-          resource: { buffer },
-        })),
-      }),
+      bindBuffers(device, p, entries),
     );
     dispatchFolded(device, pass, groups);
   };
-  const read = async (source: GPUBuffer, bytes: number) => {
-    readbackBytes += bytes;
-    const staging = make(bytes, COPY_DST | MAP_READ, "readback");
-    const encoder = device.createCommandEncoder();
-    encoder.copyBufferToBuffer(source, 0, staging, 0, bytes);
-    device.queue.submit([encoder.finish()]);
-    await staging.mapAsync(MAP_READ);
-    const copy = staging.getMappedRange().slice(0);
-    staging.unmap();
-    return copy;
-  };
+  const read = job.read;
 
   let field: GPUBuffer | null = null;
   try {
@@ -835,9 +781,7 @@ export async function gpuSesField(
     let retained: SesCells | undefined;
     if (options.retainCells) {
       const buffers = [frame, rowMap, offsets, sortedRows];
-      for (const buffer of buffers) {
-        transient.splice(transient.indexOf(buffer), 1);
-      }
+      job.detach(...buffers);
       retained = {
         frame,
         rowMap,
@@ -859,13 +803,13 @@ export async function gpuSesField(
       maxRadius,
       level: probeRadius,
       probeCount,
-      workingBytes,
-      readbackBytes,
+      workingBytes: job.bytes,
+      readbackBytes: job.readbackBytes,
     };
     field = null;
     return result;
   } finally {
     field?.destroy();
-    for (const buffer of transient) buffer.destroy();
+    job.destroy();
   }
 }

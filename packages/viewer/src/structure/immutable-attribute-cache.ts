@@ -5,10 +5,7 @@ import {
   releaseOwnedBuffer,
   trackOwnedBuffer,
 } from "../internal/instrumentation.ts";
-
-const STORAGE = 0x0080;
-const COPY_DST = 0x0008;
-const COPY_SRC = 0x0004;
+import { COPY_DST, COPY_SRC, STORAGE } from "../internal/gpu-job.ts";
 
 /** One mounted Structure and immutable topology/attribute layout revision. */
 export type ImmutableAttributeOwner = object;

@@ -5,9 +5,7 @@
 import { useMemo, useRef, useResource } from "@use-gpu/live";
 import { useDeviceContext } from "@use-gpu/workbench";
 import { releaseOwnedBuffer, trackOwnedBuffer } from "./instrumentation.ts";
-
-const MAP_READ = 0x0001;
-const COPY_DST = 0x0008;
+import { COPY_DST, MAP_READ } from "./gpu-job.ts";
 
 /** Copy `source[0, bytes)` into a free slot, if any is free and a listener is
  * registered; returns the post-submit map callback, else undefined. */
