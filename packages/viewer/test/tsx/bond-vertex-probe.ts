@@ -74,13 +74,13 @@ const Materialize: LC<{ endpoints: StorageSource; count: number }> = (
 
 /** Materialize the exact shader used by Bonds for WebGPU readback. */
 export const BondVertexProbe: LC<{ data: StructureData }> = ({ data }) => {
-  const rows = useMemo(() => buildBondRows(data, null, "both", true), [data]);
+  const rows = useMemo(() => buildBondRows(data, null, "both"), [data]);
   if (!rows.n) return null;
   return use(ColumnSource, {
     data: rows.endpoints,
     format: "vec2<u32>",
     label: "test:bond-endpoints",
     render: (endpoints: StorageSource | null): LiveElement =>
-      endpoints ? use(Materialize, { endpoints, count: rows.n }) : null,
+      endpoints ? use(Materialize, { endpoints, count: rows.n * 4 }) : null,
   });
 };

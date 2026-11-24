@@ -69,8 +69,8 @@ Deno.test("viewer gate 2", async () => {
       "probe must observe bond endpoint rows",
     );
     assert(
-      before.storageLabels.includes("molgpu:segments"),
-      "probe must observe bond segment buffer",
+      !before.storageLabels.includes("molgpu:segments"),
+      "bonds derive segments from LineLayer segment, not an uploaded column",
     );
 
     // Recolour by swapping the field on all three consumers at once.

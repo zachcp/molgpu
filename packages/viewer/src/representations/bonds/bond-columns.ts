@@ -9,19 +9,18 @@ export interface BondColumns {
   readonly rows: Uint32Array;
 }
 
-/** Topology-only LineLayer columns; endpoints are two atom rows per bond. */
+/** Topology-only bond rows: two atom rows per kept bond. */
 export interface BondRows {
+  /** Kept bonds. */
   readonly n: number;
   readonly endpoints: Uint32Array;
-  readonly segments: Int32Array;
-  readonly rows: Uint32Array;
 }
 
+/** Endpoint rows depend on topology and selection only, never on colour. */
 export function buildBondRows(
   data: StructureData,
   indices: Uint32Array | null,
   endpoints: "both" | "either",
-  splitAtMidpoint = false,
 ): BondRows {
   count("geometryBuilds", "bonds:columns");
   if (!data.topology.bonds.count) {
@@ -44,23 +43,7 @@ export function buildBondRows(
         : keep.has(a) && keep.has(z))
     ) pairs.push(a, z);
   }
-  const endpointRows = Uint32Array.from(pairs);
-  const perBond = splitAtMidpoint ? 4 : 2;
-  const n = pairs.length / 2 * perBond;
-  const segments = new Int32Array(n);
-  const rows = new Uint32Array(n);
-  for (let b = 0; b < pairs.length / 2; b++) {
-    const a = pairs[b * 2], z = pairs[b * 2 + 1];
-    const start = b * perBond;
-    if (splitAtMidpoint) {
-      rows.set([a, a, z, z], start);
-      segments.set([1, 2, 1, 2], start);
-    } else {
-      rows.set([a, z], start);
-      segments.set([1, 2], start);
-    }
-  }
-  return { n, endpoints: endpointRows, segments, rows };
+  return { n: pairs.length / 2, endpoints: Uint32Array.from(pairs) };
 }
 
 /**
@@ -75,13 +58,22 @@ export function buildBondColumns(
   endpoints: "both" | "either",
   splitAtMidpoint = false,
 ): BondColumns {
-  const built = buildBondRows(data, indices, endpoints, splitAtMidpoint);
+  const { endpoints: pairs } = buildBondRows(data, indices, endpoints);
   const perBond = splitAtMidpoint ? 4 : 2;
-  const { n, endpoints: pairs, segments, rows } = built;
+  const n = pairs.length / 2 * perBond;
   const positions = new Float32Array(n * 3);
+  const segments = new Int32Array(n);
+  const rows = new Uint32Array(n);
   for (let b = 0; b < pairs.length / 2; b++) {
     const a = pairs[b * 2], z = pairs[b * 2 + 1];
     const start = b * perBond;
+    if (splitAtMidpoint) {
+      rows.set([a, a, z, z], start);
+      segments.set([1, 2, 1, 2], start);
+    } else {
+      rows.set([a, z], start);
+      segments.set([1, 2], start);
+    }
     const a3 = a * 3, z3 = z * 3;
     if (splitAtMidpoint) {
       for (let axis = 0; axis < 3; axis++) {

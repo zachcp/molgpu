@@ -71,10 +71,8 @@ const data = createStructure({
 
 Deno.test("default bonds split C-O and diagonal N-S at exact midpoints with matching endpoint colors", () => {
   const built = buildBondColumns(data, null, "both", true);
-  const live = buildBondRows(data, null, "both", true);
+  const live = buildBondRows(data, null, "both");
   assertEquals([...live.endpoints], [0, 1, 2, 3]);
-  assertEquals([...live.rows], [...built.rows]);
-  assertEquals([...live.segments], [...built.segments]);
   assertEquals([...built.rows], [0, 0, 1, 1, 2, 2, 3, 3]);
   assertEquals([...built.segments], [1, 2, 1, 2, 1, 2, 1, 2]);
   assertEquals([...built.positions], [
@@ -122,9 +120,8 @@ Deno.test("default bonds split C-O and diagonal N-S at exact midpoints with matc
 
 Deno.test("explicit styling keeps one unsplit stroke per bond and selection endpoint policy", () => {
   const unsplit = buildBondColumns(data, null, "both", false);
-  const live = buildBondRows(data, null, "both", false);
+  const live = buildBondRows(data, null, "both");
   assertEquals([...live.endpoints], [0, 1, 2, 3]);
-  assertEquals([...live.rows], [...unsplit.rows]);
   assertEquals([...unsplit.rows], [0, 1, 2, 3]);
   assertEquals([...unsplit.segments], [1, 2, 1, 2]);
   assertEquals([...unsplit.positions], [...data.positions]);
