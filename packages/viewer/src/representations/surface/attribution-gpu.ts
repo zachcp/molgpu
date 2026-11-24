@@ -9,11 +9,15 @@
 // docs/findings/2026-10-02-native-compute-audit.md).
 import type { SesCells } from "./ses-field.ts";
 import { dispatchFolded } from "../../internal/gpu-scan.ts";
+import {
+  bindBuffers,
+  computePipeline,
+  COPY_DST,
+  COPY_SRC,
+  STORAGE,
+  UNIFORM,
+} from "../../internal/gpu-job.ts";
 
-const COPY_SRC = 0x0004;
-const COPY_DST = 0x0008;
-const UNIFORM = 0x0040;
-const STORAGE = 0x0080;
 const GROUP = 64;
 
 // grid = (cnx, cny, cnz, atoms), counts = (vertices, 0, 0, 0),
@@ -86,25 +90,8 @@ fn main(
   sourceAtom[v] = best;
 }`;
 
-const pipelines = new WeakMap<GPUDevice, GPUComputePipeline>();
-function pipeline(device: GPUDevice): GPUComputePipeline {
-  let result = pipelines.get(device);
-  if (!result) {
-    result = device.createComputePipeline({
-      layout: "auto",
-      compute: {
-        module: device.createShaderModule({
-          code: ATTRIBUTE,
-          label: "molgpu:attribution",
-        }),
-        entryPoint: "main",
-      },
-      label: "molgpu:attribution",
-    });
-    pipelines.set(device, result);
-  }
-  return result;
-}
+const pipeline = (device: GPUDevice): GPUComputePipeline =>
+  computePipeline(device, ATTRIBUTE, "main", "molgpu:attribution");
 
 /**
  * Encode the nearest selected atom row of each of `vertexCount` packed xyz
@@ -138,9 +125,10 @@ export function encodeAttribution(
   pass.setPipeline(p);
   pass.setBindGroup(
     0,
-    device.createBindGroup({
-      layout: p.getBindGroupLayout(0),
-      entries: [
+    bindBuffers(
+      device,
+      p,
+      [
         params,
         cells.frame,
         cells.offsets,
@@ -148,8 +136,8 @@ export function encodeAttribution(
         cells.rowMap,
         vertices,
         sourceAtom,
-      ].map((buffer, binding) => ({ binding, resource: { buffer } })),
-    }),
+      ].map((buffer, binding) => [binding, buffer] as const),
+    ),
   );
   dispatchFolded(device, pass, Math.ceil(vertexCount / GROUP));
   pass.end();

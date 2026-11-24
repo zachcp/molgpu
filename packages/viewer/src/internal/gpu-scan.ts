@@ -1,3 +1,11 @@
+import {
+  bindBuffers,
+  computePipeline,
+  COPY_DST,
+  COPY_SRC,
+  STORAGE,
+  UNIFORM,
+} from "./gpu-job.ts";
 // Exclusive prefix sum of a u32 storage array on the GPU: 256-wide workgroup
 // scans, a recursive scan of the block sums, then a pass adding each block's
 // offset back. Workgroups fold into two dispatch dimensions, so any count a
@@ -66,27 +74,8 @@ fn main(
 } as const;
 type Stage = keyof typeof STAGES;
 
-const pipelines = new WeakMap<GPUDevice, Map<Stage, GPUComputePipeline>>();
-function pipeline(device: GPUDevice, name: Stage): GPUComputePipeline {
-  let cache = pipelines.get(device);
-  if (!cache) pipelines.set(device, cache = new Map());
-  let result = cache.get(name);
-  if (!result) {
-    result = device.createComputePipeline({
-      layout: "auto",
-      compute: {
-        module: device.createShaderModule({
-          code: STAGES[name],
-          label: `molgpu:scan:${name}`,
-        }),
-        entryPoint: "main",
-      },
-      label: `molgpu:scan:${name}`,
-    });
-    cache.set(name, result);
-  }
-  return result;
-}
+const pipeline = (device: GPUDevice, name: Stage): GPUComputePipeline =>
+  computePipeline(device, STAGES[name], "main", `molgpu:scan:${name}`);
 
 /** Allocates a transient buffer the caller destroys after submission. */
 export type MakeBuffer = (
@@ -95,11 +84,6 @@ export type MakeBuffer = (
   label: string,
   initial?: ArrayBufferView,
 ) => GPUBuffer;
-
-const COPY_SRC = 0x0004;
-const COPY_DST = 0x0008;
-const UNIFORM = 0x0040;
-const STORAGE = 0x0080;
 
 /** Dispatch `groups` workgroups, folded into y past the per-dimension limit. */
 export function dispatchFolded(
@@ -125,13 +109,7 @@ export function encodeExclusiveScan(
   make: MakeBuffer,
 ): GPUBuffer {
   const bind = (name: Stage, entries: [number, GPUBuffer][]) =>
-    device.createBindGroup({
-      layout: pipeline(device, name).getBindGroupLayout(0),
-      entries: entries.map(([binding, buffer]) => ({
-        binding,
-        resource: { buffer },
-      })),
-    });
+    bindBuffers(device, pipeline(device, name), entries);
   const params = (n: number) =>
     make(16, UNIFORM | COPY_DST, "scan-params", Uint32Array.of(n, 0, 0, 0));
   const levels: { offsets: GPUBuffer; count: number }[] = [];

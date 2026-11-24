@@ -56,10 +56,9 @@ import type {
   ElasticNetworkStatus,
   ViewerComponent,
 } from "../types.ts";
+import { COPY_DST, COPY_SRC, STORAGE, UNIFORM } from "../internal/gpu-job.ts";
 
 const SHADER = wgsl`${elasticDisplacementWgsl}`;
-const STORAGE = 0x0080, COPY_DST = 0x0008, COPY_SRC = 0x0004;
-const UNIFORM = 0x0040;
 
 /** Test hooks: integrator work this module encoded and repaints it asked for. */
 export const elasticTesting: {

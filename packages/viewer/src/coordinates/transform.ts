@@ -15,11 +15,10 @@ import { useComputeBuffers } from "../internal/compute-buffers.ts";
 import { TimelineContext } from "../timeline-context.ts";
 import type { TransformProps, ViewerComponent } from "../types.ts";
 import { useSelectionInput } from "../selection/use-selection-input.ts";
+import { COPY_DST, STORAGE } from "../internal/gpu-job.ts";
 
 const AFFINE = wgsl`${affineWgsl}`;
 const SELECTED_AFFINE = wgsl`${affineSelectedWgsl}`;
-const STORAGE = 0x0080;
-const COPY_DST = 0x0008;
 
 const columns = (matrix: readonly number[]): number[][] => [
   matrix.slice(0, 4),

@@ -16,12 +16,18 @@ import {
 import { dssp, type StructureData, withPositions } from "@molgpu/table";
 import { COPY_POSITIONS } from "../internal/copy-positions-wgsl.ts";
 import { encodeExclusiveScan } from "../internal/gpu-scan.ts";
+import {
+  bindBuffers,
+  computePipeline,
+  COPY_DST,
+  COPY_SRC,
+  MAP_READ,
+  mapped,
+  STORAGE,
+  TransientBuffers,
+  UNIFORM,
+} from "../internal/gpu-job.ts";
 
-const MAP_READ = 0x0001;
-const COPY_SRC = 0x0004;
-const COPY_DST = 0x0008;
-const UNIFORM = 0x0040;
-const STORAGE = 0x0080;
 const GROUP = 64;
 
 type PipelineName =
@@ -34,16 +40,7 @@ type PipelineName =
   | "threeTen"
   | "pi"
   | "copyPositions";
-const pipelines = new WeakMap<
-  GPUDevice,
-  Map<PipelineName, GPUComputePipeline>
->();
-
 function pipeline(device: GPUDevice, name: PipelineName): GPUComputePipeline {
-  let cache = pipelines.get(device);
-  if (!cache) pipelines.set(device, cache = new Map());
-  let result = cache.get(name);
-  if (result) return result;
   const cell = name.startsWith("cell");
   const code = name === "copyPositions" ? COPY_POSITIONS : cell
     ? cellListWgsl[
@@ -58,18 +55,12 @@ function pipeline(device: GPUDevice, name: PipelineName): GPUComputePipeline {
   if (typeof code !== "string") {
     throw new Error(`Unknown GPU DSSP stage ${name}`);
   }
-  result = device.createComputePipeline({
-    layout: "auto",
-    compute: {
-      module: device.createShaderModule({ code, label: `molgpu:dssp:${name}` }),
-      entryPoint: name === "alpha" || name === "threeTen" || name === "pi"
-        ? name
-        : "main",
-    },
-    label: `molgpu:dssp:${name}`,
-  });
-  cache.set(name, result);
-  return result;
+  return computePipeline(
+    device,
+    code,
+    name === "alpha" || name === "threeTen" || name === "pi" ? name : "main",
+    `molgpu:dssp:${name}`,
+  );
 }
 
 /** A bounded GPU stage could not preserve exact DSSP semantics. */
@@ -129,28 +120,8 @@ export async function gpuDssp(
   if (layout.atomCount !== data.topology.atoms.count) {
     throw new TypeError("GPU DSSP layout belongs to another topology");
   }
-  const transient: GPUBuffer[] = [];
-  let workingBytes = 0;
-  let readbackBytes = 0;
-  const make = (
-    size: number,
-    usage: number,
-    label: string,
-    initial?: ArrayBufferView,
-  ) => {
-    const allocated = Math.max(16, Math.ceil(size / 4) * 4);
-    const buffer = device.createBuffer({
-      size: allocated,
-      usage,
-      label: `molgpu:dssp:${label}`,
-    });
-    transient.push(buffer);
-    workingBytes += allocated;
-    if (initial?.byteLength) {
-      device.queue.writeBuffer(buffer, 0, initial as BufferSource);
-    }
-    return buffer;
-  };
+  const job = new TransientBuffers(device, "dssp");
+  const make = job.make;
   const uploadCodes = (codes: Uint8Array): GPUBuffer => {
     const result = device.createBuffer({
       size: Math.max(16, 4 * codes.length),
@@ -164,14 +135,7 @@ export async function gpuDssp(
     name: PipelineName,
     entries: readonly [number, GPUBuffer][],
   ) => {
-    const p = pipeline(device, name);
-    return device.createBindGroup({
-      layout: p.getBindGroupLayout(0),
-      entries: entries.map(([binding, buffer]) => ({
-        binding,
-        resource: { buffer },
-      })),
-    });
+    return bindBuffers(device, pipeline(device, name), entries);
   };
   const dispatch = (
     pass: GPUComputePassEncoder,
@@ -184,20 +148,7 @@ export async function gpuDssp(
     pass.setBindGroup(0, bind(name, entries));
     pass.dispatchWorkgroups(groups);
   };
-  const read = async (
-    source: GPUBuffer,
-    bytes: number,
-  ): Promise<ArrayBuffer> => {
-    readbackBytes += bytes;
-    const staging = make(bytes, COPY_DST | MAP_READ, "readback");
-    const encoder = device.createCommandEncoder();
-    encoder.copyBufferToBuffer(source, 0, staging, 0, bytes);
-    device.queue.submit([encoder.finish()]);
-    await staging.mapAsync(MAP_READ);
-    const copy = staging.getMappedRange().slice(0);
-    staging.unmap();
-    return copy;
-  };
+  const read = job.read;
   const frameFallback = async (stage: string): Promise<GpuDsspResult> => {
     checkCurrent();
     if (options.overflow !== "frame") throw new GpuDsspOverflowError(stage);
@@ -212,8 +163,8 @@ export async function gpuDssp(
       bridgeCount: 0,
       fallback: true,
       fallbackReason: stage,
-      workingBytes,
-      readbackBytes,
+      workingBytes: job.bytes,
+      readbackBytes: job.readbackBytes,
     };
   };
   let framePositions = positions;
@@ -227,8 +178,8 @@ export async function gpuDssp(
         nearThresholdCenters: 0,
         bridgeCount: 0,
         fallback: false,
-        workingBytes,
-        readbackBytes,
+        workingBytes: job.bytes,
+        readbackBytes: job.readbackBytes,
       };
     }
     const caCount = layout.caMap.length;
@@ -336,11 +287,9 @@ export async function gpuDssp(
     }
     const boundStage = make(32, COPY_DST | MAP_READ, "bounds-readback");
     gather.copyBufferToBuffer(boundInput!, 0, boundStage, 0, 32);
-    readbackBytes += 32;
+    job.readbackBytes += 32;
     device.queue.submit([gather.finish()]);
-    await boundStage.mapAsync(MAP_READ);
-    const values = new Float32Array(boundStage.getMappedRange().slice(0));
-    boundStage.unmap();
+    const values = new Float32Array(await mapped(boundStage));
     checkCurrent();
     let plan;
     try {
@@ -510,10 +459,10 @@ export async function gpuDssp(
       nearThresholdCenters,
       bridgeCount,
       fallback: false,
-      workingBytes,
-      readbackBytes,
+      workingBytes: job.bytes,
+      readbackBytes: job.readbackBytes,
     };
   } finally {
-    for (const buffer of transient) buffer.destroy();
+    job.destroy();
   }
 }

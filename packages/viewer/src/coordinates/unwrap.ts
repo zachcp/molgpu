@@ -30,11 +30,8 @@ import type { UnwrapProps, UnwrapStatus, ViewerComponent } from "../types.ts";
 import { useSelectionInput } from "../selection/use-selection-input.ts";
 import { type Selection, where } from "@molgpu/select";
 import type { SelectionDiagnostics } from "../types.ts";
+import { COPY_DST, COPY_SRC, STORAGE, UNIFORM } from "../internal/gpu-job.ts";
 
-const STORAGE = 0x0080;
-const UNIFORM = 0x0040;
-const COPY_SRC = 0x0004;
-const COPY_DST = 0x0008;
 const GROUP = 64;
 const MAX_GROUPS = 65535;
 /** Lattice candidates per exact image search before it reports a limit. */

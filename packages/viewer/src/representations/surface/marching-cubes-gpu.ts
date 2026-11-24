@@ -11,14 +11,19 @@ import { marchingCubesTables } from "@molgpu/geo";
 import {
   dispatchFolded,
   encodeExclusiveScan,
-  type MakeBuffer,
 } from "../../internal/gpu-scan.ts";
+import {
+  bindBuffers,
+  computePipeline,
+  COPY_DST,
+  COPY_SRC,
+  MAP_READ,
+  mapped,
+  STORAGE,
+  TransientBuffers,
+  UNIFORM,
+} from "../../internal/gpu-job.ts";
 
-const MAP_READ = 0x0001;
-const COPY_SRC = 0x0004;
-const COPY_DST = 0x0008;
-const UNIFORM = 0x0040;
-const STORAGE = 0x0080;
 const GROUP = 64;
 
 // dims = (nx, ny, nz, cubes); shape = (level, 0, 0, 0), flip = (mirrored, 0, 0, 0);
@@ -162,27 +167,13 @@ fn main(
 const STAGES = { classify, emit } as const;
 type Stage = keyof typeof STAGES;
 
-const pipelines = new WeakMap<GPUDevice, Map<Stage, GPUComputePipeline>>();
-function pipeline(device: GPUDevice, name: Stage): GPUComputePipeline {
-  let cache = pipelines.get(device);
-  if (!cache) pipelines.set(device, cache = new Map());
-  let result = cache.get(name);
-  if (!result) {
-    result = device.createComputePipeline({
-      layout: "auto",
-      compute: {
-        module: device.createShaderModule({
-          code: STAGES[name],
-          label: `molgpu:marching-cubes:${name}`,
-        }),
-        entryPoint: "main",
-      },
-      label: `molgpu:marching-cubes:${name}`,
-    });
-    cache.set(name, result);
-  }
-  return result;
-}
+const pipeline = (device: GPUDevice, name: Stage): GPUComputePipeline =>
+  computePipeline(
+    device,
+    STAGES[name],
+    "main",
+    `molgpu:marching-cubes:${name}`,
+  );
 
 let packedTables: Uint32Array | null = null;
 function tables(): Uint32Array {
@@ -239,23 +230,8 @@ export async function gpuMarchingCubes(
       throw new DOMException("GPU marching cubes was replaced", "AbortError");
     }
   };
-  const transient: GPUBuffer[] = [];
-  let workingBytes = 0;
-  let readbackBytes = 0;
-  const make: MakeBuffer = (size, usage, label, initial) => {
-    const allocated = Math.max(16, Math.ceil(size / 4) * 4);
-    const buffer = device.createBuffer({
-      size: allocated,
-      usage,
-      label: `molgpu:marching-cubes:${label}`,
-    });
-    transient.push(buffer);
-    workingBytes += allocated;
-    if (initial?.byteLength) {
-      device.queue.writeBuffer(buffer, 0, initial as BufferSource);
-    }
-    return buffer;
-  };
+  const job = new TransientBuffers(device, "marching-cubes");
+  const make = job.make;
   const dispatch = (
     pass: GPUComputePassEncoder,
     name: Stage,
@@ -265,13 +241,7 @@ export async function gpuMarchingCubes(
     pass.setPipeline(p);
     pass.setBindGroup(
       0,
-      device.createBindGroup({
-        layout: p.getBindGroupLayout(0),
-        entries: entries.map(([binding, buffer]) => ({
-          binding,
-          resource: { buffer },
-        })),
-      }),
+      bindBuffers(device, p, entries),
     );
     dispatchFolded(device, pass, Math.ceil(cubes / GROUP));
   };
@@ -345,12 +315,8 @@ export async function gpuMarchingCubes(
     encoder.copyBufferToBuffer(vertexOffsets, cubes * 4, totals, 0, 4);
     encoder.copyBufferToBuffer(indexOffsets, cubes * 4, totals, 4, 4);
     device.queue.submit([encoder.finish()]);
-    readbackBytes += 8;
-    await totals.mapAsync(MAP_READ);
-    const [vertexCount, indexCount] = new Uint32Array(
-      totals.getMappedRange().slice(0),
-    );
-    totals.unmap();
+    job.readbackBytes += 8;
+    const [vertexCount, indexCount] = new Uint32Array(await mapped(totals));
     checkCurrent();
     if (!vertexCount) return null;
 
@@ -389,11 +355,11 @@ export async function gpuMarchingCubes(
       indices,
       vertexCount,
       triangleCount: indexCount / 3,
-      workingBytes,
-      readbackBytes,
+      workingBytes: job.bytes,
+      readbackBytes: job.readbackBytes,
     };
   } finally {
     for (const buffer of outputs) buffer.destroy();
-    for (const buffer of transient) buffer.destroy();
+    job.destroy();
   }
 }

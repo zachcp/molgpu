@@ -65,11 +65,8 @@ import {
   VolumeContext,
 } from "./volume-context.ts";
 import type { EFieldProps, ViewerComponent } from "../types.ts";
+import { COPY_DST, COPY_SRC, STORAGE, UNIFORM } from "../internal/gpu-job.ts";
 
-const STORAGE = 0x0080;
-const UNIFORM = 0x0040;
-const COPY_SRC = 0x0004;
-const COPY_DST = 0x0008;
 /** Uniform offsets must be multiples of 256 bytes. */
 const PARAMS_STRIDE = 256;
 const MAX_GROUPS = 65535;

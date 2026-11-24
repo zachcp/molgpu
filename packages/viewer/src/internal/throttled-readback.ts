@@ -8,10 +8,9 @@ import {
   trackOwnedBuffer,
 } from "./instrumentation.ts";
 import { type ReadbackToken, sameReadbackToken } from "./readback-token.ts";
+import { COPY_DST, MAP_READ } from "./gpu-job.ts";
 
 const noop = () => {};
-const MAP_READ = 0x0001;
-const COPY_DST = 0x0008;
 
 /** Copy the latest eligible revision, retaining rate limiting and final-on-pause. */
 export const ThrottledReadback: LC<{

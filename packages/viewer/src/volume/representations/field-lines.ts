@@ -54,9 +54,8 @@ import {
   VERTEX_POSITIONS,
   VERTEX_WIDTHS,
 } from "./field-lines-shaders.ts";
+import { COPY_DST, STORAGE } from "../../internal/gpu-job.ts";
 
-const STORAGE = 0x0080;
-const COPY_DST = 0x0008;
 /** One 1D dispatch: 65 535 workgroups of the integrator's width. */
 const MAX_INVOCATIONS = 65535 * WORKGROUP;
 

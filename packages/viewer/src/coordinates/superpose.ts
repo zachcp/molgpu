@@ -29,11 +29,8 @@ import type {
 import { useSelectionInput } from "../selection/use-selection-input.ts";
 import type { Selection } from "@molgpu/select";
 import type { SelectionDiagnostics } from "../types.ts";
+import { COPY_DST, COPY_SRC, STORAGE, UNIFORM } from "../internal/gpu-job.ts";
 
-const STORAGE = 0x0080;
-const UNIFORM = 0x0040;
-const COPY_DST = 0x0008;
-const COPY_SRC = 0x0004;
 const APPLY_GROUP = 64;
 
 const pipelines = new WeakMap<GPUDevice, {
