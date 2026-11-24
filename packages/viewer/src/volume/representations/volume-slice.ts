@@ -1,5 +1,6 @@
 import type { ColorStops, ViewerComponent } from "../../types.ts";
 import { use, useMemo } from "@use-gpu/live";
+import { modeProps } from "../../rendering/opacity.ts";
 import {
   FaceLayer,
   ShaderFlatMaterial,
@@ -9,7 +10,11 @@ import {
 import { loadModuleWithCache } from "@use-gpu/shader/wgsl";
 import { useVolume } from "../volume-context.ts";
 import { withColumns } from "../../rendering/representation.ts";
-import { modeProps } from "../../rendering/opacity.ts";
+import {
+  gridBox,
+  useBoundedPositions,
+  useOitBounds,
+} from "../../rendering/draw-mode.ts";
 import { slicePlaneFrame } from "./slice-plane.ts";
 import { useRepaint } from "../../internal/use-repaint.ts";
 import { useBindingProbe } from "../../internal/use-binding-probe.ts";
@@ -75,13 +80,18 @@ export const VolumeSlice: ViewerComponent<VolumeSliceProps> = (props) => {
     [color, opacity],
   );
   const drawMode = modeProps(mode, drawColor[3]);
+  const box = useMemo(() => gridBox(volume.dims, volume.transform), [volume]);
+  const positions = useBoundedPositions(
+    corners,
+    useOitBounds(drawMode, box),
+  );
   return withColumns(
     [{ key: "indices", data: QUAD, format: "u32" }],
     (map) =>
       use(ShaderFlatMaterial, {
         fragment,
         children: use(FaceLayer, {
-          positions: corners,
+          positions,
           uvs: corners,
           indices: map.indices,
           color: drawColor,

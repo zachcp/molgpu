@@ -25,7 +25,7 @@ import {
   snapshotCounters,
 } from "../src/internal/instrumentation.ts";
 import { structureFromBcif } from "@molgpu/io";
-import { Spacefill, Structure, Surface } from "../src/index.ts";
+import { Bonds, Spacefill, Structure, Surface } from "../src/index.ts";
 
 const probe = globalThis.__probe = {
   storage: [],
@@ -33,8 +33,26 @@ const probe = globalThis.__probe = {
   pendingPipelines: 0,
   textures: 0,
   errors: [],
+  oitDraws: 0,
   mounted: false,
 };
+// Count draws encoded into use.gpu's OIT transparency pass: only `oit` mode
+// draw calls reach it.
+const beginPass = GPUCommandEncoder.prototype.beginRenderPass;
+GPUCommandEncoder.prototype.beginRenderPass = function (desc) {
+  const pass = beginPass.call(this, desc);
+  pass.__oit = desc?.label === "OITPass/Transparency";
+  return pass;
+};
+for (
+  const name of ["draw", "drawIndexed", "drawIndirect", "drawIndexedIndirect"]
+) {
+  const original = GPURenderPassEncoder.prototype[name];
+  GPURenderPassEncoder.prototype[name] = function (...args) {
+    if (this.__oit) probe.oitDraws++;
+    return original.apply(this, args);
+  };
+}
 const makeBuffer = GPUDevice.prototype.createBuffer;
 GPUDevice.prototype.createBuffer = function (desc) {
   const buffer = makeBuffer.call(this, desc);
@@ -97,6 +115,9 @@ const styles = {
     mode: "transparent",
     material: { albedo: [1, 1, 1, 0.5] },
   },
+  oit: { color: flat, mode: "oit" },
+  // Translucent atoms and sticks draw from GPU coordinate sources.
+  atoms: { color: flat, mode: "oit", atoms: 0.5 },
   "material-solid": {
     color: [1, 1, 1, 1],
     mode: "transparent",
@@ -113,14 +134,20 @@ Object.assign(probe, {
 const Body = () => {
   const [style, setStyle] = useState("flat");
   probe.setStyle = setStyle;
+  const { atoms, ...surface } = styles[style];
   return [
     use(AmbientLight, { intensity: 0.3 }),
     use(DirectionalLight, { direction: [-1, -2, -1.5], intensity: 1 }),
     use(Structure, {
       data,
       children: [
-        use(Surface, { resolution: 1.2, ...styles[style] }),
-        use(Spacefill, { scale: 0.3 }),
+        use(Surface, { resolution: 1.2, ...surface }),
+        atoms
+          ? [
+            use(Spacefill, { scale: 0.3, opacity: atoms, mode: "oit" }),
+            use(Bonds, { opacity: atoms, mode: "oit" }),
+          ]
+          : use(Spacefill, { scale: 0.3 }),
       ],
     }),
   ];

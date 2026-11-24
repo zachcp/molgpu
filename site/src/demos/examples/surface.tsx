@@ -51,6 +51,7 @@ const surfaceLayer = (options: SceneOptions) => {
         resolution={0.55}
         color={color([0.55, 0.72, 0.98, 1])}
         opacity={fresnel && options.fresnel ? 0.8 : 0.3}
+        mode="oit"
         material={fresnel
           ? glassMaterial({
             roughness: options.roughness,

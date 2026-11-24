@@ -35,6 +35,7 @@ export const composeScene = (
         resolution={0.65}
         color={[0.68, 0.81, 0.99, 1]}
         opacity={0.15}
+        mode="oit"
       />
     ),
     on("sulfur") && (

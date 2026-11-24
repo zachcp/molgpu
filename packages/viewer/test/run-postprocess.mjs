@@ -27,6 +27,10 @@ Deno.test("viewer postprocess", async () => {
       viewport: { width: 640, height: 480 },
     });
     const errors = captureErrors(page);
+    const oitWarnings = [];
+    page.on("console", (m) => {
+      if (/OIT/.test(m.text())) oitWarnings.push(m.text());
+    });
     await page.goto(
       "http://127.0.0.1:5212/packages/viewer/test/postprocess.html",
     );
@@ -198,12 +202,46 @@ Deno.test("viewer postprocess", async () => {
     );
     assertEquals(errors, [], "alpha policy page errors");
 
+    // Under <Pass oit>, mode "oit" draws reach the OIT transparency pass, each
+    // with position bounds (GPU coordinate sources included); sorted
+    // transparency and opaque draws do not.
+    // use.gpu renders on demand, so count across the frames a style switch draws.
+    const oitDraws = async (style) => {
+      const before = await page.evaluate(() => globalThis.__probe.oitDraws);
+      await image(style);
+      return await page.evaluate(() => globalThis.__probe.oitDraws) - before;
+    };
+    const opaqueOit = await oitDraws("opaque");
+    const sortedOit = await oitDraws("flat");
+    const surfaceOit = await oitDraws("oit");
+    const atomsOit = await oitDraws("atoms");
+    assertEquals(opaqueOit, 0, "opaque geometry must not draw in OIT");
+    assertEquals(sortedOit, 0, "transparent mode stays sorted blending");
+    assert(surfaceOit > 0, "a translucent surface must draw in the OIT pass");
+    assert(
+      atomsOit > surfaceOit,
+      `translucent atoms and sticks must draw in OIT too: ${atomsOit} vs ${surfaceOit}`,
+    );
+    assertEquals(oitWarnings, [], "OIT draws without position bounds");
+    assertEquals(
+      (await snap()).errors,
+      [],
+      "OIT draws have no uncaptured WebGPU errors",
+    );
+    assertEquals(errors, [], "OIT page errors");
+
     console.log(JSON.stringify({
       status: "passed",
       plainPipelines: plain.pipelines,
       postPipelines: post.pipelines,
       plainTextures: plain.textures,
       postTextures: post.textures,
+      oitDraws: {
+        opaque: opaqueOit,
+        sorted: sortedOit,
+        surface: surfaceOit,
+        atoms: atomsOit,
+      },
       browser: browser.version(),
     }));
   } finally {

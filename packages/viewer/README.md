@@ -110,8 +110,14 @@ colour's alpha, for both flat colours and `@molgpu/fields` Fields. Automatic
 transparent mode considers the flat colour alpha and the `opacity` prop. It does
 not inspect Field alpha (including constant Fields) or alpha introduced by a
 material wrapper: use `mode="transparent"` for those translucent inputs. This
-limitation is tracked by `molgpu-sept-0vs.8`. Add `oit` to the workbench
-`<Pass>` so overlapping translucent geometry composites correctly:
+limitation is tracked by `molgpu-sept-0vs.8`. For overlapping translucent
+geometry that composites correctly, add `oit` to the workbench `<Pass>` and give
+translucent representations `mode="oit"`, use.gpu's order-independent layer
+mode. Automatic transparency stays sorted blending, because use.gpu 0.21.0 does
+not tell scene components whether their pass has an OIT target. OIT weighs depth
+within each draw's extent; atoms, sticks and volume visuals take it from the
+structure's root coordinates or the volume grid, so large coordinate motion only
+coarsens the weighting:
 
 ```tsx
 import { byElement } from "@molgpu/fields";
@@ -122,7 +128,7 @@ import { Pass } from "@use-gpu/workbench";
 <Pass lights oit>
   <Structure src="/1crn.bcif">
     <BallAndStick color={byElement()} />
-    <Surface opacity={0.3} />
+    <Surface opacity={0.3} mode="oit" />
   </Structure>
 </Pass>;
 ```

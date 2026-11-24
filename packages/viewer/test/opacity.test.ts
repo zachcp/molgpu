@@ -26,6 +26,11 @@ Deno.test("effective alpha below 1 selects transparent mode; an explicit mode wi
   assertEquals(modeProps("transparent", 1), { mode: "transparent" });
 });
 
+Deno.test("an explicit oit mode passes through to the layer", () => {
+  assertEquals(modeProps("oit", 1), { mode: "oit" });
+  assertEquals(modeProps("oit", 0.4), { mode: "oit" });
+});
+
 Deno.test("a field colour contributes alpha 1 (only opacity decides its mode)", () => {
   assertStrictEquals(flatAlpha([1, 1, 1, 0.2], true), 1);
   assertStrictEquals(flatAlpha([1, 1, 1, 0.2], false), 0.2);

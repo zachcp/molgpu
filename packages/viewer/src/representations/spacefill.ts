@@ -47,6 +47,7 @@ import {
   flatAlpha,
   modeProps,
 } from "../rendering/opacity.ts";
+import { useOitBounds } from "../rendering/draw-mode.ts";
 import { useOpacityColors } from "../rendering/use-opacity-colors.ts";
 import { withMaterial } from "../rendering/with-material.ts";
 import { Pickable } from "../interaction/picking.ts";
@@ -207,7 +208,7 @@ const SelectedSpacefill: LC<
  * spec) wraps the shaded point layer; without one the atoms use the ambient
  * scene material. `opacity` (0–1) multiplies the colour's alpha — a uniform,
  * so fading never touches geometry — and below 1 the atoms draw in transparent
- * mode (pair with <Pass oit>); an explicit `mode` overrides. `pickable` draws the atoms into the picking buffer so
+ * mode; an explicit `mode` overrides (use "oit" inside <Pass oit>). `pickable` draws the atoms into the picking buffer so
  * usePicking() can resolve the cursor to an atom row (needs a <PickingProvider>
  * and a <Pass picking>).
  */
@@ -269,6 +270,12 @@ export const Spacefill: ViewerComponent<
     [field, color, opacity],
   );
   const drawMode = modeProps(mode, flatAlpha(color, !!field) * opacity);
+  // OIT depth weighting uses the root extent grown by the largest atom radius.
+  const bounds = useOitBounds(
+    drawMode,
+    drawMode.mode === "oit" ? resource.bounds : null,
+    3 * scale,
+  );
 
   const n = indices ? indices.length : data.topology.atoms.count;
   if (
@@ -294,6 +301,7 @@ export const Spacefill: ViewerComponent<
           shape: "circle",
           shaded: true,
           id,
+          bounds,
           ...drawMode,
           ...props,
         })
@@ -308,6 +316,7 @@ export const Spacefill: ViewerComponent<
           color: flatColor,
           scale,
           id,
+          bounds,
           ...drawMode,
           ...props,
         }),
