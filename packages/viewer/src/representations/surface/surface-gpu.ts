@@ -28,6 +28,11 @@ export interface GpuSurfaceMesh {
   readonly sourceAtom: GPUBuffer;
   readonly vertexCount: number;
   readonly triangleCount: number;
+  /** The field grid the mesh was extracted from; every vertex lies inside it. */
+  readonly grid: {
+    readonly dims: readonly [number, number, number];
+    readonly transform: ArrayLike<number>;
+  };
 }
 
 /** Destroy every buffer of a mesh. */
@@ -86,6 +91,7 @@ export async function gpuSurfaceGeometry(
         sourceAtom,
         vertexCount: mesh.vertexCount,
         triangleCount: mesh.triangleCount,
+        grid: { dims: field.dims, transform: field.transform },
       };
     } catch (error) {
       mesh.positions.destroy();

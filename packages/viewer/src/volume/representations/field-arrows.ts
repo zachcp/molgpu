@@ -3,6 +3,7 @@
 // uniforms and the live samples: no compute pass and no per-move buffer.
 // See docs/findings/2026-09-27-efield-plan.md.
 import { use, useMemo } from "@use-gpu/live";
+import { modeProps } from "../../rendering/opacity.ts";
 import {
   ArrowLayer,
   useArrowSegmentsSource,
@@ -12,7 +13,11 @@ import {
 import { loadModuleWithCache } from "@use-gpu/shader/wgsl";
 import type { ViewerComponent } from "../../types.ts";
 import { useVolume } from "../volume-context.ts";
-import { modeProps } from "../../rendering/opacity.ts";
+import {
+  gridBox,
+  useBoundedPositions,
+  useOitBounds,
+} from "../../rendering/draw-mode.ts";
 import { slicePlaneFrame } from "./slice-plane.ts";
 import { count } from "../../internal/instrumentation.ts";
 import { useRepaint } from "../../internal/use-repaint.ts";
@@ -94,7 +99,13 @@ export const FieldArrows: ViewerComponent<FieldArrowsProps> = (props) => {
   const v = useShaderRef(frame.v);
   const style = useShaderRef([scale, cap, minField, width]);
   const links = [source, center, u, v, style];
-  const positions = useShader(modules.positions, links);
+  const drawMode = modeProps(mode, (color[3] ?? 1) * opacity);
+  const box = useMemo(() => gridBox(grid.dims, grid.transform), [grid]);
+  // Arrows start on lattice points inside the grid and reach at most `cap`.
+  const positions = useBoundedPositions(
+    useShader(modules.positions, links),
+    useOitBounds(drawMode, box, cap),
+  );
   const widths = useShader(modules.widths, links);
   const rangeRef = useShaderRef(colorRange ?? [0, 1]);
   const tint = useMemo(
@@ -115,6 +126,6 @@ export const FieldArrows: ViewerComponent<FieldArrowsProps> = (props) => {
     count: segments.count,
     width,
     size: 3,
-    ...modeProps(mode, tint[3]),
+    ...drawMode,
   }));
 };

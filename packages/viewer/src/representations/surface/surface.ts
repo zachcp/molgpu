@@ -36,6 +36,7 @@ import {
   flatAlpha,
   modeProps,
 } from "../../rendering/opacity.ts";
+import { gridBox, paddedBounds } from "../../rendering/draw-mode.ts";
 import { withMaterial } from "../../rendering/with-material.ts";
 import {
   CopyDraws,
@@ -217,7 +218,14 @@ const SurfaceResolved: ViewerComponent<
       version: gpuMesh.generation,
     });
     gpuColumns = {
-      positions: source(mesh.positions, "vec3<f32>", mesh.vertexCount),
+      // GPU buffers carry no bounds; the mesh lies inside its field grid.
+      positions: {
+        ...source(mesh.positions, "vec3<f32>", mesh.vertexCount),
+        bounds: paddedBounds(
+          gridBox(mesh.grid.dims, mesh.grid.transform),
+          0,
+        ),
+      },
       normals: source(mesh.normals, "vec3<f32>", mesh.vertexCount),
       indices: source(mesh.indices, "u32", mesh.triangleCount * 3),
       ...(sourceAtom

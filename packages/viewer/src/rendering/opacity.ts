@@ -4,9 +4,10 @@
 import type { DrawMode, VectorLike } from "../types.ts";
 
 // Effective alpha = colour alpha × opacity. Anything below 1 draws in the
-// layer's 'transparent' mode — sorted after opaques and, under <Pass oit>,
-// composited order-independently — instead of the default opaque mode, which
-// writes depth and hides whatever is behind it. An explicit `mode` wins.
+// layer's 'transparent' mode (blended after opaques) instead of the default
+// opaque mode, which writes depth and hides whatever is behind it. An explicit
+// `mode` wins, including use.gpu's 'oit', which composites translucency
+// order-independently inside a <Pass oit>.
 
 /** Validate an opacity prop: a finite number in [0, 1]. */
 export const checkOpacity = (opacity: unknown, where: string): number => {

@@ -49,6 +49,11 @@ import {
   flatAlpha,
   modeProps,
 } from "../../rendering/opacity.ts";
+import {
+  useBoundedPositions,
+  useOitBounds,
+} from "../../rendering/draw-mode.ts";
+import type { DataBounds } from "@use-gpu/core";
 import { useOpacityColors } from "../../rendering/use-opacity-colors.ts";
 import { withMaterial } from "../../rendering/with-material.ts";
 import { buildBondRows } from "./bond-columns.ts";
@@ -171,6 +176,7 @@ const BondLines: LC<{
   sides: number;
   shaded: boolean;
   color: VectorLike | Field;
+  bounds: DataBounds | null;
 }> = (
   {
     map,
@@ -186,10 +192,14 @@ const BondLines: LC<{
     sides,
     shaded,
     color,
+    bounds,
     ...props
   },
 ) => {
-  const positions = useBondPositions(map.endpoints!, coordinates, split);
+  const positions = useBoundedPositions(
+    useBondPositions(map.endpoints!, coordinates, split),
+    bounds,
+  );
   return field
     ? use(FieldBonds, {
       map,
@@ -220,7 +230,7 @@ const BondLines: LC<{
  * and accepts a flat colour or a @molgpu/fields Field. Connectivity comes from
  * the shared bond topology (explicit, else inferred). `opacity` (0–1)
  * multiplies the colour's alpha as a uniform; below 1 the sticks draw in
- * transparent mode (pair with <Pass oit>) unless an explicit `mode` is given.
+ * transparent mode unless an explicit `mode` is given ("oit" inside <Pass oit>).
  */
 const BondsResolved: ViewerComponent<
   Omit<BondsProps, "select" | keyof SelectionDiagnostics> & {
@@ -268,6 +278,12 @@ const BondsResolved: ViewerComponent<
   const drawMode = modeProps(
     mode,
     flatAlpha(effectiveColor, !!field) * opacity,
+  );
+  // OIT depth weighting uses the root extent grown by the stick radius.
+  const bounds = useOitBounds(
+    drawMode,
+    drawMode.mode === "oit" ? resource.bounds : null,
+    width,
   );
   // Explicit topology is independent of root positions. Inferred connectivity
   // may change when the root StructureData itself receives new positions.
@@ -317,6 +333,7 @@ const BondsResolved: ViewerComponent<
           sides,
           shaded,
           color: flatColor as VectorLike | Field,
+          bounds,
           ...drawMode,
           ...props,
         }),

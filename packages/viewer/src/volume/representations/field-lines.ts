@@ -2,6 +2,7 @@ import { useDispatchObservation } from "../../internal/dispatch-observation.ts";
 // <FieldLines>: RK4 streamlines of E = −∇φ through the nearest volume,
 // integrated by a use.gpu Kernel once per volume generation and drawn with
 // LineLayer. See docs/findings/2026-09-27-efield-plan.md §5.
+import { modeProps } from "../../rendering/opacity.ts";
 import {
   type LC,
   use,
@@ -29,8 +30,13 @@ import {
   latticeSeeds,
 } from "./field-line-geometry.ts";
 import type { ColorStops, Translucency, ViewerComponent } from "../../types.ts";
+import type { VolumeGrid } from "@molgpu/table";
 import { useVolume } from "../volume-context.ts";
-import { modeProps } from "../../rendering/opacity.ts";
+import {
+  gridBox,
+  useBoundedPositions,
+  useOitBounds,
+} from "../../rendering/draw-mode.ts";
 import {
   count,
   releaseOwnedBuffer,
@@ -224,6 +230,8 @@ export const FieldLines: ViewerComponent<FieldLinesProps> = (props) => {
         vertices,
         version: dispatched,
         steps,
+        step,
+        grid,
         width,
         colorRange,
         stops,
@@ -238,6 +246,8 @@ const LinesDraw: LC<{
   vertices: number;
   version: number;
   steps: number;
+  step: number;
+  grid: VolumeGrid;
   width: number;
   colorRange?: readonly [number, number];
   stops: ColorStops;
@@ -249,6 +259,8 @@ const LinesDraw: LC<{
     vertices,
     version,
     steps,
+    step,
+    grid,
     width,
     colorRange,
     stops,
@@ -267,7 +279,13 @@ const LinesDraw: LC<{
     size: [vertices],
     version,
   }), [target.buffer, vertices, version]);
-  const positions = useShader(VERTEX_POSITIONS, [vertexSource]);
+  const drawMode = modeProps(mode, tintValue[3]);
+  const box = useMemo(() => gridBox(grid.dims, grid.transform), [grid]);
+  // Integration stops at the grid edge, within one step.
+  const positions = useBoundedPositions(
+    useShader(VERTEX_POSITIONS, [vertexSource]),
+    useOitBounds(drawMode, box, step),
+  );
   const widthRef = useShaderRef(width);
   const widths = useShader(VERTEX_WIDTHS, [vertexSource, widthRef]);
   const rampModule = useMemo(
@@ -291,6 +309,6 @@ const LinesDraw: LC<{
     widths,
     count: vertices,
     join: "round",
-    ...modeProps(mode, tint[3]),
+    ...drawMode,
   });
 };

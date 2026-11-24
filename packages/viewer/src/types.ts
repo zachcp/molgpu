@@ -402,8 +402,9 @@ export interface EFieldProps extends SelectionDiagnostics {
 }
 
 /** How a representation's layer draws: opaque (writes depth, hides what is
- *  behind) or transparent (blended after opaques; exact under <Pass oit>). */
-export type DrawMode = "opaque" | "transparent";
+ *  behind), transparent (blended after opaques), or use.gpu's oit
+ *  (order-independent compositing; needs an enclosing <Pass oit>). */
+export type DrawMode = "opaque" | "transparent" | "oit";
 
 /** Transparency props shared by every representation. */
 export interface Translucency {
@@ -412,8 +413,8 @@ export interface Translucency {
   opacity?: number;
   /** Draw mode override. Automatic mode uses flat colour alpha × opacity;
    *  Fields (including constants) and material alpha require explicit
-   *  'transparent' mode unless opacity is below 1. Pair translucency with
-   *  <Pass oit>. */
+   *  'transparent' mode unless opacity is below 1. Inside <Pass oit>, use
+   *  'oit' so overlapping translucent geometry composites correctly. */
   mode?: DrawMode;
 }
 

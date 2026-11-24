@@ -68,6 +68,7 @@ export const selectScene = (data: StructureData, options: SceneOptions) => {
       scale={0.35}
       color={[0.3, 0.33, 0.4, 1]}
       opacity={0.18}
+      mode="oit"
       pickable={!!focus}
     />
   );

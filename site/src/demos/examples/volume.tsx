@@ -30,7 +30,11 @@ export const volumeScene = (data: StructureData, options: SceneOptions) => {
     // read 1.4 Å off the surface; field lines trace E between the charges.
     return (
       <EField spacing={options.efieldSpacing} padding={14}>
-        <Surface color={byPotential({ range: 5 })} opacity={0.85} />
+        <Surface
+          color={byPotential({ range: 5 })}
+          opacity={0.85}
+          mode="oit"
+        />
         <FieldLines
           seeds={{ spacing: options.seedSpacing }}
           step={0.35}
@@ -50,6 +54,7 @@ export const volumeScene = (data: StructureData, options: SceneOptions) => {
         level={{ sigma: options.isoSigma }}
         color={[0.55, 0.72, 0.98, 1]}
         opacity={0.25}
+        mode="oit"
       />
       <VolumeSlice
         plane={{ axis: 2, index: options.sliceIndex }}
