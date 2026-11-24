@@ -31,10 +31,6 @@ import {
   withColumns,
 } from "../rendering/representation.ts";
 
-// Each grid/frame line is its own open segment: 1 = start, 2 = end.
-const lineSegments = (count: number) =>
-  Int32Array.from({ length: 2 * count }, (_, i) => i % 2 ? 2 : 1);
-
 // Inset pixels (CSS px, origin top-left) to world positions that the scene
 // camera projects straight back onto those pixels: clip = pixel / canvas,
 // world = inverse(projection · view) · clip. The camera's inverse matrix is
@@ -89,7 +85,8 @@ const InsetLayers = (
     }),
     use(LineLayer, {
       positions: grid,
-      segments: map.segments,
+      // Each grid/frame line is its own two-vertex line.
+      segment: 1,
       count: lines,
       color: gridColor,
       width: 1,
@@ -191,11 +188,6 @@ export const Ramachandran: ViewerComponent<{
       lines: lines.length / 4,
       columns: [
         { key: "lines", data: Float32Array.from(lines), format: "vec4<f32>" },
-        {
-          key: "segments",
-          data: lineSegments(lines.length / 8),
-          format: "i32",
-        },
         {
           key: "quad",
           data: Float32Array.of(

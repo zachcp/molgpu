@@ -27,11 +27,9 @@ import {
   FIELD_LINES_WORKGROUP as WORKGROUP,
   fieldLinesWgsl,
   latticeSeeds,
-  lineSegments,
 } from "./field-line-geometry.ts";
 import type { ColorStops, Translucency, ViewerComponent } from "../../types.ts";
 import { useVolume } from "../volume-context.ts";
-import { withColumns } from "../../rendering/representation.ts";
 import { modeProps } from "../../rendering/opacity.ts";
 import {
   count,
@@ -225,7 +223,6 @@ export const FieldLines: ViewerComponent<FieldLinesProps> = (props) => {
         target,
         vertices,
         version: dispatched,
-        lines,
         steps,
         width,
         colorRange,
@@ -240,7 +237,6 @@ const LinesDraw: LC<{
   target: StorageTarget;
   vertices: number;
   version: number;
-  lines: number;
   steps: number;
   width: number;
   colorRange?: readonly [number, number];
@@ -252,7 +248,6 @@ const LinesDraw: LC<{
     target,
     vertices,
     version,
-    lines,
     steps,
     width,
     colorRange,
@@ -288,18 +283,14 @@ const LinesDraw: LC<{
   const tint = useMemo(() => tintValue, tintValue);
   const tintRef = useShaderRef(tint);
   const colors = useShader(rampModule, [vertexSource, rangeRef, tintRef]);
-  const segments = useMemo(() => lineSegments(lines, steps), [lines, steps]);
-  return (withColumns(
-    [{ key: "segments", data: segments, format: "i32" }],
-    (map) =>
-      use(LineLayer, {
-        positions,
-        segments: map.segments,
-        colors,
-        widths,
-        count: vertices,
-        join: "round",
-        ...modeProps(mode, tint[3]),
-      }),
-  ));
+  return use(LineLayer, {
+    positions,
+    // Each line is one strip of 2·steps + 1 vertices.
+    segment: 2 * steps,
+    colors,
+    widths,
+    count: vertices,
+    join: "round",
+    ...modeProps(mode, tint[3]),
+  });
 };

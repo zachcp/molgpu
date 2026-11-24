@@ -110,8 +110,6 @@ const LabelResolved: ViewerComponent<
   });
 };
 
-const SEGMENTS = Int32Array.of(1, 2); // 1 = start, 2 = end: one open line.
-
 /**
  * A distance measurement between the centroids of two selections: a line
  * connecting them and a label at the midpoint showing the separation. `a` and
@@ -204,14 +202,13 @@ const DistanceResolved: ViewerComponent<
           data: Float32Array.of(ca[0], ca[1], ca[2], cb[0], cb[1], cb[2]),
           format: "vec3<f32>",
         },
-        { key: "segments", data: SEGMENTS, format: "i32" },
       ]
       : null, [ca, cb]);
   if (!specs || !mid) return null;
   return withColumns(specs, (map) => [
     use(LineLayer, {
       positions: map.positions,
-      segments: map.segments,
+      segment: 1,
       width,
       color: lineColor,
       join: "round",

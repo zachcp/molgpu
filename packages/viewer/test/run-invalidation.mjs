@@ -1034,7 +1034,7 @@ test("Ramachandran separates color, scientific coordinates and inset layout", as
     assertEquals(
       keysOf(
         edited,
-        /^uploadBytes:(positions|lines|segments|quad|indices|structure:)/,
+        /^uploadBytes:(positions|lines|quad|indices|structure:)/,
       ),
       [],
       brief(edited),
@@ -1062,7 +1062,7 @@ test("Ramachandran separates color, scientific coordinates and inset layout", as
   );
   assert(moved.detail["uploadBytes:positions"] > 0, brief(moved));
   assertEquals(
-    keysOf(moved, /^uploadBytes:(lines|segments|quad|indices)$/),
+    keysOf(moved, /^uploadBytes:(lines|quad|indices)$/),
     [],
     brief(moved),
   );
