@@ -44,3 +44,11 @@ export const modeProps = (
   alpha: number,
 ): { mode?: DrawMode } =>
   mode !== undefined ? { mode } : alpha < 1 ? { mode: "transparent" } : {};
+
+/** A flat colour as RGBA with its alpha scaled by `opacity`, for vec4 uniforms. */
+export const tint = (color: VectorLike, opacity: number): number[] => [
+  color[0],
+  color[1],
+  color[2],
+  (color.length > 3 ? color[3] : 1) * opacity,
+];

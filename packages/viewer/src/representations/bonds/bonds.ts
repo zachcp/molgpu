@@ -21,7 +21,6 @@ import { useField } from "../../field-binding/use-field.ts";
 import {
   type ColumnMap,
   type ColumnSpec,
-  isField,
   useActiveRows,
   withColumns,
 } from "../../rendering/representation.ts";
@@ -43,14 +42,9 @@ import {
 /** LineLayer props Bonds forwards (draw mode and any upstream flags). */
 type LineProps = Record<string, unknown>;
 import {
-  applyOpacity,
-  checkOpacity,
-  flatAlpha,
-  modeProps,
-} from "../../rendering/opacity.ts";
-import {
   useBoundedPositions,
   useOitBounds,
+  useTranslucency,
 } from "../../rendering/draw-mode.ts";
 import type { DataBounds } from "@use-gpu/core";
 import { useOpacityColors } from "../../rendering/use-opacity-colors.ts";
@@ -262,20 +256,13 @@ const BondsResolved: ViewerComponent<
   }
   const defaultColor = color === undefined;
   const effectiveColor = defaultColor ? DEFAULT_COLOR : color;
-  const field = isField(effectiveColor) ? effectiveColor : null;
-  const plan = useFieldPlan(field, resource, "Bonds");
-  checkOpacity(opacity, "Bonds");
-  const flatColor = useMemo(
-    () =>
-      field
-        ? effectiveColor
-        : applyOpacity(effectiveColor as VectorLike, opacity),
-    [field, effectiveColor, opacity],
-  );
-  const drawMode = modeProps(
+  const { field, drawColor: flatColor, drawMode } = useTranslucency(
+    "Bonds",
+    effectiveColor,
+    opacity,
     mode,
-    flatAlpha(effectiveColor, !!field) * opacity,
   );
+  const plan = useFieldPlan(field, resource, "Bonds");
   // OIT depth weighting uses the root extent grown by the stick radius.
   const bounds = useOitBounds(
     drawMode,

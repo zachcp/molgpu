@@ -45,7 +45,9 @@ Each item keeps behaviour and instrumentation counters unless stated.
    opacity-scaled flat colour and `modeProps` are repeated per representation,
    and three volume visuals build the same RGBA tint inline. Fold them into one
    `rendering/opacity.ts` helper. Validate with `opacity.test.ts`,
-   `run-materials`, `run-postprocess` and `run-invalidation`.
+   `run-materials`, `run-postprocess` and `run-invalidation`. **Done:**
+   `useTranslucency` in `rendering/draw-mode.ts` and the pure `tint` in
+   `rendering/opacity.ts`.
 7. **Reuse `VertexFieldColors`.** `FieldBonds` and `FieldPoints` repeat its
    field inputs, `useField` and `useOpacityColors` sequence. Validate with
    `run-gate2`, `run-selection` and `run-invalidation`.

@@ -9,6 +9,7 @@ import {
   checkOpacity,
   flatAlpha,
   modeProps,
+  tint,
 } from "../src/rendering/opacity.ts";
 
 Deno.test("opacity multiplies a flat colour alpha, and is the identity at 1", () => {
@@ -45,4 +46,9 @@ Deno.test("opacity must be a number in [0, 1]", () => {
       /Surface opacity must be a number in \[0, 1\]/,
     );
   }
+});
+
+Deno.test("tint always yields RGBA, scaling alpha even at opacity 1", () => {
+  assertEquals(tint([1, 0.5, 0], 1), [1, 0.5, 0, 1]);
+  assertEquals(tint([1, 0.5, 0, 0.5], 0.5), [1, 0.5, 0, 0.25]);
 });
