@@ -1,6 +1,5 @@
 import type { SelectionDiagnostics, SelectionInput } from "../types.ts";
-import { SelectionConsumer } from "../selection/selection-consumer.ts";
-import type { Selection } from "@molgpu/select";
+import { type Resolved, selected } from "../selection/selection-consumer.ts";
 import type { Field } from "@molgpu/fields";
 import type {
   MaterialSpec,
@@ -55,9 +54,7 @@ import { useBindingProbe } from "../internal/use-binding-probe.ts";
  * rebuild the trace/spline geometry; `radius` and `color` update bindings.
  */
 const TubeResolved: ViewerComponent<
-  Omit<TubeProps, "select" | keyof SelectionDiagnostics> & {
-    select?: Selection | null;
-  }
+  Resolved<TubeProps>
 > = (
   {
     select,
@@ -190,19 +187,6 @@ export type TubeProps =
 /** Draw a polymer backbone tube from published coordinate snapshots.
  * A residue participates only when its guide atom is selected. Color fields
  * read guide-atom values; changing color or opacity preserves geometry. */
-export const Tube: ViewerComponent<TubeProps> = withGeometryCopies((props) =>
-  use(SelectionConsumer, {
-    input: props.select,
-    who: "Tube",
-    onSelectionStatus: props.onSelectionStatus,
-    warnEmptySelection: props.warnEmptySelection,
-    render: (select: Selection) => {
-      const { onSelectionStatus: _status, warnEmptySelection: _warn, ...draw } =
-        props;
-      return use(TubeResolved, {
-        ...draw,
-        select: props.select == null ? null : select,
-      });
-    },
-  })
+export const Tube: ViewerComponent<TubeProps> = withGeometryCopies(
+  selected("Tube", TubeResolved),
 );

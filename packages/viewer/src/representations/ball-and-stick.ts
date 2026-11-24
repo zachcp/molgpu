@@ -1,7 +1,6 @@
 import type { SelectionDiagnostics, SelectionInput } from "../types.ts";
-import { SelectionConsumer } from "../selection/selection-consumer.ts";
+import { type Resolved, selected } from "../selection/selection-consumer.ts";
 import type { Field } from "@molgpu/fields";
-import type { Selection } from "@molgpu/select";
 import type {
   MaterialSpec,
   Translucency,
@@ -13,9 +12,7 @@ import { Spacefill } from "./spacefill.ts";
 import { Bonds } from "./bonds/bonds.ts";
 
 const BallAndStickResolved: ViewerComponent<
-  Omit<BallAndStickProps, "select" | keyof SelectionDiagnostics> & {
-    select?: Selection | null;
-  }
+  Resolved<BallAndStickProps>
 > = (
   {
     select = null,
@@ -66,18 +63,7 @@ export type BallAndStickProps =
  * world units. Color, material and opacity apply to both halves. `shadow`
  * enables stick shadows under a shadow-enabled Pass; balls do not cast.
  */
-export const BallAndStick: ViewerComponent<BallAndStickProps> = (props) =>
-  use(SelectionConsumer, {
-    input: props.select,
-    who: "BallAndStick",
-    onSelectionStatus: props.onSelectionStatus,
-    warnEmptySelection: props.warnEmptySelection,
-    render: (select: Selection) => {
-      const { onSelectionStatus: _status, warnEmptySelection: _warn, ...draw } =
-        props;
-      return use(BallAndStickResolved, {
-        ...draw,
-        select: props.select == null ? null : select,
-      });
-    },
-  });
+export const BallAndStick: ViewerComponent<BallAndStickProps> = selected(
+  "BallAndStick",
+  BallAndStickResolved,
+);

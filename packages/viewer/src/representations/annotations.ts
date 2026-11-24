@@ -1,6 +1,6 @@
 import { useSelectionInput } from "../selection/use-selection-input.ts";
 import type { SelectionDiagnostics, SelectionInput } from "../types.ts";
-import { SelectionConsumer } from "../selection/selection-consumer.ts";
+import { type Resolved, selected } from "../selection/selection-consumer.ts";
 import type { Selection } from "@molgpu/select";
 import type { StructureData } from "@molgpu/table";
 import type { VectorLike, ViewerComponent } from "../types.ts";
@@ -58,9 +58,7 @@ const toPoint = (
  * (SDF glyphs draw in transparent mode); `opacity` (0–1) scales its alpha.
  */
 const LabelResolved: ViewerComponent<
-  Omit<LabelProps, "select" | keyof SelectionDiagnostics> & {
-    select?: Selection | null;
-  }
+  Resolved<LabelProps>
 > = (
   {
     select,
@@ -245,21 +243,7 @@ export const Label: ViewerComponent<LabelProps> = (
 ) => (use(props.at ? LabelOnce : LabelCopies, props));
 
 /** One label per call: the selection centroid or an explicit `at`. */
-const LabelOnce: typeof Label = (props) =>
-  use(SelectionConsumer, {
-    input: props.select,
-    who: "Label",
-    onSelectionStatus: props.onSelectionStatus,
-    warnEmptySelection: props.warnEmptySelection,
-    render: (select: Selection) => {
-      const { onSelectionStatus: _status, warnEmptySelection: _warn, ...draw } =
-        props;
-      return use(LabelResolved, {
-        ...draw,
-        select: props.select == null ? null : select,
-      });
-    },
-  });
+const LabelOnce: typeof Label = selected("Label", LabelResolved);
 
 /**
  * One label per drawn biological assembly copy of the nearest structure, each
