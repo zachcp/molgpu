@@ -9,15 +9,13 @@ import type {
 } from "../../types.ts";
 import { type LC, type LiveElement, use, useMemo, useRef } from "@use-gpu/live";
 import type { ShaderSource } from "@use-gpu/shader";
-import type { StorageSource } from "@use-gpu/core";
-import type { AttributeDomain } from "@molgpu/table";
+import type { StructureData } from "@molgpu/table";
 import { LineLayer } from "@use-gpu/workbench";
 import { byElement } from "@molgpu/fields";
 import {
   useStructure,
   useStructureResource,
 } from "../../structure/structure-context.ts";
-import { useField } from "../../field-binding/use-field.ts";
 import {
   type ColumnMap,
   type ColumnSpec,
@@ -26,7 +24,6 @@ import {
 } from "../../rendering/representation.ts";
 import { allOrRows } from "../../selection/view-rows.ts";
 import {
-  fieldColumns,
   type FieldPlan,
   useFieldPlan,
 } from "../../field-binding/use-field-plan.ts";
@@ -38,6 +35,7 @@ import {
   useBondPositions,
   useBondRows,
 } from "./bond-positions.ts";
+import { VertexFieldColors } from "../../field-binding/vertex-field-colors.ts";
 
 /** LineLayer props Bonds forwards (draw mode and any upstream flags). */
 type LineProps = Record<string, unknown>;
@@ -47,7 +45,6 @@ import {
   useTranslucency,
 } from "../../rendering/draw-mode.ts";
 import type { DataBounds } from "@use-gpu/core";
-import { useOpacityColors } from "../../rendering/use-opacity-colors.ts";
 import { withMaterial } from "../../rendering/with-material.ts";
 import { buildBondRows } from "./bond-columns.ts";
 import { useRepaint } from "../../internal/use-repaint.ts";
@@ -98,7 +95,7 @@ const line = (
 
 // A colour field colours each endpoint by its atom, composed shader-side: the
 // full attribute columns and annotation rows are read through each vertex's
-// atom row.
+// atom row, derived from the endpoint column.
 const FieldBonds: LC<
   {
     map: ColumnMap;
@@ -106,8 +103,7 @@ const FieldBonds: LC<
     count: number;
     split: boolean;
     plan: FieldPlan;
-    attrSources: Record<string, StorageSource>;
-    attrDomains: Record<string, AttributeDomain>;
+    data: StructureData;
     field: Field;
     opacity: number;
     width: number;
@@ -121,8 +117,7 @@ const FieldBonds: LC<
     count,
     split,
     plan,
-    attrSources,
-    attrDomains,
+    data,
     field,
     opacity,
     width,
@@ -130,30 +125,18 @@ const FieldBonds: LC<
     shaded,
     ...props
   },
-) => {
-  const rows = useBondRows(map.endpoints!, split);
-  const keys = plan.attrNames.map((name) => `attr:${name}`);
-  const attrs = useMemo(
-    () => ({
-      ...fieldColumns(plan, attrSources, attrDomains, map.annotation, rows),
-      // A volume-sampled colour reads each vertex's own position.
-      positions,
-    }),
-    [
-      rows,
-      map.annotation,
-      positions,
-      plan,
-      ...keys.map((key) => attrSources[key]),
-      ...keys.map((key) => attrDomains[key]),
-    ],
-  );
-  const colors = useOpacityColors(
-    useField(field, attrs, { domain: "atom" }),
+) =>
+  use(VertexFieldColors, {
+    field,
+    positions,
+    sourceAtom: useBondRows(map.endpoints!, split),
+    annotation: map.annotation ?? null,
+    data,
+    plan,
     opacity,
-  );
-  return line(positions, count, width, sides, shaded, { colors }, props);
-};
+    render: (colors: ShaderSource) =>
+      line(positions, count, width, sides, shaded, { colors }, props),
+  });
 
 const BondLines: LC<{
   map: ColumnMap;
@@ -162,8 +145,7 @@ const BondLines: LC<{
   split: boolean;
   field: Field | null;
   plan: FieldPlan;
-  attrSources: Record<string, StorageSource>;
-  attrDomains: Record<string, AttributeDomain>;
+  data: StructureData;
   opacity: number;
   width: number;
   sides: number;
@@ -178,8 +160,7 @@ const BondLines: LC<{
     split,
     field,
     plan,
-    attrSources,
-    attrDomains,
+    data,
     opacity,
     width,
     sides,
@@ -200,8 +181,7 @@ const BondLines: LC<{
       count,
       split,
       plan,
-      attrSources,
-      attrDomains,
+      data,
       field,
       opacity,
       width,
@@ -310,8 +290,7 @@ const BondsResolved: ViewerComponent<
           split: defaultColor,
           field,
           plan,
-          attrSources: attributes.sources,
-          attrDomains: attributes.domains,
+          data,
           opacity,
           width,
           sides,
