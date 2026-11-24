@@ -6,10 +6,7 @@ import {
   efieldGrid,
   rowBounds,
 } from "../src/volume/efield-grid.ts";
-import {
-  latticeSeeds,
-  lineSegments,
-} from "../src/volume/representations/field-line-geometry.ts";
+import { latticeSeeds } from "../src/volume/representations/field-line-geometry.ts";
 
 function structure(n: number) {
   return createStructure({
@@ -245,8 +242,4 @@ Deno.test("latticeSeeds thins a lattice by a fixed stride", () => {
   const few = latticeSeeds(grid, 4, 40);
   assert(few.length / 3 <= 40 && few.length / 3 >= 30);
   assertEquals([...few.subarray(0, 3)], [2, 2, 2]);
-});
-
-Deno.test("lineSegments makes one strip per line", () => {
-  assertEquals([...lineSegments(2, 2)], [1, 3, 3, 3, 2, 1, 3, 3, 3, 2]);
 });

@@ -7,9 +7,6 @@ import { useTrajectoryFrame } from "../trajectory/use-trajectory-frame.ts";
 import { type ColumnSpec, withColumns } from "../rendering/representation.ts";
 import { applyOpacity, checkOpacity, modeProps } from "../rendering/opacity.ts";
 
-// Each edge is its own open line: 1 = start, 2 = end.
-const SEGMENTS = Int32Array.from({ length: 24 }, (_, i) => i % 2 ? 2 : 1);
-
 /** Endpoints of the 12 edges of the parallelepiped spanned by box columns. */
 export function boxEdges(box: ArrayLike<number>): Float32Array {
   const col = (c: number) => [box[c * 3], box[c * 3 + 1], box[c * 3 + 2]];
@@ -53,7 +50,6 @@ export const UnitCell: ViewerComponent<{
     box
       ? [
         { key: "positions", data: boxEdges(box), format: "vec3<f32>" },
-        { key: "segments", data: SEGMENTS, format: "i32" },
       ]
       : null, [key]);
   if (!specs) return null;
@@ -64,7 +60,8 @@ export const UnitCell: ViewerComponent<{
   return (withColumns(specs, (map) =>
     use(LineLayer, {
       positions: map.positions,
-      segments: map.segments,
+      // Each edge is its own two-vertex line.
+      segment: 1,
       width,
       color: lineColor,
       join: "round",

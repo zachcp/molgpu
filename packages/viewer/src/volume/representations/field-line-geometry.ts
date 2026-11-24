@@ -108,15 +108,3 @@ export function latticeSeeds(
   }
   return Float32Array.from(points);
 }
-
-/** Per line: one strip of `2·steps + 1` vertices (1 start, 3 middle, 2 end). */
-export function lineSegments(lines: number, steps: number): Int32Array {
-  const span = 2 * steps + 1;
-  const out = new Int32Array(lines * span);
-  for (let l = 0; l < lines; l++) {
-    out[l * span] = 1;
-    out.fill(3, l * span + 1, (l + 1) * span - 1);
-    out[(l + 1) * span - 1] = 2;
-  }
-  return out;
-}
