@@ -246,23 +246,20 @@ const RibbonResolved: ViewerComponent<
     colors?: ShaderSource,
   ) =>
     use(CopyDraws, {
-      positions: map.positions!,
-      normals: map.normals!,
-      render: (positions: ShaderSource, normals: ShaderSource | null) =>
-        withMaterial(
-          material,
-          use(FaceLayer, {
-            positions,
-            normals: normals!,
-            indices: map.indices!,
-            color: drawColor,
-            ...(colors ? { colors } : {}),
-            shaded: true,
-            side: "both",
-            ...drawMode,
-            ...props,
-          }),
-        ),
+      children: withMaterial(
+        material,
+        use(FaceLayer, {
+          positions: map.positions!,
+          normals: map.normals!,
+          indices: map.indices!,
+          color: drawColor,
+          ...(colors ? { colors } : {}),
+          shaded: true,
+          side: "both",
+          ...drawMode,
+          ...props,
+        }),
+      ),
     });
   return withColumns(specs, (map) =>
     field

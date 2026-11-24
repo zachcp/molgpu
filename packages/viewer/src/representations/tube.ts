@@ -129,26 +129,22 @@ const TubeResolved: ViewerComponent<
     colors?: ShaderSource,
   ) =>
     use(CopyDraws, {
-      positions: map.positions!,
-      render: (positions: ShaderSource) =>
-        withMaterial(
-          material,
-          use(LineLayer, {
-            positions,
-            // A copy's positions are a transformed getter with no length.
-            count: built.count,
-            segments: map.segments!,
-            width,
-            color: drawColor,
-            ...(colors ? { colors } : {}),
-            shaded: true,
-            sides,
-            join,
-            depth: -1,
-            ...drawMode,
-            ...props,
-          }),
-        ),
+      children: withMaterial(
+        material,
+        use(LineLayer, {
+          positions: map.positions!,
+          segments: map.segments!,
+          width,
+          color: drawColor,
+          ...(colors ? { colors } : {}),
+          shaded: true,
+          sides,
+          join,
+          depth: -1,
+          ...drawMode,
+          ...props,
+        }),
+      ),
     });
   return withColumns(specs, (map) =>
     field

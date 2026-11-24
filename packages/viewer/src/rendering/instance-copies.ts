@@ -12,8 +12,10 @@ import {
   useContext,
   useMemo,
 } from "@use-gpu/live";
-import type { ShaderSource } from "@use-gpu/shader";
-import { useShader, useShaderRef } from "@use-gpu/workbench";
+import {
+  TransformContext,
+  useCombinedMatrixTransform,
+} from "@use-gpu/workbench";
 import { wgsl } from "@use-gpu/shader/wgsl";
 import { affineWgsl } from "@molgpu/dynamics/wgsl";
 import { useCoordinates } from "../coordinates/coordinates-context.ts";
@@ -127,71 +129,24 @@ export function withGeometryCopies<P>(
   };
 }
 
-const TRANSFORM_POINTS = wgsl`
-@link fn getPoint(i: u32) -> vec3<f32>;
-@link fn getColumn0() -> vec4<f32>;
-@link fn getColumn1() -> vec4<f32>;
-@link fn getColumn2() -> vec4<f32>;
-@link fn getColumn3() -> vec4<f32>;
-@export fn getTransformedPoint(i: u32) -> vec3<f32> {
-  let p = getPoint(i);
-  return (getColumn0() * p.x + getColumn1() * p.y + getColumn2() * p.z +
-    getColumn3()).xyz;
-}
-`;
-const TRANSFORM_VECTORS = wgsl`
-@link fn getVector(i: u32) -> vec3<f32>;
-@link fn getColumn0() -> vec4<f32>;
-@link fn getColumn1() -> vec4<f32>;
-@link fn getColumn2() -> vec4<f32>;
-@export fn getTransformedVector(i: u32) -> vec3<f32> {
-  let v = getVector(i);
-  return (getColumn0() * v.x + getColumn1() * v.y + getColumn2() * v.z).xyz;
-}
-`;
-
-const CopyDraw: LC<{
-  copy: InstanceCopy;
-  positions: ShaderSource;
-  normals: ShaderSource | null;
-  render: (
-    positions: ShaderSource,
-    normals: ShaderSource | null,
-  ) => LiveElement;
-}> = ({ copy, positions, normals, render }) => {
-  const [c0, c1, c2, c3] = columns(copy.matrix);
-  const r0 = useShaderRef(c0),
-    r1 = useShaderRef(c1),
-    r2 = useShaderRef(c2),
-    r3 = useShaderRef(c3);
-  const moved = useShader(TRANSFORM_POINTS, [positions, r0, r1, r2, r3]);
-  const turned = useShader(TRANSFORM_VECTORS, [
-    normals ?? positions,
-    r0,
-    r1,
-    r2,
-  ]);
-  return render(moved, normals ? turned : null);
+/** Draw `children` under one copy's operator, chained onto any ambient transform. */
+const CopyTransform: LC<{ copy: InstanceCopy; children: LiveElement }> = (
+  { copy, children },
+) => {
+  const [context] = useCombinedMatrixTransform(copy.matrix);
+  return provide(TransformContext, context, children);
 };
 
 /**
- * Draw a model-space geometry once per copy in DrawCopiesContext, its
- * positions (and normals, rotated) under that copy's operator; outside copies,
- * once as it is.
+ * Draw a model-space geometry once per copy in DrawCopiesContext under that
+ * copy's operator; outside copies, once as it is. The layer's own transform
+ * applies the operator to positions, normals and bounds.
  */
-export const CopyDraws: LC<{
-  positions: ShaderSource;
-  normals?: ShaderSource | null;
-  render: (
-    positions: ShaderSource,
-    normals: ShaderSource | null,
-  ) => LiveElement;
-}> = ({ positions, normals = null, render }) => {
+export const CopyDraws: LC<{ children: ViewerElement }> = (props) => {
+  const children = props.children as LiveElement;
   const copies = useContext(DrawCopiesContext);
-  if (!copies) return render(positions, normals);
+  if (!copies) return children;
   return copies.map((copy) =>
-    isIdentity(copy.matrix)
-      ? render(positions, normals)
-      : use(CopyDraw, { copy, positions, normals, render })
+    isIdentity(copy.matrix) ? children : use(CopyTransform, { copy, children })
   );
 };
