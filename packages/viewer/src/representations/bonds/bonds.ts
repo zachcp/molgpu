@@ -1,7 +1,6 @@
 import type { SelectionDiagnostics, SelectionInput } from "../../types.ts";
-import { SelectionConsumer } from "../../selection/selection-consumer.ts";
+import { type Resolved, selected } from "../../selection/selection-consumer.ts";
 import type { Field } from "@molgpu/fields";
-import type { Selection } from "@molgpu/select";
 import type {
   MaterialSpec,
   Translucency,
@@ -233,9 +232,7 @@ const BondLines: LC<{
  * transparent mode unless an explicit `mode` is given ("oit" inside <Pass oit>).
  */
 const BondsResolved: ViewerComponent<
-  Omit<BondsProps, "select" | keyof SelectionDiagnostics> & {
-    select?: Selection | null;
-  }
+  Resolved<BondsProps>
 > = (
   {
     width = 0.3,
@@ -364,19 +361,6 @@ export type BondsProps =
 
 /** Draw bond sticks from the nearest live GPU coordinates. Select queries or
  * exact atom selections; both endpoints must match unless endpoints is either. */
-export const Bonds: ViewerComponent<BondsProps> = withInstances((props) =>
-  use(SelectionConsumer, {
-    input: props.select,
-    who: "Bonds",
-    onSelectionStatus: props.onSelectionStatus,
-    warnEmptySelection: props.warnEmptySelection,
-    render: (select: Selection) => {
-      const { onSelectionStatus: _status, warnEmptySelection: _warn, ...draw } =
-        props;
-      return use(BondsResolved, {
-        ...draw,
-        select: props.select == null ? null : select,
-      });
-    },
-  })
+export const Bonds: ViewerComponent<BondsProps> = withInstances(
+  selected("Bonds", BondsResolved),
 );

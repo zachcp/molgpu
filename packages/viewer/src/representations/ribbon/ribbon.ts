@@ -1,6 +1,5 @@
 import type { SelectionDiagnostics, SelectionInput } from "../../types.ts";
-import { SelectionConsumer } from "../../selection/selection-consumer.ts";
-import type { Selection } from "@molgpu/select";
+import { type Resolved, selected } from "../../selection/selection-consumer.ts";
 import type { Field } from "@molgpu/fields";
 import type {
   MaterialSpec,
@@ -92,10 +91,7 @@ function useStableProjection(
  * bindings.
  */
 const RibbonResolved: ViewerComponent<
-  Omit<RibbonProps, "select" | keyof SelectionDiagnostics> & {
-    select?: Selection | null;
-    composition?: "trace" | "cartoon";
-  }
+  Resolved<RibbonProps> & { composition?: "trace" | "cartoon" }
 > = (
   {
     select,
@@ -307,26 +303,7 @@ const traceComponent = (
   who: string,
   composition: "trace" | "cartoon",
 ): ViewerComponent<RibbonProps> =>
-  withGeometryCopies((props) =>
-    use(SelectionConsumer, {
-      input: props.select,
-      who,
-      onSelectionStatus: props.onSelectionStatus,
-      warnEmptySelection: props.warnEmptySelection,
-      render: (select: Selection) => {
-        const {
-          onSelectionStatus: _status,
-          warnEmptySelection: _warn,
-          ...draw
-        } = props;
-        return use(RibbonResolved, {
-          ...draw,
-          composition,
-          select: props.select == null ? null : select,
-        });
-      },
-    })
-  );
+  withGeometryCopies(selected(who, RibbonResolved, { composition }));
 
 /**
  * The polymer trace alone: the trace visual of Mol*'s default Cartoon,

@@ -1,6 +1,5 @@
 import type { SelectionDiagnostics, SelectionInput } from "../../types.ts";
-import { SelectionConsumer } from "../../selection/selection-consumer.ts";
-import type { Selection } from "@molgpu/select";
+import { type Resolved, selected } from "../../selection/selection-consumer.ts";
 import type { Field } from "@molgpu/fields";
 import type {
   MaterialSpec,
@@ -111,9 +110,7 @@ const ACCESSIBLE_SMOOTHING = 0.25;
  * accessible kind, whose smoothing probe is below that bound.
  */
 const SurfaceResolved: ViewerComponent<
-  Omit<SurfaceProps, "select" | keyof SelectionDiagnostics> & {
-    select?: Selection | null;
-  }
+  Resolved<SurfaceProps>
 > = (
   {
     select,
@@ -318,21 +315,6 @@ export type SurfaceProps =
  * molecular surface around the selected atoms.
  * Supported moving grids update GPU geometry; other cases use CPU snapshots.
  * Resolution and probeRadius control geometry; color and opacity style it. */
-export const Surface: ViewerComponent<SurfaceProps> = withGeometryCopies((
-  props,
-) =>
-  use(SelectionConsumer, {
-    input: props.select,
-    who: "Surface",
-    onSelectionStatus: props.onSelectionStatus,
-    warnEmptySelection: props.warnEmptySelection,
-    render: (select: Selection) => {
-      const { onSelectionStatus: _status, warnEmptySelection: _warn, ...draw } =
-        props;
-      return use(SurfaceResolved, {
-        ...draw,
-        select: props.select == null ? null : select,
-      });
-    },
-  })
+export const Surface: ViewerComponent<SurfaceProps> = withGeometryCopies(
+  selected("Surface", SurfaceResolved),
 );
