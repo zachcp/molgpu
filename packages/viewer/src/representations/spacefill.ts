@@ -10,8 +10,8 @@ import type {
 } from "../types.ts";
 import { type LC, use, useMemo } from "@use-gpu/live";
 import type { ShaderSource } from "@use-gpu/shader";
-import type { StorageSource } from "@use-gpu/core";
-import type { AttributeDomain, StructureData } from "@molgpu/table";
+import type { StructureData } from "@molgpu/table";
+import { VertexFieldColors } from "../field-binding/vertex-field-colors.ts";
 import { WorldSpacePointLayer } from "./world-space-points.ts";
 import {
   type StructureSources,
@@ -19,7 +19,6 @@ import {
 } from "../structure/structure-context.ts";
 import { useCoordinates } from "../coordinates/coordinates-context.ts";
 import { withInstances } from "../rendering/instance-copies.ts";
-import { useField } from "../field-binding/use-field.ts";
 import { indexed } from "../rendering/indexed.ts";
 import { useAttributeSources } from "../field-binding/attribute-sources.ts";
 import {
@@ -30,7 +29,6 @@ import {
 } from "../rendering/representation.ts";
 import { allOrRows } from "../selection/view-rows.ts";
 import {
-  fieldColumns,
   type FieldPlan,
   useFieldPlan,
 } from "../field-binding/use-field-plan.ts";
@@ -41,40 +39,10 @@ type LayerProps = PointLayerOptions & {
   id?: number;
 };
 import { useOitBounds, useTranslucency } from "../rendering/draw-mode.ts";
-import { useOpacityColors } from "../rendering/use-opacity-colors.ts";
 import { withMaterial } from "../rendering/with-material.ts";
 import { Pickable } from "../interaction/picking.ts";
 import { useRepaint } from "../internal/use-repaint.ts";
 import { useBindingProbe } from "../internal/use-binding-probe.ts";
-
-// A field always colours here, so useField is called unconditionally.
-const FieldPoints: LC<
-  {
-    positions: ShaderSource;
-    attrs: Record<string, ShaderSource>;
-    radii: ShaderSource;
-    count: number;
-    field: Field;
-    opacity: number;
-    scale: number;
-  } & LayerProps
-> = ({ positions, attrs, radii, count, field, opacity, scale, ...props }) => {
-  const inputs = useMemo(() => ({ ...attrs, positions }), [attrs, positions]);
-  const colors = useOpacityColors(
-    useField(field, inputs, { domain: "atom" }),
-    opacity,
-  );
-  return use(WorldSpacePointLayer, {
-    positions,
-    colors,
-    radii,
-    count,
-    scale,
-    shape: "circle",
-    shaded: true,
-    ...props,
-  });
-};
 
 // Reads the shared structure sources, full attribute columns and the field's
 // annotation rows through the selection's rows. Instance k draws atom
@@ -83,8 +51,7 @@ const IndexedPoints: LC<
   {
     map: ColumnMap;
     plan: FieldPlan;
-    attrSources: Record<string, StorageSource>;
-    attrDomains: Record<string, AttributeDomain>;
+    data: StructureData;
     shared: StructureSources;
     positions: ShaderSource;
     count: number;
@@ -97,8 +64,7 @@ const IndexedPoints: LC<
   {
     map,
     plan,
-    attrSources,
-    attrDomains,
+    data,
     shared,
     positions,
     count,
@@ -110,41 +76,33 @@ const IndexedPoints: LC<
   },
 ) => {
   const index = map.index ?? null;
-  const keys = plan.attrNames.map((name) => `attr:${name}`);
   const sources = useMemo(() => ({
     positions: indexed(positions, index, "vec3<f32>"),
     radii: indexed(shared.radii, index, "f32"),
-    attrs: fieldColumns(plan, attrSources, attrDomains, map.annotation, index),
-  }), [
-    shared,
-    positions,
-    index,
-    plan,
-    map.annotation,
-    ...keys.map((key) => attrSources[key]),
-    ...keys.map((key) => attrDomains[key]),
-  ]);
-  return field
-    ? use(FieldPoints, {
-      positions: sources.positions,
-      attrs: sources.attrs,
-      radii: sources.radii,
-      count,
-      field,
-      opacity,
-      scale,
-      ...props,
-    })
-    : use(WorldSpacePointLayer, {
+  }), [shared, positions, index]);
+  const points = (paint: { color?: unknown; colors?: ShaderSource }) =>
+    use(WorldSpacePointLayer, {
       positions: sources.positions,
       radii: sources.radii,
       count,
       scale,
-      color,
       shape: "circle",
       shaded: true,
+      ...paint,
       ...props,
     });
+  return field
+    ? use(VertexFieldColors, {
+      field,
+      positions: sources.positions,
+      sourceAtom: index,
+      annotation: map.annotation ?? null,
+      data,
+      plan,
+      opacity,
+      render: (colors: ShaderSource) => points({ colors }),
+    })
+    : points({ color });
 };
 
 // Uploads a selection's rows and, for a colour field, the full attribute
@@ -182,8 +140,7 @@ const SelectedSpacefill: LC<
       use(IndexedPoints, {
         map,
         plan,
-        attrSources: attributes.sources,
-        attrDomains: attributes.domains,
+        data,
         count,
         ...props,
       }),

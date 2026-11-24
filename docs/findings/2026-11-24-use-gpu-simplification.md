@@ -50,7 +50,9 @@ Each item keeps behaviour and instrumentation counters unless stated.
    `rendering/opacity.ts`.
 7. **Reuse `VertexFieldColors`.** `FieldBonds` and `FieldPoints` repeat its
    field inputs, `useField` and `useOpacityColors` sequence. Validate with
-   `run-gate2`, `run-selection` and `run-invalidation`.
+   `run-gate2`, `run-selection` and `run-invalidation`. **Done:** both render
+   through `VertexFieldColors`, whose `sourceAtom` now accepts Bonds'
+   shader-derived rows.
 8. **Shared raw-GPU boilerplate.** The surface, SES and DSSP jobs repeat a
    transient-buffer allocator and a one-shot read; eight modules repeat a
    per-device compute-pipeline cache and bind-group mapping; 19 files redefine

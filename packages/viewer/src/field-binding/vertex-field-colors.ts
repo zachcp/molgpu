@@ -29,7 +29,8 @@ export function vertexAtoms(trace: Trace, residue: Uint32Array): Uint32Array {
 export const VertexFieldColors: LC<{
   field: Field;
   positions: ShaderSource;
-  sourceAtom: StorageSource | null;
+  /** Each vertex's atom row: an uploaded column or a shader-derived one. */
+  sourceAtom: ShaderSource | null;
   annotation: StorageSource | null;
   data: StructureData;
   plan: FieldPlan;
