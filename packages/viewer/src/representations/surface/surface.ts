@@ -23,19 +23,16 @@ import { useGpuSurface } from "./use-gpu-surface.ts";
 import { useCoordinateSnapshot } from "../../coordinates/coordinate-snapshot.ts";
 import {
   type ColumnSpec,
-  isField,
   useActiveRows,
   withColumns,
 } from "../../rendering/representation.ts";
 import { VertexFieldColors } from "../../field-binding/vertex-field-colors.ts";
 
 import {
-  applyOpacity,
-  checkOpacity,
-  flatAlpha,
-  modeProps,
-} from "../../rendering/opacity.ts";
-import { gridBox, paddedBounds } from "../../rendering/draw-mode.ts";
+  gridBox,
+  paddedBounds,
+  useTranslucency,
+} from "../../rendering/draw-mode.ts";
 import { withMaterial } from "../../rendering/with-material.ts";
 import {
   CopyDraws,
@@ -130,16 +127,15 @@ const SurfaceResolved: ViewerComponent<
 ) => {
   useRepaint();
   useBindingProbe("surface", color, opacity);
-  checkOpacity(opacity, "Surface");
-  const field = isField(color) ? color : null;
+  const { field, drawColor, drawMode } = useTranslucency(
+    "Surface",
+    color,
+    opacity,
+    mode,
+  );
   if (!Number.isFinite(sampleOffset)) {
     throw new TypeError("Surface sampleOffset must be finite");
   }
-  const drawColor = useMemo(
-    () => field ? [1, 1, 1, 1] : applyOpacity(color as VectorLike, opacity),
-    [field, color, opacity],
-  );
-  const drawMode = modeProps(mode, flatAlpha(color, !!field) * opacity);
   const { resource } = useStructure();
   const plan = useFieldPlan(field, resource, "Surface");
   const indices = useActiveRows(resource, select, "Surface");

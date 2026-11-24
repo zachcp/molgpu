@@ -25,7 +25,6 @@ import { useAttributeSources } from "../field-binding/attribute-sources.ts";
 import {
   type ColumnMap,
   type ColumnSpec,
-  isField,
   useActiveRows,
   withColumns,
 } from "../rendering/representation.ts";
@@ -41,13 +40,7 @@ type LayerProps = PointLayerOptions & {
   mode?: "opaque" | "transparent";
   id?: number;
 };
-import {
-  applyOpacity,
-  checkOpacity,
-  flatAlpha,
-  modeProps,
-} from "../rendering/opacity.ts";
-import { useOitBounds } from "../rendering/draw-mode.ts";
+import { useOitBounds, useTranslucency } from "../rendering/draw-mode.ts";
 import { useOpacityColors } from "../rendering/use-opacity-colors.ts";
 import { withMaterial } from "../rendering/with-material.ts";
 import { Pickable } from "../interaction/picking.ts";
@@ -261,15 +254,14 @@ export const Spacefill: ViewerComponent<
   const rows = useActiveRows(resource, select, "Spacefill");
   // Every row in order draws straight from the shared sources, unindexed.
   const indices = useMemo(() => allOrRows(data, rows), [rows]);
-  const field = isField(color) ? color : null;
+  const { field, drawColor: flatColor, drawMode } = useTranslucency(
+    "Spacefill",
+    color,
+    opacity,
+    mode,
+  );
   // A colour field names the columns it reads; gather exactly those.
   const plan = useFieldPlan(field, resource, "Spacefill");
-  checkOpacity(opacity, "Spacefill");
-  const flatColor = useMemo(
-    () => field ? color : applyOpacity(color as VectorLike, opacity),
-    [field, color, opacity],
-  );
-  const drawMode = modeProps(mode, flatAlpha(color, !!field) * opacity);
   // OIT depth weighting uses the root extent grown by the largest atom radius.
   const bounds = useOitBounds(
     drawMode,

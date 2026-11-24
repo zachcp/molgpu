@@ -6,19 +6,14 @@ import type {
   ViewerComponent,
   ViewerElement,
 } from "../../types.ts";
-import { use, useAwait, useMemo } from "@use-gpu/live";
+import { use, useAwait } from "@use-gpu/live";
 import { FaceLayer } from "@use-gpu/workbench";
 import { useVolumeSnapshot } from "../volume-context.ts";
 import {
   type ColumnSpec,
   withColumns,
 } from "../../rendering/representation.ts";
-import {
-  applyOpacity,
-  checkOpacity,
-  flatAlpha,
-  modeProps,
-} from "../../rendering/opacity.ts";
+import { useTranslucency } from "../../rendering/draw-mode.ts";
 import { withMaterial } from "../../rendering/with-material.ts";
 import { runGeometryJob } from "../../internal/geometry-job.ts";
 import { buildIsosurface } from "./isosurface-geometry.ts";
@@ -61,16 +56,16 @@ export const Isosurface: ViewerComponent<
 ) => {
   useRepaint();
   useBindingProbe("isosurface", color, opacity);
-  checkOpacity(opacity, "Isosurface");
+  const { drawColor, drawMode } = useTranslucency(
+    "Isosurface",
+    color,
+    opacity,
+    mode,
+  );
   // A computed volume (<EField>) reaches marching cubes through throttled
   // snapshots; a loaded <Volume> returns its own data at once.
   const volume = useVolumeSnapshot();
   const iso = volume ? volumeLevel(volume, level) : null;
-  const drawColor = useMemo(() => applyOpacity(color, opacity), [
-    color,
-    opacity,
-  ]);
-  const drawMode = modeProps(mode, flatAlpha(color, false) * opacity);
   const [mesh, failure, pending] = useAwait(
     volume && iso !== null
       ? (cancelled: () => boolean) =>

@@ -1,6 +1,6 @@
 import type { ColorStops, ViewerComponent } from "../../types.ts";
 import { use, useMemo } from "@use-gpu/live";
-import { modeProps } from "../../rendering/opacity.ts";
+import { modeProps, tint } from "../../rendering/opacity.ts";
 import {
   FaceLayer,
   ShaderFlatMaterial,
@@ -75,10 +75,7 @@ export const VolumeSlice: ViewerComponent<VolumeSliceProps> = (props) => {
     [volume, sorted],
   );
   const fragment = useShader(module, [source, rangeRef]);
-  const drawColor = useMemo(
-    () => [color[0], color[1], color[2], (color[3] ?? 1) * opacity],
-    [color, opacity],
-  );
+  const drawColor = useMemo(() => tint(color, opacity), [color, opacity]);
   const drawMode = modeProps(mode, drawColor[3]);
   const box = useMemo(() => gridBox(volume.dims, volume.transform), [volume]);
   const positions = useBoundedPositions(

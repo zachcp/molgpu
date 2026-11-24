@@ -16,7 +16,6 @@ import { useStructure } from "../structure/structure-context.ts";
 import { useCoordinateSnapshot } from "../coordinates/coordinate-snapshot.ts";
 import {
   type ColumnSpec,
-  isField,
   useActiveRows,
   withColumns,
 } from "../rendering/representation.ts";
@@ -26,12 +25,7 @@ import {
   vertexAtoms,
   VertexFieldColors,
 } from "../field-binding/vertex-field-colors.ts";
-import {
-  applyOpacity,
-  checkOpacity,
-  flatAlpha,
-  modeProps,
-} from "../rendering/opacity.ts";
+import { useTranslucency } from "../rendering/draw-mode.ts";
 import { withMaterial } from "../rendering/with-material.ts";
 import { CopyDraws, withGeometryCopies } from "../rendering/instance-copies.ts";
 import { buildTubeGeometry } from "./tube-geometry.ts";
@@ -71,13 +65,12 @@ const TubeResolved: ViewerComponent<
 ) => {
   useRepaint();
   useBindingProbe("tube", color, opacity, radius);
-  checkOpacity(opacity, "Tube");
-  const field = isField(color) ? color : null;
-  const drawColor = useMemo(
-    () => field ? [1, 1, 1, 1] : applyOpacity(color as VectorLike, opacity),
-    [field, color, opacity],
+  const { field, drawColor, drawMode } = useTranslucency(
+    "Tube",
+    color,
+    opacity,
+    mode,
   );
-  const drawMode = modeProps(mode, flatAlpha(color, !!field) * opacity);
   const { resource } = useStructure();
   const plan = useFieldPlan(field, resource, "Tube");
   const needsAtoms = plan.attrNames.length > 0 || plan.annotation !== null;

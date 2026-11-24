@@ -7,7 +7,40 @@
 import type { DataBounds } from "@use-gpu/core";
 import { toDataBounds } from "@use-gpu/core";
 import { useMemo } from "@use-gpu/live";
-import type { DrawMode } from "../types.ts";
+import type { Field } from "@molgpu/fields";
+import type { DrawMode, VectorLike } from "../types.ts";
+import { applyOpacity, checkOpacity, flatAlpha, modeProps } from "./opacity.ts";
+import { isField } from "./representation.ts";
+
+const WHITE = Object.freeze([1, 1, 1, 1]);
+
+/**
+ * A representation's translucency inputs, validated once: the colour Field
+ * (if any), the flat colour to bind (white under a Field, whose per-vertex
+ * `colors` win), and the layer draw mode from flat alpha × opacity.
+ */
+export function useTranslucency(
+  who: string,
+  color: VectorLike | Field,
+  opacity: number,
+  mode: DrawMode | undefined,
+): {
+  field: Field | null;
+  drawColor: VectorLike;
+  drawMode: { mode?: DrawMode };
+} {
+  checkOpacity(opacity, who);
+  const field = isField(color) ? color : null;
+  const drawColor = useMemo(
+    () => field ? WHITE : applyOpacity(color as VectorLike, opacity),
+    [field, color, opacity],
+  ) as VectorLike;
+  return {
+    field,
+    drawColor,
+    drawMode: modeProps(mode, flatAlpha(color, !!field) * opacity),
+  };
+}
 
 /** An axis-aligned world box. */
 export interface Box {

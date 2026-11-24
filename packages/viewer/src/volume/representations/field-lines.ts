@@ -2,7 +2,7 @@ import { useDispatchObservation } from "../../internal/dispatch-observation.ts";
 // <FieldLines>: RK4 streamlines of E = −∇φ through the nearest volume,
 // integrated by a use.gpu Kernel once per volume generation and drawn with
 // LineLayer. See docs/findings/2026-09-27-efield-plan.md §5.
-import { modeProps } from "../../rendering/opacity.ts";
+import { modeProps, tint } from "../../rendering/opacity.ts";
 import {
   type LC,
   use,
@@ -235,7 +235,7 @@ export const FieldLines: ViewerComponent<FieldLinesProps> = (props) => {
         width,
         colorRange,
         stops,
-        tint: [color[0], color[1], color[2], (color[3] ?? 1) * opacity],
+        tint: tint(color, opacity),
         mode,
       }),
   }));

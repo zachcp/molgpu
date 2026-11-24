@@ -5,7 +5,7 @@ import { use, useMemo } from "@use-gpu/live";
 import { LineLayer } from "@use-gpu/workbench";
 import { useTrajectoryFrame } from "../trajectory/use-trajectory-frame.ts";
 import { type ColumnSpec, withColumns } from "../rendering/representation.ts";
-import { applyOpacity, checkOpacity, modeProps } from "../rendering/opacity.ts";
+import { useTranslucency } from "../rendering/draw-mode.ts";
 
 /** Endpoints of the 12 edges of the parallelepiped spanned by box columns. */
 export function boxEdges(box: ArrayLike<number>): Float32Array {
@@ -40,11 +40,12 @@ export const UnitCell: ViewerComponent<{
   opacity?: number;
 }> = ({ color = [1, 1, 1, 1], width = 2, opacity = 1 }) => {
   const box = useTrajectoryFrame()?.box ?? null;
-  checkOpacity(opacity, "UnitCell");
-  const lineColor = useMemo(() => applyOpacity(color, opacity), [
+  const { drawColor: lineColor, drawMode: mode } = useTranslucency(
+    "UnitCell",
     color,
     opacity,
-  ]);
+    undefined,
+  );
   const key = box ? box.join() : "";
   const specs = useMemo((): ColumnSpec[] | null =>
     box
@@ -53,10 +54,6 @@ export const UnitCell: ViewerComponent<{
       ]
       : null, [key]);
   if (!specs) return null;
-  const mode = modeProps(
-    undefined,
-    (color.length > 3 ? color[3] : 1) * opacity,
-  );
   return (withColumns(specs, (map) =>
     use(LineLayer, {
       positions: map.positions,

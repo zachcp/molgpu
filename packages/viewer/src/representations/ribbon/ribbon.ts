@@ -25,7 +25,6 @@ import { useCoordinateSnapshot } from "../../coordinates/coordinate-snapshot.ts"
 import { useAttributeSnapshot } from "../../attributes/attribute-snapshot.ts";
 import {
   type ColumnSpec,
-  isField,
   useActiveRows,
   withColumns,
 } from "../../rendering/representation.ts";
@@ -35,12 +34,7 @@ import {
   vertexAtoms,
   VertexFieldColors,
 } from "../../field-binding/vertex-field-colors.ts";
-import {
-  applyOpacity,
-  checkOpacity,
-  flatAlpha,
-  modeProps,
-} from "../../rendering/opacity.ts";
+import { useTranslucency } from "../../rendering/draw-mode.ts";
 import { withMaterial } from "../../rendering/with-material.ts";
 import {
   CopyDraws,
@@ -108,13 +102,12 @@ const RibbonResolved: ViewerComponent<
   useRepaint();
   useBindingProbe("ribbon", color, opacity);
   const who = composition === "cartoon" ? "Cartoon" : "Ribbon";
-  checkOpacity(opacity, who);
-  const field = isField(color) ? color : null;
-  const drawColor = useMemo(
-    () => field ? [1, 1, 1, 1] : applyOpacity(color as VectorLike, opacity),
-    [field, color, opacity],
+  const { field, drawColor, drawMode } = useTranslucency(
+    who,
+    color,
+    opacity,
+    mode,
   );
-  const drawMode = modeProps(mode, flatAlpha(color, !!field) * opacity);
   const { resource } = useStructure();
   const plan = useFieldPlan(field, resource, who);
   const needsAtoms = plan.attrNames.length > 0 || plan.annotation !== null;

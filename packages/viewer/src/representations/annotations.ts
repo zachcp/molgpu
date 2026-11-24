@@ -18,7 +18,8 @@ import {
   useActiveRows,
   withColumns,
 } from "../rendering/representation.ts";
-import { applyOpacity, checkOpacity, modeProps } from "../rendering/opacity.ts";
+import { applyOpacity, checkOpacity } from "../rendering/opacity.ts";
+import { useTranslucency } from "../rendering/draw-mode.ts";
 import {
   centroidOf,
   distanceBetween,
@@ -176,20 +177,17 @@ const DistanceResolved: ViewerComponent<
     : format
     ? format(dist)
     : `${dist.toFixed(2)} Å`;
-  checkOpacity(opacity, "Distance");
-  const lineColor = useMemo(() => applyOpacity(color, opacity), [
+  const { drawColor: lineColor, drawMode: lineMode } = useTranslucency(
+    "Distance",
     color,
     opacity,
-  ]);
+    undefined,
+  );
   const textColor = useMemo(() => applyOpacity(labelColor ?? color, opacity), [
     labelColor,
     color,
     opacity,
   ]);
-  const lineMode = modeProps(
-    undefined,
-    (color.length > 3 ? color[3] : 1) * opacity,
-  );
 
   // Built once per anchor pair, so style edits reuse the uploaded columns.
   const specs = useMemo((): ColumnSpec[] | null =>

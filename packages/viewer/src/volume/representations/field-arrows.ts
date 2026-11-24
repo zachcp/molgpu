@@ -3,7 +3,7 @@
 // uniforms and the live samples: no compute pass and no per-move buffer.
 // See docs/findings/2026-09-27-efield-plan.md.
 import { use, useMemo } from "@use-gpu/live";
-import { modeProps } from "../../rendering/opacity.ts";
+import { modeProps, tint } from "../../rendering/opacity.ts";
 import {
   ArrowLayer,
   useArrowSegmentsSource,
@@ -99,7 +99,8 @@ export const FieldArrows: ViewerComponent<FieldArrowsProps> = (props) => {
   const v = useShaderRef(frame.v);
   const style = useShaderRef([scale, cap, minField, width]);
   const links = [source, center, u, v, style];
-  const drawMode = modeProps(mode, (color[3] ?? 1) * opacity);
+  const tintValue = useMemo(() => tint(color, opacity), [color, opacity]);
+  const drawMode = modeProps(mode, tintValue[3]);
   const box = useMemo(() => gridBox(grid.dims, grid.transform), [grid]);
   // Arrows start on lattice points inside the grid and reach at most `cap`.
   const positions = useBoundedPositions(
@@ -108,11 +109,7 @@ export const FieldArrows: ViewerComponent<FieldArrowsProps> = (props) => {
   );
   const widths = useShader(modules.widths, links);
   const rangeRef = useShaderRef(colorRange ?? [0, 1]);
-  const tint = useMemo(
-    () => [color[0], color[1], color[2], (color[3] ?? 1) * opacity],
-    [color, opacity],
-  );
-  const tintRef = useShaderRef(tint);
+  const tintRef = useShaderRef(tintValue);
   const colors = useShader(modules.colors, [...links, rangeRef, tintRef]);
   const chunks = useMemo(() => new Array(arrows).fill(2), [arrows]);
   const segments = useArrowSegmentsSource(chunks, null, false, false, true);
