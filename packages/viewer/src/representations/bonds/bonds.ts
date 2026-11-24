@@ -35,7 +35,11 @@ import {
 import { useAttributeSources } from "../../field-binding/attribute-sources.ts";
 import { useCoordinates } from "../../coordinates/coordinates-context.ts";
 import { withInstances } from "../../rendering/instance-copies.ts";
-import { useBondPositions } from "./bond-positions.ts";
+import {
+  bondVertices,
+  useBondPositions,
+  useBondRows,
+} from "./bond-positions.ts";
 
 /** LineLayer props Bonds forwards (draw mode and any upstream flags). */
 type LineProps = Record<string, unknown>;
@@ -62,8 +66,8 @@ const sameRows = (a: Uint32Array, b: Uint32Array): boolean => {
   return true;
 };
 
-// Keep the previous row array when a topology or selection update produces the
-// same rows, so the field-colour index column does not upload again.
+// Keep the previous endpoint array when a topology or selection update produces
+// the same pairs, so the endpoint column does not upload again.
 const useStableRows = (rows: Uint32Array): Uint32Array => {
   const previous = useRef<Uint32Array | null>(null);
   if (!previous.current || !sameRows(previous.current, rows)) {
@@ -74,7 +78,6 @@ const useStableRows = (rows: Uint32Array): Uint32Array => {
 
 const line = (
   positions: ShaderSource | null,
-  segments: ShaderSource | null,
   count: number,
   width: number,
   sides: number,
@@ -84,7 +87,8 @@ const line = (
 ): LiveElement =>
   use(LineLayer, {
     positions,
-    segments,
+    // Every bond half is one two-vertex stroke.
+    segment: 1,
     count,
     width,
     join: "round",
@@ -102,6 +106,7 @@ const FieldBonds: LC<
     map: ColumnMap;
     positions: ShaderSource;
     count: number;
+    split: boolean;
     plan: FieldPlan;
     attrSources: Record<string, StorageSource>;
     attrDomains: Record<string, AttributeDomain>;
@@ -116,6 +121,7 @@ const FieldBonds: LC<
     map,
     positions,
     count,
+    split,
     plan,
     attrSources,
     attrDomains,
@@ -127,15 +133,16 @@ const FieldBonds: LC<
     ...props
   },
 ) => {
+  const rows = useBondRows(map.endpoints!, split);
   const keys = plan.attrNames.map((name) => `attr:${name}`);
   const attrs = useMemo(
     () => ({
-      ...fieldColumns(plan, attrSources, attrDomains, map.annotation, map.rows),
+      ...fieldColumns(plan, attrSources, attrDomains, map.annotation, rows),
       // A volume-sampled colour reads each vertex's own position.
       positions,
     }),
     [
-      map.rows,
+      rows,
       map.annotation,
       positions,
       plan,
@@ -147,16 +154,7 @@ const FieldBonds: LC<
     useField(field, attrs, { domain: "atom" }),
     opacity,
   );
-  return line(
-    positions,
-    map.segments,
-    count,
-    width,
-    sides,
-    shaded,
-    { colors },
-    props,
-  );
+  return line(positions, count, width, sides, shaded, { colors }, props);
 };
 
 const BondLines: LC<{
@@ -197,6 +195,7 @@ const BondLines: LC<{
       map,
       positions,
       count,
+      split,
       plan,
       attrSources,
       attrDomains,
@@ -207,16 +206,7 @@ const BondLines: LC<{
       shaded,
       ...props,
     })
-    : line(
-      positions,
-      map.segments,
-      count,
-      width,
-      sides,
-      shaded,
-      { color },
-      props,
-    );
+    : line(positions, count, width, sides, shaded, { color }, props);
 };
 
 /**
@@ -284,19 +274,18 @@ const BondsResolved: ViewerComponent<
   const inferenceRevision = data.topology.bonds.count
     ? 0
     : resource.positionsRevision;
-  // Endpoint rows depend on topology/selection, never provider coordinates.
+  // Endpoint rows depend on topology/selection, never on provider coordinates
+  // or colour: the default midpoint split is a vertex count, not a column.
   const built = useMemo(
-    () => buildBondRows(rootData, indices, endpoints, defaultColor),
+    () => buildBondRows(rootData, indices, endpoints),
     [
       resource.identity,
       resource.topologyRevision,
       inferenceRevision,
       indices,
       endpoints,
-      defaultColor,
     ],
   );
-  const rows = useStableRows(built.rows);
   const endpointRows = useStableRows(built.endpoints);
   // Full attribute columns follow topology only; selections, coordinate edits
   // and re-inferred bonds change only the row column.
@@ -307,11 +296,7 @@ const BondsResolved: ViewerComponent<
 
   const specs: ColumnSpec[] = [
     { key: "endpoints", data: endpointRows, format: "vec2<u32>" },
-    { key: "segments", data: built.segments, format: "i32" },
   ];
-  if (field) {
-    specs.push({ key: "rows", data: rows, format: "u32" });
-  }
   if (plan.annotation) specs.push(plan.annotation);
   return withColumns(
     specs,
@@ -321,7 +306,7 @@ const BondsResolved: ViewerComponent<
         use(BondLines, {
           map,
           coordinates: coordinates.source,
-          count: built.n,
+          count: built.n * bondVertices(defaultColor),
           split: defaultColor,
           field,
           plan,

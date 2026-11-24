@@ -298,29 +298,6 @@ const geometryParam = (key, upstream) =>
     );
   }, { rebuilds: true });
 
-// Bonds' default two-tone split vs an explicit colour is a geometry mode
-// (sanctioned exception in the contract table): exactly one bond-column build,
-// no topology work, and no shared Structure columns re-uploaded.
-function splitModeSwitch(s) {
-  noErrors(s);
-  assertStrictEquals(
-    s.detail["geometryBuilds:bonds:columns"],
-    1,
-    `expected one bond-column build: ${brief(s)}`,
-  );
-  assertStrictEquals(
-    s.topologyBuilds,
-    0,
-    `topology rebuilt on a colour-mode switch: ${brief(s)}`,
-  );
-  assertEquals(
-    keysOf(s, /structure:/),
-    [],
-    `shared Structure columns re-uploaded: ${brief(s)}`,
-  );
-}
-splitModeSwitch.rebuilds = true;
-
 // Explicit bond endpoint rows stay fixed on a root coordinate edit; their
 // vertex positions are read from the GPU stream. Inferred connectivity can
 // change when root StructureData positions change, but provider offsets do not
@@ -329,7 +306,6 @@ const liveBondsCoordinates = Object.assign((s) => {
   coordinatesOnly([])(s);
   assertStrictEquals(s.detail["geometryBuilds:bonds:columns"], undefined);
   assertStrictEquals(s.detail["uploadBytes:endpoints"], undefined);
-  assertStrictEquals(s.detail["uploadBytes:segments"], undefined);
 }, { rebuilds: true });
 const inferredBondsKept = Object.assign((s) => {
   noErrors(s);
@@ -338,9 +314,9 @@ const inferredBondsKept = Object.assign((s) => {
     `bond geometry not rebuilt: ${brief(s)}`,
   );
   assertEquals(
-    keysOf(s, /attr:|uploadBytes:(rows|endpoints)/),
+    keysOf(s, /attr:|uploadBytes:endpoints/),
     [],
-    `attribute or row columns re-derived for unchanged bonds: ${brief(s)}`,
+    `attribute or endpoint columns re-derived for unchanged bonds: ${brief(s)}`,
   );
 }, { rebuilds: true });
 const inferredBondsChanged = Object.assign((s) => {
@@ -350,10 +326,9 @@ const inferredBondsChanged = Object.assign((s) => {
     [],
     `attribute columns re-derived for a coordinate edit: ${brief(s)}`,
   );
-  assertStrictEquals(
-    s.detail["uploadBytes:rows"],
-    s.detail["uploadBytes:endpoints"] * 2,
-    `row and endpoint columns disagree: ${brief(s)}`,
+  assert(
+    s.detail["uploadBytes:endpoints"] > 0,
+    `changed bonds must upload their endpoint column: ${brief(s)}`,
   );
 }, { rebuilds: true });
 
@@ -466,7 +441,8 @@ const MATRIX = {
     "color default -> explicit": {
       from: { props: {} },
       to: { props: { color: RED } },
-      expect: splitModeSwitch,
+      // The midpoint split is a vertex count over the same endpoint column.
+      expect: styleOnly,
     },
     clock: {
       from: { props: { color: "field:clock" }, time: 0 },
