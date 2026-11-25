@@ -2,12 +2,12 @@
 /** @jsx LiveReact.createElement */
 import { React as LiveReact } from "@use-gpu/live";
 import type { StructureData } from "@molgpu/table";
-import { byPotential, colormap, volumeSample } from "@molgpu/fields";
+import { byElement, byPotential } from "@molgpu/fields";
 import {
+  BallAndStick,
   EField,
   FieldLines,
   Isosurface,
-  Spacefill,
   Surface,
   Volume,
   VolumeSlice,
@@ -62,12 +62,8 @@ export const volumeScene = (data: StructureData, options: SceneOptions) => {
         stops={DENSITY_STOPS}
       />
     </Volume>,
-    <Spacefill
-      scale={0.3}
-      color={colormap(volumeSample(map), [
-        [1.5, [0.25, 0.55, 0.95, 1]],
-        [max * 0.6, [0.98, 0.45, 0.25, 1]],
-      ])}
-    />,
+    // Element-coloured sticks read inside the translucent contour and stay
+    // distinct from the slice's density palette.
+    <BallAndStick ball={0.2} stick={0.14} color={byElement()} />,
   ];
 };
