@@ -56,3 +56,18 @@ deno task typecheck:site
 deno task build:site
 deno task test:site
 ```
+
+## Hidden experiments
+
+`#experiments` lists standalone sketches that are built into the site but absent
+from its public navigation. `#experiments/reveal` compares full atoms with an
+outlined cartoon under one orbit camera. Drag its vertical divider, or focus it
+and use Left/Right and Home/End. Both scenes stay mounted; only the fullscreen
+shader's split changes. This deliberately renders two views, not a cheaper
+single-pass representation.
+
+The reveal's `assets/6cun.bcif` is from <https://models.rcsb.org/6cun.bcif>
+(RCSB PDB, downloaded 2026-11-25). It contains engineered cytochrome c with HEC
+heme and the CA1 carbene intermediate, described in
+[PDB-101's Artificial Metalloenzymes](https://pdb101.rcsb.org/motm/323). Gold
+marks CA1; the experiment compares representations, not a reaction trajectory.
