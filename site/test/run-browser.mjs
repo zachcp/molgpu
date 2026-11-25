@@ -1122,6 +1122,10 @@ Deno.test("site landing page and maintained gallery routes", async () => {
         );
         assertStrictEquals(
           await page.getByLabel("Trajectory representation").inputValue(),
+          "ball-and-stick",
+          "the trajectory opens as element-coloured ball and stick",
+        );
+        await page.getByLabel("Trajectory representation").selectOption(
           "tube",
         );
         // <Ramachandran> inset: 1CRN's 44 residues with both torsions, drawn
