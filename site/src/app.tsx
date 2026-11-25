@@ -1,18 +1,28 @@
 import React, { useEffect, useState } from "react";
 import { DemosPage } from "./pages/demos.tsx";
 import { HomePage } from "./pages/home.tsx";
+import { ExperimentsPage } from "./pages/experiments.tsx";
 import { packageReadme } from "./links.ts";
 
-type Page = "home" | "demos";
+type Page = "home" | "demos" | "experiments";
 
+// Experiments are routed but deliberately absent from the navigation.
 const pageFromHash = (): Page =>
-  location.hash.startsWith("#demos") ? "demos" : "home";
+  location.hash.startsWith("#demos")
+    ? "demos"
+    : location.hash.startsWith("#experiments")
+    ? "experiments"
+    : "home";
 
 export const App = () => {
   const [page, setPage] = useState<Page>(pageFromHash);
+  const [hash, setHash] = useState(location.hash);
 
   useEffect(() => {
-    const update = () => setPage(pageFromHash());
+    const update = () => {
+      setPage(pageFromHash());
+      setHash(location.hash);
+    };
     addEventListener("hashchange", update);
     return () => removeEventListener("hashchange", update);
   }, []);
@@ -32,7 +42,13 @@ export const App = () => {
           <a href="https://github.com/zachcp/molgpu">GitHub</a>
         </nav>
       </header>
-      <main>{page === "demos" ? <DemosPage /> : <HomePage />}</main>
+      <main>
+        {page === "demos"
+          ? <DemosPage />
+          : page === "experiments"
+          ? <ExperimentsPage hash={hash} />
+          : <HomePage />}
+      </main>
       <footer>MIT licensed · WebGPU-powered molecular visualization</footer>
     </>
   );

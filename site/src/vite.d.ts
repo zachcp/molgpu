@@ -7,4 +7,5 @@ interface ImportMeta {
     pattern: string,
     options: { query: string; import: "default"; eager: true },
   ): Record<string, T>;
+  glob<T>(pattern: string): Record<string, () => Promise<T>>;
 }
