@@ -1,11 +1,12 @@
 /** @jsx LiveReact.createElement */
 /**
- * ASCII cinema. A lipase (PDB 1LBS, chain A) rotates while part of the frame
- * is rasterized into a character grid: cell luminance picks a density glyph
- * from a 5×7 bitmap font, luminance edges pick a contour glyph in the
- * gradient's direction. A slider sweeps the boundary between the character
- * grid and the smooth render, with a dithered band of interleaved cells where
- * they meet.
+ * ASCII cinema. A lipase (PDB 1LBS, chain A) turns as a cartoon coloured
+ * along its sequence, while part of the frame is rasterized into a character
+ * grid. Each cell averages the scene beneath it: its brightness picks a
+ * density glyph from a 5×7 bitmap font, sharp edges pick a contour stroke
+ * along the edge, and the glyph is inked in the cell's own colour. A slider
+ * sweeps the boundary between the character grid and the smooth render, with
+ * a dithered band where the two dissolve into each other.
  *
  * Molecular data and representations are molgpu's; the character grid is this
  * file's own full-screen WGSL pass over a built-in bitmap font.
@@ -34,11 +35,12 @@ import {
   useShaderRef,
 } from "@use-gpu/workbench";
 import { useAnimationFrame } from "@use-gpu/frame";
-import { f32, u32, wgsl } from "@use-gpu/shader/wgsl";
+import { wgsl } from "@use-gpu/shader/wgsl";
 import type { OffscreenRenderContext } from "@use-gpu/core";
 import { coordinateBounds, type StructureData } from "@molgpu/table";
-import { chain } from "@molgpu/select";
-import { Structure, Tube } from "@molgpu/viewer";
+import { chain, resolve } from "@molgpu/select";
+import { bySeq } from "@molgpu/fields";
+import { Cartoon, Structure } from "@molgpu/viewer";
 import lipaseUrl from "../../../packages/io/test/fixtures/1lbs.bcif?url";
 import { loadStructure } from "../demos/data.ts";
 import { SharedWebGPU } from "../demos/viewer.tsx";
@@ -46,19 +48,8 @@ import type { Experiment } from "../pages/experiments.tsx";
 
 type Vec2 = [number, number];
 type Vec3 = [number, number, number];
-type Rgba = [number, number, number, number];
 
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
-const mixRgb = (
-  a: Rgba,
-  b: Rgba,
-  t: number,
-): Rgba => [
-  a[0] + (b[0] - a[0]) * t,
-  a[1] + (b[1] - a[1]) * t,
-  a[2] + (b[2] - a[2]) * t,
-  1,
-];
 
 // ── Bitmap font ─────────────────────────────────────────────────────────────
 
@@ -66,31 +57,36 @@ const mixRgb = (
  * density ramp, 9–12 the contour strokes. */
 const GLYPHS: number[][] = [
   [0, 0, 0, 0, 0, 0, 0],
-  [0, 0, 0, 0, 0, 0, 0b01000], // .
-  [0, 0, 0, 0b00100, 0, 0, 0b00100], // :
+  [0, 0, 0, 0, 0, 0, 0b00100], // .
+  [0, 0, 0b00100, 0, 0, 0b00100, 0], // :
   [0, 0, 0, 0b01110, 0, 0, 0], // -
-  [0, 0, 0b01110, 0, 0b01110, 0, 0], // =
-  [0, 0, 0b00100, 0b00100, 0b11111, 0b00100, 0b00100], // +
-  [0, 0b01010, 0b00100, 0b11111, 0b00100, 0b01010, 0], // *
+  [0, 0, 0b11111, 0, 0b11111, 0, 0], // =
+  [0, 0b00100, 0b00100, 0b11111, 0b00100, 0b00100, 0], // +
+  [0, 0b10101, 0b01110, 0b11111, 0b01110, 0b10101, 0], // *
   [0b01010, 0b01010, 0b11111, 0b01010, 0b11111, 0b01010, 0b01010], // #
-  [0b11000, 0b11001, 0b00010, 0b00100, 0b01000, 0b10011, 0b00011], // %
-  [0b01110, 0b10001, 0b10111, 0b10101, 0b10111, 0b10000, 0b01110], // @
+  [0b01110, 0b10001, 0b10111, 0b10101, 0b10111, 0b10000, 0b01111], // @
   [0b00100, 0b00100, 0b00100, 0b00100, 0b00100, 0b00100, 0b00100], // |
-  [0b00001, 0b00010, 0b00100, 0b00100, 0b01000, 0b10000, 0b10000], // /
-  [0b10000, 0b01000, 0b00100, 0b00100, 0b00010, 0b00001, 0b00001], // \
+  [0b00001, 0b00010, 0b00010, 0b00100, 0b01000, 0b01000, 0b10000], // /
+  [0, 0, 0, 0b11111, 0, 0, 0], // ─
+  [0b10000, 0b01000, 0b01000, 0b00100, 0b00010, 0b00010, 0b00001], // \
 ];
+const RAMP = 9; // glyphs 0–8 are the density ramp
 
 // Emitted verbatim into the shader below; `wgsl` string-joins its tokens.
 const FONT = `
 var<private> GLYPHS: array<array<u32, 7>, ${GLYPHS.length}> = array(
 ${
-  GLYPHS.map((rows) => `  array(${rows.map((bits) => `${bits}u`).join(", ")}),`)
-    .join("\n")
+  GLYPHS.map((rows) => `  array(${rows.map((b) => `${b}u`).join(", ")}),`).join(
+    "\n",
+  )
 }
 );
 `;
 
-const RAMP = 9;
+/** Scene clear colour, linear. The character grid's paper is the same, so
+ * the two halves share one background and the dither band is invisible
+ * where there is no molecule. */
+const CLEAR = [0.006, 0.008, 0.016];
 
 const ASCII = wgsl`
 ${FONT}
@@ -98,88 +94,98 @@ ${FONT}
 @link fn getSplit() -> f32;
 @link fn getCells() -> vec2<f32>;
 
-// Tone-mapped luminance of one scene sample.
-const EXPOSURE = 1.6;
-fn light(uv: vec2<f32>) -> f32 {
-  let c = getScene(uv).rgb;
-  return 1.0 - exp(-max(c.r, max(c.g, c.b)) * EXPOSURE);
+const BG = vec3<f32>(${CLEAR.map((c) => c.toFixed(4)).join(", ")});
+
+// Vignette, ACES tone map and sRGB encode, shared by both halves.
+fn tone(c: vec3<f32>, uv: vec2<f32>) -> vec3<f32> {
+  let p = uv - vec2<f32>(0.5);
+  var x = c * (1.0 - 0.8 * dot(p, p));
+  x = clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14), vec3<f32>(0.0), vec3<f32>(1.0));
+  return select(1.055 * pow(x, vec3<f32>(1.0 / 2.4)) - 0.055, x * 12.92, x <= vec3<f32>(0.0031308));
+}
+
+// Coverage-weighted brightness of a colour above the background.
+fn ink(c: vec3<f32>) -> f32 {
+  let d = max(c - BG, vec3<f32>(0.0));
+  return 1.0 - exp(-max(d.r, max(d.g, d.b)) * 2.2);
+}
+
+// The scene averaged over one cell (4 taps), so thin strands still register.
+fn cellColor(cell: vec2<f32>, step: vec2<f32>) -> vec3<f32> {
+  let q = step * 0.25;
+  return (getScene(cell + vec2<f32>(-q.x, -q.y)).rgb + getScene(cell + vec2<f32>(q.x, -q.y)).rgb +
+          getScene(cell + vec2<f32>(-q.x, q.y)).rgb + getScene(cell + q).rgb) * 0.25;
 }
 
 @export fn getAscii(uv: vec2<f32>) -> vec4<f32> {
-  let cells = getCells();
-  let step = vec2<f32>(1.0) / cells;
+  let step = vec2<f32>(1.0) / getCells();
   let grid = floor(uv / step);
   let cell = (grid + vec2<f32>(0.5)) * step;
+  let c = cellColor(cell, step);
+  let l = ink(c);
 
-  // Luminance gradient across neighbouring cells: a contour glyph in the
-  // gradient's direction, or a density glyph from the cell's own light.
-  let gx = light(cell + vec2<f32>(step.x, 0.0)) - light(cell - vec2<f32>(step.x, 0.0));
-  let gy = light(cell + vec2<f32>(0.0, step.y)) - light(cell - vec2<f32>(0.0, step.y));
-  var glyph = clamp(u32(pow(light(cell), 0.65) * ${f32(RAMP)}), 0u, ${
-  u32(RAMP - 1)
-});
-  if (length(vec2<f32>(gx, gy)) > 0.4) {
-    // Quadrants of the gradient angle: -, /, |, \.
-    let q = (u32(round(atan2(gy, gx) * 4.0 / 3.14159265)) + 4) % 4;
-    glyph = select(select(select(3u, 11u, q == 1u), 10u, q == 2u), 12u, q == 3u);
+  // Density glyph from brightness; on a strong edge, a stroke along it.
+  var glyph = min(u32(pow(l, 0.8) * ${String(RAMP)}.0), ${String(RAMP - 1)}u);
+  let gx = ink(cellColor(cell + vec2<f32>(step.x, 0.0), step)) - ink(cellColor(cell - vec2<f32>(step.x, 0.0), step));
+  let gy = ink(cellColor(cell + vec2<f32>(0.0, step.y), step)) - ink(cellColor(cell - vec2<f32>(0.0, step.y), step));
+  if (l > 0.08 && length(vec2<f32>(gx, gy)) > 0.7) {
+    // The edge runs across the gradient; fold its angle into 4 directions.
+    let a = (atan2(gy, gx) + 3.14159265) * 4.0 / 3.14159265;
+    let q = u32(round(a)) % 4u;
+    glyph = 9u + q;
   }
 
-  // Sample the 5×7 bitmap inside the cell; lit phosphor on near-black.
+  // The bitmap sits in a 6×9 box per cell, leaving a column and row gap.
   let f = fract(uv / step);
-  let row = u32((1.0 - f.y) * 7.0);
-  let bit = (GLYPHS[glyph][row] >> (4 - u32(f.x * 5.0))) & 1u;
-  let l = pow(light(cell), 0.65);
-  let phosphor = vec3<f32>(0.25, 1.0, 0.45) * (0.3 + 0.7 * l);
-  var ascii = mix(vec3<f32>(0.002, 0.006, 0.003), phosphor, f32(bit));
-  let alo = ascii * 12.92;
-  let ahi = 1.055 * pow(ascii, vec3<f32>(1.0 / 2.4)) - 0.055;
-  ascii = select(ahi, alo, ascii <= vec3<f32>(0.0031308));
-
-  // Right of the split the smooth render stays; a dithered band of columns
-  // interleaves the two where they meet.
-  let split = getSplit();
-  var left = uv.x < split;
-  if (abs(uv.x - split) < 6.0 * step.x) {
-    left = (grid.x + grid.y) % 2.0 < 1.0;
+  let px = u32(f.x * 6.0);
+  let py = i32((1.0 - f.y) * 9.0) - 1;
+  var bit = 0u;
+  if (px < 5u && py >= 0 && py < 7) {
+    bit = (GLYPHS[glyph][u32(py)] >> (4u - px)) & 1u;
   }
+  // Ink in the cell's own hue, lifted so dim strands stay legible.
+  let hue = c / max(max(c.r, max(c.g, c.b)), 1e-4);
+  let lit = hue * (0.6 + 1.6 * l);
+  let ascii = tone(mix(BG, lit, f32(bit)), uv);
+  let soft = tone(getScene(uv).rgb, uv);
 
-  let p = uv - vec2<f32>(0.5);
-  var graded = getScene(uv).rgb * (1.0 - 0.85 * dot(p, p));
-  graded = clamp((graded * (2.51 * graded + 0.03)) / (graded * (2.43 * graded + 0.59) + 0.14), vec3<f32>(0.0), vec3<f32>(1.0));
-  let lo = graded * 12.92;
-  let hi = 1.055 * pow(graded, vec3<f32>(1.0 / 2.4)) - 0.055;
-  graded = select(hi, lo, graded <= vec3<f32>(0.0031308));
-  return vec4<f32>(select(graded, ascii, left), 1.0);
+  // Left of the split is characters; across a band either side of it,
+  // cells dissolve between the two on a per-cell random threshold.
+  let w = 8.0 * step.x;
+  let t = clamp((uv.x - getSplit()) / w * 0.5 + 0.5, 0.0, 1.0);
+  let r = fract(sin(dot(grid, vec2<f32>(12.9898, 78.233))) * 43758.5453);
+  return vec4<f32>(select(soft, ascii, r >= t), 1.0);
 }
 `;
 
-const LINEAR: GPUSamplerDescriptor = {
-  minFilter: "linear",
-  magFilter: "linear",
-  addressModeU: "clamp-to-edge",
-  addressModeV: "clamp-to-edge",
-};
 const HDR = {
   format: "rgba16float" as GPUTextureFormat,
   colorSpace: "linear" as const,
-  sampler: LINEAR,
+  sampler: {
+    minFilter: "linear",
+    magFilter: "linear",
+    addressModeU: "clamp-to-edge",
+    addressModeV: "clamp-to-edge",
+  } as GPUSamplerDescriptor,
 };
-const SCENE_CLEAR = [0.004, 0.006, 0.008, 1];
 
 /** Renders `children` into an HDR target, then the character grid onto the
- * canvas. `split` moves live through the shared state ref. */
+ * canvas. */
 const AsciiCinema: LC<{
   scene: OffscreenRenderContext;
   split: number;
   children?: LiveElement;
 }> = ({ scene, split, children }) => {
   const cells = useMemo<Vec2>(() => [
-    Math.max(8, Math.round(scene.width / 10)),
-    Math.max(6, Math.round(scene.height / 18)),
+    Math.max(8, Math.round(scene.width / 9)),
+    Math.max(6, Math.round(scene.height / 15)),
   ], [scene.width, scene.height]);
   const cellsRef = useShaderRef(cells);
   const splitRef = useShaderRef(split);
-  const shader = getShader(ASCII, [scene.source, splitRef, cellsRef]);
+  const shader = useMemo(
+    () => getShader(ASCII, [scene.source, splitRef, cellsRef]),
+    [scene.source],
+  );
   return [
     use(RenderToTexture, { target: scene, children }),
     use(Pass, {
@@ -191,8 +197,14 @@ const AsciiCinema: LC<{
 
 // ── Scene ───────────────────────────────────────────────────────────────────
 
-const GROWN: Rgba = [1.0, 1.9, 1.3, 1];
-const PHOSPHOR: Rgba = [0.5, 2.0, 0.9, 1];
+/** N to C terminus: indigo, violet, rose, coral, amber. */
+const SUNSET = [
+  [0, [0.22, 0.32, 0.95, 1]],
+  [0.3, [0.58, 0.3, 0.92, 1]],
+  [0.55, [0.95, 0.32, 0.55, 1]],
+  [0.8, [1, 0.55, 0.28, 1]],
+  [1, [1, 0.82, 0.36, 1]],
+] as const;
 
 /** `frozen` holds time (screenshots); otherwise t runs from `origin`. */
 type Clock = {
@@ -208,44 +220,56 @@ const Stage: LC<{ host: string; data: StructureData; clock: Clock }> = (
   useAnimationFrame();
   const t = clock.frozen ??
     (performance.now() - clock.origin) / 1000 * clock.speed;
-  const center = useMemo(
-    () => coordinateBounds(data)!.center as Vec3,
-    [data],
-  );
+  // Chain A alone: its bounds centre the camera, its residues span the
+  // palette (1LBS has six copies; the whole entry would off-centre it).
+  const { focus, center, color } = useMemo(() => {
+    const focus = resolve(chain("A"), data);
+    // Polymer rows only: chain A's waters sit far past its last residue.
+    const { residue } = data.topology.atoms;
+    const { polymer } = data.topology.residues;
+    const rows = Array.from(focus.indices, (i) => residue[i])
+      .filter((row) => polymer[row] !== "other");
+    return {
+      focus,
+      center: coordinateBounds(data, focus.indices)!.center as Vec3,
+      color: bySeq({
+        domain: [Math.min(...rows), Math.max(...rows)],
+        stops: SUNSET,
+      }),
+    };
+  }, [data]);
   useReadout(host, clock.split);
-  const phosphor = mixRgb(GROWN, PHOSPHOR, 0.5 + 0.5 * Math.sin(t * 0.7));
   return gather(
     [use(RenderTarget, {
       ...HDR,
       label: "ascii:scene",
-      backgroundColor: SCENE_CLEAR,
+      backgroundColor: [...CLEAR, 1],
     })],
     (targets: OffscreenRenderContext[]) => (
       <AsciiCinema scene={targets[0]} split={clock.split}>
         <OrbitCamera
           target={center}
-          radius={64 + 6 * Math.sin(t * 0.2)}
-          bearing={0.5 + t * 0.16}
-          pitch={0.25 + 0.08 * Math.sin(t * 0.31)}
+          radius={62 + 5 * Math.sin(t * 0.2)}
+          bearing={0.5 + t * 0.25}
+          pitch={0.3 + 0.12 * Math.sin(t * 0.31)}
         >
           <Pass lights>
-            <AmbientLight color={[0.5, 0.7, 1]} intensity={0.55} />
+            <AmbientLight color={[0.55, 0.6, 1]} intensity={0.35} />
             <DirectionalLight
-              direction={[-0.6, -0.5, -1]}
-              color={[1, 0.95, 0.85]}
-              intensity={2.8}
+              direction={[-0.5, -0.6, -1]}
+              color={[1, 0.95, 0.88]}
+              intensity={2.2}
             />
             <DirectionalLight
-              direction={[0.7, 0.4, 1]}
-              color={[0.4, 1, 0.7]}
-              intensity={1.1}
+              direction={[0.8, 0.3, 0.6]}
+              color={[0.5, 0.7, 1]}
+              intensity={0.8}
             />
             <Structure data={data}>
-              <Tube
-                select={chain("A")}
-                radius={0.5}
-                color={phosphor}
-                material={{ type: "pbr", roughness: 0.4 }}
+              <Cartoon
+                select={focus}
+                color={color}
+                material={{ type: "pbr", roughness: 0.45 }}
               />
             </Structure>
           </Pass>
@@ -262,11 +286,6 @@ const useReadout = (host: string, split: number) =>
     if (!element) return;
     element.dataset.webgpu = "ready";
     element.dataset.split = String(Math.round(split * 100));
-    element.dataset.mode = split <= 0
-      ? "render"
-      : split >= 1
-      ? "ascii"
-      : "split";
   }, [host, split]);
 
 const Root: LC<{ host: string; data: StructureData; clock: Clock }> = (props) =>
@@ -289,11 +308,11 @@ const Root: LC<{ host: string; data: StructureData; clock: Clock }> = (props) =>
 export const experiment: Experiment = {
   title: "ASCII cinema",
   summary:
-    "A rotating lipase rasterized into chunky terminal characters on the left, its smooth render on the right, and a dithered band where they meet.",
+    "A turning lipase cartoon set in coloured terminal characters on the left, its smooth render on the right, dissolving into each other where they meet.",
   mount(element, params) {
     const host = `#${element.id}`;
-    // ?split=<0..100> sets the boundary, ?speed=<x> scales rotation and
-    // ?freeze holds it: for tests and screenshots.
+    // ?split=<0..100> sets the boundary, ?t=<s> the start time, ?speed=<x>
+    // scales rotation and ?freeze holds it: for tests and screenshots.
     const start = Number(params.get("t") ?? 0) || 0;
     const clock: Clock = {
       origin: performance.now() - start * 1000,
