@@ -1425,6 +1425,125 @@ Deno.test("site landing page and maintained gallery routes", async () => {
       await source.locator("pre").isVisible(),
       "source opens from the keyboard",
     );
+    route = "registered representation reveal";
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto("http://127.0.0.1:5190/#experiments/reveal");
+    await page.waitForSelector('#experiment-canvas[data-webgpu="ready"]');
+    // Sample the actual canvas (not the divider overlay). Endpoint renders
+    // independently define the expected pixels on each side of the split.
+    const sampleReveal = () =>
+      page.evaluate(async () => {
+        const canvas = document.querySelector("#experiment-canvas canvas");
+        const bitmap = await createImageBitmap(
+          await (await fetch(canvas.toDataURL())).blob(),
+        );
+        const copy = new OffscreenCanvas(100, 60);
+        const context = copy.getContext("2d");
+        context.drawImage(bitmap, 0, 0, 100, 60);
+        bitmap.close();
+        return Array.from(context.getImageData(0, 0, 100, 60).data);
+      });
+    const reveal = page.getByRole("slider", { name: "Representation reveal" });
+    await reveal.focus();
+    // Poll for molecular pixels: ready means mounted, not compiled shaders.
+    let visible = false;
+    for (let i = 0; i < 90 && !visible; i++) {
+      visible = (await sampleReveal()).some((v, i) => i % 4 !== 3 && v > 100);
+      if (!visible) await page.waitForTimeout(1000);
+    }
+    assert(visible, "reveal renders a molecule");
+    await reveal.press("End");
+    await page.waitForTimeout(500);
+    const atoms = await sampleReveal();
+    await reveal.press("Home");
+    await page.waitForTimeout(500);
+    const cartoon = await sampleReveal();
+    assert(
+      atoms.some((v, i) => Math.abs(v - cartoon[i]) > 30),
+      "the two styles differ",
+    );
+    await page.evaluate(async (url) => {
+      const counters = await import(url);
+      counters.enableInstrumentation();
+      counters.resetCounters();
+      globalThis.__revealCounters = counters;
+    }, `/@fs${instrumentationPath}`);
+    for (let i = 0; i < 17; i++) await reveal.press("ArrowRight");
+    assertEquals(await reveal.getAttribute("aria-valuenow"), "34");
+    await page.waitForTimeout(500);
+    const mixed = await sampleReveal();
+    let wrong = 0;
+    for (let i = 0; i < mixed.length; i++) {
+      const x = Math.floor(i / 4) % 100;
+      if (x >= 32 && x <= 36) continue; // Ignore resampling at the boundary.
+      const expected = x < 34 ? atoms[i] : cartoon[i];
+      if (Math.abs(mixed[i] - expected) > 2) wrong++;
+    }
+    assertEquals(
+      wrong,
+      0,
+      "split pixels match the registered full-frame views",
+    );
+    const handleBox = await reveal.boundingBox();
+    const stageBox = await page.locator("#experiment-canvas").boundingBox();
+    await page.mouse.move(handleBox.x + handleBox.width / 2, handleBox.y + 70);
+    await page.mouse.down();
+    await page.mouse.move(
+      stageBox.x + stageBox.width * 0.62,
+      handleBox.y + 70,
+      {
+        steps: 3,
+      },
+    );
+    await page.mouse.up();
+    assertAlmostEquals(
+      Number(await reveal.getAttribute("aria-valuenow")),
+      62,
+      0.1,
+    );
+    const revealWork = await page.evaluate(() => {
+      const counters = globalThis.__revealCounters;
+      const result = counters.snapshotCounters();
+      counters.disableInstrumentation();
+      return result;
+    });
+    assertEquals(
+      revealWork.geometryBuilds,
+      0,
+      "divider does not rebuild geometry",
+    );
+    assertEquals(
+      revealWork.uploadBytes,
+      0,
+      "divider does not upload molecular data",
+    );
+    const beforeOrbit = await sampleReveal();
+    await page.mouse.move(stageBox.x + stageBox.width * 0.8, stageBox.y + 200);
+    await page.mouse.down();
+    await page.mouse.move(
+      stageBox.x + stageBox.width * 0.95,
+      stageBox.y + 240,
+      {
+        steps: 3,
+      },
+    );
+    await page.mouse.up();
+    await page.waitForTimeout(500);
+    const afterOrbit = await sampleReveal();
+    assert(
+      beforeOrbit.some((v, i) => Math.abs(v - afterOrbit[i]) > 30),
+      "canvas drag orbits the shared camera",
+    );
+    await page.setViewportSize({ width: 390, height: 844 });
+    assert(
+      await page.evaluate(() =>
+        document.documentElement.scrollWidth <= innerWidth
+      ),
+      "reveal stays within a narrow viewport",
+    );
+    await page.getByRole("link", { name: "Experiments", exact: true }).click();
+    await page.waitForSelector(".experiment-list");
+    assertEquals(await page.locator("#experiment-canvas canvas").count(), 0);
     assertEquals(errors, [], "page has no JavaScript errors");
   } catch (error) {
     throw new Error(`site test failed at ${route}: ${error.message}`, {
