@@ -148,7 +148,7 @@ const Filter = (
   });
 
 /** Renders `children` into an HDR target, blooms what is brighter than 1. */
-const Bloom: LC<{ strength: number; children?: LiveElement }> = (
+export const Bloom: LC<{ strength: number; children?: LiveElement }> = (
   { strength, children },
 ) =>
   gather(

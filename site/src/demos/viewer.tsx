@@ -101,7 +101,7 @@ const ORBIT_BINDINGS: ActionMap = {
  * owns only bearing, pitch and a zoom factor; `radius` and `target` (which a
  * camera curve may move every frame) are applied here.
  */
-const OrbitControls = (
+export const OrbitControls = (
   { host, bearing, pitch, radius, target, children }: {
     host: string;
     bearing: number;
