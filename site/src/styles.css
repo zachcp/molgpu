@@ -580,3 +580,17 @@ footer {
   font: inherit;
   cursor: pointer;
 }
+.experiment-panel {
+  position: absolute;
+  z-index: 1;
+  top: 1rem;
+  left: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: .3rem;
+  padding: .6rem .8rem;
+  border-radius: 10px;
+  background: #050a16cc;
+  color: #e6edff;
+  font-size: .9rem;
+}
