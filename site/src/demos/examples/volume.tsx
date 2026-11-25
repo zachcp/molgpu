@@ -1,7 +1,7 @@
 // deno-lint-ignore-file jsx-key
 /** @jsx LiveReact.createElement */
 import { React as LiveReact } from "@use-gpu/live";
-import type { StructureData } from "@molgpu/table";
+import { coordinateBounds, type StructureData } from "@molgpu/table";
 import { byElement, byPotential } from "@molgpu/fields";
 import {
   BallAndStick,
@@ -26,22 +26,30 @@ const DENSITY_STOPS: ReadonlyArray<readonly [number, Rgba]> = [
 /** Volumes: an uploaded density map, or a potential computed from charges. */
 export const volumeScene = (data: StructureData, options: SceneOptions) => {
   if (options.volumeMode === "potential") {
-    // Coulomb potential (ε = 4r, kT/e) of the PQR charges on a chosen grid,
-    // read 1.4 Å off the surface; field lines trace E between the charges.
+    // Coulomb potential (ε = 4r, kT/e) of the atoms' partial charges. Field
+    // lines trace E and brighten from blue to yellow where it is strongest;
+    // a faint potential-coloured surface shows which side is + or −.
+    // Grid and seed spacing grow with the structure beyond crambin's size,
+    // so a large protein gets about as many samples and lines as a small one.
+    const bounds = coordinateBounds(data);
+    const extent = bounds
+      ? Math.max(...bounds.max.map((v, axis) => v - bounds.min[axis]))
+      : 0;
+    const scale = Math.max(1, extent / 32);
     return (
-      <EField spacing={options.efieldSpacing} padding={14}>
-        <Surface
-          color={byPotential({ range: 5 })}
-          opacity={0.85}
-          mode="oit"
-        />
+      <EField spacing={options.efieldSpacing * scale} padding={14}>
         <FieldLines
-          seeds={{ spacing: options.seedSpacing }}
+          seeds={{ spacing: options.seedSpacing * scale }}
           step={0.35}
           steps={Math.ceil(options.lineDistance / 0.35)}
           minField={0.025}
-          color={[1, 1, 1, 0.8]}
-          width={1.5}
+          colorRange={[0.05, 1]}
+          width={2}
+        />
+        <Surface
+          color={byPotential({ range: 5 })}
+          opacity={0.3}
+          mode="oit"
         />
       </EField>
     );

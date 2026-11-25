@@ -395,20 +395,14 @@ export const DemoControls = ({ id, settings: s, structure, onChange: change }: {
           <Choice
             label="Volume"
             name="Volume source"
-            value={structure.charges ? s.volumeMode : "density"}
+            value={s.volumeMode}
             options={[
               ["density", "Atom density map"],
-              [
-                "potential",
-                `Electrostatic potential${
-                  structure.charges ? "" : " (1CRN only)"
-                }`,
-                !structure.charges,
-              ],
+              ["potential", "Electric field"],
             ]}
             onChange={(volumeMode) => change({ volumeMode })}
           />
-          {(!structure.charges || s.volumeMode === "density")
+          {s.volumeMode === "density"
             ? (
               <>
                 <Slider

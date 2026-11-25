@@ -14,6 +14,7 @@ import {
   densityMapFor,
   loadChargedCrambin,
   loadStructure,
+  withTemplateCharges,
 } from "../demos/data.ts";
 import {
   demoById,
@@ -176,7 +177,7 @@ export const DemosPage = () => {
     !structure.trajectory && settings.motionMode === "trajectory"
       ? "wobble"
       : settings.motionMode;
-  const effectiveVolume = structure.charges ? settings.volumeMode : "density";
+  const effectiveVolume = settings.volumeMode;
   const [picks, setPicks] = useState<readonly number[]>([]);
   const [readout, setReadout] = useState<readonly string[]>([]);
   const onPick = useCallback(
@@ -266,9 +267,13 @@ export const DemosPage = () => {
           STRUCTURE_URLS[structure.id],
           structure.title,
         );
+        // Shipped PQR charges where they exist; the volume demo's field
+        // falls back to residue-template charges for every other structure.
         const data =
           structure.charges && (demo.id === "select" || demo.id === "volume")
             ? await loadChargedCrambin(loaded, chargesUrl)
+            : demo.id === "volume"
+            ? withTemplateCharges(loaded)
             : loaded;
         if (cancelled) return;
         const host = document.querySelector<HTMLElement>("#molecule-canvas");

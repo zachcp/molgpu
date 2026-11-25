@@ -133,7 +133,7 @@ export const demos: readonly DemoDefinition[] = [
     id: "volume",
     title: "Volumes",
     summary:
-      "Contour a Gaussian density map with a scrubbable slice, or compute the Coulomb potential of 1CRN's shipped charges and trace its field lines.",
+      "Contour a Gaussian density map with a scrubbable slice, or compute the electric field of the protein's charges and trace its field lines, coloured by strength.",
     fixture: "1crn",
     assertion:
       "volumes are uploaded or computed once and shared by isosurface, slice, surface colour and field lines",
