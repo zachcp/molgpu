@@ -3,7 +3,9 @@ import {
   createVolume,
   type StructureData,
   type VolumeData,
+  withAttributes,
 } from "@molgpu/table";
+import { templateCharges } from "@molgpu/dynamics";
 import { applyPqr, structureFromBcif } from "@molgpu/io";
 
 export const cameraFor = (data: StructureData, scale = 1.7) => {
@@ -59,6 +61,29 @@ export const loadChargedCrambin = (
     return applyPqr(data, await response.text()).data;
   });
   return charged;
+};
+
+const templated = new WeakMap<StructureData, StructureData>();
+
+/**
+ * AMBER/PDB2PQR residue-template charges for proteins, nucleic acids, water
+ * and monatomic ions. Ligands and other het groups stay uncharged (0 e), so
+ * the field is the polymer's own.
+ */
+export const withTemplateCharges = (data: StructureData): StructureData => {
+  let hit = templated.get(data);
+  if (!hit) {
+    hit = withAttributes(data, {
+      partialCharge: {
+        domain: "atom",
+        kind: "scalar",
+        values: templateCharges(data).values,
+        provenance: "template:amber-pdb2pqr",
+      },
+    });
+    templated.set(data, hit);
+  }
+  return hit;
 };
 
 const densityMaps = new WeakMap<StructureData, VolumeData>();
