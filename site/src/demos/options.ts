@@ -94,7 +94,7 @@ export const defaultSettings = (preset?: DemoPreset): DemoSettings => ({
   selectionMode: "sulfur",
   fieldMode: "element",
   motionMode: "trajectory",
-  trajectoryMode: "tube",
+  trajectoryMode: "ball-and-stick",
   ramachandran: true,
   volumeMode: "density",
   efieldSpacing: 1,
