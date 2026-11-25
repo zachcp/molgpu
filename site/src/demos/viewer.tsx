@@ -264,8 +264,8 @@ const pageDevice = (): Promise<GPUDevice> =>
     throw error;
   });
 
-/** <WebGPU> over the page's shared device: fresh roots, one device. */
-const SharedWebGPU = (
+/** <WebGPU> over the page's shared device: fresh roots, one device. Experiments reuse it. */
+export const SharedWebGPU = (
   { fallback, children }: {
     fallback: (error: unknown) => LiveElement;
     children: LiveElement;
