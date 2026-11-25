@@ -18,14 +18,13 @@ export const ThrottledReadback: LC<{
   /** The source holds this token's generation; retain scheduling while pending. */
   ready?: boolean;
   maxHz: number;
-  onPause: boolean;
   label: string;
   publish: (data: Float32Array, token: ReadbackToken) => boolean;
   fail?: (error: unknown, token: ReadbackToken) => void;
-}> = ({ token, ready = true, maxHz, onPause, label, publish, fail }) => {
+}> = ({ token, ready = true, maxHz, label, publish, fail }) => {
   const device = useDeviceContext();
-  const latest = useRef({ token, ready, publish, fail, maxHz, onPause });
-  latest.current = { token, ready, publish, fail, maxHz, onPause };
+  const latest = useRef({ token, ready, publish, fail, maxHz });
+  latest.current = { token, ready, publish, fail, maxHz };
   const inFlight = useRef(false);
   const mapping = useRef<GPUBuffer | null>(null);
   const retired = useRef(new Set<GPUBuffer>());
@@ -130,7 +129,6 @@ export const ThrottledReadback: LC<{
     token.generation,
     ready,
     maxHz,
-    onPause,
   ]);
   return null;
 };

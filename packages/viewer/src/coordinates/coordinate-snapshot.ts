@@ -33,7 +33,7 @@ export interface CoordinateSnapshot {
 interface SnapshotContextValue {
   readonly token?: ReadbackToken;
   readonly snapshot: CoordinateSnapshot | null;
-  readonly subscribe: (maxHz: number, onPause: boolean) => () => void;
+  readonly subscribe: (maxHz: number) => () => void;
 }
 
 export const CoordinateSnapshotContext: LiveContext<
@@ -80,7 +80,6 @@ export function useCoordinateSnapshot(
     throw new Error("useCoordinateSnapshot() requires a <Structure> ancestor");
   }
   const maxHz = options.maxHz ?? 4;
-  const onPause = options.onPause ?? true;
   const enabled = options.enabled ?? true;
   if (!Number.isFinite(maxHz) || maxHz <= 0) {
     throw new TypeError(
@@ -88,14 +87,13 @@ export function useCoordinateSnapshot(
     );
   }
   useResource((dispose) => {
-    if (enabled) dispose(context.subscribe(maxHz, onPause));
-  }, [context.subscribe, maxHz, onPause, enabled]);
+    if (enabled) dispose(context.subscribe(maxHz));
+  }, [context.subscribe, maxHz, enabled]);
   return enabled ? context.snapshot : null;
 }
 
 interface Request {
   maxHz: number;
-  onPause: boolean;
 }
 
 /** One demand-driven readback shared by CPU consumers below a provider. */
@@ -123,9 +121,9 @@ export const CoordinateSnapshotBoundary: LC<{
   };
   const latest = useRef(token);
   latest.current = token;
-  const subscribe = useMemo(() => (maxHz: number, onPause: boolean) => {
+  const subscribe = useMemo(() => (maxHz: number) => {
     const id = ++nextId.current;
-    setRequests((previous) => new Map(previous).set(id, { maxHz, onPause }));
+    setRequests((previous) => new Map(previous).set(id, { maxHz }));
     return () => {
       setRequests((previous) => {
         const next = new Map(previous);
@@ -182,14 +180,12 @@ export const CoordinateSnapshotBoundary: LC<{
     return true;
   };
   const maxHz = Math.max(...demand.map((request) => request.maxHz));
-  const onPause = demand.some((request) => request.onPause);
   return provide(CoordinateSnapshotContext, context, [
     demand.length
       ? use(ThrottledReadback, {
         token,
         ready: current,
         maxHz,
-        onPause,
         label: "coords:snapshot",
         publish,
       })

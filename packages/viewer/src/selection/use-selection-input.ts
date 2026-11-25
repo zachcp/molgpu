@@ -52,7 +52,7 @@ export function useSelectionInput(
   const snapshot = useCoordinateSnapshot({ enabled: positions });
   useResource((dispose) => {
     const unsubscribe = snapshots.flatMap((context) =>
-      context ? [context.subscribe(4, true)] : []
+      context ? [context.subscribe(4)] : []
     );
     dispose(() => {
       for (const release of unsubscribe) release();

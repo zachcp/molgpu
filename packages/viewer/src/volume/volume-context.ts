@@ -59,13 +59,12 @@ export function useVolumeSnapshot(
 ): VolumeData | null {
   const context = useVolume();
   const maxHz = options.maxHz ?? 4;
-  const onPause = options.onPause ?? true;
   if (!Number.isFinite(maxHz) || maxHz <= 0) {
     throw new TypeError("useVolumeSnapshot maxHz must be positive and finite");
   }
   useResource((dispose) => {
-    dispose(context.subscribe(maxHz, onPause));
-  }, [context.subscribe, maxHz, onPause]);
+    dispose(context.subscribe(maxHz, true));
+  }, [context.subscribe, maxHz]);
   return context.snapshot;
 }
 

@@ -8,12 +8,12 @@ import type { FrameSource, TrajectoryFrame } from "@molgpu/table";
 import {
   framePair,
   FrameScheduler,
-  interpolatePositions,
   prefetchFrames,
   resolveDisplay,
   SlotTable,
   TrajectoryImageBoxLimitError,
 } from "../src/trajectory/frame-window.ts";
+import { interpolatePositions } from "./interpolate-oracle.ts";
 import { FrameCache } from "../src/trajectory/frame-cache.ts";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));

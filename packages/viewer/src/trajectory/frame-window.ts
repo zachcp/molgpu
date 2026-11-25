@@ -2,7 +2,7 @@
 // what to show while they load, which GPU slot a frame goes to, and a CPU
 // reference for the interpolation kernel. See the trajectory plan, section 3.
 import type { TrajectoryFrame } from "@molgpu/table";
-import { minimumImage, type PeriodicBox, periodicBox } from "@molgpu/dynamics";
+import { type PeriodicBox, periodicBox } from "@molgpu/dynamics";
 import { gauge } from "../internal/instrumentation.ts";
 
 /** Frames interpolated on screen: `a + t * (b - a)` per atom. */
@@ -231,54 +231,4 @@ export class FrameScheduler {
     this.last = display;
     return display;
   }
-}
-
-/** Inverse of a column-major 3×3 matrix, or null when singular. */
-export function invert3(m: ArrayLike<number>): Float64Array | null {
-  const [a, b, c, d, e, f, g, h, i] = Array.from(m);
-  const A = e * i - f * h, B = -(d * i - f * g), C = d * h - e * g;
-  const det = a * A + b * B + c * C;
-  if (!Number.isFinite(det) || Math.abs(det) < 1e-12) return null;
-  return Float64Array.from([
-    A / det,
-    -(b * i - c * h) / det,
-    (b * f - c * e) / det,
-    B / det,
-    (a * i - c * g) / det,
-    -(a * f - c * d) / det,
-    C / det,
-    -(a * h - b * g) / det,
-    (a * e - b * d) / det,
-  ]);
-}
-
-/**
- * CPU reference for the interpolation kernel: `p0 + t (p1 - p0)` per atom, or
- * with `box` the nearest Cartesian image in that box. The WGSL kernel
- * implements the same bounded search.
- */
-export function interpolatePositions(
-  p0: Float32Array,
-  p1: Float32Array,
-  t: number,
-  box?: ArrayLike<number>,
-): Float32Array {
-  const out = new Float32Array(p0.length);
-  let prepared: PeriodicBox | null = null;
-  if (box) {
-    try {
-      prepared = trajectoryImageBox(box);
-    } catch (error) {
-      if (!(error instanceof RangeError)) throw error;
-      if (error instanceof TrajectoryImageBoxLimitError) throw error;
-    }
-  }
-  for (let i = 0; i < p0.length; i += 3) {
-    let d = [p1[i] - p0[i], p1[i + 1] - p0[i + 1], p1[i + 2] - p0[i + 2]];
-    if (prepared) d = [...minimumImage(d, prepared.matrix, 1_000_000)];
-    out[i] = p0[i] + t * d[0];
-    out[i + 1] = p0[i + 1] + t * d[1];
-    out[i + 2] = p0[i + 2] + t * d[2];
-  }
-  return out;
 }

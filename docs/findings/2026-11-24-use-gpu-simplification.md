@@ -71,8 +71,18 @@ Each item keeps behaviour and instrumentation counters unless stated.
    dynamics demo intersects `pick(event)` with the view-normal plane, and the
    experimental `pointerToPlane`/`projectToPointer` exports are gone; the bond
    oracle lives in `bond-columns.test.ts`; Tube's width is `2 * radius`. Row
-   equality was left alone: the viewer has one copy, and the other two are
-   private to `@molgpu/select`.
+   equality was left alone; the viewer still compares rows in `bonds.ts`,
+   `representation.ts` and `instance-plan.ts`.
+
+## Dead code
+
+`invert3` in `trajectory/frame-window.ts` had no callers and is removed. The CPU
+oracles `interpolatePositions` and `sliceCorner` move from `src` into tests.
+Snapshot hooks still accept `onPause`, but the internal request maps,
+`ThrottledReadback` and the coordinate and attribute contexts no longer carry
+it; nothing read it. `NearestVolume.subscribe` keeps its public two-argument
+signature. Remaining exports used only inside their own module, instrumentation
+test hooks and the `@molgpu/dynamics` CPU references are intentional and stay.
 
 ## Not changed
 

@@ -94,7 +94,6 @@ const Probe = () => {
     ? use(ThrottledReadback, {
       token: sources.tokens[source],
       maxHz: 1000,
-      onPause: true,
       label: "readback-probe",
       publish: (values: Float32Array, token: ReadbackToken) => {
         const owner = Object.entries(sources.tokens).find(([, candidate]) =>

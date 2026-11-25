@@ -28,7 +28,6 @@ import { snapshotAttributeValues } from "./attribute-values.ts";
 
 interface Request {
   maxHz: number;
-  onPause: boolean;
 }
 
 /**
@@ -51,7 +50,6 @@ export function useAttributeSnapshot(
   const contexts = useContext(AttributeSnapshotContext);
   const context = contexts?.[name];
   const maxHz = options.maxHz ?? 4;
-  const onPause = options.onPause ?? true;
   const enabled = options.enabled ?? true;
   if (!Number.isFinite(maxHz) || maxHz <= 0) {
     throw new TypeError(
@@ -59,8 +57,8 @@ export function useAttributeSnapshot(
     );
   }
   useResource((dispose) => {
-    if (enabled && context) dispose(context.subscribe(maxHz, onPause));
-  }, [context?.subscribe, maxHz, onPause, enabled]);
+    if (enabled && context) dispose(context.subscribe(maxHz));
+  }, [context?.subscribe, maxHz, enabled]);
   if (!enabled) return null;
   if (context?.error) {
     throw new Error(`Attribute snapshot ${name} failed`, {
@@ -77,14 +75,12 @@ const Readback: LC<{
   name: string;
   token: ReadbackToken;
   maxHz: number;
-  onPause: boolean;
   publish: (values: Float32Array, token: ReadbackToken) => boolean;
   fail: (error: unknown, token: ReadbackToken) => void;
-}> = ({ name, token, maxHz, onPause, publish, fail }) =>
+}> = ({ name, token, maxHz, publish, fail }) =>
   use(ThrottledReadback, {
     token,
     maxHz,
-    onPause,
     label: `attr:snapshot:${name}`,
     publish,
     fail,
@@ -124,9 +120,9 @@ export const AttributeSnapshotBoundary: LC<{
   >(null);
   const latest = useRef(token);
   latest.current = token;
-  const subscribe = useMemo(() => (maxHz: number, onPause: boolean) => {
+  const subscribe = useMemo(() => (maxHz: number) => {
     const id = ++nextId.current;
-    setRequests((previous) => new Map(previous).set(id, { maxHz, onPause }));
+    setRequests((previous) => new Map(previous).set(id, { maxHz }));
     return () =>
       setRequests((previous) => {
         const next = new Map(previous);
@@ -146,7 +142,6 @@ export const AttributeSnapshotBoundary: LC<{
       : undefined,
   };
   const maxHz = Math.max(...demand.map((request) => request.maxHz));
-  const onPause = demand.some((request) => request.onPause);
   const publish = (values: Float32Array, copied: ReadbackToken): boolean => {
     if (!sameReadbackToken(latest.current, copied)) return false;
     const data = withAttributes(root.data, {
@@ -173,7 +168,7 @@ export const AttributeSnapshotBoundary: LC<{
     }),
     [
       demand.length && entry.ready !== false
-        ? use(Readback, { name, token, maxHz, onPause, publish, fail })
+        ? use(Readback, { name, token, maxHz, publish, fail })
         : null,
       children,
     ],
