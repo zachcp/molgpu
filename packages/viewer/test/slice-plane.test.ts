@@ -5,9 +5,19 @@ import {
   volumeWorldToIndex,
 } from "@molgpu/table";
 import {
-  sliceCorner,
+  type SliceFrame,
   slicePlaneFrame,
 } from "../src/volume/representations/slice-plane.ts";
+
+type Vec3 = [number, number, number];
+
+/** Corner `i` (0..3) of a frame: centre + (±1)u + (±1)v, as the slice shader does. */
+function sliceCorner(frame: SliceFrame, i: number): Vec3 {
+  const s = i & 1 ? 1 : -1, t = i & 2 ? 1 : -1;
+  return [0, 1, 2].map((a) =>
+    frame.center[a] + s * frame.u[a] + t * frame.v[a]
+  ) as Vec3;
+}
 
 const volume = createVolume({
   values: new Float32Array(6 * 5 * 4),

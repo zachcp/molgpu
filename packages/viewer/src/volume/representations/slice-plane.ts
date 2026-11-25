@@ -112,11 +112,3 @@ export function slicePlaneFrame(
     normal,
   };
 }
-
-/** Corner `i` (0..3) of a frame: centre + (±1)u + (±1)v, as the shader does. */
-export function sliceCorner(frame: SliceFrame, i: number): Vec3 {
-  const s = i & 1 ? 1 : -1, t = i & 2 ? 1 : -1;
-  return [0, 1, 2].map((a) =>
-    frame.center[a] + s * frame.u[a] + t * frame.v[a]
-  ) as Vec3;
-}

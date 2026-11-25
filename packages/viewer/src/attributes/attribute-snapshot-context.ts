@@ -13,7 +13,7 @@ export interface SnapshotProvider {
   readonly token?: ReadbackToken;
   readonly error?: unknown;
   readonly snapshot: AttributeSnapshot | null;
-  readonly subscribe: (maxHz: number, onPause: boolean) => () => void;
+  readonly subscribe: (maxHz: number) => () => void;
 }
 export type SnapshotMap = Readonly<Record<string, SnapshotProvider>>;
 export const AttributeSnapshotContext: LiveContext<SnapshotMap | undefined> =

@@ -132,7 +132,6 @@ function dispatchShape(invocations: number) {
 
 interface Request {
   maxHz: number;
-  onPause: boolean;
 }
 
 const EFieldCompute: LC<{
@@ -425,11 +424,9 @@ const EFieldCompute: LC<{
   // CPU snapshots, only while a consumer (e.g. <Isosurface>) asks.
   const [requests, setRequests] = useState<Map<number, Request>>(new Map());
   const nextRequest = useRef(0);
-  const subscribe = useMemo(() => (hz: number, onPause: boolean) => {
+  const subscribe = useMemo(() => (hz: number) => {
     const id = ++nextRequest.current;
-    setRequests((previous) =>
-      new Map(previous).set(id, { maxHz: hz, onPause })
-    );
+    setRequests((previous) => new Map(previous).set(id, { maxHz: hz }));
     return () =>
       setRequests((previous) => {
         const map = new Map(previous);
@@ -483,7 +480,6 @@ const EFieldCompute: LC<{
       ? use(ThrottledReadback, {
         token,
         maxHz: Math.max(...demand.map((r) => r.maxHz)),
-        onPause: demand.some((r) => r.onPause),
         label: "efield:snapshot",
         publish,
       })
