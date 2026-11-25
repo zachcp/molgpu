@@ -10,7 +10,6 @@ import p450Url from "../../../packages/io/test/fixtures/1tqn.bcif?url";
 import complexUrl from "../../../packages/io/test/fixtures/1a4y.bcif?url";
 import membraneUrl from "../../../packages/io/test/fixtures/1c3w.bcif?url";
 import chargesUrl from "../../../packages/io/test/fixtures/1crn-amber.pqr?url";
-import { element, resolve } from "@molgpu/select";
 import {
   densityMapFor,
   loadChargedCrambin,
@@ -308,9 +307,6 @@ export const DemosPage = () => {
           }
           if (demo.id === "compose") {
             host.dataset.bondCount = String(bondTopology(data).count);
-            host.dataset.sulfurCount = String(
-              resolve(element(16), data).indices.length,
-            );
           }
         }
         const sliceIndex = demo.id === "volume" && effectiveVolume === "density"

@@ -67,7 +67,6 @@ export type ComposeLayer =
   | "sticks"
   | "spacefill"
   | "surface"
-  | "sulfur"
   | "measure";
 
 export interface DemoOptions {
@@ -95,7 +94,7 @@ export const demos: readonly DemoDefinition[] = [
     id: "compose",
     title: "Compose",
     summary:
-      "Layer cartoon, tube, sticks, spacefill, a glass surface and a sulfur highlight over one imported structure and one render pass.",
+      "Layer cartoon, tube, ball and stick, element-coloured spacefill and a glass surface over one imported structure and one render pass.",
     fixture: "1crn",
     assertion:
       "every layer is a public viewer component reading the same structure",
@@ -152,7 +151,7 @@ export const legacyDemos: Readonly<
   ribbon: { id: "compose", preset: { layers: ["cartoon"] } },
   figure: {
     id: "compose",
-    preset: { layers: ["cartoon", "surface", "sulfur"], figure: true },
+    preset: { layers: ["cartoon", "sticks", "surface"], figure: true },
   },
   charge: {
     id: "select",

@@ -390,18 +390,13 @@ Deno.test("site landing page and maintained gallery routes", async () => {
         assertStrictEquals(await host.getAttribute("data-layers"), "tube");
         await page.getByLabel("Tube", { exact: true }).uncheck();
         await page.getByLabel("Cartoon").check();
-        await page.getByLabel("Sulfur atoms").check();
-        await dataIs("layers", "cartoon,sulfur");
+        await dataIs("layers", "cartoon");
         await waitForVisibleCanvas(page);
         assert(
           Number(await host.getAttribute("data-bond-count")) > 0,
           "the imported structure yields a bond topology for sticks",
         );
-        assert(
-          Number(await host.getAttribute("data-sulfur-count")) > 0,
-          "the sulfur layer's selection contains atoms",
-        );
-        // Cartoon + sulfur only: the Mol* secondary-structure palette shows.
+        // Cartoon only: the Mol* secondary-structure palette shows.
         const pixels = await cartoonPixels(page);
         console.log("cartoon pixels", JSON.stringify(pixels));
         assert(
@@ -422,9 +417,9 @@ Deno.test("site landing page and maintained gallery routes", async () => {
         );
         await page.getByLabel("Ball and stick").check();
         await page.getByLabel("Glass surface").check();
-        await dataIs("layers", "cartoon,sticks,surface,sulfur");
+        await dataIs("layers", "cartoon,sticks,surface");
         await page.getByLabel("Cartoon").uncheck();
-        await dataIs("layers", "sticks,surface,sulfur");
+        await dataIs("layers", "sticks,surface");
 
         // The layer list stays in its column: with wide fonts it once ran
         // under the canvas, which then intercepted the checkbox clicks.
@@ -441,7 +436,7 @@ Deno.test("site landing page and maintained gallery routes", async () => {
         // Measure alone: click lit pixels (atoms or bonds) until four atoms
         // are picked; each reported value matches the 1CRN coordinates.
         for (
-          const label of ["Ball and stick", "Glass surface", "Sulfur atoms"]
+          const label of ["Ball and stick", "Glass surface"]
         ) {
           await page.getByLabel(label).uncheck();
         }

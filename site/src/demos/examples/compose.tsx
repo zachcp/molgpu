@@ -2,8 +2,7 @@
 /** @jsx LiveReact.createElement */
 import { React as LiveReact } from "@use-gpu/live";
 import type { StructureData } from "@molgpu/table";
-import { bySecondaryStructure } from "@molgpu/fields";
-import { element, resolve } from "@molgpu/select";
+import { byElement, bySecondaryStructure } from "@molgpu/fields";
 import {
   BallAndStick,
   Cartoon,
@@ -28,7 +27,7 @@ export const composeScene = (
     ),
     on("cartoon") && <Cartoon color={bySecondaryStructure()} />,
     on("tube") && <Tube shadow radius={0.5} color={[0.55, 0.85, 0.6, 1]} />,
-    on("spacefill") && <Spacefill scale={0.55} color={[0.75, 0.78, 0.86, 1]} />,
+    on("spacefill") && <Spacefill color={byElement()} />,
     on("sticks") && <BallAndStick shadow ball={0.18} stick={0.24} />,
     on("surface") && (
       <Surface
@@ -36,13 +35,6 @@ export const composeScene = (
         color={[0.68, 0.81, 0.99, 1]}
         opacity={0.15}
         mode="oit"
-      />
-    ),
-    on("sulfur") && (
-      <Spacefill
-        select={resolve(element(16), data)}
-        scale={0.7}
-        color={[0.98, 0.82, 0.2, 1]}
       />
     ),
   ].filter(Boolean);

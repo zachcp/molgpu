@@ -8,7 +8,6 @@ const LAYERS: readonly (readonly [ComposeLayer, string])[] = [
   ["sticks", "Ball and stick"],
   ["spacefill", "Spacefill"],
   ["surface", "Glass surface"],
-  ["sulfur", "Sulfur atoms"],
   ["measure", "Measure (click atoms)"],
 ];
 
