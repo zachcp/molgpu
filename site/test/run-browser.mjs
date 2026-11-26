@@ -1544,6 +1544,162 @@ Deno.test("site landing page and maintained gallery routes", async () => {
     await page.getByRole("link", { name: "Experiments", exact: true }).click();
     await page.waitForSelector(".experiment-list");
     assertEquals(await page.locator("#experiment-canvas canvas").count(), 0);
+    route = "pluckable backbone";
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto("http://127.0.0.1:5190/#experiments/pluck");
+    await page.waitForSelector('#experiment-canvas[data-webgpu="ready"]');
+    // Capture the compositor: an idle WebGPU swapchain's drawing buffer may
+    // already be cleared. Mask the DOM controls, so only molecular pixels count.
+    const stringScreenshot = async () =>
+      Array.from(
+        await page.locator("#experiment-canvas canvas").screenshot({
+          mask: [page.locator(".pluck-panel")],
+          maskColor: "#000000",
+        }),
+      );
+    const stringPixels = async () =>
+      page.evaluate(async (bytes) => {
+        const bitmap = await createImageBitmap(
+          new Blob([new Uint8Array(bytes)], { type: "image/png" }),
+        );
+        const copy = new OffscreenCanvas(200, 120);
+        const context = copy.getContext("2d");
+        context.imageSmoothingEnabled = false;
+        context.drawImage(bitmap, 0, 0, 200, 120);
+        bitmap.close();
+        return Array.from(context.getImageData(0, 0, 200, 120).data);
+      }, await stringScreenshot());
+    let stringVisible = false;
+    for (let i = 0; i < 90 && !stringVisible; i++) {
+      stringVisible = (await stringPixels()).some((v, i) =>
+        i % 4 === 1 && v > 170
+      );
+      if (!stringVisible) await page.waitForTimeout(1000);
+    }
+    assert(stringVisible, "string renders a molecular backbone");
+    const restingString = await stringPixels();
+    const pluckResidue = page.getByRole("combobox", { name: "Pluck residue" });
+    assertEquals(await pluckResidue.locator("option").count(), 44);
+    // Release away from the centre to exercise an asymmetric wave.
+    await pluckResidue.selectOption("0:7");
+    const pluckButton = page.getByRole("button", {
+      name: "Pluck",
+      exact: true,
+    });
+    await pluckButton.focus();
+    await pluckButton.press("Enter");
+    await page.waitForTimeout(200);
+    const releasedString = await stringPixels();
+    assert(
+      restingString.filter((v, i) => Math.abs(v - releasedString[i]) > 20)
+        .length > 100,
+      "keyboard pluck visibly deforms the backbone",
+    );
+    await page.waitForTimeout(500);
+    const laterString = await stringPixels();
+    assert(
+      laterString.filter((v, i) => Math.abs(v - releasedString[i]) > 20)
+        .length > 100,
+      "released string continues moving",
+    );
+    await page.getByRole("button", { name: "Reset", exact: true }).click();
+    let restored = false;
+    for (let i = 0; i < 20 && !restored; i++) {
+      restored = (await stringPixels()).every((v, i) => v === restingString[i]);
+      if (!restored) await page.waitForTimeout(100);
+    }
+    assert(restored, "reset restores the trace");
+    // Pick an actual rendered green line pixel, not a hard-coded atom location.
+    const pickPoint = await page.evaluate(async (bytes) => {
+      const canvas = document.querySelector("#experiment-canvas canvas");
+      const bitmap = await createImageBitmap(
+        new Blob([new Uint8Array(bytes)], { type: "image/png" }),
+      );
+      const { width, height } = bitmap;
+      const copy = new OffscreenCanvas(width, height);
+      const context = copy.getContext("2d");
+      context.drawImage(bitmap, 0, 0);
+      bitmap.close();
+      const pixels = context.getImageData(0, 0, width, height).data;
+      for (let y = 1; y < height - 1; y++) {
+        for (let x = Math.ceil(width * 0.6); x < width - 1; x++) {
+          const green = (x, y) => pixels[(y * width + x) * 4 + 1] > 170;
+          if (green(x, y) && green(x - 1, y) && green(x + 1, y)) {
+            const bounds = canvas.getBoundingClientRect();
+            return {
+              x: bounds.x + (x + 0.5) / width * bounds.width,
+              y: bounds.y + (y + 0.5) / height * bounds.height,
+            };
+          }
+        }
+      }
+      return null;
+    }, await stringScreenshot());
+    assert(pickPoint, "line has a pickable pixel outside the controls");
+    await page.mouse.move(pickPoint.x, pickPoint.y);
+    await page.waitForTimeout(500);
+    await page.mouse.down({ button: "right" });
+    await page.mouse.up({ button: "right" });
+    assert(
+      await pluckResidue.inputValue() !== "0:7",
+      "right-click plucks the picked residue, not the form selection",
+    );
+    const stringProtein = page.getByRole("combobox", {
+      name: "String protein",
+    });
+    assertEquals(await stringProtein.locator("option").count(), 4);
+    for (const id of ["1tqn", "1a4y", "1c3w"]) {
+      await stringProtein.selectOption(id);
+      await page.waitForSelector(
+        `#experiment-canvas[data-webgpu="ready"][data-structure="${id}"]`,
+      );
+      let proteinVisible = false;
+      for (let i = 0; i < 60 && !proteinVisible; i++) {
+        proteinVisible = (await stringPixels()).some((v, i) =>
+          i % 4 === 1 && v > 170
+        );
+        if (!proteinVisible) await page.waitForTimeout(500);
+      }
+      assert(proteinVisible, `${id} renders its backbone`);
+      assert(
+        await pluckResidue.locator("option").count() > 100,
+        `${id} replaces the residue list`,
+      );
+      const newProtein = await stringPixels();
+      assert(
+        newProtein.some((v, i) => Math.abs(v - restingString[i]) > 20),
+        `${id} replaces the molecular scene`,
+      );
+      await pluckButton.click();
+      await page.waitForTimeout(300);
+      const newWave = await stringPixels();
+      assert(
+        newWave.some((v, i) => Math.abs(v - newProtein[i]) > 20),
+        `${id} can be plucked`,
+      );
+    }
+    await stringProtein.selectOption("1crn");
+    await page.waitForSelector(
+      '#experiment-canvas[data-webgpu="ready"][data-structure="1crn"]',
+    );
+    assertEquals(await pluckResidue.locator("option").count(), 44);
+    await page.setViewportSize({ width: 390, height: 844 });
+    const panelBox = await page.locator(".pluck-panel").boundingBox();
+    const narrowCanvas = await page.locator("#experiment-canvas canvas")
+      .boundingBox();
+    assert(
+      panelBox.y + panelBox.height <= narrowCanvas.y,
+      "narrow controls do not obscure the molecule",
+    );
+    assert(
+      await page.evaluate(() =>
+        document.documentElement.scrollWidth <= innerWidth
+      ),
+      "string experiment has no horizontal overflow",
+    );
+    await page.getByRole("link", { name: "Experiments", exact: true }).click();
+    await page.waitForSelector(".experiment-list");
+    assertEquals(await page.locator("#experiment-canvas canvas").count(), 0);
     assertEquals(errors, [], "page has no JavaScript errors");
   } catch (error) {
     throw new Error(`site test failed at ${route}: ${error.message}`, {
