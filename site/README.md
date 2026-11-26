@@ -71,3 +71,22 @@ The reveal's `assets/6cun.bcif` is from <https://models.rcsb.org/6cun.bcif>
 heme and the CA1 carbene intermediate, described in
 [PDB-101's Artificial Metalloenzymes](https://pdb101.rcsb.org/motm/323). Gold
 marks CA1; the experiment compares representations, not a reaction trajectory.
+
+`#experiments/pluck` treats a protein's Cα trace as an illustrative string. Its
+protein picker reuses the gallery's local crambin, P450, inhibitor-complex and
+bacteriorhodopsin structures. Switching proteins resets the wave, residue list
+and camera; a superseded load cannot replace a newer selection. Each continuous
+chain run has its own pinned endpoints. Choose a residue and press Pluck
+(keyboard accessible), or right-click the line to pluck the picked residue.
+Orbit and zoom remain available. A thin grey trace shows the unmodified
+backbone; Reset restores it immediately. On narrow screens the controls sit
+above the canvas rather than obscuring the protein.
+
+The CPU prepares atom-row and segment mappings once per protein. A native
+use.gpu compute pass samples the nearest molecular coordinate source and caches
+the damped fixed-end displacement once per Cα. The line shader evaluates a
+Catmull–Rom spline through those GPU positions. Plucking changes uniforms, not
+the structure's coordinates or a CPU-generated mesh, and its animation clock
+stops after the wave decays. Sequence distance and transverse displacement are
+artistic choices: this is not a normal-mode calculation, force field or
+molecular dynamics model.
