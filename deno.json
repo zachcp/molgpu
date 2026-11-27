@@ -6,6 +6,7 @@
     "./packages/select",
     "./packages/fields",
     "./packages/dynamics",
+    "./packages/nn",
     "./packages/io",
     "./packages/viewer"
   ],
@@ -78,6 +79,7 @@
     "test:corpus": "deno test -A packages/io/test/corpus.test.ts",
     "test:fields:gpu": "deno test -A packages/fields/test/run-browser.mjs",
     "test:dynamics:gpu": "deno test -A packages/dynamics/test/run-browser.mjs",
+    "test:nn:gpu": "deno test -A packages/nn/test/run-gpu.ts",
     "test:gpu": "deno test -A packages/viewer/test/run-browser.mjs",
     "test:viewer:sizefield": "deno test -A packages/viewer/test/run-size-field.mjs",
     "test:viewer:gate2": "deno test -A packages/viewer/test/run-gate2.mjs",

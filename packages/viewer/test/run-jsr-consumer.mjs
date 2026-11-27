@@ -31,6 +31,7 @@ const ENTRIES = [
   "@molgpu/fields",
   "@molgpu/dynamics",
   "@molgpu/dynamics/wgsl",
+  "@molgpu/nn",
   "@molgpu/io",
   "@molgpu/viewer",
   "@molgpu/viewer/advanced",
@@ -66,7 +67,7 @@ Deno.test("isolated JSR consumers", async () => {
       [...ENTRIES].sort(),
     );
     assertEquals(report.entries.graphs["@molgpu/io"].npm, []);
-    for (const name of ["table", "geo", "select", "fields", "dynamics"]) {
+    for (const name of ["table", "geo", "select", "fields", "dynamics", "nn"]) {
       assertEquals(report.entries.graphs[`@molgpu/${name}`].npm, [], name);
     }
 

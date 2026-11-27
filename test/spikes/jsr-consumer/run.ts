@@ -29,6 +29,7 @@ const PACKAGES = [
   "select",
   "fields",
   "dynamics",
+  "nn",
   "io",
   "viewer",
 ];
