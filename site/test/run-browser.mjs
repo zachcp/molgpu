@@ -1697,6 +1697,62 @@ Deno.test("site landing page and maintained gallery routes", async () => {
       ),
       "string experiment has no horizontal overflow",
     );
+    route = "ProteinMPNN experiment";
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto("http://127.0.0.1:5190/#experiments/mpnn?structure=1crn");
+    // Crambin: 46 residues, so the model runs in seconds even on SwiftShader.
+    await page.waitForSelector(
+      '#experiment-canvas[data-mpnn="ready"][data-webgpu="ready"]',
+      { timeout: 120_000 },
+    );
+    const recovery = Number(
+      await page.locator("#experiment-canvas").getAttribute("data-recovery"),
+    );
+    assert(recovery > 0.3 && recovery <= 1, `native recovery ${recovery}`);
+    // Hovering a residue column of a probability strip selects that residue.
+    const stripLocator = page.locator("[data-map=conditional]");
+    await stripLocator.scrollIntoViewIfNeeded();
+    const strip = await stripLocator.boundingBox();
+    await page.mouse.move(
+      strip.x + strip.width * (40.5 / 46),
+      strip.y + strip.height / 2,
+    );
+    await page.waitForSelector('#experiment-canvas[data-hovered="40"]');
+    assertEquals(await page.locator("[data-bars] b").count(), 21);
+    assertEquals(await page.locator("[data-bars] b.native").count(), 1);
+    // The forward pass steps through the recorded trace and lights its weights.
+    await page.click("[data-next]");
+    await page.waitForSelector('#experiment-canvas[data-step="1"]');
+    assertEquals(
+      await page.locator("[data-map=weights3d]").getAttribute("data-focus"),
+      "features.embeddings.linear.weight features.embeddings.linear.bias",
+    );
+    await page.locator("[data-step-slider]").fill("48");
+    await page.waitForSelector('[data-map=weights3d][data-focus="W_s.weight"]');
+    // Full mode shows both flows: encoder (backbone) then decoder (sequence).
+    assertEquals(await page.locator(".mpnn-flow").count(), 2);
+    assertEquals(
+      await page.locator(".mpnn-flow-col.active").evaluateAll((els) =>
+        els.map((el) => el.dataset.column)
+      ),
+      ["onehot", "W_s", "h_S"],
+    );
+    // Encoder-only mode: one flow whose player covers only feature and
+    // encoder steps, and the neighbour-graph colouring.
+    await page.selectOption("[data-mode-picker]", "encoder");
+    await page.waitForSelector('#experiment-canvas[data-mode="encoder"]');
+    assertEquals(await page.locator(".mpnn-flow").count(), 1);
+    assertEquals(
+      await page.locator("[data-flows] .mpnn-flow-col").evaluateAll((els) =>
+        els.map((el) => el.dataset.column)
+      ),
+      ["rbf", "h_E", "enc0", "enc1", "enc2"],
+    );
+    assertEquals(await page.locator("[data-pipeline] i").count(), 6 + 3 * 14);
+    assertEquals(await page.locator("[data-metric]").inputValue(), "neighbors");
+    // Sequence mode starts at the sequence embedding.
+    await page.selectOption("[data-mode-picker]", "sequence");
+    await page.waitForSelector('#experiment-canvas[data-step="48"]');
     await page.getByRole("link", { name: "Experiments", exact: true }).click();
     await page.waitForSelector(".experiment-list");
     assertEquals(await page.locator("#experiment-canvas canvas").count(), 0);

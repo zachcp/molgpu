@@ -248,7 +248,8 @@ const OPTIONAL_FEATURES: GPUFeatureName[] = [
   "shader-f16",
 ];
 let sharedDevice: Promise<GPUDevice> | null = null;
-const pageDevice = (): Promise<GPUDevice> =>
+/** The page's one GPUDevice; experiments run their own compute on it too. */
+export const pageDevice = (): Promise<GPUDevice> =>
   sharedDevice ??= (async () => {
     const { device } = await mountGPUDevice(await getGPUAdapter(), {
       required: [],
