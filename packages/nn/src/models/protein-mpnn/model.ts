@@ -12,8 +12,8 @@ import {
 import type { ProteinMpnnInput } from "./input.ts";
 import type { ProteinMpnnStage, ProteinMpnnTrace } from "./trace.ts";
 
+// Messages are summed over neighbours and divided by this (upstream `scale`).
 const SCALE = 30;
-const LAYERS = 3;
 
 /** Encoder results: the graph, final node and edge embeddings, and each layer's nodes. */
 export interface ProteinMpnnEncoding {
@@ -47,6 +47,8 @@ export interface ProteinMpnnRunOptions {
 export class ProteinMpnn {
   readonly runtime: NnRuntime;
   readonly weights: ReadonlyMap<string, GpuTensor>;
+  /** Encoder and decoder layers, counted from the checkpoint's weight names. */
+  readonly layers: { readonly encoder: number; readonly decoder: number };
   #trace: ProteinMpnnTrace | null = null;
   #stage: ProteinMpnnStage = "features";
   #layer = -1;
@@ -54,6 +56,18 @@ export class ProteinMpnn {
   constructor(runtime: NnRuntime, weights: ReadonlyMap<string, GpuTensor>) {
     this.runtime = runtime;
     this.weights = weights;
+    const count = (part: string) => {
+      const found = new Set<number>();
+      for (const name of weights.keys()) {
+        const match = new RegExp(`^${part}_layers\\.(\\d+)\\.`).exec(name);
+        if (match) found.add(Number(match[1]));
+      }
+      if (!found.size || Math.max(...found) !== found.size - 1) {
+        throw new Error(`ProteinMpnn: no contiguous ${part}_layers.* weights`);
+      }
+      return found.size;
+    };
+    this.layers = { encoder: count("encoder"), decoder: count("decoder") };
   }
 
   /** Featurize on the CPU, then run the three encoder layers on the GPU. */
@@ -125,7 +139,7 @@ export class ProteinMpnn {
     );
     let nodes = t(rt.zeros([l, edges.shape[2]], "mpnn-h_V"));
     const layers: GpuTensor[] = [];
-    for (let i = 0; i < LAYERS; i++) {
+    for (let i = 0; i < this.layers.encoder; i++) {
       const p = `encoder_layers.${i}.`;
       this.#at("encoder", i);
       const message = t(this.#message(p, nodes, edges, neighbors));
@@ -200,7 +214,7 @@ export class ProteinMpnn {
       maskGpu = t(rt.upload(tensor([l, k], mask)));
     }
     let nodes = encoded;
-    for (let i = 0; i < LAYERS; i++) {
+    for (let i = 0; i < this.layers.decoder; i++) {
       const p = `decoder_layers.${i}.`;
       this.#at("decoder", i);
       const context = withSequence && maskGpu

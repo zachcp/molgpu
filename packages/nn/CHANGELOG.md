@@ -13,5 +13,7 @@ for the procedure.
   bound by a renderer.
 - `ProteinMpnnTrace` records a ProteinMPNN forward pass step by step, and
   `NnRuntime.copy` copies a tensor in dispatch order.
+- `ProteinMpnn.layers` counts encoder and decoder layers from the checkpoint
+  instead of assuming three.
 - `PROTEIN_MPNN_ATOM_PAIRS` names the atom pair behind each block of 16 RBF edge
   features.

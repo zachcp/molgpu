@@ -53,6 +53,17 @@ log-probabilities: structure-only (`"none"`), given every other native residue
 (`"all-but-self"`), or along a decoding order. The test fixture
 `test/fixtures/proteinmpnn_v_48_020.safetensors` holds v_48_020.
 
+Numerics: on the same fp16-rounded weights the GPU forward pass matches upstream
+PyTorch within 1.3e-4 in log-probability. Rounding the checkpoint to fp16 costs
+more: against the original fp32 v_48_020 weights, log-probabilities move by up
+to 1.4e-2 (mean 8e-4) on 1CRN, 1EMA and 1A4Y, and the argmax residue agrees at
+99.9 to 100% of positions (95.7% for 1CRN all-but-self, where two positions are
+near ties). Convert without `.to(torch.float16)` for fp32 weights at twice the
+size. Layer counts come from the checkpoint's weight names
+(`ProteinMpnn.layers`); the remaining constants (message scale 30, 16 RBFs over
+2–22 Å, relative offsets clipped to ±32, the virtual-CB coefficients) are
+upstream architecture, not learned values.
+
 Pass a `ProteinMpnnTrace` as `{ trace }` to `encode` and `decode` to record the
 forward pass: every activation in dispatch order, with its stage, layer, step
 name, the checkpoint weights it read, and the shape the model computed. The

@@ -310,3 +310,76 @@ Deno.test("ProteinMPNN trace records every step of the forward pass", async () =
   await device.queue.onSubmittedWorkDone();
   assertEquals(errors, [], "uncaptured WebGPU errors");
 });
+
+Deno.test("ProteinMPNN reads its weights from the GPU buffers it exposes", async () => {
+  const { structureFromBcif } = await import("@molgpu/io");
+  const fixtures = new URL("./fixtures/", import.meta.url);
+  const rt = new NnRuntime(device);
+  const checkpoint = parseSafetensors(
+    await Deno.readFile(new URL("proteinmpnn_v_48_020.safetensors", fixtures)),
+  );
+  const weights = rt.uploadWeights(checkpoint);
+  const model = new ProteinMpnn(rt, weights);
+  try {
+    assertEquals(model.layers, { encoder: 3, decoder: 3 });
+    // Every buffer holds exactly the checkpoint tensor under its name.
+    for (const [name, cpu] of checkpoint) {
+      const gpu = weights.get(name)!;
+      assertEquals(gpu.shape, cpu.shape, name);
+      assertEquals(await rt.read(gpu), cpu.data, name);
+    }
+    const input = proteinMpnnInput(
+      await structureFromBcif(
+        await Deno.readFile(
+          new URL("../../io/test/fixtures/1crn.bcif", import.meta.url),
+        ),
+      ),
+    );
+    const l = input.sequence.length;
+    const encoding = model.encode(input);
+    const run = async (visible: "none" | "all-but-self") => {
+      const t = model.decode(encoding, visible);
+      const out = await rt.read(t) as Float32Array;
+      rt.release(t);
+      return out;
+    };
+    const write = (name: string, data: Float32Array) =>
+      device.queue.writeBuffer(weights.get(name)!.buffer, 0, data);
+    const baseline = {
+      none: await run("none"),
+      all: await run("all-but-self"),
+    };
+
+    // Raising W_out's bias for alanine on the GPU raises P(A) everywhere:
+    // the output layer reads that buffer, not a copy.
+    const bias = checkpoint.get("W_out.bias")!.data;
+    write("W_out.bias", bias.map((v, a) => a === 0 ? v + 4 : v));
+    const raised = await run("none");
+    for (let i = 0; i < l; i++) {
+      assert(raised[i * 21] > baseline.none[i * 21], `P(A) at ${i}`);
+    }
+    write("W_out.bias", bias);
+
+    // Zeroing W_s (the sequence embedding) changes only sequence-conditioned
+    // output: amino acids enter through that buffer and only in the decoder.
+    write(
+      "W_s.weight",
+      new Float32Array(checkpoint.get("W_s.weight")!.data.length),
+    );
+    assertEquals(await run("none"), baseline.none);
+    const blind = await run("all-but-self");
+    let changed = 0;
+    for (let i = 0; i < blind.length; i++) {
+      changed = Math.max(changed, Math.abs(blind[i] - baseline.all[i]));
+    }
+    assert(changed > 0.1, `W_s zeroed changed log-probs by only ${changed}`);
+    // Restoring the buffers restores the output bit for bit.
+    write("W_s.weight", checkpoint.get("W_s.weight")!.data);
+    assertEquals(await run("all-but-self"), baseline.all);
+    model.release(encoding);
+  } finally {
+    rt.destroy();
+  }
+  await device.queue.onSubmittedWorkDone();
+  assertEquals(errors, [], "uncaptured WebGPU errors");
+});
