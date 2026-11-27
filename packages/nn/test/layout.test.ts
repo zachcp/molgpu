@@ -85,3 +85,55 @@ Deno.test("readSafetensorsHeader reads shapes without the data section", async (
   assertThrows(() => readSafetensorsHeader(bytes.subarray(0, 8 + length - 1)));
   assertThrows(() => safetensorsHeaderLength(bytes.subarray(0, 7)));
 });
+
+Deno.test("layoutFromNames collapses experts, drops scales and unpacks FP4", () => {
+  // Shapes from DeepSeek-V4-Pro (I8 + F8_E8M0 scale) and Kimi-K3.1-Pro
+  // (U8 weight_packed + weight_scale) headers.
+  const tensors: [string, { shape: number[]; dtype: string }][] = [];
+  for (let e = 0; e < 3; e++) {
+    tensors.push(
+      [`layers.5.ffn.experts.${e}.w1.weight`, {
+        shape: [3072, 3584],
+        dtype: "I8",
+      }],
+      [`layers.5.ffn.experts.${e}.w1.scale`, {
+        shape: [3072, 224],
+        dtype: "F8_E8M0",
+      }],
+      [
+        `lm.layers.5.moe.experts.${e}.w2.weight_packed`,
+        { shape: [7168, 1536], dtype: "U8" },
+      ],
+      [`lm.layers.5.moe.experts.${e}.w2.weight_scale`, {
+        shape: [7168, 96],
+        dtype: "U8",
+      }],
+    );
+  }
+  tensors.push(
+    [`layers.5.attn.wq_a.weight`, { shape: [1536, 7168], dtype: "F8_E4M3" }],
+    [`layers.5.attn.wq_a.scale`, { shape: [12, 56], dtype: "F8_E8M0" }],
+    // A byte tensor without a matching scale keeps its stored shape.
+    [`layers.5.mask`, { shape: [4, 4], dtype: "U8" }],
+  );
+  const layout = layoutFromNames(tensors);
+  const matrices = layout.stages.flatMap((s) => s.matrices);
+  assertEquals(
+    matrices.map((m) => [m.name, m.shape, m.count ?? 1, m.dtype]),
+    [
+      ["layers.5.ffn.experts.*.w1.weight", [3072, 7168], 3, "I8 (FP4 packed)"],
+      ["layers.5.attn.wq_a.weight", [1536, 7168], 1, "F8_E4M3"],
+      ["layers.5.mask", [4, 4], 1, "U8"],
+      [
+        "lm.layers.5.moe.experts.*.w2.weight_packed",
+        [7168, 3072],
+        3,
+        "U8 (FP4 packed)",
+      ],
+    ],
+  );
+  assertEquals(
+    layoutParameters(layout),
+    3 * 3072 * 7168 + 1536 * 7168 + 16 + 3 * 7168 * 3072,
+  );
+});

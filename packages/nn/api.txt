@@ -13,7 +13,7 @@ IndexTensor
 LAYER_NORM_EPS
   export const LAYER_NORM_EPS = 0.00001;
 LayoutMatrix
-  export interface LayoutMatrix { /** Checkpoint tensor name. */ readonly name: string; readonly shape: readonly [number, number] }
+  export interface LayoutMatrix { /** Checkpoint tensor name; `*` stands for the index of repeated copies. */ readonly name: string; /** Logical [out, in], after unpacking packed FP4 storage. */ readonly shape: readonly [number, number]; /** Identical copies, such as the experts of a mixture-of-experts layer; 1 when absent. */ readonly count?: number; /** Storage dtype when known, such as `"BF16"` or `"U8 (FP4 packed)"`. */ readonly dtype?: string }
 LayoutStage
   export interface LayoutStage { readonly label: string; readonly matrices: readonly LayoutMatrix[] }
 LayoutStep
@@ -65,7 +65,7 @@ indexTensor
 layerNorm
   export function layerNorm(x: Tensor, gamma: Tensor, beta: Tensor, options?: { residual?: Tensor; eps?: number }): Tensor;
 layoutFromNames
-  export function layoutFromNames(tensors: Iterable<readonly [string, { readonly shape: readonly number[] }]>): ModelLayout;
+  export function layoutFromNames(tensors: Iterable<readonly [ string, { readonly shape: readonly number[]; readonly dtype?: string } ]>): ModelLayout;
 layoutFromSteps
   export function layoutFromSteps(steps: readonly LayoutStep[], shapes: ReadonlyMap<string, { readonly shape: readonly number[] }>, label?: (stage: string, layer: number) => string): ModelLayout;
 layoutParameters

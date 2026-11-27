@@ -14,6 +14,10 @@ export interface StackMatrix {
   readonly name: string;
   /** [out, in]: height and width of the slab. */
   readonly shape: readonly [number, number];
+  /** Identical copies (MoE experts), drawn as a thicker slab; 1 when absent. */
+  readonly count?: number;
+  /** Storage dtype, for the hover readout. */
+  readonly dtype?: string;
   /** Row-major f32 values to colour by; absent for shape-only slabs. */
   readonly buffer?: GPUBuffer;
   /** CPU copy of the values, for the hover readout. */
@@ -487,7 +491,9 @@ export class WeightStack {
       floats[8] = plane.matrix.scale ?? 1;
       floats[9] = plane === this.#hovered || focused ? 1 : 0;
       // Slab thickness: visible from the side, never thicker than the gap.
-      floats[10] = Math.min(0.35 * unit, step * 0.6);
+      // Experts thicken the slab: one deck per doubling of copies.
+      floats[10] = Math.min(0.35 * unit, step * 0.6) *
+        (1 + Math.log2(plane.matrix.count ?? 1));
       floats[11] = plane.matrix.buffer
         ? -1
         : (plane.stage / Math.max(1, this.#stages)) * 0.8;
@@ -599,9 +605,11 @@ export class WeightStack {
         const { matrix } = hit.plane;
         const value = matrix.values?.[hit.row * matrix.shape[1] + hit.col];
         this.#tip.hidden = false;
-        this.#tip.textContent = `${matrix.name} [${
-          matrix.shape.join(" × ")
-        }] · out ${hit.row}, in ${hit.col}${
+        this.#tip.textContent = `${matrix.name} [${matrix.shape.join(" × ")}]${
+          (matrix.count ?? 1) > 1 ? ` × ${matrix.count} copies` : ""
+        }${
+          matrix.dtype ? ` · ${matrix.dtype}` : ""
+        } · out ${hit.row}, in ${hit.col}${
           value === undefined ? "" : ` = ${value.toFixed(4)}`
         }`;
         const box = canvas.getBoundingClientRect();

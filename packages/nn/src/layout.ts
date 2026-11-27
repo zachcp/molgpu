@@ -5,9 +5,14 @@
 
 /** One 2-D weight matrix, PyTorch layout [out, in]. */
 export interface LayoutMatrix {
-  /** Checkpoint tensor name. */
+  /** Checkpoint tensor name; `*` stands for the index of repeated copies. */
   readonly name: string;
+  /** Logical [out, in], after unpacking packed FP4 storage. */
   readonly shape: readonly [number, number];
+  /** Identical copies, such as the experts of a mixture-of-experts layer; 1 when absent. */
+  readonly count?: number;
+  /** Storage dtype when known, such as `"BF16"` or `"U8 (FP4 packed)"`. */
+  readonly dtype?: string;
 }
 
 /** A group of matrices read together, such as one transformer block. */
@@ -67,58 +72,138 @@ export function layoutFromSteps(
 
 const LAYER = /^(.*?)\.(\d+)\./;
 const EMBEDDING = /embed|wte|wpe|word_|position_|token_type/i;
+// Quantization side tensors (block scales, zero points), not weights.
+const QUANT =
+  /\.(weight_)?scale(_inv)?$|\.(input_scale|weight_global_scale|weight_zero_point|zero_point)$/;
+// MX / FP4 formats scale groups of 32 values.
+const MX_GROUP = 32;
+
+/** Logical [out, in] of a stored 2-D tensor: packed FP4 holds two values per byte. */
+function logical(
+  name: string,
+  t: { readonly shape: readonly number[]; readonly dtype?: string },
+  all: ReadonlyMap<
+    string,
+    { readonly shape: readonly number[]; readonly dtype?: string }
+  >,
+): { shape: [number, number]; dtype?: string } {
+  const [rows, cols] = t.shape;
+  if (t.dtype === "I8" || t.dtype === "U8") {
+    const base = name.replace(/\.weight(_packed)?$/, "");
+    for (const suffix of [".scale", ".weight_scale", ".weight_scale_inv"]) {
+      const scale = all.get(base + suffix);
+      // One scale per 32 values: 2 * cols values = 32 * scale columns.
+      if (scale?.shape.length === 2 && 2 * cols === MX_GROUP * scale.shape[1]) {
+        return { shape: [rows, 2 * cols], dtype: `${t.dtype} (FP4 packed)` };
+      }
+    }
+  }
+  return t.dtype
+    ? { shape: [rows, cols], dtype: t.dtype }
+    : { shape: [rows, cols] };
+}
 
 /**
  * Layout from weight names alone, for checkpoints that cannot be run here.
  * Names with a numbered block (`model.layers.3.mlp.up_proj.weight`) group
- * into one stage per block, in numeric order; families named like decoders
- * follow the others. Embeddings come first and remaining weights (final
- * norms, heads) last. Order within a block is the input order, which for
- * safetensors is alphabetical, not the forward order.
+ * into one stage per block, in numeric order; vision towers and projectors
+ * come first and families named like decoders after the others. Embeddings
+ * lead and remaining weights (final norms, heads) close. Within a block,
+ * numbered copies of one shape (`ffn.experts.17.w1.weight`) collapse into one
+ * matrix named with `*` and a `count`. Quantization scales are dropped and,
+ * given `dtype`, FP4 weights packed two per byte report their logical shape.
+ * Order within a block is the input order, which for safetensors is
+ * alphabetical, not the forward order.
  */
 export function layoutFromNames(
-  tensors: Iterable<readonly [string, { readonly shape: readonly number[] }]>,
+  tensors: Iterable<
+    readonly [
+      string,
+      { readonly shape: readonly number[]; readonly dtype?: string },
+    ]
+  >,
 ): ModelLayout {
+  const all = new Map(tensors);
   const first: LayoutMatrix[] = [], last: LayoutMatrix[] = [];
   const blocks = new Map<
     string,
-    { family: string; index: number; matrices: LayoutMatrix[] }
+    {
+      family: string;
+      index: number;
+      matrices: LayoutMatrix[];
+      repeated: Map<string, { count: number }>;
+    }
   >();
   const families: string[] = [];
-  for (const [name, t] of tensors) {
-    const m = matrix(name, t);
-    if (!m) continue;
+  for (const [name, t] of all) {
+    if (t.shape.length !== 2 || QUANT.test(name)) continue;
+    const m: LayoutMatrix = { name, ...logical(name, t, all) };
     const block = LAYER.exec(name);
-    if (block) {
-      const [, family, index] = block;
-      if (!families.includes(family)) families.push(family);
-      const key = `${family}.${index}`;
-      let entry = blocks.get(key);
-      if (!entry) {
-        blocks.set(key, entry = { family, index: Number(index), matrices: [] });
-      }
+    if (!block) {
+      (EMBEDDING.test(name) ? first : last).push(m);
+      continue;
+    }
+    const [prefix, family, index] = block;
+    if (!families.includes(family)) families.push(family);
+    const key = `${family}.${index}`;
+    let entry = blocks.get(key);
+    if (!entry) {
+      blocks.set(
+        key,
+        entry = {
+          family,
+          index: Number(index),
+          matrices: [],
+          repeated: new Map(),
+        },
+      );
+    }
+    // A second numbered segment inside the block: one of several copies.
+    const copy = /^(.*?)\.\d+\.(.*)$/.exec(name.slice(prefix.length));
+    if (!copy) {
       entry.matrices.push(m);
-    } else (EMBEDDING.test(name) ? first : last).push(m);
+      continue;
+    }
+    const pattern = `${prefix}${copy[1]}.*.${copy[2]}`;
+    const id = `${pattern} ${m.shape.join("x")}`;
+    const seen = entry.repeated.get(id);
+    if (seen) seen.count++;
+    else {
+      const collapsed = { ...m, name: pattern, count: 1 };
+      entry.repeated.set(id, collapsed);
+      entry.matrices.push(collapsed);
+    }
   }
+  const n = families.length;
   const rank = (family: string) =>
-    (/decod/i.test(family) ? families.length : 0) + families.indexOf(family);
+    (/vision|visual|image|patch/i.test(family)
+      ? -2 * n
+      : /projector/i.test(family)
+      ? -n
+      : /decod|mtp/i.test(family)
+      ? n
+      : 0) + families.indexOf(family);
   const grouped = [...blocks.values()].sort((a, b) =>
     rank(a.family) - rank(b.family) || a.index - b.index
   );
   const stages: LayoutStage[] = [];
   if (first.length) stages.push({ label: "embeddings", matrices: first });
   for (const { family, index, matrices } of grouped) {
-    stages.push({ label: `${family} ${index}`, matrices });
+    // The last two name segments: "model.layers 7", not "language_model.model.layers 7".
+    const short = family.split(".").slice(-2).join(".");
+    stages.push({ label: `${short} ${index}`, matrices });
   }
   if (last.length) stages.push({ label: "head", matrices: last });
   return { stages };
 }
 
-/** Number of weights in a layout's matrices. */
+/** Number of weights in a layout's matrices, counting every copy. */
 export function layoutParameters(layout: ModelLayout): number {
   let total = 0;
   for (const stage of layout.stages) {
-    for (const { shape } of stage.matrices) total += shape[0] * shape[1];
+    for (const { shape, count = 1 } of stage.matrices) {
+      total += shape[0] * shape[1] * count;
+    }
   }
   return total;
 }

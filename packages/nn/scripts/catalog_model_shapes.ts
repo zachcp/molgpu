@@ -1,10 +1,14 @@
 // Build a catalog of model layouts from safetensors headers alone: two range
-// requests per file, no weights downloaded. Hugging Face repos are read from
+// requests per file, no weights downloaded. Each entry stores the layout
+// (`layoutFromNames`: experts collapsed, quantization scales dropped), not
+// the raw tensor list, which runs to ~500k names for frontier MoE models. Hugging Face repos are read from
 // `model.safetensors`, or every shard listed in `model.safetensors.index.json`;
 // local `.safetensors` paths are read from disk.
 //   deno run -A packages/nn/scripts/catalog_model_shapes.ts out.json \
 //     openai-community/gpt2 facebook/esm2_t6_8M_UR50D path/to/model.safetensors
 import {
+  layoutFromNames,
+  layoutParameters,
   readSafetensorsHeader,
   type SafetensorsEntry,
   safetensorsHeaderLength,
@@ -69,9 +73,14 @@ async function headers(source: string) {
     weight_map: Record<string, string>;
   };
   const entries = new Map<string, SafetensorsEntry>();
-  for (const shard of new Set(Object.values(weight_map))) {
-    for (const entry of await remoteHeader(hub(source, shard))) {
-      entries.set(...entry);
+  const shards = [...new Set(Object.values(weight_map))];
+  // A few shards at a time: large models have ~100.
+  for (let i = 0; i < shards.length; i += 8) {
+    const headers = await Promise.all(
+      shards.slice(i, i + 8).map((shard) => remoteHeader(hub(source, shard))),
+    );
+    for (const header of headers) {
+      for (const entry of header) entries.set(...entry);
     }
   }
   return { url: hub(source, "model.safetensors.index.json"), entries };
@@ -80,25 +89,29 @@ async function headers(source: string) {
 const models = [];
 for (const source of sources) {
   const { url, entries } = await headers(source);
-  let parameters = 0;
+  let bytes = 0;
   const dtypes = new Set<string>();
-  for (const { shape, dtype } of entries.values()) {
-    parameters += shape.reduce((a, b) => a * b, 1);
+  for (const { offsets, dtype } of entries.values()) {
+    bytes += offsets[1] - offsets[0];
     dtypes.add(dtype);
   }
+  const layout = layoutFromNames(entries);
+  const parameters = layoutParameters(layout);
   models.push({
     id: source.endsWith(".safetensors")
       ? source.replace(/^.*\//, "").replace(/\.safetensors$/, "")
       : source,
     source: url,
+    tensors: entries.size,
+    bytes,
     parameters,
-    dtypes: [...dtypes],
-    tensors: [...entries].map(([name, { shape }]) => [name, shape]),
+    dtypes: [...dtypes].sort(),
+    stages: layout.stages,
   });
   console.log(
-    `${source}: ${entries.size} tensors, ${
-      (parameters / 1e6).toFixed(1)
-    }M parameters`,
+    `${source}: ${entries.size} tensors, ${layout.stages.length} stages, ${
+      (parameters / 1e9).toFixed(2)
+    }B matrix weights, ${(bytes / 2 ** 30).toFixed(1)} GiB`,
   );
 }
 await Deno.writeTextFile(

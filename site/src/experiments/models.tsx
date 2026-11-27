@@ -27,12 +27,18 @@ import {
   WeightStack,
 } from "./weights/weight-stack.ts";
 
+/** One entry of catalog.json, written by scripts/catalog_model_shapes.ts. */
 interface CatalogModel {
   readonly id: string;
   readonly source: string;
+  /** Tensors in the checkpoint, before collapsing experts. */
+  readonly tensors: number;
+  /** Checkpoint size in bytes, as stored (quantized). */
+  readonly bytes: number;
+  /** Weights in the layout's matrices, counting every expert. */
   readonly parameters: number;
   readonly dtypes: readonly string[];
-  readonly tensors: readonly (readonly [string, readonly number[]])[];
+  readonly stages: ModelLayout["stages"];
 }
 
 const TOY = "toy-mlp";
@@ -296,14 +302,21 @@ export const experiment: Experiment = {
           source = "Local file";
         } else {
           const model = catalog.find((m) => m.id === id)!;
-          const layoutValue = shapes(model.tensors);
+          const layoutValue = { stages: model.stages };
+          const experts = model.stages.flatMap((st) => st.matrices)
+            .reduce((m, x) => Math.max(m, x.count ?? 1), 1);
           loaded = {
             stages: shapeOnly(layoutValue),
             layout: layoutValue,
             runtime: null,
-            note: `Shapes from the safetensors header (${
-              model.dtypes.join(", ")
-            }); ${count(model.parameters)} parameters in all tensors.`,
+            note:
+              `Shapes from ${model.tensors.toLocaleString()} tensor headers (${
+                (model.bytes / 2 ** 30).toFixed(1)
+              } GiB stored as ${model.dtypes.join(", ")}).${
+                experts > 1
+                  ? ` Mixture of experts: up to ${experts} copies per matrix, drawn as thicker slabs; scales dropped, FP4 shown unpacked.`
+                  : ""
+              }`,
           };
           source = model.source.startsWith("https://")
             ? `<a href="${model.source}" target="_blank" rel="noopener">${model.id}</a>`
