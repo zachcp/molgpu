@@ -82,13 +82,15 @@ from a recorded forward pass, such as `ProteinMpnnTrace.steps`: each matrix
 joins the stage that first reads it, in reading order. `layoutFromNames` builds
 one from names alone for models that cannot run here: numbered blocks in numeric
 order, embeddings first, heads last. It collapses numbered copies such as MoE
-experts into one matrix with a `count`, drops quantization scales, and reports
-FP4 weights packed two per byte at their logical shape, so DeepSeek-V4 and
-Kimi-K3 layouts read correctly. `readSafetensorsHeader` reads names, dtypes and
-shapes from a file's first `8 + safetensorsHeaderLength(bytes)` bytes, so a 7B
-checkpoint's layout costs two range requests. `scripts/catalog_model_shapes.ts`
-writes such a catalog for Hugging Face repos (single-file or sharded) and local
-files.
+experts into one matrix with a `count`; pass `{ collapseCopies: false }` to
+retain exact tensor names when binding real weight buffers. It drops
+quantization scales and reports FP4 weights packed two per byte at their logical
+shape, so DeepSeek-V4 and Kimi-K3 layouts read correctly.
+`readSafetensorsHeader` reads names, dtypes and shapes from a file's first
+`8 + safetensorsHeaderLength(bytes)` bytes, so a 7B checkpoint's layout costs
+two range requests. `scripts/catalog_model_shapes.ts` writes such a catalog for
+Hugging Face repos (single-file or sharded) and local files, and rejects servers
+that do not honor byte ranges before reading their response bodies.
 
 ## Ownership
 

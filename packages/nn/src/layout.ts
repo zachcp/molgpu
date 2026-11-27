@@ -112,6 +112,7 @@ function logical(
  * numbered copies of one shape (`ffn.experts.17.w1.weight`) collapse into one
  * matrix named with `*` and a `count`. Quantization scales are dropped and,
  * given `dtype`, FP4 weights packed two per byte report their logical shape.
+ * Set `collapseCopies: false` to keep exact tensor names when binding values.
  * Order within a block is the input order, which for safetensors is
  * alphabetical, not the forward order.
  */
@@ -122,6 +123,7 @@ export function layoutFromNames(
       { readonly shape: readonly number[]; readonly dtype?: string },
     ]
   >,
+  options: { readonly collapseCopies?: boolean } = {},
 ): ModelLayout {
   const all = new Map(tensors);
   const first: LayoutMatrix[] = [], last: LayoutMatrix[] = [];
@@ -160,7 +162,7 @@ export function layoutFromNames(
     }
     // A second numbered segment inside the block: one of several copies.
     const copy = /^(.*?)\.\d+\.(.*)$/.exec(name.slice(prefix.length));
-    if (!copy) {
+    if (!copy || options.collapseCopies === false) {
       entry.matrices.push(m);
       continue;
     }

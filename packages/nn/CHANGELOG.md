@@ -12,6 +12,9 @@ for the procedure.
   `scripts/catalog_model_shapes.ts` catalogues layouts from Hugging Face.
 - `layoutFromNames` collapses mixture-of-experts copies (`LayoutMatrix.count`),
   drops quantization scales and unpacks FP4 shapes (`LayoutMatrix.dtype`).
+- `{ collapseCopies: false }` retains exact tensor names for value-backed
+  layouts. Local checkpoint views preserve FP4 metadata in header-only mode; the
+  catalog reader requires partial responses and reuses the length prefix.
 - New package: CPU reference ops (exact GELU, linear, LayerNorm, row gather,
   masked neighbour sum, log-softmax), a safetensors reader, and `NnRuntime`, a
   raw-WebGPU runtime on a caller-supplied device whose tensor buffers can be

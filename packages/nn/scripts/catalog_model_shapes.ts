@@ -27,16 +27,27 @@ async function range(url: string, start: number, end: number) {
   const response = await fetch(url, {
     headers: { Range: `bytes=${start}-${end - 1}` },
   });
-  if (!response.ok) throw new Error(`${url}: HTTP ${response.status}`);
+  if (
+    response.status !== 206 ||
+    !response.headers.get("Content-Range")?.startsWith(
+      `bytes ${start}-${end - 1}/`,
+    )
+  ) {
+    await response.body?.cancel();
+    throw new Error(`${url}: expected HTTP 206 for bytes ${start}-${end - 1}`);
+  }
   const bytes = new Uint8Array(await response.arrayBuffer());
-  // A server that ignores Range sends the whole file; keep only what we asked for.
-  return response.status === 206 ? bytes : bytes.subarray(start, end);
+  if (bytes.length !== end - start) {
+    throw new Error(`${url}: truncated range response`);
+  }
+  return bytes;
 }
 
 async function remoteHeader(url: string) {
-  const length = safetensorsHeaderLength(await range(url, 0, 8));
+  const prefix = await range(url, 0, 8);
+  const length = safetensorsHeaderLength(prefix);
   const bytes = new Uint8Array(8 + length);
-  bytes.set(await range(url, 0, 8));
+  bytes.set(prefix);
   bytes.set(await range(url, 8, 8 + length), 8);
   return readSafetensorsHeader(bytes);
 }

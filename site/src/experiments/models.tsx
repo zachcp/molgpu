@@ -45,11 +45,6 @@ const TOY = "toy-mlp";
 /** Files up to this size are parsed and uploaded; larger ones are read for their header only. */
 const UPLOAD_LIMIT = 256 * 2 ** 20;
 
-const shapes = (tensors: Iterable<readonly [string, readonly number[]]>) =>
-  layoutFromNames(
-    [...tensors].map(([name, shape]) => [name, { shape }] as const),
-  );
-
 const count = (n: number) =>
   n >= 1e9
     ? `${(n / 1e9).toFixed(2)}B`
@@ -130,9 +125,7 @@ async function toyMlp(device: GPUDevice, widths: number[]): Promise<Loaded> {
     );
     weights.set(`layers.${i}.bias`, random([widths[i + 1]], 0.1));
   }
-  const layout = shapes(
-    [...weights].map(([name, t]) => [name, t.shape] as const),
-  );
+  const layout = layoutFromNames(weights, { collapseCopies: false });
   const { runtime, gpu, stages } = upload(device, weights, layout);
   // Run a batch through the same buffers the view binds; biases are 1-D, so
   // the layout leaves them out and they are uploaded here.
@@ -167,7 +160,7 @@ async function openFile(device: GPUDevice, file: File): Promise<Loaded> {
     const header = readSafetensorsHeader(
       new Uint8Array(await file.slice(0, 8 + length).arrayBuffer()),
     );
-    const layout = shapes([...header].map(([n, e]) => [n, e.shape] as const));
+    const layout = layoutFromNames(header);
     return {
       stages: shapeOnly(layout),
       layout,
@@ -178,7 +171,7 @@ async function openFile(device: GPUDevice, file: File): Promise<Loaded> {
     };
   }
   const weights = parseSafetensors(new Uint8Array(await file.arrayBuffer()));
-  const layout = shapes([...weights].map(([n, t]) => [n, t.shape] as const));
+  const layout = layoutFromNames(weights, { collapseCopies: false });
   const { runtime, stages, skipped } = upload(device, weights, layout);
   return {
     stages,

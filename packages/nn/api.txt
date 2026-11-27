@@ -65,7 +65,7 @@ indexTensor
 layerNorm
   export function layerNorm(x: Tensor, gamma: Tensor, beta: Tensor, options?: { residual?: Tensor; eps?: number }): Tensor;
 layoutFromNames
-  export function layoutFromNames(tensors: Iterable<readonly [ string, { readonly shape: readonly number[]; readonly dtype?: string } ]>): ModelLayout;
+  export function layoutFromNames(tensors: Iterable<readonly [ string, { readonly shape: readonly number[]; readonly dtype?: string } ]>, options?: { readonly collapseCopies?: boolean }): ModelLayout;
 layoutFromSteps
   export function layoutFromSteps(steps: readonly LayoutStep[], shapes: ReadonlyMap<string, { readonly shape: readonly number[] }>, label?: (stage: string, layer: number) => string): ModelLayout;
 layoutParameters

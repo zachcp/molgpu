@@ -1764,6 +1764,71 @@ Deno.test("site landing page and maintained gallery routes", async () => {
       await page.locator("[data-stack-canvas]").getAttribute("data-planes"),
       "4",
     );
+    // Local values retain exact expert names; large packed files retain dtype
+    // when only their header is read. Repeated Blob parts avoid allocating a
+    // full checkpoint's payload for the header-only scenario.
+    for (
+      const example of [
+        {
+          header: {
+            "layers.0.experts.0.weight": {
+              dtype: "F32",
+              shape: [2, 3],
+              data_offsets: [0, 24],
+            },
+            "layers.0.experts.1.weight": {
+              dtype: "F32",
+              shape: [2, 3],
+              data_offsets: [24, 48],
+            },
+          },
+          payloadMiB: 0,
+          planes: "2",
+          largest: "layers.0.experts.0.weight [2 × 3]",
+        },
+        {
+          header: {
+            "layers.0.weight": {
+              dtype: "U8",
+              shape: [8192, 32768],
+              data_offsets: [0, 256 * 2 ** 20],
+            },
+            "layers.0.weight_scale": {
+              dtype: "U8",
+              shape: [8192, 2048],
+              data_offsets: [256 * 2 ** 20, 272 * 2 ** 20],
+            },
+          },
+          payloadMiB: 272,
+          planes: "1",
+          largest: "layers.0.weight [8192 × 65536]",
+        },
+      ]
+    ) {
+      await page.evaluate(({ header, payloadMiB }) => {
+        const json = new TextEncoder().encode(JSON.stringify(header));
+        const prefix = new Uint8Array(8 + json.length);
+        new DataView(prefix.buffer).setBigUint64(0, BigInt(json.length), true);
+        prefix.set(json, 8);
+        const payload = payloadMiB
+          ? Array(payloadMiB).fill(new Blob([new Uint8Array(2 ** 20)]))
+          : [new Float32Array([1, -2, 3, -4, 5, -6, 7, -8, 9, -10, 11, -12])];
+        const transfer = new DataTransfer();
+        transfer.items.add(new File([prefix, ...payload], "local.safetensors"));
+        const input = globalThis.document.querySelector("[data-file]");
+        input.files = transfer.files;
+        input.dispatchEvent(new Event("change", { bubbles: true }));
+      }, example);
+      await page.waitForSelector('#experiment-canvas[data-model="ready"]');
+      assertEquals(
+        await page.locator("[data-stack-canvas]").getAttribute("data-planes"),
+        example.planes,
+      );
+      assertStringIncludes(
+        await page.locator("[data-stats]").textContent(),
+        example.largest,
+      );
+    }
     // A 7B catalog model drawn from its safetensors header alone.
     await page.selectOption("[data-model-picker]", "mistralai/Mistral-7B-v0.1");
     await page.waitForSelector('[data-stack-canvas][data-planes="226"]');

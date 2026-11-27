@@ -136,4 +136,15 @@ Deno.test("layoutFromNames collapses experts, drops scales and unpacks FP4", () 
     layoutParameters(layout),
     3 * 3072 * 7168 + 1536 * 7168 + 16 + 3 * 7168 * 3072,
   );
+  // Value-backed views need checkpoint keys, not wildcard display names.
+  const exact = layoutFromNames(tensors, { collapseCopies: false });
+  assertEquals(
+    exact.stages[0].matrices.slice(0, 3).map((m) => [m.name, m.shape, m.count]),
+    [
+      ["layers.5.ffn.experts.0.w1.weight", [3072, 7168], undefined],
+      ["layers.5.ffn.experts.1.w1.weight", [3072, 7168], undefined],
+      ["layers.5.ffn.experts.2.w1.weight", [3072, 7168], undefined],
+    ],
+  );
+  assertEquals(layoutParameters(exact), layoutParameters(layout));
 });
