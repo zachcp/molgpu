@@ -1,0 +1,14 @@
+{
+  "name": "@molgpu/nn",
+  "version": "0.4.0",
+  "license": "MIT",
+  "exports": "./src/index.ts",
+  "publish": {
+    "include": [
+      "src",
+      "README.md",
+      "LICENSE",
+      "CHANGELOG.md"
+    ]
+  }
+}
