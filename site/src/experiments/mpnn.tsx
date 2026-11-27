@@ -19,9 +19,9 @@ import {
   useState,
 } from "@use-gpu/live";
 import { AutoCanvas } from "@use-gpu/webgpu";
-import { Pass } from "@use-gpu/workbench";
+import { AmbientLight, DirectionalLight, Pass } from "@use-gpu/workbench";
 import { annotation, COLOR } from "@molgpu/fields";
-import { where } from "@molgpu/select";
+import { and, protein, where } from "@molgpu/select";
 import type { StructureData } from "@molgpu/table";
 import {
   PROTEIN_MPNN_ALPHABET,
@@ -32,6 +32,7 @@ import {
   PickingProvider,
   Spacefill,
   Structure,
+  Tube,
   usePicking,
 } from "@molgpu/viewer";
 import weightsUrl from "../../../packages/nn/test/fixtures/proteinmpnn_v_48_020.safetensors?url";
@@ -54,8 +55,8 @@ const STRUCTURES = [
   { id: "1a4y", title: "RNase inhibitor–angiogenin (1A4Y)", url: complexUrl },
 ];
 const LETTERS = PROTEIN_MPNN_ALPHABET.length;
-const OTHER = [0.32, 0.34, 0.38, 1];
-const HOVER = [1, 0.92, 0.3, 1] as const;
+const OTHER = [0.42, 0.45, 0.52, 1];
+const HOVER = [1, 0.42, 0.78, 1] as const;
 
 type Metric =
   | "conditional"
@@ -120,13 +121,15 @@ class Store {
   }
 }
 
-/** Red (0) through sand (0.5) to blue (1). */
+// Slate (0) through grey teal (0.5) to sand (1): muted and sequential, light
+// enough to read on the dark background, with no red/green split.
+const RAMP = [[0.3, 0.34, 0.55], [0.34, 0.58, 0.6], [0.9, 0.82, 0.6]];
+/** Side chains shown around the hovered residue: its nearest neighbours by CA. */
+const NEAR = 8;
 const ramp = (t: number): number[] => {
-  const x = Math.min(1, Math.max(0, t));
-  const [a, b] = x < 0.5
-    ? [[0.86, 0.24, 0.22], [0.93, 0.83, 0.5]]
-    : [[0.93, 0.83, 0.5], [0.27, 0.6, 0.93]];
-  const s = x < 0.5 ? x * 2 : x * 2 - 1;
+  const x = Math.min(1, Math.max(0, t)) * 2;
+  const [a, b] = x < 1 ? [RAMP[0], RAMP[1]] : [RAMP[1], RAMP[2]];
+  const s = x < 1 ? x : x - 1;
   return [...a.map((v, i) => v + (b[i] - v) * s), 1];
 };
 
@@ -245,31 +248,42 @@ const Stage: LC<{
       ),
     [data, run, metric, step, center],
   );
-  // The encoder sees only N, CA, C and O, so encoder mode shows only those.
+  // The encoder sees only N, CA, C and O, so encoder mode shows those atoms
+  // instead of side chains.
   const backboneOnly = mode === "encoder";
-  const backbone = useMemo(
+  const alpha = useMemo(
     () =>
-      where(
-        "atom",
-        "mpnn backbone",
-        (d, a) => BACKBONE.has(d.topology.atoms.name[a]),
+      and(
+        protein(),
+        where("atom", "mpnn CA", (d, a) => d.topology.atoms.name[a] === "CA"),
       ),
     [],
   );
-  const highlight = useMemo(() => {
-    if (hovered < 0) return null;
-    const row = run.input.residues[hovered];
-    return backboneOnly
-      ? where(
-        "atom",
-        `mpnn backbone ${row}`,
-        (d, a) =>
-          d.topology.atoms.residue[a] === row &&
-          BACKBONE.has(d.topology.atoms.name[a]),
-      )
-      : where("residue", `mpnn residue ${row}`, (_, r) => r === row);
-  }, [run, hovered, backboneOnly]);
-  const camera = useMemo(() => cameraFor(data, 1.5), [data]);
+  // Side chains appear only around the hovered residue: its own (pink) and
+  // its NEAR nearest neighbours' (coloured by the metric). Encoder mode shows
+  // those residues' N/CA/C/O instead, the atoms the encoder reads.
+  const { focus, near } = useMemo(() => {
+    if (hovered < 0) return { focus: null, near: null };
+    const atoms = (label: string, rows: ReadonlySet<number>, ca: boolean) =>
+      where("atom", label, (d, a) => {
+        const { residue, name } = d.topology.atoms;
+        if (!rows.has(residue[a])) return false;
+        const backbone = BACKBONE.has(name[a]);
+        // The hovered CA keeps glycine visible when it has no side chain.
+        return backboneOnly || (ca && name[a] === "CA") ? backbone : !backbone;
+      });
+    const self = run.input.residues[hovered];
+    const around = new Set(
+      neighborsOf(run.input, run.encoding.graph, hovered)
+        .slice(1, 1 + NEAR)
+        .map((n) => run.input.residues[n.position]),
+    );
+    return {
+      focus: atoms(`mpnn hovered ${self} ${mode}`, new Set([self]), true),
+      near: atoms(`mpnn near ${self} ${mode}`, around, false),
+    };
+  }, [run, hovered, backboneOnly, mode]);
+  const camera = useMemo(() => cameraFor(data, 1.05), [data]);
   useResource(() => {
     host.dataset.webgpu = "ready";
   }, [host]);
@@ -280,17 +294,45 @@ const Stage: LC<{
     bearing: 0.6,
     pitch: 0.3,
     children: (
-      <Pass picking>
+      // Key, fill and rim lights from three sides, so the molecule stays lit
+      // wherever the orbit puts the camera.
+      <Pass picking lights>
+        <AmbientLight color={[0.8, 0.85, 1]} intensity={0.32} />
+        <DirectionalLight
+          direction={[-1, -2, -1.5]}
+          color={[1, 0.96, 0.9]}
+          intensity={1.05}
+        />
+        <DirectionalLight
+          direction={[1.2, 0.6, 1]}
+          color={[0.75, 0.85, 1]}
+          intensity={0.55}
+        />
+        <DirectionalLight
+          direction={[0.2, 1.5, -1.2]}
+          color={[0.9, 0.9, 1]}
+          intensity={0.35}
+        />
         <Structure data={data}>
           <PickingProvider>
-            <Spacefill
+            <Tube
+              select={protein()}
+              radius={0.4}
               color={color}
-              select={backboneOnly ? backbone : undefined}
-              pickable
+              material={{ type: "pbr", roughness: 0.6 }}
             />
-            {highlight
-              ? <Spacefill select={highlight} color={HOVER} scale={1.06} />
+            {/* CA beads on the tube: the residues you hover. */}
+            <Spacefill select={alpha} scale={0.3} color={color} pickable />
+            {near
+              ? (
+                <Spacefill
+                  select={near}
+                  color={color}
+                  material={{ type: "pbr", roughness: 0.7 }}
+                />
+              )
               : null}
+            {focus ? <Spacefill select={focus} color={HOVER} /> : null}
             <HoverListener data={data} run={run} store={store} />
           </PickingProvider>
         </Structure>
