@@ -1753,6 +1753,26 @@ Deno.test("site landing page and maintained gallery routes", async () => {
     // Sequence mode starts at the sequence embedding.
     await page.selectOption("[data-mode-picker]", "sequence");
     await page.waitForSelector('#experiment-canvas[data-step="48"]');
+    route = "Model layouts experiment";
+    // A toy MLP created on the GPU: one slab per weight matrix, coloured
+    // from the buffers its forward pass read.
+    await page.goto("http://127.0.0.1:5190/#experiments/models?model=toy-mlp");
+    await page.waitForSelector('#experiment-canvas[data-model="ready"]', {
+      timeout: 60_000,
+    });
+    assertEquals(
+      await page.locator("[data-stack-canvas]").getAttribute("data-planes"),
+      "4",
+    );
+    // A 7B catalog model drawn from its safetensors header alone.
+    await page.selectOption("[data-model-picker]", "mistralai/Mistral-7B-v0.1");
+    await page.waitForSelector('[data-stack-canvas][data-planes="226"]');
+    await page.waitForSelector('#experiment-canvas[data-model="ready"]');
+    await page.click("[data-stack]");
+    await page.waitForSelector(
+      '[data-stack-canvas][data-arrangement="unstacked"]',
+      { timeout: 30_000 },
+    );
     await page.getByRole("link", { name: "Experiments", exact: true }).click();
     await page.waitForSelector(".experiment-list");
     assertEquals(await page.locator("#experiment-canvas canvas").count(), 0);

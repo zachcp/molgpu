@@ -1,18 +1,42 @@
-// Every ProteinMPNN weight matrix as a plane in 3D, coloured by a fragment
-// shader that reads the same GPUBuffer the forward pass reads. "Stacked" piles
-// the planes along z in forward-pass order and blends them additively, so the
-// stack reads as a glowing volume; "unstacked" flies them out (staggered, in
-// order) into a flat grid with one column per layer. Both read left to right:
-// edge features first, output last. Raw WebGPU: a camera
-// uniform, one small uniform per plane, and the weight buffers themselves.
-import type { MatrixView } from "./run.ts";
+// A model's weight matrices as slabs in 3D, for any `ModelLayout` from
+// @molgpu/nn. "Stacked" piles the slabs along the view's left-to-right axis
+// in forward order and blends them additively, so the stack reads as a
+// glowing volume; "unstacked" flies them out (staggered, in order) into a
+// grid with one column per stage. A matrix with a GPU buffer is coloured by a
+// fragment shader reading that buffer (the same one the model reads); one
+// without (a layout from a safetensors header) is a tinted slab of its true
+// shape. Raw WebGPU: a camera uniform, one small uniform per slab, and the
+// weight buffers themselves.
+import type { ModelLayout } from "@molgpu/nn";
+
+/** A matrix to draw: its layout entry plus, optionally, its data. */
+export interface StackMatrix {
+  readonly name: string;
+  /** [out, in]: height and width of the slab. */
+  readonly shape: readonly [number, number];
+  /** Row-major f32 values to colour by; absent for shape-only slabs. */
+  readonly buffer?: GPUBuffer;
+  /** CPU copy of the values, for the hover readout. */
+  readonly values?: Float32Array;
+  /** Largest |value|, for the diverging palette. */
+  readonly scale?: number;
+}
+
+export interface StackStage {
+  readonly label: string;
+  readonly matrices: readonly StackMatrix[];
+}
+
+/** Stages of a layout with no data: every slab drawn from its shape. */
+export const shapeOnly = (layout: ModelLayout): StackStage[] =>
+  layout.stages.map((s) => ({ label: s.label, matrices: s.matrices }));
 
 const SHADER = /* wgsl */ `
 struct Camera { viewProj: mat4x4<f32> }
 struct Plane {
   center: vec3<f32>, alpha: f32,
   size: vec2<f32>, rows: u32, cols: u32,
-  scale: f32, highlight: f32, pad: vec2<f32>,
+  scale: f32, highlight: f32, thickness: f32, hue: f32,
 }
 @group(0) @binding(0) var<uniform> camera: Camera;
 @group(0) @binding(1) var<uniform> plane: Plane;
@@ -34,7 +58,7 @@ const FACES = array<u32, 36>(
 @vertex fn vs(@builtin(vertex_index) i: u32) -> Out {
   let c = FACES[i];
   let local = vec3<f32>(f32(c & 1u), f32((c >> 1u) & 1u), f32((c >> 2u) & 1u)) - 0.5;
-  let p = plane.center + local * vec3<f32>(plane.size, plane.pad.x);
+  let p = plane.center + local * vec3<f32>(plane.size, plane.thickness);
   var out: Out;
   out.position = camera.viewProj * vec4<f32>(p, 1.0);
   // Columns run along x (inputs), rows down y (outputs); sides take border cells.
@@ -43,12 +67,25 @@ const FACES = array<u32, 36>(
   return out;
 }
 
+fn hueColor(h: f32) -> vec3<f32> {
+  let k = vec3<f32>(0.0, 2.0 / 3.0, 1.0 / 3.0);
+  return 0.5 + 0.35 * cos(6.2831853 * (h + k));
+}
+
 @fragment fn fs(in: Out) -> @location(0) vec4<f32> {
-  let row = min(u32(in.uv.y * f32(plane.rows)), plane.rows - 1u);
-  let col = min(u32(in.uv.x * f32(plane.cols)), plane.cols - 1u);
-  let t = values[row * plane.cols + col] / plane.scale;
-  let hue = select(vec3<f32>(0.25, 0.62, 1.0), vec3<f32>(1.0, 0.55, 0.15), t > 0.0);
-  var color = hue * pow(clamp(abs(t), 0.0, 1.0), 0.7) * plane.alpha;
+  var color: vec3<f32>;
+  if (plane.hue >= 0.0) {
+    // Shape only: a flat stage tint with a faint 8 x 8 grid of the matrix.
+    let g = fract(in.uv * 8.0);
+    let line = select(0.0, 0.25, min(g.x, g.y) < 0.04);
+    color = hueColor(plane.hue) * (0.22 + line) * plane.alpha;
+  } else {
+    let row = min(u32(in.uv.y * f32(plane.rows)), plane.rows - 1u);
+    let col = min(u32(in.uv.x * f32(plane.cols)), plane.cols - 1u);
+    let t = values[row * plane.cols + col] / plane.scale;
+    let hue = select(vec3<f32>(0.25, 0.62, 1.0), vec3<f32>(1.0, 0.55, 0.15), t > 0.0);
+    color = hue * pow(clamp(abs(t), 0.0, 1.0), 0.7) * plane.alpha;
+  }
   let frame = mix(vec3<f32>(0.07), vec3<f32>(1.0, 0.92, 0.3), plane.highlight);
   if (in.side == 1u) {
     // Slab edges: a solid tint so the thickness reads from the side.
@@ -56,20 +93,23 @@ const FACES = array<u32, 36>(
   }
   let edge = min(min(in.uv.x, 1.0 - in.uv.x) * plane.size.x,
                  min(in.uv.y, 1.0 - in.uv.y) * plane.size.y);
-  if (edge < 0.08) { color += frame; }
+  if (edge < plane.thickness * 0.25) { color += frame; }
   return vec4<f32>(color, 1.0);
 }
 `;
 
 type Vec3 = [number, number, number];
-const CELL = 1 / 32; // world units per matrix cell
 const STAGGER = 0.6; // fraction of the transition spent staggering planes
 const DURATION = 1600; // ms for a full stack <-> unstack transition
 const FOV = 0.8;
-// Looking from -x, the stack's +z (later steps) runs to the right on screen,
+/** Largest matrix side in world units; smaller models keep 1/32 per cell. */
+const SPAN = 48;
+// Looking from -x, the stack's +z (later stages) runs to the right on screen,
 // so the forward pass reads left to right as in the unstacked grid.
 const STACK_VIEW = { yaw: -0.85, pitch: 0.42 };
 const FLAT_VIEW = { yaw: 0, pitch: 0 };
+/** Width : height the unstacked grid wraps toward. */
+const ASPECT = 1.8;
 
 const smooth = (x: number) => {
   const t = Math.min(1, Math.max(0, x));
@@ -87,22 +127,9 @@ const normalize = (a: Vec3): Vec3 => {
   return [a[0] / l, a[1] / l, a[2] / l];
 };
 
-/** Column in the unstacked grid: one per stage of the forward pass. */
-const groupOf = (name: string) => {
-  const layer = /^(encoder|decoder)_layers\.(\d+)\./.exec(name);
-  if (layer) {
-    return `${layer[1] === "encoder" ? "Encoder" : "Decoder"} ${
-      Number(layer[2]) + 1
-    }`;
-  }
-  if (name === "W_s.weight") return "Sequence";
-  if (name === "W_out.weight") return "Output";
-  return "Edge features";
-};
-
 interface Plane {
-  readonly view: MatrixView;
-  readonly index: number;
+  readonly matrix: StackMatrix;
+  readonly stage: number;
   readonly order: number;
   readonly size: [number, number];
   readonly flat: Vec3;
@@ -114,17 +141,21 @@ interface Plane {
 
 const pipelines = new WeakMap<GPUDevice, Map<string, GPURenderPipeline>>();
 
-/** The 3D weights view; `onSelect` receives a matrix index into `matrices`. */
-export class Weights3D {
+/** The 3D weights view; `onSelect` receives the clicked matrix's name. */
+export class WeightStack {
   readonly canvas: HTMLCanvasElement;
   #device: GPUDevice;
   #context: GPUCanvasContext;
   #pipeline: GPURenderPipeline;
   #camera: GPUBuffer;
+  #placeholder: GPUBuffer;
   #planes: Plane[] = [];
+  #stages = 0;
+  #cell = 1 / 32;
+  #largest = 1;
   #flatSize: [number, number] = [1, 1];
   #tip: HTMLElement;
-  #onSelect: (index: number) => void;
+  #onSelect: (name: string) => void;
   #resize: ResizeObserver;
   #labels: { element: HTMLElement; plane: Plane }[] = [];
   #viewProj = new Float32Array(16);
@@ -140,7 +171,7 @@ export class Weights3D {
   #zoom = 1;
   #view: { yaw: number; pitch: number } | null = null;
   #hovered: Plane | null = null;
-  /** Checkpoint names the current forward-pass step reads, or null for no focus. */
+  /** Names the current forward-pass step reads, or null for no focus. */
   #focus: ReadonlySet<string> | null = null;
   #eye: Vec3 = [0, 0, 1];
   #basis: [Vec3, Vec3, Vec3] = [[1, 0, 0], [0, 1, 0], [0, 0, -1]];
@@ -149,8 +180,8 @@ export class Weights3D {
     device: GPUDevice,
     canvas: HTMLCanvasElement,
     tip: HTMLElement,
-    matrices: readonly MatrixView[],
-    onSelect: (index: number) => void,
+    stages: readonly StackStage[],
+    onSelect: (name: string) => void = () => {},
   ) {
     this.canvas = canvas;
     this.#device = device;
@@ -165,7 +196,7 @@ export class Weights3D {
     if (!pipeline) {
       const module = device.createShaderModule({
         code: SHADER,
-        label: "mpnn:weights3d",
+        label: "weights:stack",
       });
       const add = { srcFactor: "one", dstFactor: "one", operation: "add" };
       pipeline = device.createRenderPipeline({
@@ -180,7 +211,7 @@ export class Weights3D {
           }],
         },
         primitive: { cullMode: "none" },
-        label: "mpnn:weights3d",
+        label: "weights:stack",
       });
       cache.set(format, pipeline);
     }
@@ -188,12 +219,19 @@ export class Weights3D {
     this.#camera = device.createBuffer({
       size: 64,
       usage: 0x0040 | 0x0008, // UNIFORM | COPY_DST
-      label: "mpnn:weights3d:camera",
+      label: "weights:stack:camera",
     });
-    this.#layout(matrices);
+    // Bound for shape-only slabs, whose shader never reads it.
+    this.#placeholder = device.createBuffer({
+      size: 16,
+      usage: 0x0080, // STORAGE
+      label: "weights:stack:placeholder",
+    });
+    this.#layout(stages);
     this.#bindEvents();
     this.#resize = new ResizeObserver(() => this.draw());
     this.#resize.observe(canvas);
+    canvas.dataset.planes = String(this.#planes.length);
   }
 
   /** "stacked" or "unstacked", the state the view is heading to. */
@@ -210,9 +248,8 @@ export class Weights3D {
   }
 
   /**
-   * Light the matrices a forward-pass step reads and dim the rest; in the
-   * stack they also slide out sideways. An empty list dims every matrix (a
-   * step with no weights); null clears the focus.
+   * Light the named matrices and dim the rest; in the stack they also rise
+   * out of it. An empty list dims every matrix; null clears the focus.
    */
   focus(names: readonly string[] | null): void {
     this.#focus = names && new Set(names);
@@ -220,61 +257,90 @@ export class Weights3D {
     this.draw();
   }
 
-  /** Spacing between stacked planes in world units. */
+  /** Spacing between stacked planes, in units of 1/16 of the largest matrix side. */
   setGap(gap: number): void {
     this.#gap = gap;
     this.draw();
   }
 
-  #layout(matrices: readonly MatrixView[]): void {
-    const real = matrices
-      .map((view, index) => ({ view, index }))
-      .filter(({ view }) => view.name);
-    // Unstacked grid: layers as columns, matrices top-down in each column.
-    const groups = new Map<string, typeof real>();
-    for (const entry of real) {
-      const key = groupOf(entry.view.name!);
-      groups.set(key, [...groups.get(key) ?? [], entry]);
-    }
-    const columns = [...groups.values()].map((entries) => {
-      const sizes = entries.map(({ view }) =>
-        [view.tensor.shape[1] * CELL, view.tensor.shape[0] * CELL] as [
-          number,
-          number,
-        ]
+  #layout(stages: readonly StackStage[]): void {
+    this.#stages = stages.length;
+    const largest = Math.max(
+      1,
+      ...stages.flatMap((s) => s.matrices.flatMap((m) => m.shape)),
+    );
+    // Small models keep 32 cells per world unit; large ones shrink so the
+    // largest side spans SPAN units. Every slab keeps its true proportions.
+    this.#cell = Math.min(1 / 32, SPAN / largest);
+    this.#largest = largest * this.#cell;
+    const unit = this.#largest / 16;
+    const columns = stages.map(({ matrices }) => {
+      const sizes = matrices.map(({ shape }) =>
+        [shape[1] * this.#cell, shape[0] * this.#cell] as [number, number]
       );
       return {
-        entries,
         sizes,
-        // Wide enough for the stage label even when its matrices are narrow.
-        width: Math.max(9, ...sizes.map((s) => s[0])),
-        height: sizes.reduce((h, s) => h + s[1], 0) + 1 * (sizes.length - 1),
+        width: Math.max(...sizes.map((s) => s[0])),
+        height: sizes.reduce((h, s) => h + s[1], 0) +
+          unit * (sizes.length - 1),
       };
     });
-    const GAP = 3;
-    const overlay = this.#tip.parentElement!;
-    const width = columns.reduce((w, c) => w + c.width, 0) +
-      GAP * (columns.length - 1);
-    const height = Math.max(...columns.map((c) => c.height));
+    const gap = 3 * unit;
+    // Wrap stages into rows, reading order, so the grid is about as wide as
+    // it is tall times ASPECT instead of one long strip for deep models.
+    const total = columns.reduce((w, c) => w + c.width + gap, -gap);
+    const tallest = Math.max(...columns.map((c) => c.height)) + 2 * gap;
+    const rowCount = Math.max(
+      1,
+      Math.min(
+        columns.length,
+        Math.round(Math.sqrt(total / (ASPECT * tallest))),
+      ),
+    );
+    const rowWidth = total / rowCount;
+    const rows: number[][] = [[]];
+    let filled = 0;
+    columns.forEach((column, s) => {
+      if (filled > 0 && filled + column.width / 2 > rowWidth * rows.length) {
+        rows.push([]);
+      }
+      rows.at(-1)!.push(s);
+      filled += column.width + gap;
+    });
+    const rowSize = rows.map((row) => ({
+      width: row.reduce((w, s) => w + columns[s].width + gap, -gap),
+      height: Math.max(...row.map((s) => columns[s].height)) + 2 * gap,
+    }));
+    const width = Math.max(...rowSize.map((r) => r.width));
+    const height = rowSize.reduce((h, r) => h + r.height, 0);
     this.#flatSize = [width, height];
-    let x = -width / 2, order = 0;
-    for (
-      const [key, column] of [...groups.keys()].map((k, i) =>
-        [k, columns[i]] as const
-      )
-    ) {
-      let y = height / 2;
+    const origin = new Map<number, [number, number]>();
+    let top = height / 2;
+    rows.forEach((row, r) => {
+      let x = -rowSize[r].width / 2;
+      for (const s of row) {
+        origin.set(s, [x, top - 2 * gap]);
+        x += columns[s].width + gap;
+      }
+      top -= rowSize[r].height;
+    });
+    const overlay = this.#tip.parentElement!;
+    let order = 0;
+    stages.forEach((stage, s) => {
+      const column = columns[s];
+      const [x] = origin.get(s)!;
+      let y = origin.get(s)![1];
       const first = this.#planes.length;
-      column.entries.forEach(({ view, index }, i) => {
+      stage.matrices.forEach((matrix, i) => {
         const size = column.sizes[i];
         const uniform = this.#device.createBuffer({
           size: 48,
           usage: 0x0040 | 0x0008,
-          label: `mpnn:weights3d:${view.name}`,
+          label: `weights:stack:${matrix.name}`,
         });
         this.#planes.push({
-          view,
-          index,
+          matrix,
+          stage: s,
           order: order++,
           size,
           flat: [x + column.width / 2, y - size[1] / 2, 0],
@@ -284,23 +350,23 @@ export class Weights3D {
             entries: [
               { binding: 0, resource: { buffer: this.#camera } },
               { binding: 1, resource: { buffer: uniform } },
-              { binding: 2, resource: { buffer: view.tensor.buffer } },
+              {
+                binding: 2,
+                resource: { buffer: matrix.buffer ?? this.#placeholder },
+              },
             ],
           }),
           center: [0, 0, 0],
         });
-        y -= size[1] + 1;
+        y -= size[1] + unit;
       });
+      if (!stage.matrices.length) return;
       const element = document.createElement("div");
-      element.className = "mpnn-stage";
-      element.textContent = key;
+      element.className = "weights-stage";
+      element.textContent = stage.label;
       overlay.append(element);
       this.#labels.push({ element, plane: this.#planes[first] });
-      x += column.width + GAP;
-    }
-    // `matrices` is in forward-pass order; that sets the stack and the stagger.
-    this.#planes.sort((a, b) => a.index - b.index);
-    this.#planes.forEach((plane, i) => (plane as { order: number }).order = i);
+    });
   }
 
   /** Per-plane transition progress: earlier planes move first. */
@@ -330,9 +396,7 @@ export class Weights3D {
       }
       this.draw();
       this.#raf = moving ? requestAnimationFrame(step) : 0;
-      if (!moving) {
-        this.canvas.dataset.arrangement = this.mode;
-      }
+      if (!moving) this.canvas.dataset.arrangement = this.mode;
     };
     this.#raf = requestAnimationFrame(step);
   }
@@ -346,8 +410,10 @@ export class Weights3D {
     const aspect = width / height;
     const n = this.#planes.length;
     const tan = Math.tan(FOV / 2);
+    const unit = this.#largest / 16;
     // Fit the stack or the grid, blending between them as planes move.
-    const stackRadius = Math.max(22, n * this.#gap * 0.9) * 1.2;
+    const step = this.#gap * Math.min(unit, (2 * this.#largest) / n);
+    const stackRadius = Math.max(this.#largest * 0.7, n * step) * 1.2;
     const [fw, fh] = this.#flatSize;
     const flatRadius = Math.max(fw / aspect, fh) / (2 * tan) * 1.08;
     const radius =
@@ -365,41 +431,17 @@ export class Weights3D {
     this.#eye = eye;
     this.#basis = [x, y, [-z[0], -z[1], -z[2]]];
     const view = [
-      x[0],
-      y[0],
-      z[0],
-      0,
-      x[1],
-      y[1],
-      z[1],
-      0,
-      x[2],
-      y[2],
-      z[2],
-      0,
-      -dot(x, eye),
-      -dot(y, eye),
-      -dot(z, eye),
-      1,
+      ...[x[0], y[0], z[0], 0],
+      ...[x[1], y[1], z[1], 0],
+      ...[x[2], y[2], z[2], 0],
+      ...[-dot(x, eye), -dot(y, eye), -dot(z, eye), 1],
     ];
     const near = radius * 0.01, far = radius * 10, f = 1 / tan;
     const proj = [
-      f / aspect,
-      0,
-      0,
-      0,
-      0,
-      f,
-      0,
-      0,
-      0,
-      0,
-      far / (near - far),
-      -1,
-      0,
-      0,
-      (near * far) / (near - far),
-      0,
+      ...[f / aspect, 0, 0, 0],
+      ...[0, f, 0, 0],
+      ...[0, 0, far / (near - far), -1],
+      ...[0, 0, (near * far) / (near - far), 0],
     ];
     const viewProj = new Float32Array(16);
     for (let c = 0; c < 4; c++) {
@@ -426,27 +468,29 @@ export class Weights3D {
     const floats = new Float32Array(data), words = new Uint32Array(data);
     for (const plane of this.#planes) {
       const p = this.#progress(plane);
-      const stackZ = (plane.order - (n - 1) / 2) * this.#gap;
-      // Planes lift out of the stack on an arc before settling in the grid.
-      const focused = this.#focus?.has(plane.view.name!) ?? false;
+      const stackZ = (plane.order - (n - 1) / 2) * step;
+      const focused = this.#focus?.has(plane.matrix.name) ?? false;
       // Focused planes rise out of the stack, keeping their place in the order.
-      const pop = focused ? (plane.size[1] * 0.5 + 3) * (1 - p) : 0;
+      const pop = focused ? (plane.size[1] * 0.5 + 3 * unit) * (1 - p) : 0;
       plane.center = [
         plane.flat[0] * p,
         plane.flat[1] * p + pop,
-        stackZ * (1 - p) + Math.sin(Math.PI * p) * 10,
+        stackZ * (1 - p) + Math.sin(Math.PI * p) * 10 * unit,
       ];
       floats.set(plane.center, 0);
       // Dimmer while stacked (overlaps add up); a focus dims the rest further.
       const alpha = 0.4 + 0.6 * p;
       floats[3] = !this.#focus ? alpha : focused ? 1 : alpha * 0.18;
       floats.set(plane.size, 4);
-      words[6] = plane.view.tensor.shape[0];
-      words[7] = plane.view.tensor.shape[1];
-      floats[8] = plane.view.scale;
+      words[6] = plane.matrix.shape[0];
+      words[7] = plane.matrix.shape[1];
+      floats[8] = plane.matrix.scale ?? 1;
       floats[9] = plane === this.#hovered || focused ? 1 : 0;
       // Slab thickness: visible from the side, never thicker than the gap.
-      floats[10] = Math.min(0.35, this.#gap * 0.6);
+      floats[10] = Math.min(0.35 * unit, step * 0.6);
+      floats[11] = plane.matrix.buffer
+        ? -1
+        : (plane.stage / Math.max(1, this.#stages)) * 0.8;
       this.#device.queue.writeBuffer(plane.uniform, 0, data);
       pass.setBindGroup(0, plane.bindGroup);
       pass.draw(36);
@@ -456,25 +500,34 @@ export class Weights3D {
     this.#placeLabels();
   }
 
-  /** Pin each stage label above its column's first plane, wherever it is now. */
+  /** Pin each stage label above its first plane; skip labels that would collide. */
   #placeLabels(): void {
     const m = this.#viewProj;
     const box = this.canvas.getBoundingClientRect();
+    const placed: [number, number, number][] = [];
     for (const { element, plane } of this.#labels) {
       const p = [
         plane.center[0],
-        plane.center[1] + plane.size[1] / 2 + 0.4,
+        plane.center[1] + plane.size[1] / 2 + this.#largest / 80,
         plane.center[2],
         1,
       ];
       const clip = [0, 1, 2, 3].map((r) =>
         m[r] * p[0] + m[4 + r] * p[1] + m[8 + r] * p[2] + m[12 + r] * p[3]
       );
-      const visible = clip[3] > 0;
+      const left = (clip[0] / clip[3] * 0.5 + 0.5) * box.width;
+      const top = (0.5 - clip[1] / clip[3] * 0.5) * box.height;
+      // Approximate label width from its text: 0.72rem bold is about 7 px a character.
+      const half = (element.textContent!.length * 7 + 14) / 2;
+      const visible = clip[3] > 0 &&
+        placed.every(([l, t, w]) =>
+          Math.abs(l - left) > w + half || Math.abs(t - top) > 18
+        );
       element.hidden = !visible;
       if (!visible) continue;
-      element.style.left = `${(clip[0] / clip[3] * 0.5 + 0.5) * box.width}px`;
-      element.style.top = `${(0.5 - clip[1] / clip[3] * 0.5) * box.height}px`;
+      placed.push([left, top, half]);
+      element.style.left = `${left}px`;
+      element.style.top = `${top}px`;
     }
   }
 
@@ -501,7 +554,7 @@ export class Weights3D {
       const u = hit[0] / plane.size[0] + 0.5;
       const v = 0.5 - hit[1] / plane.size[1];
       if (u < 0 || u >= 1 || v < 0 || v >= 1) continue;
-      const [rows, cols] = plane.view.tensor.shape;
+      const [rows, cols] = plane.matrix.shape;
       best = {
         plane,
         row: Math.floor(v * rows),
@@ -543,15 +596,18 @@ export class Weights3D {
       const changed = (hit?.plane ?? null) !== this.#hovered;
       this.#hovered = hit?.plane ?? null;
       if (hit) {
-        const { view } = hit.plane;
-        const value = view.values[hit.row * view.tensor.shape[1] + hit.col];
+        const { matrix } = hit.plane;
+        const value = matrix.values?.[hit.row * matrix.shape[1] + hit.col];
         this.#tip.hidden = false;
-        this.#tip.textContent =
-          `${view.label} · out ${hit.row}, in ${hit.col} = ${value.toFixed(4)}`;
+        this.#tip.textContent = `${matrix.name} [${
+          matrix.shape.join(" × ")
+        }] · out ${hit.row}, in ${hit.col}${
+          value === undefined ? "" : ` = ${value.toFixed(4)}`
+        }`;
         const box = canvas.getBoundingClientRect();
         this.#tip.style.left = `${event.clientX - box.left + 12}px`;
         this.#tip.style.top = `${event.clientY - box.top + 12}px`;
-        canvas.dataset.hoveredWeight = view.name;
+        canvas.dataset.hoveredWeight = matrix.name;
       } else {
         this.#tip.hidden = true;
         delete canvas.dataset.hoveredWeight;
@@ -563,7 +619,7 @@ export class Weights3D {
       drag = null;
       if (!click) return;
       const hit = this.#pick(event);
-      if (hit) this.#onSelect(hit.plane.index);
+      if (hit) this.#onSelect(hit.plane.matrix.name);
     });
     on("pointerleave", () => {
       this.#tip.hidden = true;
@@ -575,7 +631,7 @@ export class Weights3D {
     on("wheel", (event) => {
       event.preventDefault();
       this.#zoom = Math.max(
-        0.15,
+        0.05,
         Math.min(4, this.#zoom * Math.exp(event.deltaY * 0.001)),
       );
       this.draw();
@@ -588,6 +644,7 @@ export class Weights3D {
     for (const remove of this.#cleanup) remove();
     this.#context.unconfigure();
     this.#camera.destroy();
+    this.#placeholder.destroy();
     for (const plane of this.#planes) plane.uniform.destroy();
     for (const { element } of this.#labels) element.remove();
   }

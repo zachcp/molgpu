@@ -7,6 +7,9 @@ for the procedure.
 
 ## [Unreleased]
 
+- `ModelLayout` with `layoutFromSteps` and `layoutFromNames`, and
+  `readSafetensorsHeader` for reading a checkpoint's shapes without its data;
+  `scripts/catalog_model_shapes.ts` catalogues layouts from Hugging Face.
 - New package: CPU reference ops (exact GELU, linear, LayerNorm, row gather,
   masked neighbour sum, log-softmax), a safetensors reader, and `NnRuntime`, a
   raw-WebGPU runtime on a caller-supplied device whose tensor buffers can be

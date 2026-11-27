@@ -20,7 +20,21 @@ export { gatherRows } from "./ops/gather.ts";
 export { mix } from "./ops/mix.ts";
 export { neighborSum } from "./ops/neighbor-sum.ts";
 export { logSoftmax } from "./ops/log-softmax.ts";
-export { parseSafetensors } from "./safetensors.ts";
+export {
+  parseSafetensors,
+  readSafetensorsHeader,
+  type SafetensorsEntry,
+  safetensorsHeaderLength,
+} from "./safetensors.ts";
+export {
+  layoutFromNames,
+  layoutFromSteps,
+  type LayoutMatrix,
+  layoutParameters,
+  type LayoutStage,
+  type LayoutStep,
+  type ModelLayout,
+} from "./layout.ts";
 export { type GpuTensor, NnRuntime } from "./runtime.ts";
 export {
   type BackboneSource,

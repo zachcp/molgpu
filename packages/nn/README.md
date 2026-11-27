@@ -74,6 +74,19 @@ still frees its temporaries. Tracing does not change the outputs.
 same trace for a fixture or a `.bcif` file as JSON, for replaying a structure's
 pass outside the browser.
 
+## Model layouts
+
+A `ModelLayout` lists a model's 2-D weight matrices (PyTorch `[out, in]`)
+grouped into stages, with no data and no renderer. `layoutFromSteps` builds one
+from a recorded forward pass, such as `ProteinMpnnTrace.steps`: each matrix
+joins the stage that first reads it, in reading order. `layoutFromNames` builds
+one from names alone for models that cannot run here: numbered blocks in numeric
+order, embeddings first, heads last. `readSafetensorsHeader` reads names, dtypes
+and shapes from a file's first `8 + safetensorsHeaderLength(bytes)` bytes, so a
+7B checkpoint's layout costs two range requests.
+`scripts/catalog_model_shapes.ts` writes such a catalog for Hugging Face repos
+(single-file or sharded) and local files.
+
 ## Ownership
 
 Tensors created by `upload`, `uploadIndex`, `uploadWeights`, `copy` or an op are
@@ -134,6 +147,16 @@ _stable_: relied on by other packages and settled. _experimental_: may change in
 | `ProteinMpnn`             | experimental | ProteinMPNN forward pass on an `NnRuntime`, reading weights under their PyTorch state_dict names. |
 | `ProteinMpnnEncoding`     | experimental | Encoder output: graph, GPU neighbours, per-layer node embeddings and final edge embeddings.       |
 | `ProteinMpnnVisibility`   | experimental | Which native residues the decoder sees: `"none"`, `"all-but-self"`, or a decoding order.          |
+| `SafetensorsEntry`        | experimental | One tensor as a safetensors header describes it: dtype, shape and byte range, without data.       |
+| `safetensorsHeaderLength` | experimental | JSON header length from a file's first 8 bytes.                                                   |
+| `readSafetensorsHeader`   | experimental | Tensor names, dtypes and shapes from a safetensors header; the data section need not be present.  |
+| `ModelLayout`             | experimental | A model's 2-D weight matrices grouped into stages in forward order, renderer- and data-free.      |
+| `LayoutStage`             | experimental | One stage of a layout: a label and its matrices.                                                  |
+| `LayoutMatrix`            | experimental | One matrix of a layout: checkpoint name and `[out, in]` shape.                                    |
+| `LayoutStep`              | experimental | A recorded step `layoutFromSteps` reads: stage, layer and the weights it read.                    |
+| `layoutFromSteps`         | experimental | Layout from a recorded forward pass, in the order the weights are first read.                     |
+| `layoutFromNames`         | experimental | Layout from weight names alone, grouping numbered blocks, for models that cannot run here.        |
+| `layoutParameters`        | experimental | Number of weights in a layout's matrices.                                                         |
 | `ProteinMpnnRunOptions`   | experimental | Options for `encode` and `decode`: a trace to record into.                                        |
 | `ProteinMpnnTrace`        | experimental | Records every activation of a forward pass and owns its copies until `release`.                   |
 | `ProteinMpnnStep`         | experimental | One recorded activation: stage, layer, name, weights read, model shape and `[L, C]` values.       |

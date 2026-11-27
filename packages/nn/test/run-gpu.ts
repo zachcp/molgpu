@@ -7,6 +7,7 @@ import {
   type GpuTensor,
   indexTensor,
   layerNorm,
+  layoutFromSteps,
   linear,
   logSoftmax,
   neighborSum,
@@ -270,11 +271,25 @@ Deno.test("ProteinMPNN trace records every step of the forward pass", async () =
       assertEquals(step.values.shape, [l, step.shape[step.shape.length - 1]]);
       for (const name of step.weights) assert(checkpoint.has(name), name);
     }
-    // Every weight matrix in the checkpoint is read by some recorded step.
-    const read = new Set(steps.flatMap((step) => step.weights));
-    for (const [name, weight] of checkpoint) {
-      if (weight.shape.length === 2) assert(read.has(name), name);
-    }
+    // The traced layout holds every 2-D checkpoint weight exactly once, in
+    // the stages that read them: features, 3 encoder layers, the sequence
+    // embedding, 3 decoder layers, output.
+    const layout = layoutFromSteps(steps, checkpoint);
+    const names = layout.stages.flatMap((s) => s.matrices.map((m) => m.name));
+    const matrices = [...checkpoint].filter(([, w]) => w.shape.length === 2);
+    assertEquals(names.length, matrices.length);
+    assertEquals(new Set(names), new Set(matrices.map(([name]) => name)));
+    assertEquals(layout.stages.map((s) => s.label), [
+      "features",
+      "encoder 1",
+      "encoder 2",
+      "encoder 3",
+      "sequence",
+      "decoder 1",
+      "decoder 2",
+      "decoder 3",
+      "output",
+    ]);
 
     const values = await trace.read();
     assertEquals(steps.at(-1)!.name, "log-softmax");

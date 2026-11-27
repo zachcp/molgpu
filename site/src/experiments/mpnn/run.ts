@@ -3,6 +3,8 @@
 // recorded forward pass) alive on the GPU until the runtime is destroyed.
 import {
   type GpuTensor,
+  layoutFromSteps,
+  type ModelLayout,
   NnRuntime,
   parseSafetensors,
   PROTEIN_MPNN_ALPHABET,
@@ -42,7 +44,9 @@ export interface MpnnRun {
   readonly structureOnly: Decoded;
   /** Decoder seeing every other native residue: P(aa | backbone, rest of sequence). */
   readonly conditional: Decoded;
-  /** Every 2-D checkpoint weight, plus amino-acid similarity maps derived on the GPU. */
+  /** Matrices in forward order, as the traced pass read them. */
+  readonly layout: ModelLayout;
+  /** Every 2-D checkpoint weight in forward order, after amino-acid similarity maps derived on the GPU. */
   readonly matrices: readonly MatrixView[];
   /** The conditional forward pass (encode, then decode seeing the native sequence), step by step. */
   readonly trace: ProteinMpnnTrace;
@@ -67,35 +71,14 @@ const maxAbs = (values: ArrayLike<number>) => {
   return max || 1;
 };
 
-// Within a layer: message MLP, feed-forward, then the encoder's edge update.
-const LAYER_ORDER = [
-  "W1",
-  "W2",
-  "W3",
-  "dense.W_in",
-  "dense.W_out",
-  "W11",
-  "W12",
-  "W13",
-];
-const TOP_ORDER = [
-  "features.embeddings.linear.weight",
-  "features.edge_embedding.weight",
-  "W_e.weight",
-];
-
-/** Position of a checkpoint weight in the forward pass. */
-const forwardRank = (name: string): number => {
-  const top = TOP_ORDER.indexOf(name);
-  if (top >= 0) return top;
-  const layer = /^(encoder|decoder)_layers\.(\d+)\.(.+)\.weight$/.exec(name);
-  if (layer) {
-    const base = layer[1] === "encoder" ? 100 : 1000;
-    return base + 100 * Number(layer[2]) + LAYER_ORDER.indexOf(layer[3]);
-  }
-  if (name === "W_s.weight") return 900; // sequence embedding enters the decoder
-  return 10_000; // W_out
-};
+/** Display titles of the trace's stages. */
+export const STAGE_TITLES = {
+  features: "Edge features",
+  encoder: "Encoder",
+  sequence: "Sequence",
+  decoder: "Decoder",
+  output: "Output",
+} as const;
 
 let weights: Promise<Map<string, Tensor>> | null = null;
 const loadWeights = (url: string) =>
@@ -140,11 +123,18 @@ export async function runProteinMpnn(
       return sorted[Math.floor(0.98 * (sorted.length - 1))] || 1;
     });
 
+    // safetensors stores names alphabetically; the trace gives forward order.
+    const layout = layoutFromSteps(
+      trace.steps,
+      cpuWeights,
+      (stage, layer) => {
+        const title = STAGE_TITLES[stage as keyof typeof STAGE_TITLES];
+        return layer >= 0 ? `${title} ${layer + 1}` : title;
+      },
+    );
     const matrices: MatrixView[] = [];
-    // safetensors stores names alphabetically; list matrices in forward-pass order.
-    const named = [...cpuWeights].filter(([, w]) => w.shape.length === 2)
-      .sort(([a], [b]) => forwardRank(a) - forwardRank(b));
-    for (const [name, weight] of named) {
+    for (const { name } of layout.stages.flatMap((s) => s.matrices)) {
+      const weight = cpuWeights.get(name)!;
       matrices.push({
         label: `${name} [${weight.shape.join(" × ")}]`,
         name,
@@ -183,6 +173,7 @@ export async function runProteinMpnn(
       encoding,
       structureOnly,
       conditional,
+      layout,
       matrices,
       trace,
       oneHot: runtime.upload(
