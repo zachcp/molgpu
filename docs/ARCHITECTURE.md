@@ -11,7 +11,7 @@ records intent and [ROADMAP](ROADMAP.md) retains historical phase outcomes.
 
 ## Package boundaries
 
-The eight packages expose ten JSR entries: one per package, plus
+The nine packages expose eleven JSR entries: one per package, plus
 `viewer/advanced` and `dynamics/wgsl`. Cross-package code uses these public
 entries. There is no production import into another package's private source.
 
@@ -32,17 +32,24 @@ flowchart BT
   viewer --> upstream["use.gpu Live / workbench / shader"]
 ```
 
-`table` and `geo` have no production runtime dependency. IO is the only
+`table`, `geo` and `nn` have no production runtime dependency. IO is the only
 production Mol* consumer, loaded lazily; it currently owns the Mol* molecular
 surface adapter as well as decoding. Viewer source loaders and its CPU surface
 fallback load IO dynamically. Type imports do not imply a runtime load.
+
+`nn` supplies CPU references, WGSL neural-network kernels and ProteinMPNN on a
+caller-supplied `GPUDevice`, without use.gpu imports. `NnRuntime` owns uploaded
+weights and activations; renderers can bind those same buffers. Model layouts
+are renderer-free metadata, ordered by traced first use or checkpoint-name
+heuristics, with checkpoint axis order preserved. Site model experiments own
+their rendering; they do not add a scene graph to `nn`.
 
 Reducing dependency edges should follow removing a responsibility, not copying
 its implementation into callers. Table owns identities, attributes and molecular
 data contracts; select owns query semantics; fields owns field evaluation and
 WGSL generation; dynamics owns scientific kernels; geo owns geometry. Live and
-GPU adaptation stay in viewer. Exact use.gpu `0.21.0` from the public npm
-registry and bundled browser viewer execution are the verified dependency
+molecular GPU adaptation stay in viewer. Exact use.gpu `0.21.0` from the public
+npm registry and bundled browser viewer execution are the verified dependency
 contract.
 
 ## Dataset scopes and specialized consumers

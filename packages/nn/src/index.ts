@@ -20,6 +20,7 @@ export { gatherRows } from "./ops/gather.ts";
 export { mix } from "./ops/mix.ts";
 export { neighborSum } from "./ops/neighbor-sum.ts";
 export { logSoftmax } from "./ops/log-softmax.ts";
+export { tileMeanAbs } from "./ops/tile-mean-abs.ts";
 export {
   parseSafetensors,
   readSafetensorsHeader,

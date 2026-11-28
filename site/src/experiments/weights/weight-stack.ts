@@ -1,29 +1,31 @@
 // A model's weight matrices as slabs in 3D, for any `ModelLayout` from
 // @molgpu/nn. "Stacked" piles the slabs along the view's left-to-right axis
-// in forward order and blends them additively, so the stack reads as a
+// in layout order and blends them additively, so the stack reads as a
 // glowing volume; "unstacked" flies them out (staggered, in order) into a
 // grid with one column per stage. A matrix with a GPU buffer is coloured by a
-// fragment shader reading that buffer (the same one the model reads); one
+// fragment shader reading the original weights or compact mean-|w| tiles; one
 // without (a layout from a safetensors header) is a tinted slab of its true
 // shape. Raw WebGPU: a camera uniform, one small uniform per slab, and the
-// weight buffers themselves.
+// weight or summary buffers themselves.
 import type { ModelLayout } from "@molgpu/nn";
 
 /** A matrix to draw: its layout entry plus, optionally, its data. */
 export interface StackMatrix {
   readonly name: string;
-  /** [out, in]: height and width of the slab. */
+  /** [rows, columns]: height and width of the slab, preserving checkpoint axes. */
   readonly shape: readonly [number, number];
   /** Identical copies (MoE experts), drawn as a thicker slab; 1 when absent. */
   readonly count?: number;
   /** Storage dtype, for the hover readout. */
   readonly dtype?: string;
-  /** Row-major f32 values to colour by; absent for shape-only slabs. */
+  /** Row-major f32 weights or tile means; absent for shape-only slabs. */
   readonly buffer?: GPUBuffer;
   /** CPU copy of the values, for the hover readout. */
   readonly values?: Float32Array;
   /** Largest |value|, for the diverging palette. */
   readonly scale?: number;
+  /** When present, values are snapshot mean |w| per tile, not individual weights. */
+  readonly tileSize?: number;
 }
 
 export interface StackStage {
@@ -41,6 +43,7 @@ struct Plane {
   center: vec3<f32>, alpha: f32,
   size: vec2<f32>, rows: u32, cols: u32,
   scale: f32, highlight: f32, thickness: f32, hue: f32,
+  tileSize: u32,
 }
 @group(0) @binding(0) var<uniform> camera: Camera;
 @group(0) @binding(1) var<uniform> plane: Plane;
@@ -65,7 +68,7 @@ const FACES = array<u32, 36>(
   let p = plane.center + local * vec3<f32>(plane.size, plane.thickness);
   var out: Out;
   out.position = camera.viewProj * vec4<f32>(p, 1.0);
-  // Columns run along x (inputs), rows down y (outputs); sides take border cells.
+  // Columns run along x, rows down y; sides take border cells.
   out.uv = clamp(vec2<f32>(local.x + 0.5, 0.5 - local.y), vec2<f32>(0.0), vec2<f32>(0.9999));
   out.side = select(0u, 1u, i >= 12u);
   return out;
@@ -86,7 +89,8 @@ fn hueColor(h: f32) -> vec3<f32> {
   } else {
     let row = min(u32(in.uv.y * f32(plane.rows)), plane.rows - 1u);
     let col = min(u32(in.uv.x * f32(plane.cols)), plane.cols - 1u);
-    let t = values[row * plane.cols + col] / plane.scale;
+    let columns = (plane.cols + plane.tileSize - 1u) / plane.tileSize;
+    let t = values[(row / plane.tileSize) * columns + col / plane.tileSize] / plane.scale;
     let hue = select(vec3<f32>(0.25, 0.62, 1.0), vec3<f32>(1.0, 0.55, 0.15), t > 0.0);
     color = hue * pow(clamp(abs(t), 0.0, 1.0), 0.7) * plane.alpha;
   }
@@ -141,6 +145,8 @@ interface Plane {
   readonly bindGroup: GPUBindGroup;
   /** Centre drawn last frame, for picking. */
   center: Vec3;
+  /** Current slab depth, including repeated experts. */
+  thickness: number;
 }
 
 const pipelines = new WeakMap<GPUDevice, Map<string, GPURenderPipeline>>();
@@ -157,7 +163,6 @@ export class WeightStack {
   #stages = 0;
   #cell = 1 / 32;
   #largest = 1;
-  #flatSize: [number, number] = [1, 1];
   #tip: HTMLElement;
   #onSelect: (name: string) => void;
   #resize: ResizeObserver;
@@ -315,9 +320,7 @@ export class WeightStack {
       width: row.reduce((w, s) => w + columns[s].width + gap, -gap),
       height: Math.max(...row.map((s) => columns[s].height)) + 2 * gap,
     }));
-    const width = Math.max(...rowSize.map((r) => r.width));
     const height = rowSize.reduce((h, r) => h + r.height, 0);
-    this.#flatSize = [width, height];
     const origin = new Map<number, [number, number]>();
     let top = height / 2;
     rows.forEach((row, r) => {
@@ -338,7 +341,7 @@ export class WeightStack {
       stage.matrices.forEach((matrix, i) => {
         const size = column.sizes[i];
         const uniform = this.#device.createBuffer({
-          size: 48,
+          size: 64,
           usage: 0x0040 | 0x0008,
           label: `weights:stack:${matrix.name}`,
         });
@@ -361,6 +364,7 @@ export class WeightStack {
             ],
           }),
           center: [0, 0, 0],
+          thickness: 0,
         });
         y -= size[1] + unit;
       });
@@ -415,23 +419,47 @@ export class WeightStack {
     const n = this.#planes.length;
     const tan = Math.tan(FOV / 2);
     const unit = this.#largest / 16;
-    // Fit the stack or the grid, blending between them as planes move.
     const step = this.#gap * Math.min(unit, (2 * this.#largest) / n);
-    const stackRadius = Math.max(this.#largest * 0.7, n * step) * 1.2;
-    const [fw, fh] = this.#flatSize;
-    const flatRadius = Math.max(fw / aspect, fh) / (2 * tan) * 1.08;
-    const radius =
-      (stackRadius + (flatRadius - stackRadius) * smooth(this.#t)) *
-      this.#zoom;
+    // Bound the actual slabs, including focus lifts and the staggered transition.
+    const min: Vec3 = [Infinity, Infinity, Infinity];
+    const max: Vec3 = [-Infinity, -Infinity, -Infinity];
+    for (const plane of this.#planes) {
+      const p = this.#progress(plane);
+      const stackZ = (plane.order - (n - 1) / 2) * step;
+      const focused = this.#focus?.has(plane.matrix.name) ?? false;
+      const pop = focused ? (plane.size[1] * 0.5 + 3 * unit) * (1 - p) : 0;
+      plane.center = [
+        plane.flat[0] * p,
+        plane.flat[1] * p + pop,
+        stackZ * (1 - p) + Math.sin(Math.PI * p) * 10 * unit,
+      ];
+      plane.thickness = Math.min(0.35 * unit, step * 0.6) *
+        (1 + Math.log2(plane.matrix.count ?? 1));
+      const size = [...plane.size, plane.thickness];
+      for (let i = 0; i < 3; i++) {
+        min[i] = Math.min(min[i], plane.center[i] - size[i] / 2);
+        max[i] = Math.max(max[i], plane.center[i] + size[i] / 2);
+      }
+    }
+    const target = min.map((v, i) => (v + max[i]) / 2);
+    const half = min.map((v, i) => (max[i] - v) / 2);
     const cp = Math.cos(this.#pitch);
-    const eye: Vec3 = [
-      radius * cp * Math.sin(this.#yaw),
-      radius * Math.sin(this.#pitch),
-      radius * cp * Math.cos(this.#yaw),
+    const z: Vec3 = [
+      cp * Math.sin(this.#yaw),
+      Math.sin(this.#pitch),
+      cp * Math.cos(this.#yaw),
     ];
-    const z = normalize(eye); // target is the origin
     const x = normalize(cross([0, 1, 0], z));
     const y = cross(z, x);
+    // Project the bounds onto the camera axes. Reserve depth before fitting
+    // width and height to the perspective frustum, then retain the user's zoom.
+    const extent = (axis: Vec3) =>
+      half.reduce((sum, h, i) => sum + h * Math.abs(axis[i]), 0);
+    const radius = (extent(z) + Math.max(
+      extent(x) / (tan * aspect),
+      extent(y) / tan,
+    )) * 1.12 * this.#zoom;
+    const eye = target.map((v, i) => v + radius * z[i]) as Vec3;
     this.#eye = eye;
     this.#basis = [x, y, [-z[0], -z[1], -z[2]]];
     const view = [
@@ -440,7 +468,8 @@ export class WeightStack {
       ...[x[2], y[2], z[2], 0],
       ...[-dot(x, eye), -dot(y, eye), -dot(z, eye), 1],
     ];
-    const near = radius * 0.01, far = radius * 10, f = 1 / tan;
+    const near = radius * 0.01;
+    const far = radius + 2 * Math.hypot(...half), f = 1 / tan;
     const proj = [
       ...[f / aspect, 0, 0, 0],
       ...[0, f, 0, 0],
@@ -468,19 +497,11 @@ export class WeightStack {
       }],
     });
     pass.setPipeline(this.#pipeline);
-    const data = new ArrayBuffer(48);
+    const data = new ArrayBuffer(64);
     const floats = new Float32Array(data), words = new Uint32Array(data);
     for (const plane of this.#planes) {
       const p = this.#progress(plane);
-      const stackZ = (plane.order - (n - 1) / 2) * step;
       const focused = this.#focus?.has(plane.matrix.name) ?? false;
-      // Focused planes rise out of the stack, keeping their place in the order.
-      const pop = focused ? (plane.size[1] * 0.5 + 3 * unit) * (1 - p) : 0;
-      plane.center = [
-        plane.flat[0] * p,
-        plane.flat[1] * p + pop,
-        stackZ * (1 - p) + Math.sin(Math.PI * p) * 10 * unit,
-      ];
       floats.set(plane.center, 0);
       // Dimmer while stacked (overlaps add up); a focus dims the rest further.
       const alpha = 0.4 + 0.6 * p;
@@ -492,11 +513,11 @@ export class WeightStack {
       floats[9] = plane === this.#hovered || focused ? 1 : 0;
       // Slab thickness: visible from the side, never thicker than the gap.
       // Experts thicken the slab: one deck per doubling of copies.
-      floats[10] = Math.min(0.35 * unit, step * 0.6) *
-        (1 + Math.log2(plane.matrix.count ?? 1));
+      floats[10] = plane.thickness;
       floats[11] = plane.matrix.buffer
         ? -1
         : (plane.stage / Math.max(1, this.#stages)) * 0.8;
+      words[12] = plane.matrix.tileSize ?? 1;
       this.#device.queue.writeBuffer(plane.uniform, 0, data);
       pass.setBindGroup(0, plane.bindGroup);
       pass.draw(36);
@@ -603,18 +624,43 @@ export class WeightStack {
       this.#hovered = hit?.plane ?? null;
       if (hit) {
         const { matrix } = hit.plane;
-        const value = matrix.values?.[hit.row * matrix.shape[1] + hit.col];
+        const tile = matrix.tileSize ?? 1;
+        const row = Math.floor(hit.row / tile),
+          col = Math.floor(hit.col / tile);
+        const value = matrix.values
+          ?.[row * Math.ceil(matrix.shape[1] / tile) + col];
+        const cell = matrix.tileSize
+          ? `mean |w| · rows ${row * tile}–${
+            Math.min((row + 1) * tile, matrix.shape[0]) - 1
+          }, cols ${col * tile}–${
+            Math.min((col + 1) * tile, matrix.shape[1]) - 1
+          }`
+          : `row ${hit.row}, col ${hit.col}`;
         this.#tip.hidden = false;
         this.#tip.textContent = `${matrix.name} [${matrix.shape.join(" × ")}]${
           (matrix.count ?? 1) > 1 ? ` × ${matrix.count} copies` : ""
-        }${
-          matrix.dtype ? ` · ${matrix.dtype}` : ""
-        } · out ${hit.row}, in ${hit.col}${
+        }${matrix.dtype ? ` · ${matrix.dtype}` : ""} · ${cell}${
           value === undefined ? "" : ` = ${value.toFixed(4)}`
         }`;
         const box = canvas.getBoundingClientRect();
-        this.#tip.style.left = `${event.clientX - box.left + 12}px`;
-        this.#tip.style.top = `${event.clientY - box.top + 12}px`;
+        this.#tip.style.left = `${
+          Math.max(
+            8,
+            Math.min(
+              event.clientX - box.left + 12,
+              box.width - this.#tip.offsetWidth - 8,
+            ),
+          )
+        }px`;
+        this.#tip.style.top = `${
+          Math.max(
+            8,
+            Math.min(
+              event.clientY - box.top + 12,
+              box.height - this.#tip.offsetHeight - 8,
+            ),
+          )
+        }px`;
         canvas.dataset.hoveredWeight = matrix.name;
       } else {
         this.#tip.hidden = true;

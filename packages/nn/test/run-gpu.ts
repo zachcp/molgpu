@@ -1,7 +1,12 @@
 // GPU parity for @molgpu/nn: every kernel against its CPU reference on Deno's
 // built-in WebGPU (no browser), plus buffer ownership. Shapes are deliberately
 // not multiples of the 64-thread workgroup. Run with `deno task test:nn:gpu`.
-import { assert, assertEquals, assertLessOrEqual } from "@std/assert";
+import {
+  assert,
+  assertEquals,
+  assertLessOrEqual,
+  assertThrows,
+} from "@std/assert";
 import {
   gatherRows,
   type GpuTensor,
@@ -143,6 +148,69 @@ Deno.test("nn GPU kernels match the CPU references", async (t) => {
     rt.destroy();
   }
   await device.queue.onSubmittedWorkDone();
+  assertEquals(errors, [], "uncaptured WebGPU errors");
+});
+
+Deno.test("nn tile summaries window oversized buffers without changing their values", async () => {
+  const rt = new NnRuntime(device);
+  try {
+    // Odd row stride forces padding at the second aligned window; both axes
+    // have partial final tiles. Alternating signs distinguish mean |w| from |mean w|.
+    const x = tensor(
+      [65, 67],
+      Array.from(
+        { length: 65 * 67 },
+        (_, i) => (i % 2 ? -1 : 1) * (Math.floor(i / 67) * 100 + i % 67 + 1),
+      ),
+    );
+    const gx = rt.upload(x);
+    const summary = rt.tileMeanAbs(gx);
+    const unchanged = rt.copy(gx);
+    // Release before reading, exercising submission and ownership of the input windows.
+    rt.release(gx);
+    assertEquals(summary.shape, [3, 3]);
+    assertEquals([...await rt.read(summary)], [
+      1566.5,
+      1598.5,
+      1616,
+      4766.5,
+      4798.5,
+      4816,
+      6416.5,
+      6448.5,
+      6466,
+    ]);
+    assertEquals(await rt.read(unchanged), x.data);
+    rt.release(summary, unchanged);
+    // A genuinely oversized buffer: devices promote smaller requested limits
+    // to the default. Constant tiles give exact independently known means.
+    const cols = 8193;
+    const rows = 32 * Math.ceil(
+          device.limits.maxStorageBufferBindingSize / (32 * cols * 4),
+        ) + 1;
+    const large = tensor([rows, cols]);
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        large.data[r * cols + c] = (c % 2 ? -1 : 1) *
+          (10 * Math.floor(r / 32) + Math.floor(c / 32) + 1);
+      }
+    }
+    const source = rt.upload(large);
+    assert(source.buffer.size > device.limits.maxStorageBufferBindingSize);
+    const tiles = rt.tileMeanAbs(source);
+    rt.release(source);
+    assertEquals(tiles.shape, [Math.ceil(rows / 32), 257]);
+    const means = await rt.read(tiles);
+    for (let r = 0; r < tiles.shape[0]; r++) {
+      for (let c = 0; c < 257; c++) {
+        assertEquals(means[r * 257 + c], 10 * r + c + 1);
+      }
+    }
+    assertThrows(() => rt.tileMeanAbs(rt.zeros([0, 3])), Error, "non-empty");
+  } finally {
+    rt.destroy();
+    await device.queue.onSubmittedWorkDone();
+  }
   assertEquals(errors, [], "uncaptured WebGPU errors");
 });
 

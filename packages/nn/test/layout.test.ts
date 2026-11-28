@@ -48,14 +48,16 @@ Deno.test("layoutFromSteps groups 2-D weights by first use, in reading order", (
   );
 });
 
-Deno.test("layoutFromNames orders blocks numerically, embeddings first, decoders after encoders", () => {
-  // Alphabetical, as safetensors headers store names: "10" sorts before "2"
-  // and "decoder" before "encoder".
+Deno.test("layoutFromNames orders blocks without inferring matrix axes or execution order", () => {
+  // Lexical sorting can put "10" before "2" and "decoder" before "encoder";
+  // within a block the supplied order is not necessarily execution order.
   const layout = layoutFromNames([
     ["decoder.layers.0.fc.weight", { shape: [8, 8] }],
     ["encoder.layers.10.fc.weight", { shape: [8, 8] }],
     ["encoder.layers.2.fc.weight", { shape: [8, 8] }],
     ["encoder.layers.2.norm.weight", { shape: [8] }],
+    // Conv1D stores [in, out]; it stays after fc despite alphabetical order.
+    ["encoder.layers.2.attn.c_attn.weight", { shape: [8, 24] }],
     ["lm_head.weight", { shape: [100, 8] }],
     ["model.embed_tokens.weight", { shape: [100, 8] }],
   ]);
@@ -67,6 +69,10 @@ Deno.test("layoutFromNames orders blocks numerically, embeddings first, decoders
     "head",
   ]);
   assertEquals(layout.stages[0].matrices[0].shape, [100, 8]);
+  assertEquals(layout.stages[1].matrices, [
+    { name: "encoder.layers.2.fc.weight", shape: [8, 8] },
+    { name: "encoder.layers.2.attn.c_attn.weight", shape: [8, 24] },
+  ]);
 });
 
 Deno.test("readSafetensorsHeader reads shapes without the data section", async () => {

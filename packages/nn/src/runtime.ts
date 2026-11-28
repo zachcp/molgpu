@@ -14,6 +14,7 @@ import {
 import { type Activation, LINEAR_WGSL, linearShape } from "./ops/linear.ts";
 import { LOG_SOFTMAX_WGSL } from "./ops/log-softmax.ts";
 import { NEIGHBOR_SUM_WGSL, neighborSumShape } from "./ops/neighbor-sum.ts";
+import { TILE_MEAN_ABS_WGSL, tileMeanAbsShape } from "./ops/tile-mean-abs.ts";
 import {
   elementCount,
   type IndexTensor,
@@ -236,6 +237,52 @@ export class NnRuntime {
     return y;
   }
 
+  /**
+   * Snapshot mean |x| per 32 x 32 tile of a non-empty matrix, including partial
+   * edges. Uses aligned input windows: x may exceed the storage binding limit,
+   * but each 32-row band and the output grid must fit. x is not modified.
+   */
+  tileMeanAbs(x: GpuTensor): GpuTensor {
+    floats(x);
+    const shape = tileMeanAbsShape(x.shape);
+    const [rows, cols] = x.shape;
+    const limit = this.device.limits.maxStorageBufferBindingSize;
+    const align = this.device.limits.minStorageBufferOffsetAlignment;
+    if (4 * elementCount(shape) > limit) {
+      throw new Error(
+        "tileMeanAbs: output grid exceeds the storage binding limit",
+      );
+    }
+    // Validate all windows before allocating or recording any work.
+    for (let row = 0; row < rows; row += 32) {
+      const start = row * cols * 4;
+      const padding = start % align;
+      if (padding + Math.min(32, rows - row) * cols * 4 > limit) {
+        throw new Error(
+          "tileMeanAbs: a 32-row band exceeds the storage binding limit",
+        );
+      }
+    }
+    const y = this.#create(shape, "f32", "tile-mean-abs");
+    for (let row = 0; row < rows; row += 32) {
+      const start = row * cols * 4;
+      const offset = Math.floor(start / align) * align;
+      const padding = start - offset;
+      this.#dispatch(
+        "tileMeanAbs",
+        TILE_MEAN_ABS_WGSL,
+        [rows, cols, row, padding / 4, shape[1]],
+        [{
+          buffer: x.buffer,
+          offset,
+          size: padding + Math.min(32, rows - row) * cols * 4,
+        }, y.buffer],
+        shape[1],
+      );
+    }
+    return y;
+  }
+
   /** A new owned tensor holding x's current values, recorded in dispatch order. */
   copy(x: GpuTensor, label = "copy"): GpuTensor {
     const y = this.#create(x.shape, x.dtype, label);
@@ -336,7 +383,7 @@ export class NnRuntime {
     key: string,
     code: string,
     params: readonly number[],
-    buffers: readonly GPUBuffer[],
+    buffers: readonly (GPUBuffer | GPUBufferBinding)[],
     threads: number,
   ): void {
     if (threads === 0) return;
@@ -368,7 +415,7 @@ export class NnRuntime {
       layout: pipeline.getBindGroupLayout(0),
       entries: [uniform, ...buffers].map((buffer, binding) => ({
         binding,
-        resource: { buffer },
+        resource: "buffer" in buffer ? buffer : { buffer },
       })),
     });
     const groups = Math.ceil(threads / WORKGROUP);

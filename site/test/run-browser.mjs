@@ -81,6 +81,51 @@ const waitForVisibleCanvas = async (page) => {
   await rendered.dispose();
 };
 
+// Read the compositor, not an idle swapchain. Default framing must leave a
+// margin around rendered slabs at either aspect ratio, without counting labels.
+const assertStackFramed = async (page, selector = "[data-stack-canvas]") => {
+  const image = await page.locator(selector).screenshot({
+    mask: [page.locator(".weights-stage, [data-tip]")],
+    maskColor: "#000000",
+    // Exclude rounded panel corners and subpixel clipping outside the canvas;
+    // neither is part of the WebGPU output whose bounds we are checking.
+    style:
+      `${selector}, :has(> ${selector}) { border-radius: 0 !important; outline: 2px solid #000 !important; }`,
+  });
+  const bounds = await page.evaluate(async (bytes) => {
+    const bitmap = await createImageBitmap(
+      new Blob([new Uint8Array(bytes)], { type: "image/png" }),
+    );
+    const { width, height } = bitmap;
+    const copy = new OffscreenCanvas(width, height);
+    const context = copy.getContext("2d");
+    context.drawImage(bitmap, 0, 0);
+    bitmap.close();
+    const { data } = context.getImageData(0, 0, width, height);
+    let left = width, right = -1, top = height, bottom = -1, lit = 0;
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const i = (y * width + x) * 4;
+        if (data[i] + data[i + 1] + data[i + 2] <= 45) continue;
+        lit++;
+        left = Math.min(left, x);
+        right = Math.max(right, x);
+        top = Math.min(top, y);
+        bottom = Math.max(bottom, y);
+      }
+    }
+    return { left, right, top, bottom, width, height, lit };
+  }, Array.from(image));
+  assert(bounds.lit > 50, "weight slabs render visible pixels");
+  assert(
+    bounds.left > bounds.width * 0.01 &&
+      bounds.right < bounds.width * 0.99 &&
+      bounds.top > bounds.height * 0.01 &&
+      bounds.bottom < bounds.height * 0.99,
+    `weight slabs fit the canvas with margin: ${JSON.stringify(bounds)}`,
+  );
+};
+
 // Classify the canvas's lit pixels by Mol*'s secondary-structure palette:
 // magenta helix, yellow strand and white coil. Brightness spread within the
 // helix pixels shows the cartoon is shaded rather than a flat silhouette.
@@ -1750,6 +1795,7 @@ Deno.test("site landing page and maintained gallery routes", async () => {
     );
     assertEquals(await page.locator("[data-pipeline] i").count(), 6 + 3 * 14);
     assertEquals(await page.locator("[data-metric]").inputValue(), "neighbors");
+    await assertStackFramed(page, "[data-map=weights3d]");
     // Sequence mode starts at the sequence embedding.
     await page.selectOption("[data-mode-picker]", "sequence");
     await page.waitForSelector('#experiment-canvas[data-step="48"]');
@@ -1764,6 +1810,28 @@ Deno.test("site landing page and maintained gallery routes", async () => {
       await page.locator("[data-stack-canvas]").getAttribute("data-planes"),
       "4",
     );
+    for (const width of [1280, 390]) {
+      await page.setViewportSize({ width, height: 900 });
+      const controlsFit = await page.evaluate(() => {
+        const side = document.querySelector(".models-side");
+        const panel = side.getBoundingClientRect();
+        return document.documentElement.scrollWidth <= innerWidth &&
+          side.scrollWidth <= side.clientWidth &&
+          [...side.querySelectorAll("input, select, button")].every((el) => {
+            const box = el.getBoundingClientRect();
+            return box.width > 0 && box.left >= panel.left &&
+              box.right <= panel.right;
+          });
+      });
+      assert(controlsFit, `model controls fit at ${width}px`);
+      await assertStackFramed(page);
+      await page.click("[data-stack]");
+      await page.waitForSelector('[data-arrangement="unstacked"]');
+      await assertStackFramed(page);
+      await page.click("[data-stack]");
+      await page.waitForSelector('[data-arrangement="stacked"]');
+    }
+    await page.setViewportSize({ width: 1280, height: 900 });
     // Local values retain exact expert names; large packed files retain dtype
     // when only their header is read. Repeated Blob parts avoid allocating a
     // full checkpoint's payload for the header-only scenario.
@@ -1828,7 +1896,82 @@ Deno.test("site landing page and maintained gallery routes", async () => {
         await page.locator("[data-stats]").textContent(),
         example.largest,
       );
+      assertEquals(await page.locator("[data-widths-row]").isVisible(), false);
+      await assertStackFramed(page);
+      await page.click("[data-stack]");
+      await page.waitForSelector('[data-arrangement="unstacked"]');
+      await assertStackFramed(page);
     }
+    // A real 4096 x 11008 f32 matrix exceeds the default 128 MiB binding limit.
+    // Alternating signs cancel signed means; each tile has a known mean |w|.
+    await page.evaluate(async () => {
+      const { pageDevice } = await import("/src/demos/viewer.tsx");
+      const device = await pageDevice();
+      globalThis.modelGpuErrors = [];
+      device.addEventListener("uncapturederror", (event) => {
+        globalThis.modelGpuErrors.push(event.error.message);
+      });
+      const rows = 4096, cols = 11008;
+      const values = new Float32Array(rows * cols);
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          values[r * cols + c] = (c % 2 ? -1 : 1) *
+            (1 + 2 * (Math.floor(r / 32) % 8) + Math.floor(c / 32) % 8);
+        }
+      }
+      const json = new TextEncoder().encode(JSON.stringify({
+        "layers.0.weight": {
+          dtype: "F32",
+          shape: [rows, cols],
+          data_offsets: [0, values.byteLength],
+        },
+      }));
+      const prefix = new Uint8Array(8 + json.length);
+      new DataView(prefix.buffer).setBigUint64(0, BigInt(json.length), true);
+      prefix.set(json, 8);
+      const transfer = new DataTransfer();
+      transfer.items.add(new File([prefix, values], "tiles.safetensors"));
+      const input = globalThis.document.querySelector("[data-file]");
+      input.files = transfer.files;
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    await page.waitForSelector('#experiment-canvas[data-model="ready"]', {
+      timeout: 60_000,
+    });
+    assertStringIncludes(
+      await page.locator("[data-stats]").textContent(),
+      "GPU 32 × 32 mean |w| tiles",
+    );
+    assertStringIncludes(
+      await page.locator("[data-stats]").textContent(),
+      "[4096 × 11008]",
+    );
+    await assertStackFramed(page);
+    await page.click("[data-stack]");
+    await page.waitForSelector('[data-arrangement="unstacked"]');
+    await assertStackFramed(page);
+    const slab = await page.locator("[data-stack-canvas]").boundingBox();
+    const means = [];
+    for (const [x, y] of [[0.28, 0.43], [0.65, 0.58]]) {
+      await page.mouse.move(slab.x + slab.width * x, slab.y + slab.height * y);
+      const tip = page.locator("[data-tip]");
+      assert(await tip.isVisible(), "summary tile is pickable");
+      const text = await tip.textContent();
+      const match = text.match(
+        /mean \|w\| · rows (\d+)–\d+, cols (\d+)–\d+ = ([\d.]+)/,
+      );
+      assert(match, `summary hover labels its range and statistic: ${text}`);
+      const expected = 1 + 2 * (Number(match[1]) / 32 % 8) +
+        Number(match[2]) / 32 % 8;
+      assertEquals(Number(match[3]), expected);
+      means.push(expected);
+      const box = await tip.boundingBox();
+      assert(
+        box.x >= slab.x && box.x + box.width <= slab.x + slab.width,
+        "summary tooltip fits",
+      );
+    }
+    assert(means[0] !== means[1], "different tiles exercise different means");
     // A 7B catalog model drawn from its safetensors header alone.
     await page.selectOption("[data-model-picker]", "mistralai/Mistral-7B-v0.1");
     await page.waitForSelector('[data-stack-canvas][data-planes="226"]');
@@ -1838,9 +1981,15 @@ Deno.test("site landing page and maintained gallery routes", async () => {
       '[data-stack-canvas][data-arrangement="unstacked"]',
       { timeout: 30_000 },
     );
+    await assertStackFramed(page);
     await page.getByRole("link", { name: "Experiments", exact: true }).click();
     await page.waitForSelector(".experiment-list");
     assertEquals(await page.locator("#experiment-canvas canvas").count(), 0);
+    assertEquals(
+      await page.evaluate(() => globalThis.modelGpuErrors),
+      [],
+      "model WebGPU errors",
+    );
     assertEquals(errors, [], "page has no JavaScript errors");
   } catch (error) {
     throw new Error(`site test failed at ${route}: ${error.message}`, {

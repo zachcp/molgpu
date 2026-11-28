@@ -1,13 +1,13 @@
-// A model's physical layout: its weight matrices grouped into stages in the
-// order the forward pass reads them. Renderer-free and data-free, so the same
-// value describes a model whose weights are on the GPU, or one known only from
-// a safetensors header.
+// A model's physical layout: its weight matrices grouped into stages from a
+// recorded forward pass or checkpoint-name heuristics. Renderer-free and
+// data-free, so the same value describes weights on the GPU or a model known
+// only from a safetensors header.
 
-/** One 2-D weight matrix, PyTorch layout [out, in]. */
+/** One 2-D weight matrix, preserving the checkpoint's axis order. */
 export interface LayoutMatrix {
   /** Checkpoint tensor name; `*` stands for the index of repeated copies. */
   readonly name: string;
-  /** Logical [out, in], after unpacking packed FP4 storage. */
+  /** Logical [rows, columns], after unpacking packed FP4; input/output roles depend on the model. */
   readonly shape: readonly [number, number];
   /** Identical copies, such as the experts of a mixture-of-experts layer; 1 when absent. */
   readonly count?: number;
@@ -15,13 +15,13 @@ export interface LayoutMatrix {
   readonly dtype?: string;
 }
 
-/** A group of matrices read together, such as one transformer block. */
+/** A group of matrices from a recorded stage or a name-derived block. */
 export interface LayoutStage {
   readonly label: string;
   readonly matrices: readonly LayoutMatrix[];
 }
 
-/** Stages in forward order; every matrix appears exactly once. */
+/** Ordered stages: first-use order from steps, or name heuristics from headers. */
 export interface ModelLayout {
   readonly stages: readonly LayoutStage[];
 }
@@ -78,7 +78,7 @@ const QUANT =
 // MX / FP4 formats scale groups of 32 values.
 const MX_GROUP = 32;
 
-/** Logical [out, in] of a stored 2-D tensor: packed FP4 holds two values per byte. */
+/** Logical [rows, columns] of a stored 2-D tensor: packed FP4 holds two values per byte. */
 function logical(
   name: string,
   t: { readonly shape: readonly number[]; readonly dtype?: string },
@@ -113,8 +113,9 @@ function logical(
  * matrix named with `*` and a `count`. Quantization scales are dropped and,
  * given `dtype`, FP4 weights packed two per byte report their logical shape.
  * Set `collapseCopies: false` to keep exact tensor names when binding values.
- * Order within a block is the input order, which for safetensors is
- * alphabetical, not the forward order.
+ * Order within a block is the input order, often alphabetical for safetensors,
+ * not verified execution order. Checkpoint axes are preserved, not transposed
+ * to infer input/output roles (for example, GPT-2 Conv1D uses [in, out]).
  */
 export function layoutFromNames(
   tensors: Iterable<
