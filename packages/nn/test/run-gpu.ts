@@ -169,7 +169,7 @@ Deno.test("nn tile summaries window oversized buffers without changing their val
     // Release before reading, exercising submission and ownership of the input windows.
     rt.release(gx);
     assertEquals(summary.shape, [3, 3]);
-    assertEquals([...await rt.read(summary)], [
+    const expected = [
       1566.5,
       1598.5,
       1616,
@@ -179,9 +179,31 @@ Deno.test("nn tile summaries window oversized buffers without changing their val
       6416.5,
       6448.5,
       6466,
-    ]);
+    ];
+    const actual = await rt.read(summary);
+    for (let i = 0; i < expected.length; i++) {
+      // Normalization avoids overflow but introduces f32 rounding in each term.
+      assertLessOrEqual(Math.abs(actual[i] - expected[i]) / expected[i], 1e-6);
+    }
     assertEquals(await rt.read(unchanged), x.data);
     rt.release(summary, unchanged);
+    // A finite mean at the top of the f32 range must not overflow its sum.
+    // Full tiles are constant |max|; partial columns average [max/4, max/2, max, 0].
+    const max = 3.4028234663852886e38;
+    const extreme = tensor([33, 36]);
+    for (let r = 0; r < 33; r++) {
+      for (let c = 0; c < 36; c++) {
+        extreme.data[r * 36 + c] = c < 32
+          ? (c % 2 ? -max : max)
+          : [max / 4, -max / 2, max, 0][c - 32];
+      }
+    }
+    const extremeMeans = await rt.read(rt.tileMeanAbs(rt.upload(extreme)));
+    assertEquals(
+      [...extremeMeans],
+      [max, max * 7 / 16, max, max * 7 / 16].map(Math.fround),
+    );
+    assertEquals([...await rt.read(rt.tileMeanAbs(rt.zeros([1, 4])))], [0]);
     // A genuinely oversized buffer: devices promote smaller requested limits
     // to the default. Constant tiles give exact independently known means.
     const cols = 8193;

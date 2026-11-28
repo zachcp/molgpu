@@ -44,12 +44,20 @@ ${ENTRY_WGSL} {
   if (tile >= params.e) { return; }
   let height = min(32u, params.a - params.c);
   let width = min(32u, params.b - tile * 32u);
+  // Normalize before summing: a finite tile mean must not overflow just
+  // because its unscaled sum exceeds f32. Starting at 1 also handles zeros.
+  var scale = 1.0;
+  for (var r = 0u; r < height; r++) {
+    for (var c = 0u; c < width; c++) {
+      scale = max(scale, abs(x[params.d + r * params.b + tile * 32u + c]));
+    }
+  }
   var sum = 0.0;
   for (var r = 0u; r < height; r++) {
     for (var c = 0u; c < width; c++) {
-      sum += abs(x[params.d + r * params.b + tile * 32u + c]);
+      sum += abs(x[params.d + r * params.b + tile * 32u + c]) / scale;
     }
   }
-  y[(params.c / 32u) * params.e + tile] = sum / f32(height * width);
+  y[(params.c / 32u) * params.e + tile] = (sum / f32(height * width)) * scale;
 }
 `;

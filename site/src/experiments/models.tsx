@@ -284,7 +284,16 @@ export const experiment: Experiment = {
       runtime = null;
     };
 
-    const show = (device: GPUDevice, loaded: Loaded, source: string) => {
+    const show = (
+      device: GPUDevice,
+      loaded: Loaded,
+      source: string | HTMLAnchorElement,
+    ) => {
+      const matrices = loaded.layout.stages.flatMap((s) => s.matrices);
+      if (!matrices.length) {
+        loaded.runtime?.destroy();
+        throw new Error("No 2-D weight matrices found in this checkpoint.");
+      }
       runtime = loaded.runtime;
       stack = new WeightStack(
         device,
@@ -294,16 +303,20 @@ export const experiment: Experiment = {
       );
       stack.setGap(Number(gap.value));
       stackButton.textContent = "Unstack";
-      const matrices = loaded.layout.stages.flatMap((s) => s.matrices);
       const largest = matrices.reduce(
         (a, m) => m.shape[0] * m.shape[1] > a.shape[0] * a.shape[1] ? m : a,
       );
-      stats.innerHTML =
-        `${source}<br>${loaded.layout.stages.length} stages · ${matrices.length} matrices · ${
+      stats.replaceChildren(
+        source,
+        document.createElement("br"),
+        `${loaded.layout.stages.length} stages · ${matrices.length} matrices · ${
           count(layoutParameters(loaded.layout))
-        } weights in matrices<br>Largest: ${largest.name} [${
-          largest.shape.join(" × ")
-        }]<br>${loaded.note}`;
+        } weights in matrices`,
+        document.createElement("br"),
+        `Largest: ${largest.name} [${largest.shape.join(" × ")}]`,
+        document.createElement("br"),
+        loaded.note,
+      );
       host.dataset.model = "ready";
     };
 
@@ -314,7 +327,7 @@ export const experiment: Experiment = {
       widthsRow.hidden = id !== TOY;
       host.dataset.model = "loading";
       void pageDevice().then(async (device) => {
-        let loaded: Loaded, source: string;
+        let loaded: Loaded, source: string | HTMLAnchorElement;
         if (id === TOY) {
           loaded = await toyMlp(
             device,
@@ -342,9 +355,14 @@ export const experiment: Experiment = {
                   : ""
               }`,
           };
-          source = model.source.startsWith("https://")
-            ? `<a href="${model.source}" target="_blank" rel="noopener">${model.id}</a>`
-            : model.id;
+          if (model.source.startsWith("https://")) {
+            const link = document.createElement("a");
+            link.href = model.source;
+            link.target = "_blank";
+            link.rel = "noopener";
+            link.textContent = model.id;
+            source = link;
+          } else source = model.id;
         }
         if (!live || request !== generation) {
           loaded.runtime?.destroy();

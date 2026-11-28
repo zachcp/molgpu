@@ -1835,11 +1835,21 @@ Deno.test("site landing page and maintained gallery routes", async () => {
     // Local values retain exact expert names; large packed files retain dtype
     // when only their header is read. Repeated Blob parts avoid allocating a
     // full checkpoint's payload for the header-only scenario.
+    const markup =
+      '<img src=x onerror="globalThis.checkpointMarkupExecuted=true">';
     for (
       const example of [
         {
           header: {
-            "layers.0.experts.0.weight": {
+            bias: { dtype: "F32", shape: [3], data_offsets: [0, 12] },
+          },
+          values: [1, 2, 3],
+          payloadMiB: 0,
+          error: "No 2-D weight matrices found in this checkpoint.",
+        },
+        {
+          header: {
+            [`layers.0.experts.0.weight${markup}`]: {
               dtype: "F32",
               shape: [2, 3],
               data_offsets: [0, 24],
@@ -1850,9 +1860,10 @@ Deno.test("site landing page and maintained gallery routes", async () => {
               data_offsets: [24, 48],
             },
           },
+          filename: `local ${markup}.safetensors`,
           payloadMiB: 0,
           planes: "2",
-          largest: "layers.0.experts.0.weight [2 × 3]",
+          largest: `layers.0.experts.0.weight${markup} [2 × 3]`,
         },
         {
           header: {
@@ -1873,20 +1884,34 @@ Deno.test("site landing page and maintained gallery routes", async () => {
         },
       ]
     ) {
-      await page.evaluate(({ header, payloadMiB }) => {
+      await page.evaluate(({
+        header,
+        payloadMiB,
+        filename = "local.safetensors",
+        values = [1, -2, 3, -4, 5, -6, 7, -8, 9, -10, 11, -12],
+      }) => {
         const json = new TextEncoder().encode(JSON.stringify(header));
         const prefix = new Uint8Array(8 + json.length);
         new DataView(prefix.buffer).setBigUint64(0, BigInt(json.length), true);
         prefix.set(json, 8);
         const payload = payloadMiB
           ? Array(payloadMiB).fill(new Blob([new Uint8Array(2 ** 20)]))
-          : [new Float32Array([1, -2, 3, -4, 5, -6, 7, -8, 9, -10, 11, -12])];
+          : [new Float32Array(values)];
         const transfer = new DataTransfer();
-        transfer.items.add(new File([prefix, ...payload], "local.safetensors"));
+        transfer.items.add(new File([prefix, ...payload], filename));
         const input = globalThis.document.querySelector("[data-file]");
         input.files = transfer.files;
         input.dispatchEvent(new Event("change", { bubbles: true }));
       }, example);
+      if (example.error) {
+        await page.waitForSelector('#experiment-canvas[data-model="error"]');
+        assertStringIncludes(
+          await page.locator("[data-stats]").textContent(),
+          example.error,
+        );
+        assertEquals(await page.locator(".weights-stage").count(), 0);
+        continue;
+      }
       await page.waitForSelector('#experiment-canvas[data-model="ready"]');
       assertEquals(
         await page.locator("[data-stack-canvas]").getAttribute("data-planes"),
@@ -1896,6 +1921,18 @@ Deno.test("site landing page and maintained gallery routes", async () => {
         await page.locator("[data-stats]").textContent(),
         example.largest,
       );
+      assertEquals(await page.locator("[data-stats] img").count(), 0);
+      assertEquals(
+        await page.evaluate(() => !!globalThis.checkpointMarkupExecuted),
+        false,
+        "checkpoint names and filenames must not execute markup",
+      );
+      if (example.filename) {
+        assertStringIncludes(
+          await page.locator("[data-stats]").textContent(),
+          example.filename,
+        );
+      }
       assertEquals(await page.locator("[data-widths-row]").isVisible(), false);
       await assertStackFramed(page);
       await page.click("[data-stack]");
