@@ -12,8 +12,16 @@ IndexTensor
   export interface IndexTensor { readonly shape: readonly number[]; readonly data: Uint32Array }
 LAYER_NORM_EPS
   export const LAYER_NORM_EPS = 0.00001;
+LayoutMatrix
+  export interface LayoutMatrix { /** Checkpoint tensor name; `*` stands for the index of repeated copies. */ readonly name: string; /** Logical [rows, columns], after unpacking packed FP4; input/output roles depend on the model. */ readonly shape: readonly [number, number]; /** Identical copies, such as the experts of a mixture-of-experts layer; 1 when absent. */ readonly count?: number; /** Storage dtype when known, such as `"BF16"` or `"U8 (FP4 packed)"`. */ readonly dtype?: string }
+LayoutStage
+  export interface LayoutStage { readonly label: string; readonly matrices: readonly LayoutMatrix[] }
+LayoutStep
+  export interface LayoutStep { readonly stage: string; /** Layer within the stage, or -1. */ readonly layer: number; readonly weights: readonly string[] }
+ModelLayout
+  export interface ModelLayout { readonly stages: readonly LayoutStage[] }
 NnRuntime
-  export class NnRuntime { #private; readonly device: GPUDevice; constructor(device: GPUDevice); /** Upload a CPU tensor into a new owned buffer. */ upload(t: Tensor, label?: string): GpuTensor; /** A new owned f32 tensor of zeros (WebGPU zero-initializes buffers). */ zeros(shape: readonly number[], label?: string): GpuTensor; /** Upload row indices into a new owned buffer. */ uploadIndex(t: IndexTensor, label?: string): GpuTensor; /** Upload every named tensor, labelling each buffer with its name. */ uploadWeights(weights: ReadonlyMap<string, Tensor>): Map<string, GpuTensor>; /** View a caller-owned buffer as a tensor; the runtime never destroys it. */ wrap(buffer: GPUBuffer, shape: readonly number[], dtype?: "f32" | "u32"): GpuTensor; /** x Wᵀ + b with W in [out, in] layout and an optional fused GELU. */ linear(x: GpuTensor, w: GpuTensor, b?: GpuTensor, activation?: Activation): GpuTensor; /** LayerNorm over the last axis of x, or of x + residual. */ layerNorm(x: GpuTensor, gamma: GpuTensor, beta: GpuTensor, options?: { residual?: GpuTensor; eps?: number }): GpuTensor; /** Rows of x [R, C] at each index; indices must be below R (not checked on the GPU). */ gatherRows(x: GpuTensor, index: GpuTensor): GpuTensor; /** Sum of x [L, K, C] over K, weighted by mask [L, K], divided by scale. */ neighborSum(x: GpuTensor, options?: { mask?: GpuTensor; scale?: number }): GpuTensor; /** Log-softmax over the last axis. */ logSoftmax(x: GpuTensor): GpuTensor; /** Concatenate along the last axis; one side's leading dims must prefix the other's. */ concat(a: GpuTensor, b: GpuTensor): GpuTensor; /** mask * a + (1 - mask) * b, with one mask value per row of a. */ mix(a: GpuTensor, b: GpuTensor, mask: GpuTensor): GpuTensor; /** A new owned tensor holding x's current values, recorded in dispatch order. */ copy(x: GpuTensor, label?: string): GpuTensor; /** Submit the recorded dispatches. */ flush(): void; /** Flush, then copy a tensor back to the CPU. */ read(t: GpuTensor): Promise<Float32Array | Uint32Array>; /** Destroy owned tensors' buffers after flushing work that may read them. */ release(...tensors: GpuTensor[]): void; /** Flush and destroy every owned buffer; wrapped buffers are left alone. */ destroy(): void }
+  export class NnRuntime { #private; readonly device: GPUDevice; constructor(device: GPUDevice); /** Upload a CPU tensor into a new owned buffer. */ upload(t: Tensor, label?: string): GpuTensor; /** A new owned f32 tensor of zeros (WebGPU zero-initializes buffers). */ zeros(shape: readonly number[], label?: string): GpuTensor; /** Upload row indices into a new owned buffer. */ uploadIndex(t: IndexTensor, label?: string): GpuTensor; /** Upload every named tensor, labelling each buffer with its name. */ uploadWeights(weights: ReadonlyMap<string, Tensor>): Map<string, GpuTensor>; /** View a caller-owned buffer as a tensor; the runtime never destroys it. */ wrap(buffer: GPUBuffer, shape: readonly number[], dtype?: "f32" | "u32"): GpuTensor; /** x Wᵀ + b with W in [out, in] layout and an optional fused GELU. */ linear(x: GpuTensor, w: GpuTensor, b?: GpuTensor, activation?: Activation): GpuTensor; /** LayerNorm over the last axis of x, or of x + residual. */ layerNorm(x: GpuTensor, gamma: GpuTensor, beta: GpuTensor, options?: { residual?: GpuTensor; eps?: number }): GpuTensor; /** Rows of x [R, C] at each index; indices must be below R (not checked on the GPU). */ gatherRows(x: GpuTensor, index: GpuTensor): GpuTensor; /** Sum of x [L, K, C] over K, weighted by mask [L, K], divided by scale. */ neighborSum(x: GpuTensor, options?: { mask?: GpuTensor; scale?: number }): GpuTensor; /** Log-softmax over the last axis. */ logSoftmax(x: GpuTensor): GpuTensor; /** Concatenate along the last axis; one side's leading dims must prefix the other's. */ concat(a: GpuTensor, b: GpuTensor): GpuTensor; /** mask * a + (1 - mask) * b, with one mask value per row of a. */ mix(a: GpuTensor, b: GpuTensor, mask: GpuTensor): GpuTensor; /** * Snapshot mean |x| per 32 x 32 tile of a non-empty matrix, including partial * edges. Uses aligned input windows: x may exceed the storage binding limit, * but each 32-row band and the output grid must fit. x is not modified. */ tileMeanAbs(x: GpuTensor): GpuTensor; /** A new owned tensor holding x's current values, recorded in dispatch order. */ copy(x: GpuTensor, label?: string): GpuTensor; /** Submit the recorded dispatches. */ flush(): void; /** Flush, then copy a tensor back to the CPU. */ read(t: GpuTensor): Promise<Float32Array | Uint32Array>; /** Destroy owned tensors' buffers after flushing work that may read them. */ release(...tensors: GpuTensor[]): void; /** Flush and destroy every owned buffer; wrapped buffers are left alone. */ destroy(): void }
 PROTEIN_MPNN_ALPHABET
   export const PROTEIN_MPNN_ALPHABET = "ACDEFGHIKLMNPQRSTVWYX";
 PROTEIN_MPNN_ATOM_PAIRS
@@ -38,6 +46,8 @@ ProteinMpnnTrace
   export class ProteinMpnnTrace { #private; readonly runtime: NnRuntime; constructor(runtime: NnRuntime); /** Recorded steps in forward-pass order. */ get steps(): readonly ProteinMpnnStep[]; /** Record x as the next step; called by `ProteinMpnn` while it runs. */ record(stage: ProteinMpnnStage, layer: number, name: string, weights: readonly string[], x: GpuTensor): void; /** CPU copies of every step's [L, C] values, in step order. */ read(): Promise<Float32Array[]>; /** Destroy every recorded buffer and empty the trace. */ release(): void }
 ProteinMpnnVisibility
   export type ProteinMpnnVisibility = "none" | "all-but-self" | readonly number[];
+SafetensorsEntry
+  export interface SafetensorsEntry { /** As stored, such as `"F16"`, `"BF16"`, `"F32"` or `"I64"`. */ readonly dtype: string; readonly shape: readonly number[]; /** Byte range within the data section. */ readonly offsets: readonly [number, number] }
 Tensor
   export interface Tensor { readonly shape: readonly number[]; readonly data: Float32Array }
 concat
@@ -54,6 +64,12 @@ indexTensor
   export function indexTensor(shape: readonly number[], data: ArrayLike<number>): IndexTensor;
 layerNorm
   export function layerNorm(x: Tensor, gamma: Tensor, beta: Tensor, options?: { residual?: Tensor; eps?: number }): Tensor;
+layoutFromNames
+  export function layoutFromNames(tensors: Iterable<readonly [ string, { readonly shape: readonly number[]; readonly dtype?: string } ]>, options?: { readonly collapseCopies?: boolean }): ModelLayout;
+layoutFromSteps
+  export function layoutFromSteps(steps: readonly LayoutStep[], shapes: ReadonlyMap<string, { readonly shape: readonly number[] }>, label?: (stage: string, layer: number) => string): ModelLayout;
+layoutParameters
+  export function layoutParameters(layout: ModelLayout): number;
 linear
   export function linear(x: Tensor, w: Tensor, b?: Tensor, activation?: Activation): Tensor;
 logSoftmax
@@ -68,5 +84,11 @@ proteinMpnnGraph
   export function proteinMpnnGraph(input: ProteinMpnnInput, neighbors?: number): ProteinMpnnGraph;
 proteinMpnnInput
   export function proteinMpnnInput(structure: BackboneSource): ProteinMpnnInput;
+readSafetensorsHeader
+  export function readSafetensorsHeader(bytes: Uint8Array): Map<string, SafetensorsEntry>;
+safetensorsHeaderLength
+  export function safetensorsHeaderLength(prefix: Uint8Array): number;
 tensor
   export function tensor(shape: readonly number[], data?: ArrayLike<number>): Tensor;
+tileMeanAbs
+  export function tileMeanAbs(x: Tensor): Tensor;

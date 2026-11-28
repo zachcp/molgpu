@@ -43,8 +43,8 @@ import { cameraFor, loadStructure } from "../demos/data.ts";
 import { OrbitControls, pageDevice, SharedWebGPU } from "../demos/viewer.tsx";
 import type { Experiment } from "../pages/experiments.tsx";
 import { Heatmap } from "./mpnn/heatmap.ts";
-import { Weights3D } from "./mpnn/weights3d.ts";
-import { type MpnnRun, runProteinMpnn } from "./mpnn/run.ts";
+import { WeightStack } from "./weights/weight-stack.ts";
+import { type MpnnRun, runProteinMpnn, STAGE_TITLES } from "./mpnn/run.ts";
 import { ForwardPlayer } from "./mpnn/forward.ts";
 import { edgeFeaturesOf, neighborsOf } from "./mpnn/flow.ts";
 import { type FlowColumn, FlowPanel } from "./mpnn/flow-panel.ts";
@@ -85,14 +85,6 @@ const MODE_STAGES: Record<Mode, readonly ProteinMpnnStep["stage"][]> = {
   sequence: ["sequence", "decoder", "output"],
 };
 const BACKBONE = new Set(["N", "CA", "C", "O"]);
-
-const STAGE_TITLES = {
-  features: "Edge features",
-  encoder: "Encoder",
-  sequence: "Sequence",
-  decoder: "Decoder",
-  output: "Output",
-} as const;
 
 /** Hovered position, colour metric and forward-pass step, shared by the scene and the DOM. */
 class Store {
@@ -547,7 +539,7 @@ const STYLE = `
   .mpnn-map canvas.weight { height: 220px; cursor: default; }
   .mpnn-3d { position: relative; }
   .mpnn-map canvas.weights3d { height: 440px; cursor: grab; touch-action: none; }
-  .mpnn-stage { position: absolute; transform: translate(-50%, -100%); pointer-events: none; padding: .05rem .4rem; border-radius: 4px; background: #050a16bb; color: #9fe3d8; font-size: .72rem; font-weight: 600; white-space: nowrap; }
+  .weights-stage { position: absolute; transform: translate(-50%, -100%); pointer-events: none; padding: .05rem .4rem; border-radius: 4px; background: #050a16bb; color: #9fe3d8; font-size: .72rem; font-weight: 600; white-space: nowrap; }
   .mpnn-tip { z-index: 1; position: absolute; pointer-events: none; padding: .2rem .45rem; border-radius: 4px; background: #050a16ee; border: 1px solid #33476a; font-size: .75rem; white-space: nowrap; }
   .mpnn-3d-controls { display: flex; gap: .6rem; align-items: center; }
   .mpnn-layout .mpnn-3d-controls button { position: static; padding: .15rem .7rem; border: 1px solid #33476a; border-radius: 4px; background: #15213a; color: inherit; font: inherit; cursor: pointer; }
@@ -662,7 +654,7 @@ export const experiment: Experiment = {
     let maps: Heatmap[] = [];
     let weightMap: Heatmap | null = null;
     let nodeMap: Heatmap | null = null;
-    let weights3d: Weights3D | null = null;
+    let weights3d: WeightStack | null = null;
     let activationMap: Heatmap | null = null;
     let player: ForwardPlayer | null = null;
     /** Trace step index of each player position, for the current mode. */
@@ -987,13 +979,30 @@ export const experiment: Experiment = {
           layerPicker.onchange = () => showLayer(device, current);
           showWeight(device, current);
           showLayer(device, current);
-          weights3d = new Weights3D(
+          const byName = new Map(
+            current.matrices.flatMap((m) => m.name ? [[m.name, m]] : []),
+          );
+          weights3d = new WeightStack(
             device,
             $("[data-map=weights3d]"),
             $("[data-tip]"),
-            current.matrices,
-            (index) => {
-              weightPicker.value = String(index);
+            current.layout.stages.map(({ label, matrices }) => ({
+              label,
+              matrices: matrices.map(({ name, shape }) => {
+                const view = byName.get(name)!;
+                return {
+                  name,
+                  shape,
+                  buffer: view.tensor.buffer,
+                  values: view.values,
+                  scale: view.scale,
+                };
+              }),
+            })),
+            (name) => {
+              weightPicker.value = String(
+                current.matrices.findIndex((m) => m.name === name),
+              );
               showWeight(device, current);
             },
           );

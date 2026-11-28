@@ -3,7 +3,7 @@
 ## Start Here
 
 This is a TypeScript molecular visualization library built on use.gpu, organized
-as eight Deno workspace packages targeting JSR. The application owns its canvas,
+as nine Deno workspace packages targeting JSR. The application owns its canvas,
 device, camera, lights and render passes. Molecular components compose beneath
 them.
 
@@ -46,6 +46,8 @@ small follow-ups. Routine fixes do not require a new design process.
   `./wgsl` export. No use.gpu imports.
 - `timeline`: scrubbable curves and seconds-based time; pinned use.gpu math is
   isolated behind `src/internal`.
+- `nn`: CPU references, WGSL neural-network kernels and model metadata. Use a
+  caller-supplied GPUDevice; keep rendering and use.gpu imports outside `nn`.
 - `viewer`: Live orchestration, GPU adaptation, resources and representations.
   Workbench, Live and shader runtime imports belong here.
 

@@ -74,6 +74,58 @@ still frees its temporaries. Tracing does not change the outputs.
 same trace for a fixture or a `.bcif` file as JSON, for replaying a structure's
 pass outside the browser.
 
+## Model layouts
+
+A `ModelLayout` lists a model's 2-D weight matrices grouped into stages, with no
+data and no renderer. Shapes are logical `[rows, columns]` in checkpoint axis
+order, not necessarily `[out, in]`: PyTorch linear weights use `[out, in]`,
+embeddings use `[vocabulary, channels]`, and GPT-2 Conv1D weights use
+`[in, out]`. The layout does not infer these roles or transpose tensors.
+`layoutFromSteps` builds one from a recorded forward pass, such as
+`ProteinMpnnTrace.steps`: each matrix joins the stage that first reads it, in
+reading order. `layoutFromNames` builds one from names alone for models that
+cannot run here: numbered blocks in numeric order, embeddings first, heads last.
+These are grouping heuristics, not a verified forward graph; within each block
+matrices retain input order. It collapses numbered copies such as MoE experts
+into one matrix with a `count`; pass `{ collapseCopies: false }` to retain exact
+tensor names when binding real weight buffers. It drops quantization scales and
+reports FP4 weights packed two per byte at their logical shape, so DeepSeek-V4
+and Kimi-K3 layouts read correctly. `readSafetensorsHeader` reads names, dtypes
+and shapes from a file's first `8 + safetensorsHeaderLength(bytes)` bytes, so a
+7B checkpoint's layout costs two range requests.
+`scripts/catalog_model_shapes.ts` writes such a catalog for Hugging Face repos
+(single-file or sharded) and local files, and rejects servers that do not honor
+byte ranges before reading their response bodies.
+
+## Weight tile summaries
+
+`tileMeanAbs(matrix)` is the CPU reference for mean absolute weight per 32 × 32
+tile. `NnRuntime.tileMeanAbs(matrix)` records the GPU reduction and returns an
+owned f32 tensor shaped `[ceil(rows / 32), ceil(columns / 32)]`. Partial edge
+tiles divide by their actual cell count, not 1024. This is a snapshot, not a
+live view of later writes, and it loses sign and within-tile detail.
+
+The GPU op binds aligned 32-row input windows, so the original buffer may exceed
+`maxStorageBufferBindingSize`. The source must fit `maxBufferSize`; each input
+band, including alignment padding, and the compact output must fit the storage
+binding limit. No full-weight CPU readback is needed. For example, a
+`[4096, 11008]` f32 matrix reduces from 180,355,072 bytes to a `[128, 344]` grid
+of 176,128 bytes (172 KiB), which can be drawn with one slab draw call:
+
+```ts
+const weights = rt.upload(matrix); // matrix: Tensor, e.g. [4096, 11008]
+const tiles = rt.tileMeanAbs(weights);
+rt.flush(); // submit before a renderer binds tiles.buffer on the same device
+// Preserve matrix.shape for geometry; tiles are mean |w|, not signed weights.
+```
+
+The site's local-file view uses these summaries for float matrices above the
+binding limit, reads back only the compact grid for scaling/hover, and releases
+the original GPU buffer after computation completes. Smaller matrices retain
+their exact signed values. The existing 256 MiB file limit remains; larger
+files, and matrices exceeding `maxBufferSize`, remain shape-only. Packed FP4
+catalogs are still header-only; this op does not dequantize them.
+
 ## Ownership
 
 Tensors created by `upload`, `uploadIndex`, `uploadWeights`, `copy` or an op are
@@ -118,6 +170,7 @@ _stable_: relied on by other packages and settled. _experimental_: may change in
 | `gatherRows`              | experimental | CPU reference row gather `x[index]`, ProteinMPNN's neighbour lookup.                              |
 | `neighborSum`             | experimental | CPU reference masked sum over the K neighbour axis of `[L, K, C]`, divided by a scale.            |
 | `logSoftmax`              | experimental | CPU reference numerically stable log-softmax over the last axis.                                  |
+| `tileMeanAbs`             | experimental | CPU reference mean absolute value per 32 × 32 matrix tile, with partial edge tiles.               |
 | `parseSafetensors`        | experimental | Read a safetensors checkpoint into named f32 tensors (F32, F16 and BF16 inputs).                  |
 | `GpuTensor`               | experimental | A tensor in a `GPUBuffer` (`f32` or `u32`), and whether the runtime owns it.                      |
 | `NnRuntime`               | experimental | Runs the ops as WGSL compute on a caller-supplied `GPUDevice`; owns the buffers it creates.       |
@@ -134,6 +187,16 @@ _stable_: relied on by other packages and settled. _experimental_: may change in
 | `ProteinMpnn`             | experimental | ProteinMPNN forward pass on an `NnRuntime`, reading weights under their PyTorch state_dict names. |
 | `ProteinMpnnEncoding`     | experimental | Encoder output: graph, GPU neighbours, per-layer node embeddings and final edge embeddings.       |
 | `ProteinMpnnVisibility`   | experimental | Which native residues the decoder sees: `"none"`, `"all-but-self"`, or a decoding order.          |
+| `SafetensorsEntry`        | experimental | One tensor as a safetensors header describes it: dtype, shape and byte range, without data.       |
+| `safetensorsHeaderLength` | experimental | JSON header length from a file's first 8 bytes.                                                   |
+| `readSafetensorsHeader`   | experimental | Tensor names, dtypes and shapes from a safetensors header; the data section need not be present.  |
+| `ModelLayout`             | experimental | Renderer- and data-free stages, ordered by first use from steps or by name heuristics.            |
+| `LayoutStage`             | experimental | One stage of a layout: a label and its matrices.                                                  |
+| `LayoutMatrix`            | experimental | One matrix of a layout: checkpoint name and logical `[rows, columns]` in checkpoint axis order.   |
+| `LayoutStep`              | experimental | A recorded step `layoutFromSteps` reads: stage, layer and the weights it read.                    |
+| `layoutFromSteps`         | experimental | Layout from a recorded forward pass, in the order the weights are first read.                     |
+| `layoutFromNames`         | experimental | Layout from weight names alone, grouping numbered blocks, for models that cannot run here.        |
+| `layoutParameters`        | experimental | Number of weights in a layout's matrices.                                                         |
 | `ProteinMpnnRunOptions`   | experimental | Options for `encode` and `decode`: a trace to record into.                                        |
 | `ProteinMpnnTrace`        | experimental | Records every activation of a forward pass and owns its copies until `release`.                   |
 | `ProteinMpnnStep`         | experimental | One recorded activation: stage, layer, name, weights read, model shape and `[L, C]` values.       |

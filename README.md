@@ -8,7 +8,7 @@ device, camera, lights and render passes.
 
 ## Get started
 
-All eight packages are available on
+The workspace contains nine packages targeting
 [JSR](https://jsr.io/packages?search=molgpu). For a data-only workflow, install
 the loader and selection packages:
 
@@ -43,6 +43,7 @@ needed.
 | [`@molgpu/geo`](packages/geo/README.md)           | Geometry kernels: curve segments, marching cubes, surface attribution.                             |
 | [`@molgpu/timeline`](packages/timeline/README.md) | Scrubbable time values: named beats and keyframe curves.                                           |
 | [`@molgpu/dynamics`](packages/dynamics/README.md) | Coordinate transforms, secondary structure, charges, and dynamics kernels.                         |
+| [`@molgpu/nn`](packages/nn/README.md)             | Experimental CPU/WGSL neural-network ops, shared GPU weight buffers, and ProteinMPNN inference.    |
 | [`@molgpu/viewer`](packages/viewer/README.md)     | use.gpu components: structures, representations, materials, lights, picking, annotations, cameras. |
 
 The table links open local guides; the

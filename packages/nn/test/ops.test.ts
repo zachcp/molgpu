@@ -10,6 +10,7 @@ import {
   neighborSum,
   parseSafetensors,
   tensor,
+  tileMeanAbs,
 } from "../src/index.ts";
 
 const close = (actual: ArrayLike<number>, expected: number[], tol = 1e-6) => {
@@ -96,6 +97,20 @@ Deno.test("logSoftmax is normalised and stable for large logits", () => {
     -Math.LN2,
     -Math.LN2,
   ]);
+});
+
+Deno.test("tileMeanAbs preserves axes and averages partial tiles over real cells", () => {
+  const values = Array.from({ length: 35 * 67 }, (_, i) => {
+    const r = Math.floor(i / 67), c = i % 67;
+    return (i % 2 ? -1 : 1) * (r * 100 + c + 1);
+  });
+  const out = tileMeanAbs(tensor([35, 67], values));
+  assertEquals(out.shape, [2, 3]);
+  // Means of the arithmetic row/column sequences, independent of reduction code.
+  close(out.data, [1566.5, 1598.5, 1616, 3316.5, 3348.5, 3366]);
+  close(tileMeanAbs(tensor([1, 3], [-3, 0, 6])).data, [3]);
+  assertThrows(() => tileMeanAbs(tensor([0, 3])), Error, "non-empty");
+  assertThrows(() => tileMeanAbs(tensor([3])), Error, "matrix");
 });
 
 Deno.test("parseSafetensors reads F32, F16 and BF16 at unaligned offsets", () => {

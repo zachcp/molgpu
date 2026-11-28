@@ -1,12 +1,18 @@
 // GPU parity for @molgpu/nn: every kernel against its CPU reference on Deno's
 // built-in WebGPU (no browser), plus buffer ownership. Shapes are deliberately
 // not multiples of the 64-thread workgroup. Run with `deno task test:nn:gpu`.
-import { assert, assertEquals, assertLessOrEqual } from "@std/assert";
+import {
+  assert,
+  assertEquals,
+  assertLessOrEqual,
+  assertThrows,
+} from "@std/assert";
 import {
   gatherRows,
   type GpuTensor,
   indexTensor,
   layerNorm,
+  layoutFromSteps,
   linear,
   logSoftmax,
   neighborSum,
@@ -145,6 +151,91 @@ Deno.test("nn GPU kernels match the CPU references", async (t) => {
   assertEquals(errors, [], "uncaptured WebGPU errors");
 });
 
+Deno.test("nn tile summaries window oversized buffers without changing their values", async () => {
+  const rt = new NnRuntime(device);
+  try {
+    // Odd row stride forces padding at the second aligned window; both axes
+    // have partial final tiles. Alternating signs distinguish mean |w| from |mean w|.
+    const x = tensor(
+      [65, 67],
+      Array.from(
+        { length: 65 * 67 },
+        (_, i) => (i % 2 ? -1 : 1) * (Math.floor(i / 67) * 100 + i % 67 + 1),
+      ),
+    );
+    const gx = rt.upload(x);
+    const summary = rt.tileMeanAbs(gx);
+    const unchanged = rt.copy(gx);
+    // Release before reading, exercising submission and ownership of the input windows.
+    rt.release(gx);
+    assertEquals(summary.shape, [3, 3]);
+    const expected = [
+      1566.5,
+      1598.5,
+      1616,
+      4766.5,
+      4798.5,
+      4816,
+      6416.5,
+      6448.5,
+      6466,
+    ];
+    const actual = await rt.read(summary);
+    for (let i = 0; i < expected.length; i++) {
+      // Normalization avoids overflow but introduces f32 rounding in each term.
+      assertLessOrEqual(Math.abs(actual[i] - expected[i]) / expected[i], 1e-6);
+    }
+    assertEquals(await rt.read(unchanged), x.data);
+    rt.release(summary, unchanged);
+    // A finite mean at the top of the f32 range must not overflow its sum.
+    // Full tiles are constant |max|; partial columns average [max/4, max/2, max, 0].
+    const max = 3.4028234663852886e38;
+    const extreme = tensor([33, 36]);
+    for (let r = 0; r < 33; r++) {
+      for (let c = 0; c < 36; c++) {
+        extreme.data[r * 36 + c] = c < 32
+          ? (c % 2 ? -max : max)
+          : [max / 4, -max / 2, max, 0][c - 32];
+      }
+    }
+    const extremeMeans = await rt.read(rt.tileMeanAbs(rt.upload(extreme)));
+    assertEquals(
+      [...extremeMeans],
+      [max, max * 7 / 16, max, max * 7 / 16].map(Math.fround),
+    );
+    assertEquals([...await rt.read(rt.tileMeanAbs(rt.zeros([1, 4])))], [0]);
+    // A genuinely oversized buffer: devices promote smaller requested limits
+    // to the default. Constant tiles give exact independently known means.
+    const cols = 8193;
+    const rows = 32 * Math.ceil(
+          device.limits.maxStorageBufferBindingSize / (32 * cols * 4),
+        ) + 1;
+    const large = tensor([rows, cols]);
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        large.data[r * cols + c] = (c % 2 ? -1 : 1) *
+          (10 * Math.floor(r / 32) + Math.floor(c / 32) + 1);
+      }
+    }
+    const source = rt.upload(large);
+    assert(source.buffer.size > device.limits.maxStorageBufferBindingSize);
+    const tiles = rt.tileMeanAbs(source);
+    rt.release(source);
+    assertEquals(tiles.shape, [Math.ceil(rows / 32), 257]);
+    const means = await rt.read(tiles);
+    for (let r = 0; r < tiles.shape[0]; r++) {
+      for (let c = 0; c < 257; c++) {
+        assertEquals(means[r * 257 + c], 10 * r + c + 1);
+      }
+    }
+    assertThrows(() => rt.tileMeanAbs(rt.zeros([0, 3])), Error, "non-empty");
+  } finally {
+    rt.destroy();
+    await device.queue.onSubmittedWorkDone();
+  }
+  assertEquals(errors, [], "uncaptured WebGPU errors");
+});
+
 Deno.test("nn runtime owns its tensors and leaves wrapped buffers alone", async () => {
   const usage = 0x0080 | 0x0004 | 0x0008; // STORAGE | COPY_SRC | COPY_DST
   const external = device.createBuffer({ size: 16, usage });
@@ -270,11 +361,25 @@ Deno.test("ProteinMPNN trace records every step of the forward pass", async () =
       assertEquals(step.values.shape, [l, step.shape[step.shape.length - 1]]);
       for (const name of step.weights) assert(checkpoint.has(name), name);
     }
-    // Every weight matrix in the checkpoint is read by some recorded step.
-    const read = new Set(steps.flatMap((step) => step.weights));
-    for (const [name, weight] of checkpoint) {
-      if (weight.shape.length === 2) assert(read.has(name), name);
-    }
+    // The traced layout holds every 2-D checkpoint weight exactly once, in
+    // the stages that read them: features, 3 encoder layers, the sequence
+    // embedding, 3 decoder layers, output.
+    const layout = layoutFromSteps(steps, checkpoint);
+    const names = layout.stages.flatMap((s) => s.matrices.map((m) => m.name));
+    const matrices = [...checkpoint].filter(([, w]) => w.shape.length === 2);
+    assertEquals(names.length, matrices.length);
+    assertEquals(new Set(names), new Set(matrices.map(([name]) => name)));
+    assertEquals(layout.stages.map((s) => s.label), [
+      "features",
+      "encoder 1",
+      "encoder 2",
+      "encoder 3",
+      "sequence",
+      "decoder 1",
+      "decoder 2",
+      "decoder 3",
+      "output",
+    ]);
 
     const values = await trace.read();
     assertEquals(steps.at(-1)!.name, "log-softmax");

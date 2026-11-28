@@ -90,3 +90,14 @@ the structure's coordinates or a CPU-generated mesh, and its animation clock
 stops after the wave decays. Sequence distance and transverse displacement are
 artistic choices: this is not a normal-mode calculation, force field or
 molecular dynamics model.
+
+`#experiments/models` draws weight layouts from catalog headers, a runnable toy
+MLP, or a local `.safetensors` checkpoint. Files up to 256 MiB decode supported
+float weights. Matrices above the GPU storage binding limit use GPU-computed 32
+× 32 mean-absolute-weight snapshots: original slab dimensions are preserved, and
+hover reports tile row/column ranges rather than individual signed values. Only
+the compact grid is read back, for hover and color scaling. Each matrix still
+uses one draw call per frame. Smaller matrices bind their real signed weights
+directly. Larger files, packed-FP4 headers and matrices exceeding the GPU
+allocation limit remain shape-only; no full checkpoint download or FP4
+dequantization is implied by a catalog view.
